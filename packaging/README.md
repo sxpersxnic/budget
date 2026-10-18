@@ -59,7 +59,14 @@ release.
 | `launcher.py` | Frozen entry point. It calls `multiprocessing.freeze_support()` before the app is imported, because the native window runs in a child process. |
 | `make_icons.py` | Regenerates `assets/icon.png`, `icon.icns` and `icon.ico`. |
 
-Build output goes to `dist/` and intermediate files to `build/`. Both are git-ignored.
+Build output goes to `dist/` and intermediate files to `build/`. Both are git-ignored. The
+finished installer is also copied to [`installers/macos/`](../installers) or `installers/windows/`.
+That copy replaces any older version and refreshes `SHA256SUMS.txt`. It is committed so users
+can download it from the repository.
+
+To keep the DMG under GitHub's 50 MiB recommended file size, `build.py` removes JavaScript
+payloads the app never loads: unused NiceGUI element bundles, and Plotly's Jupyter widget and
+offline-HTML scripts. NiceGUI renders charts with its own plotly.js.
 
 ## Signing (optional)
 

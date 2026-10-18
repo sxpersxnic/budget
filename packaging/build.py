@@ -3,6 +3,9 @@
     macOS   -> dist/Budget-<version>-macOS-<arch>.dmg   (Budget.app, drag to Applications)
     Windows -> dist/Budget-<version>-Windows-Setup.exe  (per-user install, Start menu entry, uninstaller)
 
+The finished installer is also copied to installers/<os>/ (replacing older versions) together
+with a SHA-256 checksum, so it can be committed and downloaded from the repository.
+
 PyInstaller cannot cross-compile: build the macOS installer on a Mac and the Windows installer on
 a Windows PC. The wrappers packaging/macos/build.sh and packaging/windows/build.bat check the
 prerequisites, run the tests and then call this script.
@@ -15,6 +18,7 @@ Environment:
 
 from __future__ import annotations
 
+import hashlib
 import os
 import platform
 import plistlib
@@ -30,8 +34,14 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGING = ROOT / "packaging"
 DIST = ROOT / "dist"
 WORK = ROOT / "build"
+INSTALLERS = ROOT / "installers"
 NAME = "Budget"
 BUNDLE_ID = "app.budget.local"
+# NiceGUI ships JavaScript bundles for every element; these are never used by the app and are only
+# loaded lazily when such an element is created, so their payload can be dropped (~10 MB).
+UNUSED_NICEGUI_BUNDLES = ("mermaid", "codemirror", "echart", "json_editor", "scene", "leaflet", "xterm")
+# plotly's own JS (Jupyter widget + offline HTML export); NiceGUI renders charts with its own plotly.js
+UNUSED_PLOTLY_FILES = ("widgetbundle.js", "plotly.min.js")
 
 
 def version() -> str:
@@ -81,6 +91,35 @@ def pyinstaller() -> Path:
     return DIST / (f"{NAME}.app" if sys.platform == "darwin" else NAME)
 
 
+def strip_unused(app: Path) -> None:
+    for dist_dir in list(app.rglob("dist")):
+        element = dist_dir.parent
+        if element.name in UNUSED_NICEGUI_BUNDLES and element.parent.name == "elements" and dist_dir.is_dir():
+            if dist_dir.is_symlink():
+                dist_dir.unlink()
+            else:
+                shutil.rmtree(dist_dir)
+            print(f"  removed unused {element.name} bundle")
+    for name in UNUSED_PLOTLY_FILES:
+        for f in app.rglob(name):
+            if f.parent.name == "package_data" and f.parent.parent.name == "plotly":
+                f.unlink()
+                print(f"  removed unused plotly/{name}")
+
+
+def publish(installer: Path, platform_dir: str, pattern: str) -> Path:
+    """Copy the installer to installers/<platform_dir>/, replacing older ones, and write its checksum."""
+    dest = INSTALLERS / platform_dir
+    dest.mkdir(parents=True, exist_ok=True)
+    for old in dest.glob(pattern):
+        old.unlink()
+    target = dest / installer.name
+    shutil.copy2(installer, target)
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    (dest / "SHA256SUMS.txt").write_text(f"{digest}  {target.name}\n", encoding="utf-8")
+    return target
+
+
 def build_macos(app: Path) -> Path:
     plist_path = app / "Contents" / "Info.plist"
     plist = plistlib.loads(plist_path.read_bytes())
@@ -110,7 +149,7 @@ def build_macos(app: Path) -> Path:
     (staging / "Applications").symlink_to("/Applications")
     dmg = DIST / f"{NAME}-{version()}-macOS-{platform.machine()}.dmg"
     dmg.unlink(missing_ok=True)
-    run(["hdiutil", "create", "-volname", NAME, "-srcfolder", staging, "-fs", "HFS+", "-format", "UDZO", "-ov", dmg])
+    run(["hdiutil", "create", "-volname", NAME, "-srcfolder", staging, "-fs", "HFS+", "-format", "ULMO", "-ov", dmg])
     return dmg
 
 
@@ -144,10 +183,11 @@ def build_windows(app_dir: Path) -> Path:
 
 def main() -> None:
     app = pyinstaller()
+    strip_unused(app)
     if sys.platform == "darwin":
-        out = build_macos(app)
+        out = publish(build_macos(app), "macos", f"{NAME}-*-macOS-*.dmg")
     elif sys.platform == "win32":
-        out = build_windows(app)
+        out = publish(build_windows(app), "windows", f"{NAME}-*-Windows-Setup.exe")
     else:
         out = app
         print("Linux: no installer format configured; the app folder is", app)
