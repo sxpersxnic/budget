@@ -1,0 +1,270 @@
+# Budget App – Architecture & Implementation
+
+This document describes how the budgeting app specified in
+[Description_Budgeting_App.md](Description_Budgeting_App.md) is implemented: the module
+structure, the CSV data model, the calculation rules, and the decisions and assumptions
+taken where the specification left room for interpretation.
+
+## 1. Overview
+
+- **Runtime:** Python 3.13. Dependencies are managed with `uv`.
+- **UI:** [NiceGUI](https://nicegui.io) 3. Pages are written in Python and served
+  locally on `http://127.0.0.1:8080` (localhost only), or in a native window with `--native`.
+  Installed builds always use the native window (see §9).
+  - Tables use AG Grid.
+  - Charts use Plotly.
+- **Storage:** plain CSV files plus one `settings.json` in `data/` (configurable).
+- **Exchange rates:** the ECB historic reference-rate file, downloaded once per day.
+- **Classification:** COICOP 2018, all four levels (15 divisions, 63 groups, 186 classes,
+  338 subclasses). It was extracted from the Eurostat SDMX codelist `ESTAT/COICOP18`
+  and is bundled as `src/budget_app/resources/coicop2018.csv`.
+
+The code is split into three layers, which keeps every calculation testable without the UI:
+
+```
+ui/         NiceGUI pages and widgets  ── only calls ──▶  services/
+services/   business rules & calculations ─────────────▶  domain/ + storage/
+domain/     pure helpers: months, FX rates, COICOP, record types
+storage/    typed CSV tables + settings JSON
+```
+
+## 2. Module map
+
+| Module | Responsibility |
+| --- | --- |
+| `main.py` | CLI entry (`uv run budget`). Registers pages, refreshes ECB rates at startup and every 30 min. |
+| `config.py` | Base currency `CHF`, ECB URL, data/resource paths (`BUDGET_DATA_DIR` env override). |
+| `domain/months.py` | `YYYY-MM` month arithmetic and the "month complete" rule. |
+| `domain/fx.py` | `FxRates` (parse ECB CSV, rate lookup with date fallback, cross-rate conversion) and `FxService` (daily download, atomic file replacement). |
+| `domain/coicop.py` | COICOP tree (ancestors, children, labels) plus pseudo-categories `TAX`, `ADV`, `UNACCOUNTED`. |
+| `domain/models.py` | Dataclasses `Account`, `IncomeCategory`, `Transaction`, `AccountEntry`, `BudgetEntry`, `Settings`. |
+| `storage/csv_store.py` | Generic `CsvTable[T]`: in-memory records, atomic rewrite (temp file + rename) on every change. |
+| `storage/store.py` | `Store` bundling all tables and settings. |
+| `storage/lock.py` | Single-instance lock on `<data>/.lock`, so two processes cannot overwrite each other's files. |
+| `services/context.py` | `Context` (store + FX), conversion helpers, budget horizon, `ValidationError`. |
+| `services/accounts.py` | Accounts, advance-payment accounts and income categories, with their deletion rules. |
+| `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement. |
+| `services/budget.py` | Budget series expansion, overwrite, horizon change and "Forever" extension. |
+| `services/wealth.py` | Account balances, wealth, projected wealth, wealth time series. |
+| `services/reports.py` | Monthly statement (expenditure tree, income, budget vs. actual, unaccounted), chart series. |
+| `services/export.py` | Statement as Excel/PDF; chart data as CSV/Excel. |
+| `ui/layout.py` | Task bar, formatting (`1'234.50 CHF`), date picker, month options. |
+| `ui/widgets/` | Searchable selects, transaction form (shared by add and edit), AG Grid helpers. |
+| `ui/pages/` | One module per page (see §6). |
+
+## 3. Data model (`data/`)
+
+Every money record stores **the original amount and currency, the amount in CHF, and the
+ECB date of the rate used** (`fx_date`).
+
+| File | Columns |
+| --- | --- |
+| `accounts.csv` | `name, currency, kind (regular/advance), created, id` |
+| `income_categories.csv` | `name, id` |
+| `transactions.csv` | `date, type, amount, currency, amount_chf, fx_date, category, from_account, to_account, to_amount, to_currency, is_advance, advance_amount, advance_account, debtor, settles_id, comment, id` |
+| `account_entries.csv` | `account_id, month, amount, currency, amount_chf, fx_date, id` – recorded balance at month end ("budget recording") |
+| `budget_entries.csv` | `month, type, category, amount, currency, amount_chf, fx_date, series_id, recur_months, forever, comment, generated_until, id` – one row per budgeted month |
+| `settings.json` | `budget_horizon, display_currency, last_fx_download` |
+| `ecb/eurofxref-hist.csv` | Latest ECB file (replaced daily) |
+
+**Transaction types**
+
+- `expenditure`
+  - `category` is a COICOP code at any level, or `TAX`.
+  - `from_account` must be a regular account in the transaction currency.
+- `income`
+  - `category` is an income-category id.
+  - `to_account` must be a regular account in the transaction currency.
+- `transfer`
+  - `from_account` and `to_account` are different regular accounts in the transaction currency.
+- `exchange`
+  - `amount` is in the currency of `from_account`.
+  - `to_amount` and `to_currency` are computed with the ECB cross-rate of `fx_date`.
+
+**Advance payments.** An advanced expenditure is stored as **one row**:
+
+- `amount` is the full payment.
+- `advance_amount` is the share paid on behalf of others.
+- `advance_account` and `debtor` record where the receivable sits and who owes it.
+
+If no advance account is chosen, the account "Advance payments" in the transaction currency
+is used, and it is created automatically if needed.
+
+A **repayment** is an `income` row with `is_advance=1`, the advance account, and
+`settles_id` pointing to the advanced expenditure. What is still outstanding on an
+advance is `advance_amount − Σ amount of its repayments`. A repayment can never exceed
+that outstanding amount.
+
+## 4. Calculation rules
+
+### 4.1 Currency conversion
+
+ECB rates are EUR-based (`1 EUR = r[CUR]`, with `r[EUR] = 1`). Every conversion is a cross-rate on the same date:
+
+```
+amount_to = amount_from / r[from] · r[to]
+```
+
+A rate lookup for date *d* uses the latest ECB date ≤ *d*, which covers weekends and
+holidays. Dates before the start of the file use its first rate.
+
+| Use | Rate used |
+| --- | --- |
+| Saving a transaction / budget entry (`amount_chf`) | Last (most recent) row of the ECB file; that date is stored as `fx_date` |
+| Saving an account entry | Last ECB date within that month |
+| Displaying a transaction in another currency | Rate of its recorded `fx_date` |
+| Displaying an account balance | Last ECB date of the month being viewed |
+| Displaying budget entries | Latest available rate |
+
+### 4.2 Wealth
+
+- **Wealth(M)** is the sum over **regular** accounts of the latest account entry with
+  month ≤ M, so balances carry forward. **Advance accounts are excluded.** They are
+  receivables tracked as open items (decision §7.1).
+- **Current wealth** is Wealth(previous month). It is shown on the Overview and the Budget
+  overview whatever month is selected.
+- **Projected wealth(M):** let L be the last month with at least one account entry. Then
+  - projected wealth(M) = Wealth(L) + Σ (budgeted income − budgeted expenditure) for
+    months L+1 … M;
+  - for M ≤ L it is simply Wealth(M).
+
+### 4.3 Monthly statement (`reports.month_report`)
+
+- **Month complete:** month < current month. For complete months the Budget overview lists
+  the accounts. For the current and future months it shows the projected wealth instead,
+  and budget cells become editable.
+- **Expenditure tree:** a category's amount is its own direct entries plus everything
+  recorded in any descendant code. For example, `01` includes `01`, `01.1`, `01.1.1`
+  and `01.1.1.1`.
+  - Top-level rows: the 15 COICOP divisions, **Taxes**, **Advance payments** (the
+    `advance_amount` shares) and, for complete months, **Unaccounted Expenditure**.
+  - An advanced expenditure contributes `amount − advance_amount` to its COICOP code and
+    `advance_amount` to *Advance payments*.
+- **Income:** non-zero income categories, plus **Advance repayments** (the repayments).
+- **Unaccounted Expenditure** = total income − recorded expenditure − (Wealth(M) − Wealth(M−1)).
+  - It is computed only for complete months that have balance data for M−1.
+  - A positive value is money that left the accounts without being recorded.
+- **Total expenditure** = recorded expenditure + unaccounted expenditure.
+- **Difference** = actual − budget. It is shown in red when expenditure exceeds the
+  budget or income falls short of it.
+
+### 4.4 Budget series
+
+- **Creating** an entry expands the month range into one row per month, every
+  `recur_months` months (1 = monthly, 12 = yearly). All rows share a `series_id`.
+  - The final month is limited to the **budget horizon**.
+  - "Forever" means "until the horizon".
+- **Overwrite** deletes all budget rows of the same type and category in the target months
+  before saving.
+- **Extending the horizon** continues every `forever` series in its recurrence step, using
+  the series' latest row as the template.
+  - Generation resumes after the furthest month the series was ever generated for. That
+    month is stored in `generated_until`.
+  - Months the user deleted or overwrote are therefore never re-created or duplicated.
+- **Shrinking the horizon** never deletes anything. Rows beyond the new horizon stay, and
+  the series resume after them when the horizon is extended again.
+
+## 5. Exchange-rate refresh
+
+At startup, and every 30 minutes while the app runs, `FxService.refresh_if_stale` compares
+`settings.last_fx_download` with today. If they differ, it:
+
+1. downloads the ZIP, capped at 20 MB, with a 100 MB cap on the contained CSV;
+2. validates the CSV in memory (nothing is extracted to disk by name);
+3. atomically replaces `data/ecb/eurofxref-hist.csv` through a unique temp file;
+4. stores today's date.
+
+A lock prevents overlapping refreshes.
+
+If the download fails, the previous file stays in use and a warning banner is shown. The
+currency dropdowns list every currency the ECB quoted on its latest date, plus EUR and CHF.
+
+## 6. Pages
+
+| Route | Page | Notes |
+| --- | --- | --- |
+| `/` | Overview (start page) | Current and projected wealth at the horizon. Chart builder: wealth line (actual and dashed projection), income/expenditure bars or lines with category multi-select and optional budget, waterfall of per-account change. Charts sit side by side; each offers CSV, Excel and PNG download. |
+| `/budget` | Budget overview | Month and currency selection. KPI cards. Accounts with add/edit balance buttons (a "not recorded" badge marks missing entries whose last balance was non-zero). "Add budget recording" dialog. Expandable expenditure tree. Income table. Budget cells editable in incomplete months. Excel/PDF statement export. |
+| `/add-transaction` | Add transaction | The four transaction types with dependent fields. Account dropdowns are filtered by currency. Live CHF preview. Save stays disabled until the form validates. After saving, every field except date, currency and type resets. |
+| `/transactions` | Transactions | AG Grid: filters (date range, amount range, account, type, text), sort on every column, multi-select delete with confirmation, edit via "Edit selected" or double-click. |
+| `/add-budget` | Add budget entry | Month range or "Forever", recurrence, type, currency, amount, category, overwrite option, comment. Live preview of the months that will be created. |
+| `/budget-entries` | Budget entries | Same grid pattern. The edit dialog can apply changes to all following months of a series. |
+| `/settings` | Settings | Budget horizon, display currency, accounts, advance-payment accounts (with outstanding balances), income categories. |
+
+## 7. Decisions and assumptions
+
+1. **Advances sit outside wealth** (agreed during planning). Advanced shares appear as the
+   expenditure line *Advance payments*, and repayments count as income. This keeps
+   *Unaccounted Expenditure* consistent, because the receivable is not also counted
+   in wealth.
+2. **An advance is a single row** with an `advance_amount` column, not two linked rows.
+   Editing and deleting stay atomic, and the reports split the amount.
+3. **Exchange `to_amount` is computed from ECB rates**, as the spec requires. Real-world
+   spreads and fees therefore show up in Unaccounted Expenditure once balances are
+   recorded.
+4. **Balances carry forward.** A month with no entry for an account reuses the account's
+   last recorded balance. The Budget overview flags such accounts and offers an "Add"
+   button.
+5. **Deleting an account** is refused while transactions reference it. Its recorded
+   balances are deleted along with it, and the confirmation dialog says so. The currency of
+   an account in use cannot be changed.
+6. **Repayments** can only be entered in the currency of their advance account. A deleted
+   advance requires its repayments to be deleted first, or selected for deletion at the
+   same time.
+7. **Chart PNGs** are rendered in the browser (Plotly `downloadImage`), so no headless
+   Chrome or Kaleido is required.
+8. **Default budget horizon:** December of next year, until it is changed in Settings.
+9. **Localhost only.** The server binds to `127.0.0.1` because the app has no login. Use
+   `--host 0.0.0.0` only on a trusted network.
+10. **Exports are formula-safe.** Text cells in Excel and CSV exports that start with `=`,
+    `+`, `-`, `@`, a tab or a carriage return are prefixed with `'`. A name like
+    `=HYPERLINK(...)` therefore cannot run as a formula. The raw `data/*.csv` files are not
+    escaped, because they are the app's own storage. Open them in a spreadsheet only with
+    care.
+11. **Edits keep the original valuation.** Editing a transaction keeps its `amount_chf` and
+    `fx_date` unless the amount or currency changes.
+12. **Advances with repayments are locked.** The currency and advance account of an advanced
+    expenditure cannot change once repayments exist, and its advance share cannot drop
+    below what has already been repaid.
+13. **Storage safety:**
+    - Every write is fsynced before the file is replaced.
+    - `get()` returns a copy, so a failed update never leaves memory and disk out of sync.
+    - An unparsable value aborts startup with the file and line number, instead of
+      silently dropping data.
+
+## 8. Testing
+
+- `uv run pytest` runs the unit tests (`tests/`) for:
+  - FX parsing, cross-rates and date fallback;
+  - COICOP level counts and roll-up;
+  - every transaction type, the advance split, settlement and deletion rules;
+  - budget expansion, overwrite, horizon extension and shrinking, and no resurrection of
+    deleted or overwritten months;
+  - CSV round-trip, corrupt-file reporting and formula-safe exports;
+  - edit valuation and locking of repaid advances;
+  - wealth with carry-forward, projected wealth and the unaccounted-expenditure formula.
+- The UI was exercised end-to-end with Playwright against a seeded data set:
+  - all pages and the forms with advance and repayment;
+  - the grid filters, edit and multi-delete;
+  - horizon extension and budget-cell editing;
+  - balance recording;
+  - the Excel, PDF, CSV and PNG exports.
+
+## 9. Installers
+
+Installed builds are made with PyInstaller (see [packaging/README.md](../packaging/README.md)):
+
+- **macOS:** `Budget.app` inside a drag-to-Applications `.dmg`.
+- **Windows:** an Inno Setup installer. It installs per user, needs no admin rights, and
+  adds a Start-menu entry and an uninstaller.
+
+An installed build:
+
+- bundles Python and all dependencies, so neither uv nor Python is needed;
+- opens in a native window (pywebview: WebKit on macOS, WebView2 on Windows) on a free port;
+- keeps its data in the user data folder:
+  - macOS: `~/Library/Application Support/Budget`
+  - Windows: `%APPDATA%\Budget`
+
+  The data survives updates and uninstalls. `BUDGET_DATA_DIR` or `--data-dir` override the
+  location.
