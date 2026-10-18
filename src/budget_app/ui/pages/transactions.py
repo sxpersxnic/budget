@@ -10,22 +10,21 @@ from budget_app.services import accounts as acc_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import ValidationError
 from budget_app.services.reports import ADV_REPAY_NAME
-from budget_app.ui.layout import card, date_input, error, frame, parse_date, success
-from budget_app.ui.widgets.grid import confirm, make_grid, num_col
-from budget_app.ui.widgets.transaction_form import TransactionForm
+from budget_app.ui.layout import date_input, error, frame, on_data_changed, parse_date, success
+from budget_app.ui.widgets.grid import confirm, date_col, make_grid, money_col, num_col
+from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 COLUMNS = [
-    {"field": "date", "headerName": "Date", "sort": "desc", "width": 115},
-    {"field": "type", "headerName": "Type", "width": 140},
-    num_col("amount", "Amount", width=120),
-    {"field": "currency", "headerName": "Cur.", "width": 75},
-    num_col("amount_chf", "Amount CHF", width=130),
-    {"field": "category", "headerName": "Category", "width": 260},
-    {"field": "from", "headerName": "From", "width": 170},
-    {"field": "to", "headerName": "To", "width": 170},
-    {"field": "advance", "headerName": "Advance", "width": 160},
-    {"field": "comment", "headerName": "Comment", "width": 220},
-    {"field": "fx_date", "headerName": "FX date", "width": 110},
+    date_col("date", "Date", sort="desc", width=120),
+    {"field": "category", "headerName": "Category", "width": 250},
+    money_col("amount", "Amount", width=150),
+    {"field": "from", "headerName": "From", "width": 160},
+    {"field": "to", "headerName": "To", "width": 180},
+    {"field": "type", "headerName": "Type", "width": 130, "cellClass": "muted"},
+    num_col("amount_chf", "In CHF", width=120, cellClass="muted"),
+    {"field": "advance", "headerName": "Advance", "width": 150},
+    {"field": "comment", "headerName": "Note", "width": 200},
+    date_col("fx_date", "Rate Date", width=120, cellClass="muted"),
 ]
 
 
@@ -35,7 +34,7 @@ def _row(t: Transaction, accs: dict[str, str], income_cats: dict[str, str]) -> d
     elif t.type == TX_INCOME:
         category = ADV_REPAY_NAME if t.is_advance else income_cats.get(t.category, "")
     else:
-        category = ""
+        category = TX_TYPES.get(t.type, t.type)
     advance = ""
     if t.is_advance and t.type == TX_EXPENDITURE:
         advance = f"{t.advance_amount:.2f} · {t.debtor}"
@@ -57,34 +56,49 @@ def _row(t: Transaction, accs: dict[str, str], income_cats: dict[str, str]) -> d
         "advance": advance,
         "comment": t.comment,
         "fx_date": t.fx_date.isoformat(),
-        "_search": " ".join([category, accs.get(t.from_account, ""), to, t.debtor, t.comment]).lower(),
+        "_search": " ".join([category, accs.get(t.from_account, ""), to, t.debtor, t.comment, str(t.amount)]).lower(),
         "_accounts": [t.from_account, t.to_account, t.advance_account],
         "_type": t.type,
     }
 
 
 def page() -> None:
-    with frame("Transactions", "/transactions") as ctx:
-        with card():
-            with ui.row().classes("w-full items-start gap-2 flex-wrap"):
-                d_from = date_input("From date").classes("w-40")
-                d_to = date_input("To date").classes("w-40")
-                a_min = ui.number("Min amount").props("dense outlined").classes("w-32")
-                a_max = ui.number("Max amount").props("dense outlined").classes("w-32")
-                acc = ui.select(
-                    {a.id: acc_svc.account_label(a) for a in acc_svc.accounts(ctx)},
-                    label="Account (from/to)",
-                    with_input=True,
-                    clearable=True,
-                )
-                acc.props("dense outlined").classes("w-56")
-                typ = ui.select(TX_TYPES, label="Type", clearable=True).props("dense outlined").classes("w-44")
-                text = ui.input("Search").props("dense outlined clearable").classes("w-56")
-            grid = make_grid(COLUMNS)
-            with ui.row().classes("items-center gap-2"):
-                ui.button("Edit selected", icon="edit", on_click=lambda: edit_selected())  # noqa: PLW0108 - defined below
-                ui.button("Delete selected", icon="delete", color="negative", on_click=lambda: delete_selected())  # noqa: PLW0108 - defined below
-                count = ui.label().classes("text-sm text-slate-500")
+    with frame("Transactions", "/transactions") as (ctx, actions):
+        with actions:
+            text = ui.input(placeholder="Search").props("dense outlined clearable").classes("search w-64 max-sm:w-full")
+            with text.add_slot("prepend"):
+                ui.icon("search", size="18px").classes("text-3")
+            filter_btn = ui.button("Filters", icon="o_filter_list").props("flat").classes("text-primary")
+            ui.button("New Transaction", icon="add", on_click=lambda: open_transaction_sheet(ctx, apply_filters)).props(
+                "unelevated"
+            )
+        with ui.row().classes("w-full items-start gap-2 flex-wrap") as filters:
+            d_from = date_input("From").classes("w-40")
+            d_to = date_input("To").classes("w-40")
+            a_min = ui.number("Min amount").props("dense outlined").classes("w-32")
+            a_max = ui.number("Max amount").props("dense outlined").classes("w-32")
+            acc = ui.select(
+                {a.id: acc_svc.account_label(a) for a in acc_svc.accounts(ctx)},
+                label="Account",
+                with_input=True,
+                clearable=True,
+            )
+            acc.props("dense outlined").classes("w-56")
+            typ = ui.select(TX_TYPES, label="Type", clearable=True).props("dense outlined").classes("w-44")
+        filters.set_visibility(False)
+        filter_btn.on_click(lambda: filters.set_visibility(not filters.visible))
+        with ui.element("div").classes("selection-bar") as bar:
+            selected_label = ui.label().classes("font-medium")
+            ui.space()
+            ui.button("Edit", icon="o_edit", on_click=lambda: edit_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
+                "text-primary"
+            )
+            ui.button("Delete", icon="o_delete", on_click=lambda: delete_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
+                "text-negative"
+            )
+        bar.set_visibility(False)
+        grid = make_grid(COLUMNS)
+        count = ui.label().classes("caption px-1")
 
         def apply_filters() -> None:
             start, end = parse_date(d_from.value), parse_date(d_to.value)
@@ -109,26 +123,24 @@ def page() -> None:
                 rows.append(r)
             grid.options["rowData"] = rows
             grid.update()
-            count.set_text(f"{len(rows)} transactions")
+            total = len(ctx.store.transactions.all())
+            count.set_text(f"{len(rows)} of {total} transactions" if len(rows) != total else f"{total} transactions")
+            bar.set_visibility(False)
 
         for el in (d_from, d_to, a_min, a_max, acc, typ, text):
             el.on_value_change(apply_filters)
         apply_filters()
+        on_data_changed(apply_filters)
 
         def open_editor(tx_id: str) -> None:
             tx = ctx.store.transactions.get(tx_id)
-            if tx is None:
-                return
+            if tx is not None:
+                open_transaction_sheet(ctx, apply_filters, editing=tx)
 
-            def saved(_: Transaction) -> None:
-                dlg.close()
-                apply_filters()
-
-            with ui.dialog() as dlg, ui.card().classes("min-w-[56rem] max-w-[90vw]"):
-                ui.label("Edit transaction").classes("text-lg font-semibold")
-                TransactionForm(ctx, editing=tx, on_saved=saved)
-                ui.button("Cancel", on_click=dlg.close).props("flat")
-            dlg.open()
+        async def selection_changed() -> None:
+            rows = await grid.get_selected_rows()
+            bar.set_visibility(bool(rows))
+            selected_label.set_text(f"{len(rows)} selected")
 
         async def edit_selected() -> None:
             rows = await grid.get_selected_rows()
@@ -140,17 +152,18 @@ def page() -> None:
         async def delete_selected() -> None:
             rows = await grid.get_selected_rows()
             if not rows:
-                error("Select at least one transaction")
                 return
 
             def do() -> None:
                 try:
                     n = tx_svc.delete(ctx, [r["id"] for r in rows])
-                    success(f"Deleted {n} transaction(s)")
+                    success(f"Deleted {n} transaction{'' if n == 1 else 's'}")
                 except ValidationError as exc:
                     error(str(exc))
                 apply_filters()
 
-            confirm(f"Delete {len(rows)} transaction(s)?", do)
+            n = len(rows)
+            confirm(f"Delete {n} transaction{'' if n == 1 else 's'}?", do, detail="This can’t be undone.")
 
+        grid.on("selectionChanged", selection_changed)
         grid.on("rowDoubleClicked", lambda e: open_editor(e.args["data"]["id"]), ["data"])

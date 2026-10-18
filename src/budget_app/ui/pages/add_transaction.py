@@ -1,4 +1,4 @@
-"""Page for adding a transaction."""
+"""Page for adding a transaction (the same form also opens as a sheet from the sidebar)."""
 
 from __future__ import annotations
 
@@ -7,5 +7,5 @@ from budget_app.ui.widgets.transaction_form import TransactionForm
 
 
 def page() -> None:
-    with frame("Add transaction", "/add-transaction") as ctx, card():
+    with frame("New Transaction", "/add-transaction", narrow=True) as (ctx, _), card():
         TransactionForm(ctx)

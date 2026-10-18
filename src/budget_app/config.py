@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from importlib import metadata
 from pathlib import Path
 
 APP_NAME = "Budget"
@@ -14,6 +15,14 @@ ECB_CSV_NAME = "eurofxref-hist.csv"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RESOURCES_DIR = Path(__file__).resolve().parent / "resources"
 COICOP_FILE = RESOURCES_DIR / "coicop2018.csv"
+
+
+def app_version() -> str:
+    """Version from the package metadata (pyproject.toml); the installer build bundles that metadata."""
+    try:
+        return metadata.version("budget-app")
+    except metadata.PackageNotFoundError:
+        return "dev"
 
 
 def is_frozen() -> bool:

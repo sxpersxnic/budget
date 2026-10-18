@@ -9,21 +9,29 @@ from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, BudgetEntry
 from budget_app.services import budget as budget_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import card, data_month_range, error, frame, month_options, success
-from budget_app.ui.pages.add_budget import RECURRENCE
-from budget_app.ui.widgets.grid import confirm, make_grid, num_col
+from budget_app.ui.layout import (
+    data_month_range,
+    error,
+    frame,
+    month_options,
+    on_data_changed,
+    sheet,
+    sheet_buttons,
+    success,
+)
+from budget_app.ui.pages.add_budget import RECURRENCE, open_budget_sheet
+from budget_app.ui.widgets.grid import confirm, make_grid, money_col, month_col, num_col
 from budget_app.ui.widgets.selects import currency_select, expenditure_category_select, income_category_select
 
 TYPES = {BUDGET_EXPENDITURE: "Expenditure", BUDGET_INCOME: "Income"}
 COLUMNS = [
-    {"field": "month", "headerName": "Month", "sort": "asc", "width": 110},
-    {"field": "type", "headerName": "Type", "width": 120},
-    {"field": "category", "headerName": "Category", "width": 300},
-    num_col("amount", "Amount", width=120),
-    {"field": "currency", "headerName": "Cur.", "width": 75},
-    num_col("amount_chf", "Amount CHF", width=130),
-    {"field": "recurrence", "headerName": "Recurrence", "width": 150},
-    {"field": "comment", "headerName": "Comment", "width": 240},
+    month_col("month", "Month", sort="asc", width=120),
+    {"field": "category", "headerName": "Category", "width": 300, "flex": 1, "minWidth": 180},
+    money_col("amount", "Amount", width=150),
+    {"field": "type", "headerName": "Type", "width": 120, "cellClass": "muted"},
+    num_col("amount_chf", "In CHF", width=120, cellClass="muted"),
+    {"field": "recurrence", "headerName": "Repeats", "width": 170, "cellClass": "muted"},
+    {"field": "comment", "headerName": "Note", "width": 220},
 ]
 
 
@@ -35,24 +43,31 @@ def category_label(ctx: Context, b: BudgetEntry) -> str:
 
 
 def edit_dialog(ctx: Context, entry: BudgetEntry, on_saved) -> None:
-    with ui.dialog() as dlg, ui.card().classes("min-w-[30rem]"):
-        ui.label(f"Edit budget entry · {months.label(entry.month)}").classes("text-lg font-semibold")
+    later = [
+        b
+        for b in ctx.store.budget.all()
+        if entry.series_id and b.series_id == entry.series_id and b.month > entry.month
+    ]
+    with sheet(f"Budget for {months.label(entry.month)}", width="30rem") as dlg:
         if entry.type == BUDGET_EXPENDITURE:
             cat = expenditure_category_select(entry.category)
         else:
             cat = income_category_select(ctx, entry.category)
-        with ui.row().classes("gap-2"):
+        with ui.row().classes("w-full gap-2 no-wrap items-center"):
             amount = (
-                ui.number("Amount", value=entry.amount, min=0, format="%.2f").props("dense outlined").classes("w-40")
+                ui.number("Amount", value=entry.amount, min=0, format="%.2f")
+                .props("dense outlined")
+                .classes("flex-1 min-w-0")
             )
             cur = currency_select(ctx, entry.currency)
-        comment = ui.textarea("Comment", value=entry.comment).props("dense outlined autogrow").classes("w-full")
-        later = [
-            b
-            for b in ctx.store.budget.all()
-            if entry.series_id and b.series_id == entry.series_id and b.month > entry.month
-        ]
-        following = ui.checkbox(f"Also apply to the {len(later)} following month(s) of this series") if later else None
+        comment = ui.textarea("Note", value=entry.comment).props("dense outlined autogrow rows=1").classes("w-full")
+        following = (
+            ui.switch(f"Also change the {len(later)} later month{'' if len(later) == 1 else 's'} of this series").props(
+                "dense"
+            )
+            if later
+            else None
+        )
 
         def save() -> None:
             try:
@@ -62,39 +77,54 @@ def edit_dialog(ctx: Context, entry: BudgetEntry, on_saved) -> None:
                 error(str(exc))
                 return
             dlg.close()
-            success("Budget entry saved")
+            success("Budget updated")
             on_saved()
 
-        with ui.row().classes("justify-end w-full"):
-            ui.button("Cancel", on_click=dlg.close).props("flat")
-            ui.button("Save", on_click=save)
-    dlg.open()
+        sheet_buttons(dlg, "Save", save)
 
 
 def page() -> None:
-    with frame("Budget entries", "/budget-entries") as ctx:
+    with frame("Budget Plan", "/budget-entries", subtitle="Planned income and spending, month by month") as (
+        ctx,
+        actions,
+    ):
         first, last = data_month_range(ctx)
-        with card():
-            with ui.row().classes("w-full items-start gap-2 flex-wrap"):
-                m_from = (
-                    ui.select(month_options(first, last), label="From month", clearable=True)
-                    .props("dense outlined")
-                    .classes("w-40")
-                )
-                m_to = (
-                    ui.select(month_options(first, last), label="To month", clearable=True)
-                    .props("dense outlined")
-                    .classes("w-40")
-                )
-                a_min = ui.number("Min amount").props("dense outlined").classes("w-32")
-                a_max = ui.number("Max amount").props("dense outlined").classes("w-32")
-                typ = ui.select(TYPES, label="Type", clearable=True).props("dense outlined").classes("w-40")
-                text = ui.input("Search").props("dense outlined clearable").classes("w-56")
-            grid = make_grid(COLUMNS)
-            with ui.row().classes("items-center gap-2"):
-                ui.button("Edit selected", icon="edit", on_click=lambda: edit_selected())  # noqa: PLW0108 - defined below
-                ui.button("Delete selected", icon="delete", color="negative", on_click=lambda: delete_selected())  # noqa: PLW0108 - defined below
-                count = ui.label().classes("text-sm text-slate-500")
+        with actions:
+            text = ui.input(placeholder="Search").props("dense outlined clearable").classes("search w-64 max-sm:w-full")
+            with text.add_slot("prepend"):
+                ui.icon("search", size="18px").classes("text-3")
+            filter_btn = ui.button("Filters", icon="o_filter_list").props("flat").classes("text-primary")
+            ui.button("New Budget Entry", icon="add", on_click=lambda: open_budget_sheet(ctx, apply_filters)).props(
+                "unelevated"
+            )
+        with ui.row().classes("w-full items-start gap-2 flex-wrap") as filters:
+            m_from = (
+                ui.select(month_options(first, last), label="From", clearable=True)
+                .props("dense outlined options-dense")
+                .classes("w-40")
+            )
+            m_to = (
+                ui.select(month_options(first, last), label="To", clearable=True)
+                .props("dense outlined options-dense")
+                .classes("w-40")
+            )
+            a_min = ui.number("Min amount").props("dense outlined").classes("w-32")
+            a_max = ui.number("Max amount").props("dense outlined").classes("w-32")
+            typ = ui.select(TYPES, label="Type", clearable=True).props("dense outlined").classes("w-40")
+        filters.set_visibility(False)
+        filter_btn.on_click(lambda: filters.set_visibility(not filters.visible))
+        with ui.element("div").classes("selection-bar") as bar:
+            selected_label = ui.label().classes("font-medium")
+            ui.space()
+            ui.button("Edit", icon="o_edit", on_click=lambda: edit_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
+                "text-primary"
+            )
+            ui.button("Delete", icon="o_delete", on_click=lambda: delete_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
+                "text-negative"
+            )
+        bar.set_visibility(False)
+        grid = make_grid(COLUMNS)
+        count = ui.label().classes("caption px-1")
 
         def apply_filters() -> None:
             q = (text.value or "").lower().strip()
@@ -117,26 +147,34 @@ def page() -> None:
                         "id": b.id,
                         "month": b.month,
                         "type": TYPES.get(b.type, b.type),
+                        "_type": b.type,
                         "category": label,
                         "amount": b.amount,
                         "currency": b.currency,
                         "amount_chf": round(b.amount_chf, 2),
-                        "recurrence": rec + (" · forever" if b.forever else ""),
+                        "recurrence": rec + (", forever" if b.forever else ""),
                         "comment": b.comment,
                     }
                 )
             grid.options["rowData"] = rows
             grid.update()
-            count.set_text(f"{len(rows)} budget entries")
+            count.set_text(f"{len(rows)} budget entr{'y' if len(rows) == 1 else 'ies'}")
+            bar.set_visibility(False)
 
         for el in (m_from, m_to, a_min, a_max, typ, text):
             el.on_value_change(apply_filters)
         apply_filters()
+        on_data_changed(apply_filters)
 
         def open_editor(entry_id: str) -> None:
             entry = ctx.store.budget.get(entry_id)
             if entry:
                 edit_dialog(ctx, entry, apply_filters)
+
+        async def selection_changed() -> None:
+            rows = await grid.get_selected_rows()
+            bar.set_visibility(bool(rows))
+            selected_label.set_text(f"{len(rows)} selected")
 
         async def edit_selected() -> None:
             rows = await grid.get_selected_rows()
@@ -148,7 +186,6 @@ def page() -> None:
         async def delete_selected() -> None:
             rows = await grid.get_selected_rows()
             if not rows:
-                error("Select at least one budget entry")
                 return
 
             def do() -> None:
@@ -156,6 +193,9 @@ def page() -> None:
                 success(f"Deleted {n} budget entries")
                 apply_filters()
 
-            confirm(f"Delete {len(rows)} budget entr{'y' if len(rows) == 1 else 'ies'}?", do)
+            confirm(
+                f"Delete {len(rows)} budget entr{'y' if len(rows) == 1 else 'ies'}?", do, detail="This can’t be undone."
+            )
 
+        grid.on("selectionChanged", selection_changed)
         grid.on("rowDoubleClicked", lambda e: open_editor(e.args["data"]["id"]), ["data"])

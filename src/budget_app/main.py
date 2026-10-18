@@ -17,6 +17,7 @@ from nicegui import app, native, ui
 from budget_app import config
 from budget_app.services.context import init_context
 from budget_app.storage import lock as instance_lock
+from budget_app.ui import theme
 from budget_app.ui.layout import refresh_rates
 from budget_app.ui.pages import (
     add_budget,
@@ -29,20 +30,21 @@ from budget_app.ui.pages import (
 )
 
 PAGES = {
-    "/": overview.page,
-    "/budget": budget_overview.page,
-    "/add-transaction": add_transaction.page,
-    "/transactions": transactions.page,
-    "/add-budget": add_budget.page,
-    "/budget-entries": budget_entries.page,
-    "/settings": settings.page,
+    "/": ("Overview", overview.page),
+    "/budget": ("Budget", budget_overview.page),
+    "/add-transaction": ("New Transaction", add_transaction.page),
+    "/transactions": ("Transactions", transactions.page),
+    "/add-budget": ("New Budget Entry", add_budget.page),
+    "/budget-entries": ("Budget Plan", budget_entries.page),
+    "/settings": ("Settings", settings.page),
 }
 
 
 def setup(data_dir: Path) -> None:
     ctx = init_context(data_dir)
-    for path, builder in PAGES.items():
-        ui.page(path, title="Budget")(builder)
+    theme.install()
+    for path, (title, builder) in PAGES.items():
+        ui.page(path, title=f"{title} – Budget")(builder)
 
     async def refresh() -> None:
         await refresh_rates(ctx)
@@ -99,6 +101,7 @@ def run() -> None:
         reload=False,
         show=not args.no_show,
         favicon="💰",
+        dark=None,  # follow the system appearance
         reconnect_timeout=30,
     )
 

@@ -13,7 +13,7 @@ from budget_app.services.context import Context
 def expenditure_category_select(value: str | None = None, on_change=None, label: str = "Category") -> ui.select:
     """COICOP (any level) + Taxes, with a search field."""
     sel = ui.select(get_coicop().selectable(), label=label, value=value or None, with_input=True, on_change=on_change)
-    return sel.props("dense outlined options-dense clearable").classes("min-w-[22rem]")
+    return sel.props("dense outlined options-dense clearable").classes("w-full")
 
 
 def income_category_options(ctx: Context) -> dict[str, str]:
@@ -24,15 +24,17 @@ def income_category_select(ctx: Context, value: str | None = None, on_change=Non
     sel = ui.select(
         income_category_options(ctx), label="Income category", value=value or None, with_input=True, on_change=on_change
     )
-    return sel.props("dense outlined clearable").classes("min-w-[16rem]")
+    return sel.props("dense outlined clearable").classes("w-full")
 
 
-def currency_select(ctx: Context, value: str | None = None, on_change=None, label: str = "Currency") -> ui.select:
+def currency_select(
+    ctx: Context, value: str | None = None, on_change=None, label: str | None = "Currency"
+) -> ui.select:
     currencies = ctx.fx.currencies()
     sel = ui.select(
         currencies, label=label, value=value if value in currencies else None, with_input=True, on_change=on_change
     )
-    return sel.props("dense outlined").classes("w-32")
+    return sel.props("dense outlined options-dense").classes("w-28")
 
 
 def account_options(

@@ -21,7 +21,7 @@ from budget_app.domain.models import (
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
-from budget_app.ui.layout import date_input, error, fmt, parse_date, success
+from budget_app.ui.layout import date_input, error, fmt, parse_date, segmented, sheet, success
 from budget_app.ui.widgets.selects import (
     account_options,
     currency_select,
@@ -37,12 +37,18 @@ AUTO_ADVANCE = "__auto__"
 
 class TransactionForm:
     def __init__(
-        self, ctx: Context, editing: Transaction | None = None, on_saved: Callable[[Transaction], None] | None = None
+        self,
+        ctx: Context,
+        editing: Transaction | None = None,
+        on_saved: Callable[[Transaction], None] | None = None,
+        on_cancel: Callable[[], None] | None = None,
     ):
         self.ctx = ctx
         self.editing = editing
         self.on_saved = on_saved
+        self.on_cancel = on_cancel
         self._busy = False
+        self._touched = False  # explain why Save is disabled only once the user has started
         init = (
             tx_svc.to_input(editing)
             if editing
@@ -50,106 +56,109 @@ class TransactionForm:
         )
         self._build(init)
         self._changed()
+        self._touched = True
 
     # ------------------------------------------------------------------ layout
     def _build(self, init: TransactionInput) -> None:
         ch = self._changed
-        with ui.column().classes("w-full gap-3"):
-            with ui.row().classes("w-full items-start gap-3 flex-wrap"):
-                self.date = date_input("Date", init.date.isoformat() if init.date else "", on_change=ch).classes("w-44")
-                self.amount = ui.number(
-                    "Amount",
-                    value=init.amount,
-                    min=0,
-                    format="%.2f",
-                    on_change=ch,
-                    validation={"Must be positive": lambda v: v is None or v > 0},
-                )
-                self.amount.props("dense outlined").classes("w-40")
-                self.currency = currency_select(self.ctx, init.currency, on_change=ch)
-                self.base_hint = ui.label().classes("text-sm text-slate-500 self-center")
-            self.type = ui.toggle(dict(TX_TYPES.items()), value=init.type, on_change=ch)
-            self.type.props("no-caps unelevated toggle-color=primary")
+        with ui.column().classes("w-full gap-4"):
+            # The type decides every other field, so it comes first.
+            self.type = segmented(dict(TX_TYPES.items()), init.type, on_change=ch, full=True)
+            with ui.column().classes("w-full gap-1"):
+                with ui.row().classes("w-full gap-2 items-center no-wrap"):
+                    self.amount = ui.number(
+                        "Amount",
+                        value=init.amount,
+                        min=0,
+                        format="%.2f",
+                        on_change=ch,
+                        validation={"Must be positive": lambda v: v is None or v > 0},
+                    )
+                    self.amount.props("outlined inputmode=decimal autofocus").classes("hero-amount flex-1 min-w-0")
+                    self.currency = currency_select(self.ctx, init.currency, on_change=ch)
+                self.base_hint = ui.label().classes("caption px-1")
+            self.date = date_input("Date", init.date.isoformat() if init.date else "", on_change=ch).classes("w-full")
 
             # --- expenditure
             with ui.column().classes("w-full gap-3") as self.exp_box:
-                with ui.row().classes("gap-3 flex-wrap"):
-                    self.exp_category = expenditure_category_select(
-                        init.category if init.type == TX_EXPENDITURE else None, on_change=ch
-                    )
-                    self.exp_from = self._account_select(
-                        "From account", init.from_account if init.type == TX_EXPENDITURE else None
-                    )
-                self.exp_adv = ui.checkbox(
-                    "Advance payment (partly paid for others)",
+                self.exp_category = expenditure_category_select(
+                    init.category if init.type == TX_EXPENDITURE else None, on_change=ch
+                )
+                self.exp_from = self._account_select(
+                    "From Account", init.from_account if init.type == TX_EXPENDITURE else None
+                )
+                self.exp_adv = ui.switch(
+                    "Partly paid for others (advance payment)",
                     value=init.is_advance and init.type == TX_EXPENDITURE,
                     on_change=ch,
-                )
-                with ui.row().classes("gap-3 flex-wrap items-start pl-8") as self.exp_adv_box:
-                    self.adv_mode = ui.toggle(
-                        {"percent": "%", "amount": "Amount"}, value=init.advance_mode, on_change=ch
-                    ).props("dense no-caps")
-                    self.adv_value = ui.number("Paid for others", value=init.advance_value, min=0, on_change=ch)
-                    self.adv_value.props("dense outlined").classes("w-40")
+                ).props("dense")
+                with ui.column().classes("w-full gap-3 subform") as self.exp_adv_box:
+                    with ui.row().classes("w-full gap-2 items-center no-wrap"):
+                        self.adv_value = ui.number("Paid for others", value=init.advance_value, min=0, on_change=ch)
+                        self.adv_value.props("dense outlined").classes("flex-1 min-w-0")
+                        self.adv_mode = segmented({"percent": "%", "amount": "Amount"}, init.advance_mode, on_change=ch)
+                    self.adv_hint = ui.label().classes("caption px-1 -mt-2")
                     self.exp_adv_account = (
-                        ui.select({}, label="Advance payment account", on_change=ch)
+                        ui.select({}, label="Advance Payment Account", on_change=ch)
                         .props("dense outlined")
-                        .classes("min-w-[16rem]")
+                        .classes("w-full")
                     )
                     self._init_exp_adv_account = init.advance_account if init.type == TX_EXPENDITURE else ""
                     self.debtor = (
                         ui.input("Debtor", value=init.debtor if init.type == TX_EXPENDITURE else "", on_change=ch)
                         .props("dense outlined")
-                        .classes("w-56")
+                        .classes("w-full")
                     )
-                    self.adv_hint = ui.label().classes("text-sm text-slate-500 self-center")
 
             # --- income
             with ui.column().classes("w-full gap-3") as self.inc_box:
-                with ui.row().classes("gap-3 flex-wrap"):
-                    self.inc_category = income_category_select(
-                        self.ctx,
-                        init.category if init.type == TX_INCOME and not init.is_advance else None,
-                        on_change=ch,
-                    )
-                    self.inc_to = self._account_select(
-                        "To account", init.to_account if init.type == TX_INCOME else None
-                    )
-                self.inc_adv = ui.checkbox(
-                    "Repayment of an advance payment", value=init.is_advance and init.type == TX_INCOME, on_change=ch
+                self.inc_category = income_category_select(
+                    self.ctx,
+                    init.category if init.type == TX_INCOME and not init.is_advance else None,
+                    on_change=ch,
                 )
-                with ui.row().classes("gap-3 flex-wrap pl-8") as self.inc_adv_box:
+                self.inc_to = self._account_select("To Account", init.to_account if init.type == TX_INCOME else None)
+                self.inc_adv = ui.switch(
+                    "Repays an advance payment", value=init.is_advance and init.type == TX_INCOME, on_change=ch
+                ).props("dense")
+                with ui.column().classes("w-full gap-3 subform") as self.inc_adv_box:
                     self.inc_adv_account = ui.select(
-                        {}, label="Advance payment account", value=None, on_change=self._inc_adv_account_changed
+                        {}, label="Advance Payment Account", value=None, on_change=self._inc_adv_account_changed
                     )
-                    self.inc_adv_account.props("dense outlined").classes("min-w-[16rem]")
-                    self.open_items = ui.select({}, label="Outstanding payment", on_change=self._open_item_changed)
-                    self.open_items.props("dense outlined").classes("min-w-[24rem]")
+                    self.inc_adv_account.props("dense outlined").classes("w-full")
+                    self.open_items = ui.select({}, label="Outstanding Payment", on_change=self._open_item_changed)
+                    self.open_items.props("dense outlined").classes("w-full")
                     self._init_inc_adv = (init.advance_account, init.settles_id) if init.type == TX_INCOME else ("", "")
 
             # --- transfer / exchange
-            with ui.row().classes("gap-3 flex-wrap items-center") as self.move_box:
+            with ui.column().classes("w-full gap-1") as self.move_box:
                 init_move = init.type in (TX_TRANSFER, TX_EXCHANGE)
-                self.move_from = self._account_select("From account", init.from_account if init_move else None)
-                ui.icon("arrow_forward").classes("text-slate-400")
-                self.move_to = self._account_select("To account", init.to_account if init_move else None)
-                self.exchange_hint = ui.label().classes("text-sm text-slate-500")
+                with ui.row().classes("w-full gap-2 items-center no-wrap max-sm:flex-wrap"):
+                    self.move_from = self._account_select("From", init.from_account if init_move else None)
+                    ui.icon("arrow_forward", size="18px").classes("text-3 max-sm:hidden")
+                    self.move_to = self._account_select("To", init.to_account if init_move else None)
+                self.exchange_hint = ui.label().classes("caption px-1")
 
             self.comment = (
-                ui.textarea("Comment (optional)", value=init.comment)
-                .props("dense outlined autogrow")
-                .classes("w-full max-w-2xl")
+                ui.textarea("Note", value=init.comment, placeholder="Optional")
+                .props("dense outlined autogrow rows=1")
+                .classes("w-full")
             )
-            with ui.row().classes("gap-2 items-center"):
-                self.save_btn = ui.button("Save changes" if self.editing else "Save", icon="save", on_click=self._save)
-                self.status = ui.label().classes("text-sm text-slate-500")
+            with ui.row().classes("w-full items-center gap-2 no-wrap pt-1"):
+                self.status = ui.label().classes("caption")
+                ui.space()
+                if self.on_cancel:
+                    ui.button("Cancel", on_click=self.on_cancel).props("flat").classes("text-primary")
+                self.save_btn = ui.button(
+                    "Save Changes" if self.editing else "Add Transaction", on_click=self._save
+                ).props("unelevated")
 
     def _account_select(self, label: str, value: str | None) -> ui.select:
         value = value or None
         sel = ui.select(
             {value: value} if value else {}, label=label, value=value, with_input=True, on_change=self._changed
         )
-        return sel.props("dense outlined").classes("min-w-[16rem]")
+        return sel.props("dense outlined").classes("w-full flex-1 min-w-0")
 
     # ------------------------------------------------------------------ events
     def _inc_adv_account_changed(self) -> None:
@@ -180,7 +189,7 @@ class TransactionForm:
             self.status.set_text("")
         except ValidationError as exc:
             self.save_btn.disable()
-            self.status.set_text(str(exc))
+            self.status.set_text(str(exc) if self._touched or self.editing else "")
         self._update_hints(inp)
 
     # ------------------------------------------------------------- dependents
@@ -306,7 +315,7 @@ class TransactionForm:
         except Exception as exc:  # validation and FX errors
             error(str(exc))
             return
-        success("Transaction saved")
+        success("Changes saved" if self.editing else "Transaction added")
         if self.on_saved:
             self.on_saved(tx)
         if not self.editing:
@@ -336,4 +345,20 @@ class TransactionForm:
             self.exp_adv_account.set_value(None)
         finally:
             self._busy = False
+        self._touched = False
         self._changed()
+        self._touched = True
+
+
+def open_transaction_sheet(
+    ctx: Context, on_saved: Callable[[], None] | None = None, editing: Transaction | None = None
+) -> None:
+    """The transaction form as a modal sheet, so a transaction can be added from any page."""
+
+    def saved(_: Transaction) -> None:
+        dlg.close()
+        if on_saved:
+            on_saved()
+
+    with sheet("Edit Transaction" if editing else "New Transaction", width="34rem") as dlg:
+        TransactionForm(ctx, editing=editing, on_saved=saved, on_cancel=dlg.close)
