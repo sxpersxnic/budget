@@ -54,6 +54,9 @@ class CsvTable[T: Record]:
 
     `all()` returns the live records and must be treated as read-only; `get()` returns a copy
     that can be modified and passed back to `update()`.
+
+    Columns this version does not know (written by a newer version) are kept and written back
+    unchanged, so opening the data with an older version never drops them.
     """
 
     def __init__(self, path: Path, cls: type[T]):
@@ -63,6 +66,8 @@ class CsvTable[T: Record]:
         self._types = typing.get_type_hints(cls)
         self._lock = threading.RLock()
         self._rows: dict[str, T] = {}
+        self._extra_fields: list[str] = []
+        self._extras: dict[str, dict[str, str]] = {}  # record id -> values of the unknown columns
         self._load()
 
     def _load(self) -> None:
@@ -71,6 +76,7 @@ class CsvTable[T: Record]:
             return
         with self.path.open(newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
+            self._extra_fields = [c for c in reader.fieldnames or [] if c and c not in self._fields]
             for raw in reader:
                 try:
                     kwargs = {k: _from_str(raw[k], self._types[k]) for k in self._fields if k in raw}
@@ -78,15 +84,20 @@ class CsvTable[T: Record]:
                 except (TypeError, ValueError) as exc:
                     raise CorruptDataError(f"{self.path} line {reader.line_num}: {exc}") from exc
                 self._rows[obj.id] = obj
+                if self._extra_fields:
+                    self._extras[obj.id] = {c: raw.get(c) or "" for c in self._extra_fields}
 
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".csv.tmp")
         with tmp.open("w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(self._fields)
+            writer.writerow(self._fields + self._extra_fields)
             for obj in self._rows.values():
-                writer.writerow([_to_str(getattr(obj, k)) for k in self._fields])
+                extra = self._extras.get(obj.id, {})
+                writer.writerow(
+                    [_to_str(getattr(obj, k)) for k in self._fields] + [extra.get(c, "") for c in self._extra_fields]
+                )
             f.flush()
             os.fsync(f.fileno())  # never replace the old file with a partially written one
         tmp.replace(self.path)
@@ -131,6 +142,7 @@ class CsvTable[T: Record]:
             ids = [i for i in ids if i in self._rows]
             for i in ids:
                 del self._rows[i]
+                self._extras.pop(i, None)
             if ids:
                 self._save()
         return len(ids)

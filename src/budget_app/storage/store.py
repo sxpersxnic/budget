@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import os
 from pathlib import Path
 
 from budget_app.domain.models import Account, AccountEntry, BudgetEntry, IncomeCategory, Settings, Transaction
@@ -14,16 +15,21 @@ class SettingsStore:
     def __init__(self, path: Path):
         self.path = path
         self.value = Settings()
+        self._unknown: dict = {}  # keys of a newer version, written back unchanged
         if path.exists():
             raw = json.loads(path.read_text(encoding="utf-8"))
             known = {f.name for f in dataclasses.fields(Settings)}
             self.value = Settings(**{k: v for k, v in raw.items() if k in known})
+            self._unknown = {k: v for k, v in raw.items() if k not in known}
         else:
             self.save()
 
     def save(self) -> None:
         tmp = self.path.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(dataclasses.asdict(self.value), indent=2), encoding="utf-8")
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(self._unknown | dataclasses.asdict(self.value), f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())  # never replace the old file with a partially written one
         tmp.replace(self.path)
 
 

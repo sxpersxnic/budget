@@ -6,9 +6,10 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from budget_app.config import BASE_CURRENCY
+from budget_app.config import BASE_CURRENCY, app_version
 from budget_app.domain import months
 from budget_app.domain.fx import FxRates, FxService
+from budget_app.storage import backup
 from budget_app.storage.store import Store
 
 
@@ -58,6 +59,7 @@ _ctx: Context | None = None
 
 def init_context(data_dir: Path) -> Context:
     global _ctx  # noqa: PLW0603 - process-wide singleton set once at startup
+    backup.backup_on_version_change(data_dir, app_version())  # before the store reads or writes anything
     _ctx = Context(store=Store(data_dir), fx_service=FxService(data_dir))
     return _ctx
 
