@@ -131,7 +131,9 @@ The app opens in its own window and keeps all data in your user folder:
 3. **New Transaction** (top of the sidebar, available on every page): record expenditures
    (with a COICOP category or taxes), income, transfers and currency exchanges. Turn on
    *Partly paid for others* when part of a payment was for someone else. Record their
-   repayment later as income with *Repays an advance payment*.
+   repayment later as income with *Repays an advance payment*. Under **Items** you can list
+   what you bought (for example a grocery receipt) with quantity and price; the Transactions
+   search then also finds a purchase by item name.
 4. **Transactions → Import…** (optional): bring in a CSV export from your e-banking
    instead of typing. Choose the account, check the detected columns, give the new rows a
    category and import. The column settings can be saved per bank; transactions already

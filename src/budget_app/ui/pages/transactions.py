@@ -8,6 +8,7 @@ from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import TX_EXCHANGE, TX_EXPENDITURE, TX_INCOME, TX_TYPES, Transaction
 from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
+from budget_app.services import items as items_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import ValidationError
 from budget_app.services.reports import ADV_REPAY_NAME
@@ -21,6 +22,7 @@ def _columns() -> list[dict]:
         date_col("date", t("Date"), sort="desc", width=120),
         {"field": "category", "headerName": t("Category"), "width": 250},
         money_col("amount", t("Amount"), width=150),
+        {"field": "items", "headerName": t("Items"), "width": 90, "type": "rightAligned", "cellClass": "muted"},
         {"field": "from", "headerName": tc("account", "From"), "width": 160},
         {"field": "to", "headerName": tc("account", "To"), "width": 180},
         {"field": "type", "headerName": t("Type"), "width": 130, "cellClass": "muted"},
@@ -35,7 +37,9 @@ def _type_label(tx_type: str) -> str:
     return t(TX_TYPES[tx_type]) if tx_type in TX_TYPES else tx_type
 
 
-def _row(tx: Transaction, accs: dict[str, str], income_cats: dict[str, str]) -> dict:
+def _row(
+    tx: Transaction, accs: dict[str, str], income_cats: dict[str, str], item_counts: dict, item_names: dict
+) -> dict:
     if tx.type == TX_EXPENDITURE:
         category = get_coicop().label(tx.category)
     elif tx.type == TX_INCOME:
@@ -63,8 +67,17 @@ def _row(tx: Transaction, accs: dict[str, str], income_cats: dict[str, str]) -> 
         "advance": advance,
         "comment": tx.comment,
         "fx_date": tx.fx_date.isoformat(),
+        "items": item_counts.get(tx.id) or None,
         "_search": " ".join(
-            [category, accs.get(tx.from_account, ""), to, tx.debtor, tx.comment, str(tx.amount)]
+            [
+                category,
+                accs.get(tx.from_account, ""),
+                to,
+                tx.debtor,
+                tx.comment,
+                str(tx.amount),
+                item_names.get(tx.id, ""),  # find a receipt by what was bought
+            ]
         ).lower(),
         "_accounts": [tx.from_account, tx.to_account, tx.advance_account],
         "_type": tx.type,
@@ -123,6 +136,7 @@ def page() -> None:
             q = (text.value or "").lower().strip()
             accs = {a.id: acc_svc.account_label(a) for a in ctx.store.accounts.all()}
             income_cats = {c.id: c.name for c in ctx.store.income_categories.all()}
+            item_counts, item_names = items_svc.counts(ctx), items_svc.names_by_transaction(ctx)
             rows = []
             for tx in ctx.store.transactions.all():
                 if (start and tx.date < start) or (end and tx.date > end):
@@ -133,7 +147,7 @@ def page() -> None:
                     continue
                 if typ.value and tx.type != typ.value:
                     continue
-                r = _row(tx, accs, income_cats)
+                r = _row(tx, accs, income_cats, item_counts, item_names)
                 if acc.value and acc.value not in r["_accounts"]:
                     continue
                 if q and q not in r["_search"]:

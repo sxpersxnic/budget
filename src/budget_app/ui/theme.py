@@ -217,6 +217,16 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
 .q-toggle__inner--truthy .q-toggle__track { opacity: 1 !important; }
 .q-toggle__inner--truthy .q-toggle__thumb:after { background: #fff !important; }
 
+/* product list rows in the transaction form */
+.item-row { display: grid; grid-template-columns: minmax(0, 1fr) 4.5rem 6.5rem 5.5rem 1.75rem; gap: 6px;
+  align-items: center; width: 100%; }
+.item-row.head { font-size: 12px; color: var(--label-2); font-weight: 500; padding: 0 2px; }
+.item-row .r { text-align: right; }
+@media (max-width: 520px) {
+  .item-row { grid-template-columns: minmax(0, 1fr) 3.75rem 5.5rem 1.75rem; }
+  .item-row .c-total { display: none; }
+}
+
 /* indented, dependent group of fields */
 .subform { border-left: 2px solid var(--separator); padding-left: 14px; margin-left: 4px; }
 

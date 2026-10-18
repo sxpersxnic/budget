@@ -7,7 +7,15 @@ import json
 import os
 from pathlib import Path
 
-from budget_app.domain.models import Account, AccountEntry, BudgetEntry, IncomeCategory, Settings, Transaction
+from budget_app.domain.models import (
+    Account,
+    AccountEntry,
+    BudgetEntry,
+    IncomeCategory,
+    Settings,
+    Transaction,
+    TransactionItem,
+)
 from budget_app.storage.csv_store import CsvTable
 
 
@@ -40,6 +48,7 @@ class Store:
         self.accounts = CsvTable(data_dir / "accounts.csv", Account)
         self.income_categories = CsvTable(data_dir / "income_categories.csv", IncomeCategory)
         self.transactions = CsvTable(data_dir / "transactions.csv", Transaction)
+        self.transaction_items = CsvTable(data_dir / "transaction_items.csv", TransactionItem)
         self.account_entries = CsvTable(data_dir / "account_entries.csv", AccountEntry)
         self.budget = CsvTable(data_dir / "budget_entries.csv", BudgetEntry)
         self._settings = SettingsStore(data_dir / "settings.json")

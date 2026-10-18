@@ -20,10 +20,12 @@ from budget_app.domain.models import (
     Transaction,
 )
 from budget_app.i18n import t, tc
+from budget_app.services import items as items_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
 from budget_app.ui.layout import date_input, error, fmt, parse_date, segmented, sheet, success
+from budget_app.ui.widgets.item_list import ItemList
 from budget_app.ui.widgets.selects import (
     account_options,
     currency_select,
@@ -147,6 +149,15 @@ class TransactionForm:
                     self.move_to = self._account_select(tc("account", "To"), init.to_account if init_move else None)
                 self.exchange_hint = ui.label().classes("caption px-1")
 
+            with ui.column().classes("w-full") as self.items_box:
+                self.items = ItemList(
+                    items_svc.known_names(self.ctx),
+                    items_svc.items_for(self.ctx, self.editing.id) if self.editing else [],
+                    amount=lambda: self.amount.value,
+                    currency=lambda: self.currency.value or "",
+                    use_total=self._use_items_total,
+                )
+
             self.comment = (
                 ui.textarea(t("Note"), value=init.comment, placeholder=t("Optional"))
                 .props("dense outlined autogrow rows=1")
@@ -169,6 +180,9 @@ class TransactionForm:
         return sel.props("dense outlined").classes("w-full flex-1 min-w-0")
 
     # ------------------------------------------------------------------ events
+    def _use_items_total(self, total: float) -> None:
+        self.amount.value = total
+
     def _inc_adv_account_changed(self) -> None:
         self.open_items.value = None
         self._changed()
@@ -199,6 +213,7 @@ class TransactionForm:
             self.save_btn.disable()
             self.status.set_text(str(exc) if self._touched or self.editing else "")
         self._update_hints(inp)
+        self.items.refresh()
 
     # ------------------------------------------------------------- dependents
     def _refresh_options(self) -> None:
@@ -206,6 +221,7 @@ class TransactionForm:
         self.exp_box.set_visibility(kind == TX_EXPENDITURE)
         self.inc_box.set_visibility(kind == TX_INCOME)
         self.move_box.set_visibility(kind in (TX_TRANSFER, TX_EXCHANGE))
+        self.items_box.set_visibility(kind in (TX_EXPENDITURE, TX_INCOME))
         self.exp_adv_box.set_visibility(bool(self.exp_adv.value))
         self.inc_adv_box.set_visibility(bool(self.inc_adv.value))
         self.inc_category.set_visibility(not self.inc_adv.value)
@@ -328,8 +344,13 @@ class TransactionForm:
         return inp
 
     def _save(self) -> None:
+        inp = self.read()
+        # transfers and exchanges have no product list; switching to one drops an existing list
+        item_inputs = self.items.read() if inp.type in (TX_EXPENDITURE, TX_INCOME) else []
         try:
-            tx = tx_svc.save(self.ctx, self.read(), self.editing.id if self.editing else "")
+            items_svc.validate(item_inputs)  # before saving, so a bad item cannot leave half a change
+            tx = tx_svc.save(self.ctx, inp, self.editing.id if self.editing else "")
+            items_svc.replace(self.ctx, tx.id, item_inputs)
         except Exception as exc:  # validation and FX errors
             error(str(exc))
             return
@@ -361,6 +382,7 @@ class TransactionForm:
             self.debtor.set_value("")
             self.comment.set_value("")
             self.exp_adv_account.set_value(None)
+            self.items.clear()
         finally:
             self._busy = False
         self._touched = False

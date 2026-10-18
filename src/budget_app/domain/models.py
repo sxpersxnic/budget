@@ -73,6 +73,22 @@ class Transaction:
 
 
 @dataclass
+class TransactionItem:
+    """One line of a transaction's product list (e.g. a receipt), in the transaction's currency."""
+
+    transaction_id: str
+    name: str
+    quantity: float = 1.0
+    unit_price: float = 0.0  # negative for discounts
+    position: int = 0  # order within the list
+    id: str = field(default_factory=new_id)
+
+    @property
+    def total(self) -> float:
+        return round(self.quantity * self.unit_price, 2)
+
+
+@dataclass
 class AccountEntry:
     """Recorded balance of an account at the end of a month."""
 

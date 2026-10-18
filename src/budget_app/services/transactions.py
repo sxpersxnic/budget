@@ -293,4 +293,7 @@ def delete(ctx: Context, ids: list[str]) -> int:
         raise ValidationError(
             t("Some selected advance payments have repayments. Delete the repayments first (or select them as well).")
         )
-    return ctx.store.transactions.delete(ids)
+    items = [i.id for i in ctx.store.transaction_items.all() if i.transaction_id in ids_set]
+    count = ctx.store.transactions.delete(ids)
+    ctx.store.transaction_items.delete(items)  # a transaction's product list goes with it
+    return count
