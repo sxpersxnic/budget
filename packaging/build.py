@@ -81,6 +81,9 @@ def pyinstaller() -> Path:
         f"{Path(nicegui.__file__).parent}{sep}nicegui",
         "--add-data",
         f"{ROOT / 'src' / 'budget_app' / 'resources'}{sep}budget_app/resources",
+        # the app reads its version from the package metadata (see budget_app.config.app_version)
+        "--copy-metadata",
+        "budget-app",
         "--exclude-module",
         "tkinter",
     ]
@@ -149,7 +152,9 @@ def build_macos(app: Path) -> Path:
     (staging / "Applications").symlink_to("/Applications")
     dmg = DIST / f"{NAME}-{version()}-macOS-{platform.machine()}.dmg"
     dmg.unlink(missing_ok=True)
-    run(["hdiutil", "create", "-volname", NAME, "-srcfolder", staging, "-fs", "HFS+", "-format", "ULMO", "-ov", dmg])
+    # the version in the volume name tells users which version they are about to install
+    volname = f"{NAME} {version()}"
+    run(["hdiutil", "create", "-volname", volname, "-srcfolder", staging, "-fs", "HFS+", "-format", "ULMO", "-ov", dmg])
     return dmg
 
 

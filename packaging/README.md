@@ -48,7 +48,38 @@ Both wrappers:
 `uv run --group build python packaging/build.py`.
 
 The version comes from `pyproject.toml` (`[project] version`). Raise it before building a new
-release.
+release; it is the only place it is set.
+
+## Releasing an update
+
+1. Raise `version` in `pyproject.toml`, for example `0.1.0` → `0.2.0`, and run `uv sync`.
+2. Build on each platform (`just build`, or the wrappers above).
+3. Commit `pyproject.toml`, `uv.lock` and the new files in `installers/`.
+
+What makes the new installer an update rather than a second copy:
+
+- **Version everywhere.** `build.py` bundles the package metadata (`--copy-metadata
+  budget-app`), so the app shows its version in the sidebar. The same number names the DMG,
+  its volume ("Budget 0.2.0"), `Info.plist`, the Windows Setup file and its *Installed apps* entry.
+- **Windows** (`windows/budget.iss`). The fixed `AppId` finds the existing installation, whose
+  folder, language and tasks are reused. The tasks page is skipped and the Ready page states
+  *Budget 0.1.0 will be replaced by version 0.2.0*. `CloseApplications` asks to close a running
+  Budget (Windows Restart Manager). `[InstallDelete]` removes the old `_internal` folder first:
+  PyInstaller's file set changes between versions, and stale libraries must not survive.
+- **macOS.** `Budget.app` keeps its bundle identifier (`app.budget.local`), so dragging the new
+  version onto *Applications* replaces the old one. The data lives outside the bundle.
+- **Data.** Both platforms keep user data outside the program folder (`~/Library/Application
+  Support/Budget`, `%APPDATA%\Budget`), so installing an update never touches it; the Windows
+  uninstaller leaves it too. In the app itself:
+  - The first start of a new version copies the data files to `backups/<date>_<old>_to_<new>/`
+    before reading them (`storage/backup.py`, keeps the last ten).
+  - Every write goes to a temporary file, is flushed to disk and then replaces the old file,
+    so closing the app during an update can't leave a half-written file.
+  - Columns and settings a version doesn't know are written back unchanged, so a downgrade
+    doesn't drop them.
+  - A release that adds a field must give it a default value, so files from older versions
+    still load. A release that changes the format must migrate old files when they are
+    loaded; the backup is the safety net.
 
 | File | Purpose |
 | --- | --- |
