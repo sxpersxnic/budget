@@ -7,6 +7,7 @@ from nicegui import ui
 from budget_app.domain import months
 from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, BudgetEntry
+from budget_app.i18n import N_, t, tn
 from budget_app.services import budget as budget_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import (
@@ -23,16 +24,19 @@ from budget_app.ui.pages.add_budget import RECURRENCE, open_budget_sheet
 from budget_app.ui.widgets.grid import confirm, make_grid, money_col, month_col, num_col
 from budget_app.ui.widgets.selects import currency_select, expenditure_category_select, income_category_select
 
-TYPES = {BUDGET_EXPENDITURE: "Expenditure", BUDGET_INCOME: "Income"}
-COLUMNS = [
-    month_col("month", "Month", sort="asc", width=120),
-    {"field": "category", "headerName": "Category", "width": 300, "flex": 1, "minWidth": 180},
-    money_col("amount", "Amount", width=150),
-    {"field": "type", "headerName": "Type", "width": 120, "cellClass": "muted"},
-    num_col("amount_chf", "In CHF", width=120, cellClass="muted"),
-    {"field": "recurrence", "headerName": "Repeats", "width": 170, "cellClass": "muted"},
-    {"field": "comment", "headerName": "Note", "width": 220},
-]
+TYPES = {BUDGET_EXPENDITURE: N_("Expenditure"), BUDGET_INCOME: N_("Income")}
+
+
+def _columns() -> list[dict]:
+    return [
+        month_col("month", t("Month"), sort="asc", width=120),
+        {"field": "category", "headerName": t("Category"), "width": 300, "flex": 1, "minWidth": 180},
+        money_col("amount", t("Amount"), width=150),
+        {"field": "type", "headerName": t("Type"), "width": 120, "cellClass": "muted"},
+        num_col("amount_chf", t("In CHF"), width=120, cellClass="muted"),
+        {"field": "recurrence", "headerName": t("Repeats"), "width": 170, "cellClass": "muted"},
+        {"field": "comment", "headerName": t("Note"), "width": 220},
+    ]
 
 
 def category_label(ctx: Context, b: BudgetEntry) -> str:
@@ -48,23 +52,27 @@ def edit_dialog(ctx: Context, entry: BudgetEntry, on_saved) -> None:
         for b in ctx.store.budget.all()
         if entry.series_id and b.series_id == entry.series_id and b.month > entry.month
     ]
-    with sheet(f"Budget for {months.label(entry.month)}", width="30rem") as dlg:
+    with sheet(t("Budget for {month}", month=months.label(entry.month)), width="30rem") as dlg:
         if entry.type == BUDGET_EXPENDITURE:
             cat = expenditure_category_select(entry.category)
         else:
             cat = income_category_select(ctx, entry.category)
         with ui.row().classes("w-full gap-2 no-wrap items-center"):
             amount = (
-                ui.number("Amount", value=entry.amount, min=0, format="%.2f")
+                ui.number(t("Amount"), value=entry.amount, min=0, format="%.2f")
                 .props("dense outlined")
                 .classes("flex-1 min-w-0")
             )
             cur = currency_select(ctx, entry.currency)
-        comment = ui.textarea("Note", value=entry.comment).props("dense outlined autogrow rows=1").classes("w-full")
+        comment = ui.textarea(t("Note"), value=entry.comment).props("dense outlined autogrow rows=1").classes("w-full")
         following = (
-            ui.switch(f"Also change the {len(later)} later month{'' if len(later) == 1 else 's'} of this series").props(
-                "dense"
-            )
+            ui.switch(
+                tn(
+                    "Also change the {n} later month of this series",
+                    "Also change the {n} later months of this series",
+                    len(later),
+                )
+            ).props("dense")
             if later
             else None
         )
@@ -77,53 +85,59 @@ def edit_dialog(ctx: Context, entry: BudgetEntry, on_saved) -> None:
                 error(str(exc))
                 return
             dlg.close()
-            success("Budget updated")
+            success(t("Budget updated"))
             on_saved()
 
-        sheet_buttons(dlg, "Save", save)
+        sheet_buttons(dlg, t("Save"), save)
 
 
 def page() -> None:
-    with frame("Budget Plan", "/budget-entries", subtitle="Planned income and spending, month by month") as (
+    with frame(t("Budget Plan"), "/budget-entries", subtitle=t("Planned income and spending, month by month")) as (
         ctx,
         actions,
     ):
         first, last = data_month_range(ctx)
         with actions:
-            text = ui.input(placeholder="Search").props("dense outlined clearable").classes("search w-64 max-sm:w-full")
+            text = (
+                ui.input(placeholder=t("Search")).props("dense outlined clearable").classes("search w-64 max-sm:w-full")
+            )
             with text.add_slot("prepend"):
                 ui.icon("search", size="18px").classes("text-3")
-            filter_btn = ui.button("Filters", icon="o_filter_list").props("flat").classes("text-primary")
-            ui.button("New Budget Entry", icon="add", on_click=lambda: open_budget_sheet(ctx, apply_filters)).props(
+            filter_btn = ui.button(t("Filters"), icon="o_filter_list").props("flat").classes("text-primary")
+            ui.button(t("New Budget Entry"), icon="add", on_click=lambda: open_budget_sheet(ctx, apply_filters)).props(
                 "unelevated"
             )
         with ui.row().classes("w-full items-start gap-2 flex-wrap") as filters:
             m_from = (
-                ui.select(month_options(first, last), label="From", clearable=True)
+                ui.select(month_options(first, last), label=t("From"), clearable=True)
                 .props("dense outlined options-dense")
                 .classes("w-40")
             )
             m_to = (
-                ui.select(month_options(first, last), label="To", clearable=True)
+                ui.select(month_options(first, last), label=t("To"), clearable=True)
                 .props("dense outlined options-dense")
                 .classes("w-40")
             )
-            a_min = ui.number("Min amount").props("dense outlined").classes("w-32")
-            a_max = ui.number("Max amount").props("dense outlined").classes("w-32")
-            typ = ui.select(TYPES, label="Type", clearable=True).props("dense outlined").classes("w-40")
+            a_min = ui.number(t("Min amount")).props("dense outlined").classes("w-32")
+            a_max = ui.number(t("Max amount")).props("dense outlined").classes("w-32")
+            typ = (
+                ui.select({k: t(v) for k, v in TYPES.items()}, label=t("Type"), clearable=True)
+                .props("dense outlined")
+                .classes("w-40")
+            )
         filters.set_visibility(False)
         filter_btn.on_click(lambda: filters.set_visibility(not filters.visible))
         with ui.element("div").classes("selection-bar") as bar:
             selected_label = ui.label().classes("font-medium")
             ui.space()
-            ui.button("Edit", icon="o_edit", on_click=lambda: edit_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
+            ui.button(t("Edit"), icon="o_edit", on_click=lambda: edit_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
                 "text-primary"
             )
-            ui.button("Delete", icon="o_delete", on_click=lambda: delete_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
+            ui.button(t("Delete"), icon="o_delete", on_click=lambda: delete_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
                 "text-negative"
             )
         bar.set_visibility(False)
-        grid = make_grid(COLUMNS)
+        grid = make_grid(_columns())
         count = ui.label().classes("caption px-1")
 
         def apply_filters() -> None:
@@ -141,24 +155,28 @@ def page() -> None:
                 label = category_label(ctx, b)
                 if q and q not in f"{label} {b.comment}".lower():
                     continue
-                rec = RECURRENCE.get(b.recur_months, f"Every {b.recur_months} months")
+                rec = (
+                    t(RECURRENCE[b.recur_months])
+                    if b.recur_months in RECURRENCE
+                    else t("Every {n} months", n=b.recur_months)
+                )
                 rows.append(
                     {
                         "id": b.id,
                         "month": b.month,
-                        "type": TYPES.get(b.type, b.type),
+                        "type": t(TYPES[b.type]) if b.type in TYPES else b.type,
                         "_type": b.type,
                         "category": label,
                         "amount": b.amount,
                         "currency": b.currency,
                         "amount_chf": round(b.amount_chf, 2),
-                        "recurrence": rec + (", forever" if b.forever else ""),
+                        "recurrence": t("{repeat}, forever", repeat=rec) if b.forever else rec,
                         "comment": b.comment,
                     }
                 )
             grid.options["rowData"] = rows
             grid.update()
-            count.set_text(f"{len(rows)} budget entr{'y' if len(rows) == 1 else 'ies'}")
+            count.set_text(tn("{n} budget entry", "{n} budget entries", len(rows)))
             bar.set_visibility(False)
 
         for el in (m_from, m_to, a_min, a_max, typ, text):
@@ -174,12 +192,12 @@ def page() -> None:
         async def selection_changed() -> None:
             rows = await grid.get_selected_rows()
             bar.set_visibility(bool(rows))
-            selected_label.set_text(f"{len(rows)} selected")
+            selected_label.set_text(t("{n} selected", n=len(rows)))
 
         async def edit_selected() -> None:
             rows = await grid.get_selected_rows()
             if len(rows) != 1:
-                error("Select exactly one budget entry to edit")
+                error(t("Select exactly one budget entry to edit"))
                 return
             open_editor(rows[0]["id"])
 
@@ -190,11 +208,13 @@ def page() -> None:
 
             def do() -> None:
                 n = budget_svc.delete(ctx, [r["id"] for r in rows])
-                success(f"Deleted {n} budget entries")
+                success(tn("Deleted {n} budget entry", "Deleted {n} budget entries", n))
                 apply_filters()
 
             confirm(
-                f"Delete {len(rows)} budget entr{'y' if len(rows) == 1 else 'ies'}?", do, detail="This can’t be undone."
+                tn("Delete {n} budget entry?", "Delete {n} budget entries?", len(rows)),
+                do,
+                detail=t("This can’t be undone."),
             )
 
         grid.on("selectionChanged", selection_changed)

@@ -16,11 +16,12 @@ from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months
 from budget_app.domain.coicop import ADV, TAX, UNACCOUNTED, get_coicop
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, TX_EXPENDITURE, TX_INCOME, Transaction
+from budget_app.i18n import N_, t
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context
 
 ADV_REPAY = "ADV_REPAY"
-ADV_REPAY_NAME = "Advance repayments"
+ADV_REPAY_NAME = N_("Advance repayments")  # display with t()
 
 
 def tx_value(ctx: Context, tx: Transaction, view_cur: str) -> float:
@@ -54,18 +55,18 @@ def _in_months(d: date, month_set: set[str]) -> bool:
 def actual_expenditure(ctx: Context, month_set: set[str], view_cur: str) -> dict[str, float]:
     """Direct (not rolled up) actual expenditure per category code."""
     out: dict[str, float] = defaultdict(float)
-    for t in ctx.store.transactions.all():
-        if t.type == TX_EXPENDITURE and _in_months(t.date, month_set):
-            for code, value in expenditure_parts(ctx, t, view_cur):
+    for tx in ctx.store.transactions.all():
+        if tx.type == TX_EXPENDITURE and _in_months(tx.date, month_set):
+            for code, value in expenditure_parts(ctx, tx, view_cur):
                 out[code] += value
     return dict(out)
 
 
 def actual_income(ctx: Context, month_set: set[str], view_cur: str) -> dict[str, float]:
     out: dict[str, float] = defaultdict(float)
-    for t in ctx.store.transactions.all():
-        if t.type == TX_INCOME and _in_months(t.date, month_set):
-            out[income_key(t)] += tx_value(ctx, t, view_cur)
+    for tx in ctx.store.transactions.all():
+        if tx.type == TX_INCOME and _in_months(tx.date, month_set):
+            out[income_key(tx)] += tx_value(ctx, tx, view_cur)
     return dict(out)
 
 
@@ -111,8 +112,8 @@ class MonthReport:
     expenditure_tree: dict[str, Line] = field(default_factory=dict)  # all codes with a value
     top_expenditure: list[str] = field(default_factory=list)  # keys shown at top level
     income_lines: list[Line] = field(default_factory=list)
-    total_expenditure: Line = field(default_factory=lambda: Line("TOTAL", "Total expenditure"))
-    total_income: Line = field(default_factory=lambda: Line("TOTAL", "Total income"))
+    total_expenditure: Line = field(default_factory=lambda: Line("TOTAL", t("Total expenditure")))
+    total_income: Line = field(default_factory=lambda: Line("TOTAL", t("Total income")))
     unaccounted: float | None = None
     wealth_start: float | None = None
     wealth_end: float | None = None
@@ -161,7 +162,7 @@ def month_report(ctx: Context, month: str, view_cur: str, today: date | None = N
 
     act_inc = actual_income(ctx, mset, view_cur)
     bud_inc = budgeted(ctx, mset, BUDGET_INCOME, view_cur)
-    names = {c.id: c.name for c in ctx.store.income_categories.all()} | {ADV_REPAY: ADV_REPAY_NAME}
+    names = {c.id: c.name for c in ctx.store.income_categories.all()} | {ADV_REPAY: t(ADV_REPAY_NAME)}
     for key in sorted(set(act_inc) | set(bud_inc), key=lambda k: (names.get(k) or k).lower()):
         line = Line(key, names.get(key, key), act_inc.get(key, 0.0), bud_inc.get(key, 0.0), editable=key != ADV_REPAY)
         if abs(line.actual) > 0.005 or abs(line.budget) > 0.005:
@@ -179,9 +180,9 @@ def month_report(ctx: Context, month: str, view_cur: str, today: date | None = N
         rep.top_expenditure.append(UNACCOUNTED)
 
     rep.total_expenditure = Line(
-        "TOTAL", "Total expenditure", recorded_exp + (rep.unaccounted or 0.0), total_exp_budget
+        "TOTAL", t("Total expenditure"), recorded_exp + (rep.unaccounted or 0.0), total_exp_budget
     )
-    rep.total_income = Line("TOTAL", "Total income", total_inc_act, sum(bud_inc.values()))
+    rep.total_income = Line("TOTAL", t("Total income"), total_inc_act, sum(bud_inc.values()))
 
     if complete:
         rep.accounts = [
@@ -196,13 +197,18 @@ def month_report(ctx: Context, month: str, view_cur: str, today: date | None = N
 def series_keys(ctx: Context) -> dict[str, str]:
     """Selectable chart series: expenditure divisions, taxes, advances and income categories."""
     coicop = get_coicop()
-    out = {"EXP:TOTAL": "Total expenditure", "INC:TOTAL": "Total income"}
+    out = {"EXP:TOTAL": t("Total expenditure"), "INC:TOTAL": t("Total income")}
     for code in [*coicop.divisions, TAX, ADV]:
         out[f"EXP:{code}"] = coicop.label(code)
     for c in ctx.store.income_categories.all():
-        out[f"INC:{c.id}"] = f"Income: {c.name}"
-    out[f"INC:{ADV_REPAY}"] = f"Income: {ADV_REPAY_NAME}"
+        out[f"INC:{c.id}"] = t("Income: {name}", name=c.name)
+    out[f"INC:{ADV_REPAY}"] = t("Income: {name}", name=t(ADV_REPAY_NAME))
     return out
+
+
+def budget_label(label: str) -> str:
+    """Name of the budget series next to an actual series in `monthly_series`."""
+    return t("{series} (budget)", series=label)
 
 
 def monthly_series(
@@ -229,7 +235,7 @@ def monthly_series(
                 value, bvalue = src.get(code, 0.0), bsrc.get(code, 0.0)
             row[labels.get(key, key)] = round(value, 2)
             if include_budget:
-                row[f"{labels.get(key, key)} (budget)"] = round(bvalue, 2)
+                row[budget_label(labels.get(key, key))] = round(bvalue, 2)
         rows.append(row)
     return rows
 

@@ -5,6 +5,8 @@ from __future__ import annotations
 import calendar
 from datetime import date
 
+from budget_app import i18n
+
 
 def month_of(d: date) -> str:
     return f"{d.year:04d}-{d.month:02d}"
@@ -54,5 +56,6 @@ def last_day(month: str) -> date:
 
 
 def label(month: str) -> str:
+    """'2026-10' -> 'Oct 2026' / 'Okt. 2026' in the interface language."""
     year, mon = parse(month)
-    return f"{calendar.month_abbr[mon]} {year}"
+    return i18n.month_label(year, mon)

@@ -21,6 +21,7 @@ import httpx
 import pandas as pd
 
 from budget_app.config import BASE_CURRENCY, ECB_CSV_NAME, ECB_URL
+from budget_app.i18n import N_, t
 
 log = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ class FxRates:
         if currency == "EUR":
             return 1.0
         if currency not in self._series:
-            raise FxError(f"No ECB rate for currency {currency}")
+            raise FxError(t("No ECB rate for currency {currency}", currency=currency))
         dates, values = self._series[currency]
         if on is None:
             return values[-1]
@@ -106,13 +107,13 @@ def download_ecb_csv(target: Path, url: str = ECB_URL, timeout: float = 30.0) ->
         for chunk in resp.iter_bytes():
             buf.write(chunk)
             if buf.tell() > MAX_DOWNLOAD_BYTES:
-                raise FxError("ECB download is unexpectedly large; aborted")
+                raise FxError(t("ECB download is unexpectedly large; aborted"))
     with zipfile.ZipFile(buf) as zf:
         info = next((i for i in zf.infolist() if i.filename.endswith(".csv")), None)
         if info is None:
-            raise FxError("ECB archive does not contain a CSV file")
+            raise FxError(t("ECB archive does not contain a CSV file"))
         if info.file_size > MAX_CSV_BYTES:
-            raise FxError("ECB CSV is unexpectedly large; aborted")
+            raise FxError(t("ECB CSV is unexpectedly large; aborted"))
         content = zf.read(info)  # read into memory only: nothing is extracted to disk by name
     FxRates.from_csv(io.StringIO(content.decode("utf-8")))  # validate before replacing
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -135,8 +136,16 @@ class FxService:
         self.path = data_dir / "ecb" / ECB_CSV_NAME
         self._refresh_lock = threading.Lock()
         self.rates = FxRates()
-        self.last_error: str | None = None
+        self._error: tuple[str, str] | None = None  # (message, detail), translated when shown
         self._load()
+
+    @property
+    def last_error(self) -> str | None:
+        """The last loading or download problem in the interface language (it may change after startup)."""
+        if self._error is None:
+            return None
+        message, detail = self._error
+        return t(message, error=detail)
 
     def _load(self) -> None:
         if self.path.exists():
@@ -144,7 +153,7 @@ class FxService:
                 self.rates = FxRates.from_csv(self.path)
             except Exception as exc:  # corrupt file: keep empty rates, report error
                 log.exception("Could not read ECB file")
-                self.last_error = f"Could not read exchange rates: {exc}"
+                self._error = (N_("Could not read exchange rates: {error}"), str(exc))
 
     def refresh_if_stale(self, last_download: str | None, today: date | None = None) -> bool:
         """Download the ECB file if it has not yet been downloaded today. Returns True on download."""
@@ -155,10 +164,10 @@ class FxService:
             return False
         try:
             download_ecb_csv(self.path)
-            self.last_error = None
+            self._error = None
         except Exception as exc:  # network, HTTP, zip or parse error: keep the old file
             log.warning("ECB download failed: %s", exc)
-            self.last_error = f"Exchange rate download failed ({exc}). Using the last stored rates."
+            self._error = (N_("Exchange rate download failed ({error}). Using the last stored rates."), str(exc))
             return False
         finally:
             self._refresh_lock.release()

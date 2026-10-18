@@ -63,7 +63,7 @@ ECB date of the rate used** (`fx_date`).
 | --- | --- |
 | `accounts.csv` | `name, currency, kind (regular/advance), created, id` |
 | `income_categories.csv` | `name, id` |
-| `transactions.csv` | `date, type, amount, currency, amount_chf, fx_date, category, from_account, to_account, to_amount, to_currency, is_advance, advance_amount, advance_account, debtor, settles_id, comment, id` |
+| `transactions.csv` | `date, type, amount, currency, amount_chf, fx_date, category, from_account, to_account, to_amount, to_currency, is_advance, advance_amount, advance_account, debtor, settles_id, comment, import_ref, id` |
 | `account_entries.csv` | `account_id, month, amount, currency, amount_chf, fx_date, id` – recorded balance at month end ("budget recording") |
 | `budget_entries.csv` | `month, type, category, amount, currency, amount_chf, fx_date, series_id, recur_months, forever, comment, generated_until, id` – one row per budgeted month |
 | `settings.json` | `budget_horizon, display_currency, last_fx_download` |
@@ -113,6 +113,7 @@ holidays. Dates before the start of the file use its first rate.
 | Use | Rate used |
 | --- | --- |
 | Saving a transaction / budget entry (`amount_chf`) | Last (most recent) row of the ECB file; that date is stored as `fx_date` |
+| Saving an imported transaction (`import_ref` set) | Last ECB date on or before its booking date. Editing it re-values it only when amount, currency or date change |
 | Saving an account entry | Last ECB date within that month |
 | Displaying a transaction in another currency | Rate of its recorded `fx_date` |
 | Displaying an account balance | Last ECB date of the month being viewed |
@@ -188,12 +189,31 @@ currency dropdowns list every currency the ECB quoted on its latest date, plus E
 | `/` | Overview (start page) | Current wealth and the projection at the horizon in one hero card. Chart builder ("Add Chart" menu): wealth line (recorded, then dotted projection), income/expenditure bars or lines with category multi-select and optional budget, waterfall of per-account change. Each chart's "…" menu saves a PNG, exports CSV or Excel, or removes it. |
 | `/budget` | Budget | Month stepper (‹ month ›) and currency. A callout names accounts without a balance for a past month. Metric strip (current wealth, wealth or projected wealth at month end, net income). Income and expenditure ledgers share one column layout: budget meter, actual, budget, difference; zero values show as a dash. The expenditure tree expands by clicking a category. Budget amounts are editable (pencil on hover) in incomplete months. Balances list for past months. Statement export sits in the share menu. "Record Balance" opens the balance sheet. |
 | `/add-transaction` | New Transaction | The same form also opens as a sheet from the sidebar's "New Transaction" button on every page; the page behind refreshes after saving. Type first (segmented control), then amount, currency and date, then the type's fields. Account dropdowns are filtered by currency. Live CHF preview. Save stays disabled until the form validates, and the reason is shown once the user has started. After saving, every field except date, currency and type resets. |
-| `/transactions` | Transactions | Search field, filters (date range, amount range, account, type) behind "Filters". AG Grid with signed, coloured amounts, sort on every column. Selecting rows reveals Edit and Delete; double-click edits in a sheet. |
+| `/transactions` | Transactions | Search field, filters (date range, amount range, account, type) behind "Filters". AG Grid with signed, coloured amounts, sort on every column. Selecting rows reveals Edit and Delete; double-click edits in a sheet. "Import…" opens the CSV import. |
+| `/import` | Import Transactions | 1 · file: encoding (UTF-8, Windows-1252), separator and header line (bank preambles are skipped) are detected. 2 · columns: account, date column and format, one signed amount or debit/credit columns, decimal style, description columns, sign inversion for card statements; the mapping can be saved per bank (`import_profiles.json`) and is recognised by the header line next time. 3 · review: rows already imported (same `import_ref`) or matching a manual entry (same account, day, type and amount) are left out; categories are suggested from earlier transactions with the same text; selected rows get a category, are included or excluded in bulk. Saving is one write; nothing is saved while a row is invalid. |
 | `/add-budget` | New Budget Entry | Also a sheet on Budget Plan. Type, amount, currency, category, month range or "Forever", repeat interval, replace option, note. Live summary of the months that will be created. |
 | `/budget-entries` | Budget Plan | Same list pattern as Transactions. The edit sheet can apply changes to all later months of a series. |
-| `/settings` | Settings | Grouped lists: plan horizon (Apply appears when changed), display and base currency, accounts, advance-payment accounts (with outstanding balances), income categories. Add, edit and rename open small sheets. |
+| `/settings` | Settings | Grouped lists: interface language (system, English, Deutsch), plan horizon (Apply appears when changed), display and base currency, accounts, advance-payment accounts (with outstanding balances), income categories. Add, edit and rename open small sheets. |
 
 Pages follow the system light/dark appearance (`ui.run(dark=None)`).
+
+### Languages
+
+- English is the source language. Texts in the code are wrapped in `t()` (with `{placeholders}`),
+  plurals in `tn()`, and texts in constant tables are marked with `N_()` and translated where shown
+  (`i18n.py`). Where one English word needs different German words, `tc(context, text)` looks up
+  `"context|text"` first (`tc("heading", "Income")` → "Einnahmen"; the transaction type "Income"
+  stays "Einnahme").
+- German texts live in `resources/i18n/de.json` (English text → German; plural texts map to
+  `[singular, plural]`). COICOP names are in `resources/i18n/coicop_de.json`, keyed by the
+  English name. They are the app's own translation in Swiss spelling (no "ß"), not the official
+  Destatis wording.
+- The language is a setting (`settings.json` → `language`; empty means follow the system:
+  `LANG`, macOS `AppleLanguages`, or the Windows locale). Changing it reloads the page. Quasar
+  (date picker) uses `de-CH` / `en-GB`, AG Grid gets German `localeText`, and dates in the grids
+  use the browser's `de-CH` / `en-GB` formatting. Amounts keep the Swiss format in both languages.
+- `tests/test_i18n.py` fails when a marked text has no German translation, when placeholders
+  differ, or when a translation is no longer used.
 
 ## 7. Decisions and assumptions
 
@@ -245,6 +265,9 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
   - budget expansion, overwrite, horizon extension and shrinking, and no resurrection of
     deleted or overwritten months;
   - CSV round-trip, corrupt-file reporting and formula-safe exports;
+  - CSV import: detection of encoding, separator, header line, columns, number and date
+    formats; duplicates on re-import; booking-date valuation; saved profiles;
+  - translation completeness and language switching;
   - edit valuation and locking of repaid advances;
   - wealth with carry-forward, projected wealth and the unaccounted-expenditure formula.
 - The UI was exercised end-to-end with Playwright against a seeded data set:

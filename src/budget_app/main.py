@@ -14,7 +14,7 @@ from pathlib import Path
 
 from nicegui import app, native, ui
 
-from budget_app import config
+from budget_app import config, i18n
 from budget_app.services.context import init_context
 from budget_app.storage import lock as instance_lock
 from budget_app.ui import theme
@@ -24,27 +24,30 @@ from budget_app.ui.pages import (
     add_transaction,
     budget_entries,
     budget_overview,
+    import_transactions,
     overview,
     settings,
     transactions,
 )
 
 PAGES = {
-    "/": ("Overview", overview.page),
-    "/budget": ("Budget", budget_overview.page),
-    "/add-transaction": ("New Transaction", add_transaction.page),
-    "/transactions": ("Transactions", transactions.page),
-    "/add-budget": ("New Budget Entry", add_budget.page),
-    "/budget-entries": ("Budget Plan", budget_entries.page),
-    "/settings": ("Settings", settings.page),
+    "/": overview.page,
+    "/budget": budget_overview.page,
+    "/add-transaction": add_transaction.page,
+    "/transactions": transactions.page,
+    "/import": import_transactions.page,
+    "/add-budget": add_budget.page,
+    "/budget-entries": budget_entries.page,
+    "/settings": settings.page,
 }
 
 
 def setup(data_dir: Path) -> None:
     ctx = init_context(data_dir)
+    i18n.set_language(ctx.store.settings.language)
     theme.install()
-    for path, (title, builder) in PAGES.items():
-        ui.page(path, title=f"{title} – Budget")(builder)
+    for path, builder in PAGES.items():
+        ui.page(path, title="Budget")(builder)  # each page sets its translated title in layout.frame
 
     async def refresh() -> None:
         await refresh_rates(ctx)
@@ -102,6 +105,7 @@ def run() -> None:
         show=not args.no_show,
         favicon="💰",
         dark=None,  # follow the system appearance
+        language=i18n.QUASAR[i18n.language()],  # type: ignore[arg-type]
         reconnect_timeout=30,
     )
 

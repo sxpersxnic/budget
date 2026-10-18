@@ -12,7 +12,8 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from budget_app.domain import months
-from budget_app.services.reports import MonthReport
+from budget_app.i18n import t
+from budget_app.services.reports import Line, MonthReport
 
 _FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
@@ -34,19 +35,21 @@ def safe_frame(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _line_row(label: str, line: Line) -> dict:
+    return {
+        t("Category"): label,
+        t("Actual"): round(line.actual, 2),
+        t("Budget"): round(line.budget, 2),
+        t("Difference"): round(line.diff, 2),
+    }
+
+
 def _expenditure_rows(rep: MonthReport) -> list[dict]:
     rows = []
 
     def walk(code: str, depth: int) -> None:
         line = rep.expenditure_tree[code]
-        rows.append(
-            {
-                "Category": "  " * depth + line.label,
-                "Actual": round(line.actual, 2),
-                "Budget": round(line.budget, 2),
-                "Difference": round(line.diff, 2),
-            }
-        )
+        rows.append(_line_row("  " * depth + line.label, line))
         for child in rep.children(code):
             if abs(child.actual) > 0.005 or abs(child.budget) > 0.005:
                 walk(child.key, depth + 1)
@@ -57,64 +60,44 @@ def _expenditure_rows(rep: MonthReport) -> list[dict]:
 
 
 def statement_frames(rep: MonthReport) -> dict[str, pd.DataFrame]:
+    """Sheets of the statement export (sheet and column names in the interface language)."""
     tot_e, tot_i = rep.total_expenditure, rep.total_income
-    income = [
-        {
-            "Category": tot_i.label,
-            "Actual": round(tot_i.actual, 2),
-            "Budget": round(tot_i.budget, 2),
-            "Difference": round(tot_i.diff, 2),
-        }
-    ]
-    income += [
-        {
-            "Category": line.label,
-            "Actual": round(line.actual, 2),
-            "Budget": round(line.budget, 2),
-            "Difference": round(line.diff, 2),
-        }
-        for line in rep.income_lines
-    ]
-    expenditure = [
-        {
-            "Category": tot_e.label,
-            "Actual": round(tot_e.actual, 2),
-            "Budget": round(tot_e.budget, 2),
-            "Difference": round(tot_e.diff, 2),
-        },
-        *_expenditure_rows(rep),
-    ]
+    income = [_line_row(tot_i.label, tot_i)]
+    income += [_line_row(line.label, line) for line in rep.income_lines]
+    expenditure = [_line_row(tot_e.label, tot_e), *_expenditure_rows(rep)]
+    account, currency, amount = t("Account"), t("Currency"), t("Amount")
+    amount_view = t("Amount ({currency})", currency=rep.currency)
     if rep.complete:
         accounts = [
             {
-                "Account": r.account.name,
-                "Currency": r.account.currency,
-                "Amount": round(r.amount, 2),
-                f"Amount ({rep.currency})": round(r.amount_view, 2),
+                account: r.account.name,
+                currency: r.account.currency,
+                amount: round(r.amount, 2),
+                amount_view: round(r.amount_view, 2),
             }
             for r in rep.accounts
         ]
         accounts.append(
             {
-                "Account": "Total wealth",
-                "Currency": rep.currency,
-                "Amount": None,
-                f"Amount ({rep.currency})": round(sum(r.amount_view for r in rep.accounts), 2),
+                account: t("Total wealth"),
+                currency: rep.currency,
+                amount: None,
+                amount_view: round(sum(r.amount_view for r in rep.accounts), 2),
             }
         )
     else:
         accounts = [
             {
-                "Account": "Projected wealth",
-                "Currency": rep.currency,
-                "Amount": None,
-                f"Amount ({rep.currency})": round(rep.projected_wealth or 0.0, 2),
+                account: t("Projected wealth"),
+                currency: rep.currency,
+                amount: None,
+                amount_view: round(rep.projected_wealth or 0.0, 2),
             }
         ]
     return {
-        "Income": pd.DataFrame(income),
-        "Expenditure": pd.DataFrame(expenditure),
-        "Accounts": pd.DataFrame(accounts),
+        t("Income"): pd.DataFrame(income),
+        t("Expenditure"): pd.DataFrame(expenditure),
+        t("Accounts"): pd.DataFrame(accounts),
     }
 
 
@@ -147,13 +130,15 @@ def statement_pdf(rep: MonthReport) -> bytes:
         rightMargin=15 * mm,
         topMargin=15 * mm,
         bottomMargin=15 * mm,
-        title=f"Statement {rep.month}",
+        title=t("Statement {month}", month=rep.month),
     )
     styles = getSampleStyleSheet()
     story = [
-        Paragraph(f"Income and account statement – {months.label(rep.month)}", styles["Title"]),
+        Paragraph(t("Income and account statement – {month}", month=months.label(rep.month)), styles["Title"]),
         Paragraph(
-            f"Amounts in {rep.currency}" + ("" if rep.complete else " · month not yet complete (budget view)"),
+            t("Amounts in {currency}", currency=rep.currency)
+            if rep.complete
+            else t("Amounts in {currency} · month not yet complete (budget view)", currency=rep.currency),
             styles["Normal"],
         ),
         Spacer(1, 6 * mm),
@@ -188,8 +173,8 @@ def frame_csv(df: pd.DataFrame) -> bytes:
     return safe_frame(df).to_csv(index=False).encode("utf-8")
 
 
-def frame_xlsx(df: pd.DataFrame, sheet: str = "Data") -> bytes:
+def frame_xlsx(df: pd.DataFrame, sheet: str = "") -> bytes:
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        safe_frame(df).to_excel(writer, sheet_name=sheet[:31], index=False)
+        safe_frame(df).to_excel(writer, sheet_name=(sheet or t("Data"))[:31], index=False)
     return buf.getvalue()

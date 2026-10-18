@@ -6,13 +6,20 @@ from nicegui import ui
 
 from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import ACCOUNT_REGULAR
+from budget_app.i18n import t
 from budget_app.services import accounts as acc_svc
 from budget_app.services.context import Context
 
 
-def expenditure_category_select(value: str | None = None, on_change=None, label: str = "Category") -> ui.select:
+def expenditure_category_select(value: str | None = None, on_change=None, label: str | None = None) -> ui.select:
     """COICOP (any level) + Taxes, with a search field."""
-    sel = ui.select(get_coicop().selectable(), label=label, value=value or None, with_input=True, on_change=on_change)
+    sel = ui.select(
+        get_coicop().selectable(),
+        label=label or t("Category"),
+        value=value or None,
+        with_input=True,
+        on_change=on_change,
+    )
     return sel.props("dense outlined options-dense clearable").classes("w-full")
 
 
@@ -22,7 +29,11 @@ def income_category_options(ctx: Context) -> dict[str, str]:
 
 def income_category_select(ctx: Context, value: str | None = None, on_change=None) -> ui.select:
     sel = ui.select(
-        income_category_options(ctx), label="Income category", value=value or None, with_input=True, on_change=on_change
+        income_category_options(ctx),
+        label=t("Income category"),
+        value=value or None,
+        with_input=True,
+        on_change=on_change,
     )
     return sel.props("dense outlined clearable").classes("w-full")
 
@@ -30,9 +41,14 @@ def income_category_select(ctx: Context, value: str | None = None, on_change=Non
 def currency_select(
     ctx: Context, value: str | None = None, on_change=None, label: str | None = "Currency"
 ) -> ui.select:
+    """`label=None` hides the label; the default is the translated "Currency"."""
     currencies = ctx.fx.currencies()
     sel = ui.select(
-        currencies, label=label, value=value if value in currencies else None, with_input=True, on_change=on_change
+        currencies,
+        label=t(label) if label else None,
+        value=value if value in currencies else None,
+        with_input=True,
+        on_change=on_change,
     )
     return sel.props("dense outlined options-dense").classes("w-28")
 

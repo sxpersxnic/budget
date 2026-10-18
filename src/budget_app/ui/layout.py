@@ -11,21 +11,22 @@ from datetime import date
 from nicegui import run, ui
 from nicegui.client import Client
 
-from budget_app import config
+from budget_app import config, i18n
 from budget_app.domain import months
+from budget_app.i18n import N_, t
 from budget_app.services.context import Context, get_ctx
 from budget_app.ui import theme
 
 # Places only. Creating things ("Add transaction", "Add budget entry") is an action, offered where it is needed.
 NAV = [
-    ("/", "Overview", "o_space_dashboard"),
-    ("/budget", "Budget", "o_donut_large"),
-    ("/transactions", "Transactions", "o_receipt_long"),
-    ("/budget-entries", "Budget Plan", "o_event_note"),
+    ("/", N_("Overview"), "o_space_dashboard"),
+    ("/budget", N_("Budget"), "o_donut_large"),
+    ("/transactions", N_("Transactions"), "o_receipt_long"),
+    ("/budget-entries", N_("Budget Plan"), "o_event_note"),
 ]
-SETTINGS = ("/settings", "Settings", "o_settings")
+SETTINGS = ("/settings", N_("Settings"), "o_settings")
 # Routes that are not in the sidebar highlight their parent.
-NAV_PARENT = {"/add-transaction": "/transactions", "/add-budget": "/budget-entries"}
+NAV_PARENT = {"/add-transaction": "/transactions", "/import": "/transactions", "/add-budget": "/budget-entries"}
 
 _data_listeners: weakref.WeakKeyDictionary[Client, Callable[[], object]] = weakref.WeakKeyDictionary()
 
@@ -80,7 +81,7 @@ def _nav_item(target: str, label: str, icon: str, active: bool) -> None:
         .props('aria-current="page"' if active else "")
     ):
         ui.icon(icon)
-        ui.label(label)
+        ui.label(t(label))
 
 
 def _new_transaction() -> None:
@@ -97,6 +98,7 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
     """
     ctx = get_ctx()
     theme.apply_colors()
+    ui.page_title(f"{title} – Budget")
     current = NAV_PARENT.get(path, path)
     with (
         ui.left_drawer().props("width=232 :breakpoint=1023").classes("sidebar") as drawer,
@@ -105,7 +107,7 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
         with ui.row().classes("items-center gap-2 px-2 pb-4"):
             ui.icon("savings", size="22px").classes("text-primary")
             ui.label("Budget").classes("text-[15px] font-semibold")
-        ui.button("New Transaction", icon="add", on_click=_new_transaction).props("unelevated no-wrap").classes(
+        ui.button(t("New Transaction"), icon="add", on_click=_new_transaction).props("unelevated no-wrap").classes(
             "w-full bg-primary text-white mb-4"
         )
         for target, label, icon in NAV:
@@ -115,15 +117,15 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
         latest = ctx.fx.latest_date()
         with ui.column().classes("gap-0 px-2 pt-3"):
             ui.label(f"Budget {config.app_version()}").classes("nav-footer")
-            ui.label(f"ECB rates of {latest.day} {latest:%b %Y}" if latest else "No exchange rates yet").classes(
-                "nav-footer"
-            )
+            ui.label(
+                t("ECB rates of {date}", date=i18n.date_label(latest)) if latest else t("No exchange rates yet")
+            ).classes("nav-footer")
     with ui.header().classes("mobile-bar lg:hidden px-2 py-1 items-center gap-1"):
         ui.button(icon="menu", on_click=drawer.toggle).props("flat round dense").classes("text-primary")
         ui.label(title).classes("font-semibold text-[15px]")
         ui.space()
         ui.button(icon="add", on_click=_new_transaction).props("flat round dense").classes("text-primary").tooltip(
-            "New Transaction"
+            t("New Transaction")
         )
     if ctx.fx_service and ctx.fx_service.last_error:
         with ui.row().classes("w-full px-8 pt-4 max-sm:px-4"), ui.element("div").classes("callout"):
@@ -159,15 +161,15 @@ def sheet(title: str, width: str = "30rem"):
 
 def sheet_buttons(dlg: ui.dialog, label: str, on_click, enabled: bool = True) -> ui.button:
     with ui.row().classes("w-full justify-end gap-2 pt-1"):
-        ui.button("Cancel", on_click=dlg.close).props("flat").classes("text-primary")
+        ui.button(t("Cancel"), on_click=dlg.close).props("flat").classes("text-primary")
         btn = ui.button(label, on_click=on_click).props("unelevated")
     btn.set_enabled(enabled)
     return btn
 
 
 def segmented(options: dict, value, on_change=None, full: bool = False) -> ui.toggle:
-    t = ui.toggle(options, value=value, on_change=on_change).props("no-caps unelevated spread=false")
-    return t.classes("segmented" + (" full" if full else ""))
+    toggle = ui.toggle(options, value=value, on_change=on_change).props("no-caps unelevated spread=false")
+    return toggle.classes("segmented" + (" full" if full else ""))
 
 
 def metric(label: str, value: float | None, currency: str, sub: str = "", hero: bool = False) -> None:
@@ -190,7 +192,7 @@ def month_stepper(options: dict[str, str], value: str, on_change: Callable[[str]
     with ui.row().classes("items-center gap-0 no-wrap"):
         ui.button(icon="chevron_left", on_click=lambda: step(-1)).props("flat round dense").classes(
             "text-primary"
-        ).tooltip("Previous month")
+        ).tooltip(t("Previous month"))
         sel = (
             ui.select(options, value=value, on_change=lambda e: on_change(e.value))
             .props("borderless dense options-dense hide-dropdown-icon")
@@ -198,7 +200,7 @@ def month_stepper(options: dict[str, str], value: str, on_change: Callable[[str]
         )
         ui.button(icon="chevron_right", on_click=lambda: step(1)).props("flat round dense").classes(
             "text-primary"
-        ).tooltip("Next month")
+        ).tooltip(t("Next month"))
     return sel
 
 

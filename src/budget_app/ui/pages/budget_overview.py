@@ -9,6 +9,7 @@ from nicegui import ui
 from budget_app.domain import months
 from budget_app.domain.coicop import ADV, UNACCOUNTED
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, BudgetEntry
+from budget_app.i18n import t, tc
 from budget_app.services import accounts as acc_svc
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
@@ -39,18 +40,20 @@ EPS = 0.005
 def account_entry_dialog(ctx: Context, on_saved, month: str | None = None, account_id: str | None = None) -> None:
     """Add or edit the recorded balance of an account at the end of a month."""
     first, _ = data_month_range(ctx, back=60)
-    with sheet("Record Balance", width="26rem") as dlg:
-        ui.label("What did the account hold at the end of the month?").classes("footnote -mt-2")
+    with sheet(t("Record Balance"), width="26rem") as dlg:
+        ui.label(t("What did the account hold at the end of the month?")).classes("footnote -mt-2")
         month_sel = (
             ui.select(
-                month_options(first, months.current_month()), value=month or months.previous_month(), label="Month"
+                month_options(first, months.current_month()), value=month or months.previous_month(), label=t("Month")
             )
             .props("dense outlined options-dense")
             .classes("w-full")
         )
-        acc_sel = ui.select(account_options(ctx), value=account_id, label="Account", with_input=True)
+        acc_sel = ui.select(account_options(ctx), value=account_id, label=t("Account"), with_input=True)
         acc_sel.props("dense outlined").classes("w-full")
-        amount = ui.number("Balance", format="%.2f").props("outlined inputmode=decimal").classes("hero-amount w-full")
+        amount = (
+            ui.number(t("Balance"), format="%.2f").props("outlined inputmode=decimal").classes("hero-amount w-full")
+        )
         hint = ui.label().classes("caption px-1 -mt-2")
 
         def load() -> None:
@@ -58,7 +61,7 @@ def account_entry_dialog(ctx: Context, on_saved, month: str | None = None, accou
             amount.props(f"suffix={acc.currency}" if acc else "suffix=")
             entry = wealth_svc.entry_for(ctx, acc_sel.value, month_sel.value) if acc and month_sel.value else None
             amount.value = entry.amount if entry else None
-            hint.set_text("Already recorded. Saving replaces it." if entry else "")
+            hint.set_text(t("Already recorded. Saving replaces it.") if entry else "")
             check()
 
         def check() -> None:
@@ -71,10 +74,10 @@ def account_entry_dialog(ctx: Context, on_saved, month: str | None = None, accou
                 error(str(exc))
                 return
             dlg.close()
-            success("Balance recorded")
+            success(t("Balance recorded"))
             on_saved()
 
-        save_btn = sheet_buttons(dlg, "Save", save)
+        save_btn = sheet_buttons(dlg, t("Save"), save)
         month_sel.on_value_change(load)
         acc_sel.on_value_change(load)
         amount.on_value_change(check)
@@ -85,23 +88,23 @@ def budget_edit_dialog(ctx: Context, month: str, type_: str, category: str, labe
     """Edit the budget entries of one category in one month (or add one)."""
     entries: list[BudgetEntry] = budget_svc.entries_for(ctx, month, type_, category)
     with sheet(label, width="30rem") as dlg:
-        ui.label(f"Budget for {months.label(month)}").classes("footnote -mt-2")
+        ui.label(t("Budget for {month}", month=months.label(month))).classes("footnote -mt-2")
         fields = []
         for e in entries:
             with ui.row().classes("w-full items-center gap-2 no-wrap"):
                 num = (
-                    ui.number("Amount", value=e.amount, min=0, format="%.2f")
+                    ui.number(t("Amount"), value=e.amount, min=0, format="%.2f")
                     .props("dense outlined")
                     .classes("flex-1 min-w-0")
                 )
                 cur = currency_select(ctx, e.currency)
-                remove = ui.checkbox("Remove").props("dense")
+                remove = ui.checkbox(t("Remove")).props("dense")
             if e.comment:
                 ui.label(e.comment).classes("caption px-1 -mt-2")
             fields.append((e, num, cur, remove))
-        ui.label("Add to this budget" if entries else "Amount").classes("caption px-1 pt-1")
+        ui.label(t("Add to this budget") if entries else t("Amount")).classes("caption px-1 pt-1")
         with ui.row().classes("w-full items-center gap-2 no-wrap"):
-            new_amount = ui.number("Amount", min=0, format="%.2f").props("dense outlined").classes("flex-1 min-w-0")
+            new_amount = ui.number(t("Amount"), min=0, format="%.2f").props("dense outlined").classes("flex-1 min-w-0")
             new_cur = currency_select(ctx, ctx.store.settings.display_currency)
 
         def save() -> None:
@@ -119,7 +122,7 @@ def budget_edit_dialog(ctx: Context, month: str, type_: str, category: str, labe
             try:
                 for _, num, cur, remove in fields:
                     if not remove.value and (num.value is None or num.value <= 0 or not cur.value):
-                        raise ValidationError("Every kept amount must be a positive number with a currency")
+                        raise ValidationError(t("Every kept amount must be a positive number with a currency"))
                 if new_entry is not None:
                     budget_svc.validate(ctx, new_entry)
             except ValidationError as exc:
@@ -134,7 +137,7 @@ def budget_edit_dialog(ctx: Context, month: str, type_: str, category: str, labe
             dlg.close()
             on_saved()
 
-        sheet_buttons(dlg, "Save", save)
+        sheet_buttons(dlg, t("Save"), save)
 
 
 # ------------------------------------------------------------------ cells
@@ -160,7 +163,7 @@ def _meter(actual: float, budget: float, lg: bool = False) -> None:
 
 # --------------------------------------------------------------------- page
 def page() -> None:
-    with frame("Budget", "/budget") as (ctx, actions):
+    with frame(t("Budget"), "/budget") as (ctx, actions):
         first, last = data_month_range(ctx)
         state = {
             "month": months.current_month(),
@@ -182,18 +185,18 @@ def page() -> None:
             currency_select(
                 ctx,
                 state["currency"],
-                label="Currency",
+                label=t("Currency"),
                 on_change=lambda e: (state.update(currency=e.value), content.refresh()),
             )
             with (
-                ui.button(icon="ios_share").props("flat round").classes("text-primary").tooltip("Export statement"),
+                ui.button(icon="ios_share").props("flat round").classes("text-primary").tooltip(t("Export statement")),
                 ui.menu().props("auto-close"),
             ):
-                ui.menu_item("Export as Excel…", on_click=lambda: export("xlsx"))
-                ui.menu_item("Export as PDF…", on_click=lambda: export("pdf"))
-            ui.button("Record Balance", icon="add", on_click=lambda: account_entry_dialog(ctx, content.refresh)).props(
-                "unelevated"
-            )
+                ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))
+                ui.menu_item(t("Export as PDF…"), on_click=lambda: export("pdf"))
+            ui.button(
+                t("Record Balance"), icon="add", on_click=lambda: account_entry_dialog(ctx, content.refresh)
+            ).props("unelevated")
 
         @ui.refreshable
         def content() -> None:
@@ -202,7 +205,7 @@ def page() -> None:
                 rep = reports.month_report(ctx, month, cur)
                 current = wealth_svc.current_wealth(ctx, cur)
             except Exception as exc:
-                error(f"Cannot compute the overview: {exc}")
+                error(t("Cannot compute the overview: {error}", error=exc))
                 return
 
             missing = [r for r in rep.accounts if r.needs_entry]
@@ -210,25 +213,45 @@ def page() -> None:
                 with ui.element("div").classes("callout"):
                     ui.icon("o_error_outline")
                     names = ", ".join(r.account.name for r in missing)
-                    ui.label(f"No balance recorded for {names} at the end of {months.label(month)}.").classes("flex-1")
+                    ui.label(
+                        t(
+                            "No balance recorded for {names} at the end of {month}.",
+                            names=names,
+                            month=months.label(month),
+                        )
+                    ).classes("flex-1")
                     ui.button(
-                        "Record",
+                        t("Record"),
                         on_click=lambda a=missing[0].account.id: account_entry_dialog(ctx, content.refresh, month, a),
                     ).props("flat dense").classes("text-primary")
 
             with ui.element("div").classes("surface"), ui.element("div").classes("metrics").style("--n: 3"):
-                metric("Current Wealth", current, cur, f"End of {months.label(months.previous_month())}", hero=True)
+                metric(
+                    t("Current Wealth"),
+                    current,
+                    cur,
+                    t("End of {month}", month=months.label(months.previous_month())),
+                    hero=True,
+                )
                 if rep.complete:
                     end = rep.wealth_end if rep.wealth_end is not None else wealth_svc.wealth(ctx, month, cur)
-                    metric("Wealth", end, cur, f"End of {months.label(month)}")
+                    metric(t("Wealth"), end, cur, t("End of {month}", month=months.label(month)))
                 else:
-                    metric("Projected Wealth", rep.projected_wealth, cur, f"End of {months.label(month)}")
+                    metric(
+                        t("Projected Wealth"), rep.projected_wealth, cur, t("End of {month}", month=months.label(month))
+                    )
                 net = rep.total_income.actual - rep.total_expenditure.actual
                 net_budget = rep.total_income.budget - rep.total_expenditure.budget
-                metric("Net Income", net, cur, f"Budgeted {fmt(net_budget)}")
+                metric(t("Net Income"), net, cur, t("Budgeted {amount}", amount=fmt(net_budget)))
 
-            ledger_card(rep, "Income", rep.total_income, BUDGET_INCOME, lambda: income_rows(rep))
-            ledger_card(rep, "Expenditure", rep.total_expenditure, BUDGET_EXPENDITURE, lambda: expenditure_rows(rep))
+            ledger_card(rep, tc("heading", "Income"), rep.total_income, BUDGET_INCOME, lambda: income_rows(rep))
+            ledger_card(
+                rep,
+                tc("heading", "Expenditure"),
+                rep.total_expenditure,
+                BUDGET_EXPENDITURE,
+                lambda: expenditure_rows(rep),
+            )
             if rep.complete:
                 accounts_card(rep)
 
@@ -249,23 +272,25 @@ def page() -> None:
                             ui.element("div").style(f"width: {min(ratio, 1) * 100:.1f}%")
                 with ui.element("div").classes("ledger"):
                     with ui.element("div").classes("ledger-row head"):
-                        ui.label("Category")
+                        ui.label(t("Category"))
                         ui.element("div").classes("c-bar")
-                        ui.label("Actual").classes("r")
-                        ui.label("Budget").classes("r")
-                        ui.label("Difference").classes("r c-diff")
+                        ui.label(t("Actual")).classes("r")
+                        ui.label(t("Budget")).classes("r")
+                        ui.label(t("Difference")).classes("r c-diff")
                         ui.element("div")
                     rows()
                 if is_exp:
                     with ui.row().classes("w-full items-center pt-2"):
                         if rep.complete and rep.unaccounted is None:
                             ui.label(
-                                "Unaccounted expenditure appears once balances are recorded "
-                                "for this and the previous month."
+                                t(
+                                    "Unaccounted expenditure appears once balances are recorded "
+                                    "for this and the previous month."
+                                )
                             ).classes("caption")
                         ui.space()
                         ui.switch(
-                            "Show all subcategories",
+                            t("Show all subcategories"),
                             value=state["show_empty"],
                             on_change=lambda e: (state.update(show_empty=e.value), content.refresh()),
                         ).props("dense").classes("text-[13px] text-2")
@@ -297,7 +322,7 @@ def page() -> None:
                         on_click=lambda: budget_edit_dialog(
                             ctx, rep.month, type_, line.key, line.label, content.refresh
                         ),
-                    ).props("flat dense round size=sm").classes("edit").tooltip("Edit budget")
+                    ).props("flat dense round size=sm").classes("edit").tooltip(t("Edit budget"))
                 else:
                     ui.element("div")
             if children:
@@ -321,7 +346,7 @@ def page() -> None:
 
         def income_rows(rep: reports.MonthReport) -> None:
             if not rep.income_lines:
-                ui.label("No income this month.").classes("caption px-1 py-2")
+                ui.label(t("No income this month.")).classes("caption px-1 py-2")
             for line in rep.income_lines:
                 line_row(rep, line, BUDGET_INCOME)
             if not rep.complete:
@@ -332,7 +357,7 @@ def page() -> None:
                 }
                 if opts:
                     with (
-                        ui.button("Budget Another Category", icon="add")
+                        ui.button(t("Budget Another Category"), icon="add")
                         .props("flat dense no-caps")
                         .classes("link-btn mt-1"),
                         ui.menu().props("auto-close"),
@@ -348,23 +373,23 @@ def page() -> None:
         # ------------------------------------------------------------ accounts
         def accounts_card(rep: reports.MonthReport) -> None:
             with ui.element("div").classes("w-full"):
-                ui.label(f"Balances · End of {months.label(rep.month)}").classes("group-header")
+                ui.label(t("Balances · End of {month}", month=months.label(rep.month))).classes("group-header")
                 with ui.element("div").classes("group"):
                     if not rep.accounts:
                         with ui.element("div").classes("group-row"):
-                            ui.label("No balances recorded yet.").classes("text-2")
+                            ui.label(t("No balances recorded yet.")).classes("text-2")
                     for r in rep.accounts:
                         with ui.element("div").classes("group-row"):
                             with ui.column().classes("gap-0 flex-1 min-w-0"):
                                 ui.label(r.account.name).classes("truncate")
                                 if r.needs_entry:
-                                    ui.label("Not recorded, last balance carried over").classes("caption")
+                                    ui.label(t("Not recorded, last balance carried over")).classes("caption")
                             if r.account.currency != rep.currency:
                                 ui.label(fmt(r.amount, r.account.currency)).classes("num text-2 text-[13px]")
                             ui.label(fmt(r.amount_view, rep.currency)).classes("num font-medium w-36 text-right")
                             if r.needs_entry or r.has_entry:
                                 ui.button(
-                                    "Record" if r.needs_entry else "Edit",
+                                    t("Record") if r.needs_entry else t("Edit"),
                                     on_click=lambda a=r.account.id: account_entry_dialog(
                                         ctx, content.refresh, rep.month, a
                                     ),
@@ -372,7 +397,7 @@ def page() -> None:
                                     "text-primary" + ("" if r.needs_entry else " row-actions")
                                 )
                     with ui.element("div").classes("group-row"):
-                        ui.label("Total").classes("font-semibold flex-1")
+                        ui.label(t("Total")).classes("font-semibold flex-1")
                         ui.label(fmt(sum(r.amount_view for r in rep.accounts), rep.currency)).classes(
                             "num font-semibold"
                         )
@@ -383,19 +408,19 @@ def page() -> None:
 
 def _summary(total: reports.Line, is_exp: bool, currency: str) -> str:
     if total.budget <= EPS:
-        return "No budget set"
+        return t("No budget set")
     left = total.budget - total.actual if is_exp else total.actual - total.budget
     if is_exp:
         return (
-            f"{fmt(left)} left of {fmt(total.budget, currency)}"
+            t("{amount} left of {budget}", amount=fmt(left), budget=fmt(total.budget, currency))
             if left >= -EPS
-            else f"{fmt(-left)} over the {fmt(total.budget, currency)} budget"
+            else t("{amount} over the {budget} budget", amount=fmt(-left), budget=fmt(total.budget, currency))
         )
     if left > EPS:
-        return f"{fmt(left)} above the {fmt(total.budget, currency)} budget"
+        return t("{amount} above the {budget} budget", amount=fmt(left), budget=fmt(total.budget, currency))
     if left < -EPS:
-        return f"{fmt(-left)} still expected of {fmt(total.budget, currency)}"
-    return f"On budget, {fmt(total.budget, currency)}"
+        return t("{amount} still expected of {budget}", amount=fmt(-left), budget=fmt(total.budget, currency))
+    return t("On budget, {budget}", budget=fmt(total.budget, currency))
 
 
 def _split_code(line: reports.Line) -> tuple[str, str]:

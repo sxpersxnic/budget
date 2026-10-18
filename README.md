@@ -123,6 +123,7 @@ The app opens in its own window and keeps all data in your user folder:
 ## First steps
 
 1. **Settings:**
+   - Choose the language (English or Deutsch; by default it follows your system).
    - Add your accounts, each with its currency.
    - Add your income categories.
    - Choose how far ahead to plan (*Plan Until*) and the display currency.
@@ -131,9 +132,14 @@ The app opens in its own window and keeps all data in your user folder:
    (with a COICOP category or taxes), income, transfers and currency exchanges. Turn on
    *Partly paid for others* when part of a payment was for someone else. Record their
    repayment later as income with *Repays an advance payment*.
-4. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
+4. **Transactions → Import…** (optional): bring in a CSV export from your e-banking
+   instead of typing. Choose the account, check the detected columns, give the new rows a
+   category and import. The column settings can be saved per bank; transactions already
+   imported are recognised and skipped. Imported transactions are converted to CHF with the
+   exchange rate of their booking date.
+5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
-5. **Overview / Budget:** compare actual against budget, check the projected wealth, build
+6. **Overview / Budget:** compare actual against budget, check the projected wealth, build
    charts, and export statements as Excel or PDF (share button on the Budget page).
 
 ## Building the installers

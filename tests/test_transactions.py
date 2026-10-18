@@ -159,3 +159,22 @@ def test_store_get_returns_copy(ctx, setup):
     acc = ctx.store.accounts.get(setup["chf"].id)
     acc.name = "mutated"
     assert ctx.store.accounts.get(setup["chf"].id).name == "Bank"
+
+
+def test_imported_transactions_use_the_rate_of_their_booking_date(ctx, setup):
+    base = dict(type="expenditure", amount=100, currency="EUR", category="01.1", from_account=setup["eur"].id)
+    manual = tx_svc.save(ctx, TransactionInput(date=date(2026, 9, 15), **base))
+    imported = tx_svc.save(ctx, TransactionInput(date=date(2026, 9, 15), import_ref="f1", **base))
+    # manual entries: latest ECB rate (16 Oct: 0.90 CHF per EUR); imports: last rate on or before 15 Sep
+    assert manual.fx_date == date(2026, 10, 16) and manual.amount_chf == pytest.approx(90.0)
+    assert imported.fx_date == date(2026, 8, 29) and imported.amount_chf == pytest.approx(95.0)
+
+    # editing the date of an imported row revalues it; editing the note does not
+    moved = tx_svc.save(ctx, TransactionInput(date=date(2026, 10, 1), import_ref="f1", **base), editing_id=imported.id)
+    assert moved.fx_date == date(2026, 9, 30) and moved.amount_chf == pytest.approx(94.0)
+    noted = tx_svc.save(
+        ctx,
+        TransactionInput(date=date(2026, 10, 1), import_ref="f1", comment="x", **base),
+        editing_id=imported.id,
+    )
+    assert noted.fx_date == date(2026, 9, 30)

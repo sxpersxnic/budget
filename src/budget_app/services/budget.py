@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from budget_app.domain import months
 from budget_app.domain.coicop import ADV, TAX, get_coicop
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, BudgetEntry, new_id
+from budget_app.i18n import t
 from budget_app.services.context import Context, ValidationError
 
 
@@ -27,35 +28,37 @@ class BudgetInput:
 def _validate_category(ctx: Context, type_: str, category: str) -> None:
     if type_ == BUDGET_EXPENDITURE:
         if category == ADV or (category != TAX and get_coicop().get(category) is None):
-            raise ValidationError("Select an expenditure category")
+            raise ValidationError(t("Select an expenditure category"))
     elif type_ == BUDGET_INCOME:
         if ctx.store.income_categories.get(category) is None:
-            raise ValidationError("Select an income category")
+            raise ValidationError(t("Select an income category"))
     else:
-        raise ValidationError("Select income or expenditure")
+        raise ValidationError(t("Select income or expenditure"))
 
 
 def plan_months(ctx: Context, inp: BudgetInput) -> list[str]:
     horizon = ctx.horizon()
     if not inp.start_month:
-        raise ValidationError("Select the first month")
+        raise ValidationError(t("Select the first month"))
     end = horizon if inp.forever else inp.end_month
     if not end:
-        raise ValidationError("Select the final month")
+        raise ValidationError(t("Select the final month"))
     if end > horizon:
-        raise ValidationError(f"The final month cannot be after the budget horizon ({months.label(horizon)})")
+        raise ValidationError(
+            t("The final month cannot be after the budget horizon ({month})", month=months.label(horizon))
+        )
     if end < inp.start_month:
-        raise ValidationError("The final month must not be before the first month")
+        raise ValidationError(t("The final month must not be before the first month"))
     if inp.recur_months < 1:
-        raise ValidationError("The recurrence must be at least every month")
+        raise ValidationError(t("The recurrence must be at least every month"))
     return months.month_range(inp.start_month, end, inp.recur_months)
 
 
 def validate(ctx: Context, inp: BudgetInput) -> list[str]:
     if inp.amount is None or inp.amount <= 0:
-        raise ValidationError("Amount must be a positive number")
+        raise ValidationError(t("Amount must be a positive number"))
     if not inp.currency:
-        raise ValidationError("Currency is required")
+        raise ValidationError(t("Currency is required"))
     _validate_category(ctx, inp.type, inp.category)
     return plan_months(ctx, inp)
 
@@ -104,9 +107,9 @@ def update_entry(
 ) -> BudgetEntry:
     entry = ctx.store.budget.get(entry_id)  # a copy: nothing changes unless update() succeeds
     if entry is None:
-        raise ValidationError("Budget entry not found")
+        raise ValidationError(t("Budget entry not found"))
     if amount is None or amount <= 0:
-        raise ValidationError("Amount must be a positive number")
+        raise ValidationError(t("Amount must be a positive number"))
     if category is not None:
         _validate_category(ctx, entry.type, category)
         entry.category = category

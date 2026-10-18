@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from budget_app import i18n
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months
 from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR
+from budget_app.i18n import t, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import budget as budget_svc
 from budget_app.services import transactions as tx_svc
@@ -21,16 +23,20 @@ ROW_ACTION = "flat dense round size=sm"
 
 def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
     """Add (acc=None) or edit an account."""
-    noun = "Advance Payment Account" if kind == ACCOUNT_ADVANCE else "Account"
+    advance = kind == ACCOUNT_ADVANCE
+    if acc:
+        title = t("Edit Advance Payment Account") if advance else t("Edit Account")
+    else:
+        title = t("New Advance Payment Account") if advance else t("New Account")
     in_use = acc is not None and acc_svc.account_in_use(ctx, acc.id)
-    with sheet(f"Edit {noun}" if acc else f"New {noun}", width="26rem") as dlg:
-        name = ui.input("Name", value=acc.name if acc else "").props("dense outlined autofocus").classes("w-full")
+    with sheet(title, width="26rem") as dlg:
+        name = ui.input(t("Name"), value=acc.name if acc else "").props("dense outlined autofocus").classes("w-full")
         cur = currency_select(ctx, acc.currency if acc else ctx.store.settings.display_currency)
         if in_use:
             cur.disable()
-            ui.label("The currency can’t change while transactions use this account.").classes("caption -mt-2")
+            ui.label(t("The currency can’t change while transactions use this account.")).classes("caption -mt-2")
         elif not acc:
-            ui.label("Every transaction on this account will be in this currency.").classes("caption -mt-2")
+            ui.label(t("Every transaction on this account will be in this currency.")).classes("caption -mt-2")
 
         def save():
             try:
@@ -44,7 +50,7 @@ def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
             dlg.close()
             refresh()
 
-        sheet_buttons(dlg, "Save" if acc else "Add", save)
+        sheet_buttons(dlg, t("Save") if acc else t("Add"), save)
         name.on("keydown.enter", save)
 
 
@@ -60,42 +66,51 @@ def _accounts_group(ctx: Context, kind: str, title: str) -> None:
                         if kind == ACCOUNT_REGULAR:
                             last = wealth_svc.balance_entry(ctx, acc.id, "9999-12")
                             ui.label(
-                                f"{fmt(last.amount, acc.currency)} at the end of {months.label(last.month)}"
+                                t(
+                                    "{amount} at the end of {month}",
+                                    amount=fmt(last.amount, acc.currency),
+                                    month=months.label(last.month),
+                                )
                                 if last
-                                else "No balance recorded"
+                                else t("No balance recorded")
                             ).classes("caption")
                         else:
                             ui.label(
-                                f"{fmt(tx_svc.advance_account_balance(ctx, acc.id), acc.currency)} outstanding"
+                                t(
+                                    "{amount} outstanding",
+                                    amount=fmt(tx_svc.advance_account_balance(ctx, acc.id), acc.currency),
+                                )
                             ).classes("caption")
                     ui.label(acc.currency).classes("text-2 text-[13px]")
                     with ui.row().classes("row-actions gap-0 no-wrap"):
                         ui.button(
                             icon="o_edit", on_click=lambda a=acc: _account_sheet(ctx, kind, body.refresh, a)
-                        ).props(ROW_ACTION).classes("text-primary").tooltip("Edit")
+                        ).props(ROW_ACTION).classes("text-primary").tooltip(t("Edit"))
 
                         def delete(a=acc):
                             def do():
                                 try:
                                     acc_svc.delete_account(ctx, a.id)
-                                    success(f"Deleted {a.name}")
+                                    success(t("Deleted {name}", name=a.name))
                                 except ValidationError as exc:
                                     error(str(exc))
                                 body.refresh()
 
                             confirm(
-                                f"Delete “{a.name}”?",
+                                t("Delete “{name}”?", name=a.name),
                                 do,
-                                detail="Its recorded balances are removed too. Accounts with transactions can’t be "
-                                "deleted.",
+                                detail=t(
+                                    "Its recorded balances are removed too. "
+                                    "Accounts with transactions can’t be deleted."
+                                ),
                             )
 
                         ui.button(icon="o_delete", on_click=delete).props(ROW_ACTION).classes("text-negative").tooltip(
-                            "Delete"
+                            t("Delete")
                         )
             with ui.element("div").classes("group-row"):
                 ui.button(
-                    f"Add {'Advance Payment Account' if kind == ACCOUNT_ADVANCE else 'Account'}…",
+                    t("Add Advance Payment Account…") if kind == ACCOUNT_ADVANCE else t("Add Account…"),
                     on_click=lambda: _account_sheet(ctx, kind, body.refresh),
                 ).props("flat dense no-caps").classes("link-btn -ml-2")
 
@@ -105,8 +120,8 @@ def _accounts_group(ctx: Context, kind: str, title: str) -> None:
 
 
 def _category_sheet(ctx: Context, refresh, cat=None) -> None:
-    with sheet("Rename Income Category" if cat else "New Income Category", width="24rem") as dlg:
-        name = ui.input("Name", value=cat.name if cat else "").props("dense outlined autofocus").classes("w-full")
+    with sheet(t("Rename Income Category") if cat else t("New Income Category"), width="24rem") as dlg:
+        name = ui.input(t("Name"), value=cat.name if cat else "").props("dense outlined autofocus").classes("w-full")
 
         def save():
             try:
@@ -120,7 +135,7 @@ def _category_sheet(ctx: Context, refresh, cat=None) -> None:
             dlg.close()
             refresh()
 
-        sheet_buttons(dlg, "Save" if cat else "Add", save)
+        sheet_buttons(dlg, t("Save") if cat else t("Add"), save)
         name.on("keydown.enter", save)
 
 
@@ -134,7 +149,7 @@ def _income_group(ctx: Context) -> None:
                     with ui.row().classes("row-actions gap-0 no-wrap"):
                         ui.button(icon="o_edit", on_click=lambda c=cat: _category_sheet(ctx, body.refresh, c)).props(
                             ROW_ACTION
-                        ).classes("text-primary").tooltip("Rename")
+                        ).classes("text-primary").tooltip(t("Rename"))
 
                         def delete(c=cat):
                             def do():
@@ -144,66 +159,97 @@ def _income_group(ctx: Context) -> None:
                                     error(str(exc))
                                 body.refresh()
 
-                            confirm(f"Delete “{c.name}”?", do, detail="Categories that are in use can’t be deleted.")
+                            confirm(
+                                t("Delete “{name}”?", name=c.name),
+                                do,
+                                detail=t("Categories that are in use can’t be deleted."),
+                            )
 
                         ui.button(icon="o_delete", on_click=delete).props(ROW_ACTION).classes("text-negative").tooltip(
-                            "Delete"
+                            t("Delete")
                         )
             with ui.element("div").classes("group-row"):
-                ui.button("Add Category…", on_click=lambda: _category_sheet(ctx, body.refresh)).props(
+                ui.button(t("Add Category…"), on_click=lambda: _category_sheet(ctx, body.refresh)).props(
                     "flat dense no-caps"
                 ).classes("link-btn -ml-2")
 
     with ui.column().classes("w-full gap-0"):
-        ui.label("Income Categories").classes("group-header")
+        ui.label(t("Income Categories")).classes("group-header")
         body()
 
 
 def page() -> None:
-    with frame("Settings", "/settings", narrow=True) as (ctx, _):
+    with frame(t("Settings"), "/settings", narrow=True) as (ctx, _):
         with ui.column().classes("w-full gap-0"):
-            ui.label("Budget").classes("group-header")
+            ui.label(t("Budget")).classes("group-header")
             with ui.element("div").classes("group"):
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
-                        ui.label("Plan Until")
-                        ui.label("Extending it continues every budget entry that runs forever.").classes("caption")
+                        ui.label(t("Language"))
+                        ui.label(t("The interface language. Amounts keep the Swiss format.")).classes("caption")
+
+                    def set_language(e):
+                        ctx.store.settings.language = e.value
+                        ctx.store.save_settings()
+                        i18n.set_language(e.value)
+                        ui.navigate.reload()
+
+                    languages = {
+                        "": t("System ({name})", name=i18n.LANGUAGES[i18n.system_language()]),
+                        **i18n.LANGUAGES,
+                    }
+                    ui.select(languages, value=ctx.store.settings.language, on_change=set_language).props(
+                        "dense outlined options-dense"
+                    ).classes("w-36")
+                with ui.element("div").classes("group-row"):
+                    with ui.column().classes("gap-0 flex-1 min-w-0"):
+                        ui.label(t("Plan Until"))
+                        ui.label(t("Extending it continues every budget entry that runs forever.")).classes("caption")
                     cm = months.current_month()
                     opts = month_options(cm, months.add_months(cm, 12 * 15))
                     horizon = ctx.horizon()
                     opts.setdefault(horizon, months.label(horizon))
                     sel = ui.select(opts, value=horizon).props("dense outlined options-dense").classes("w-36")
-                    apply_btn = ui.button("Apply").props("unelevated dense").classes("px-3")
+                    apply_btn = ui.button(t("Apply")).props("unelevated dense").classes("px-3")
                     apply_btn.set_visibility(False)
 
                     def apply():
                         added = budget_svc.set_horizon(ctx, sel.value)
                         apply_btn.set_visibility(False)
+                        month = months.label(sel.value)
                         success(
-                            f"Planning until {months.label(sel.value)}"
-                            + (f", {added} budget entries added" if added else "")
+                            tn(
+                                "Planning until {month}, {n} budget entry added",
+                                "Planning until {month}, {n} budget entries added",
+                                added,
+                                month=month,
+                            )
+                            if added
+                            else t("Planning until {month}", month=month)
                         )
 
                     apply_btn.on_click(apply)
                     sel.on_value_change(lambda e: apply_btn.set_visibility(e.value != ctx.horizon()))
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
-                        ui.label("Display Currency")
-                        ui.label("Amounts are shown in this currency unless a page says otherwise.").classes("caption")
+                        ui.label(t("Display Currency"))
+                        ui.label(t("Amounts are shown in this currency unless a page says otherwise.")).classes(
+                            "caption"
+                        )
 
                     def set_cur(e):
                         ctx.store.settings.display_currency = e.value
                         ctx.store.save_settings()
-                        success(f"Showing amounts in {e.value}")
+                        success(t("Showing amounts in {currency}", currency=e.value))
 
                     currency_select(ctx, ctx.store.settings.display_currency, on_change=set_cur, label=None)
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
-                        ui.label("Base Currency")
-                        ui.label("Every amount is also stored in this currency. It can’t be changed.").classes(
+                        ui.label(t("Base Currency"))
+                        ui.label(t("Every amount is also stored in this currency. It can’t be changed.")).classes(
                             "caption"
                         )
                     ui.label(BASE_CURRENCY).classes("text-2 pr-2")
-        _accounts_group(ctx, ACCOUNT_REGULAR, "Accounts")
-        _accounts_group(ctx, ACCOUNT_ADVANCE, "Advance Payment Accounts")
+        _accounts_group(ctx, ACCOUNT_REGULAR, t("Accounts"))
+        _accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"))
         _income_group(ctx)

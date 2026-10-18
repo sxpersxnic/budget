@@ -8,6 +8,7 @@ from datetime import date
 
 from nicegui import ui
 
+from budget_app import i18n
 from budget_app.domain.fx import FxError
 from budget_app.domain.models import (
     ACCOUNT_ADVANCE,
@@ -18,6 +19,7 @@ from budget_app.domain.models import (
     TX_TYPES,
     Transaction,
 )
+from budget_app.i18n import t, tc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
@@ -63,21 +65,23 @@ class TransactionForm:
         ch = self._changed
         with ui.column().classes("w-full gap-4"):
             # The type decides every other field, so it comes first.
-            self.type = segmented(dict(TX_TYPES.items()), init.type, on_change=ch, full=True)
+            self.type = segmented({k: t(v) for k, v in TX_TYPES.items()}, init.type, on_change=ch, full=True)
             with ui.column().classes("w-full gap-1"):
                 with ui.row().classes("w-full gap-2 items-center no-wrap"):
                     self.amount = ui.number(
-                        "Amount",
+                        t("Amount"),
                         value=init.amount,
                         min=0,
                         format="%.2f",
                         on_change=ch,
-                        validation={"Must be positive": lambda v: v is None or v > 0},
+                        validation={t("Must be positive"): lambda v: v is None or v > 0},
                     )
                     self.amount.props("outlined inputmode=decimal autofocus").classes("hero-amount flex-1 min-w-0")
                     self.currency = currency_select(self.ctx, init.currency, on_change=ch)
                 self.base_hint = ui.label().classes("caption px-1")
-            self.date = date_input("Date", init.date.isoformat() if init.date else "", on_change=ch).classes("w-full")
+            self.date = date_input(t("Date"), init.date.isoformat() if init.date else "", on_change=ch).classes(
+                "w-full"
+            )
 
             # --- expenditure
             with ui.column().classes("w-full gap-3") as self.exp_box:
@@ -85,27 +89,29 @@ class TransactionForm:
                     init.category if init.type == TX_EXPENDITURE else None, on_change=ch
                 )
                 self.exp_from = self._account_select(
-                    "From Account", init.from_account if init.type == TX_EXPENDITURE else None
+                    t("From Account"), init.from_account if init.type == TX_EXPENDITURE else None
                 )
                 self.exp_adv = ui.switch(
-                    "Partly paid for others (advance payment)",
+                    t("Partly paid for others (advance payment)"),
                     value=init.is_advance and init.type == TX_EXPENDITURE,
                     on_change=ch,
                 ).props("dense")
                 with ui.column().classes("w-full gap-3 subform") as self.exp_adv_box:
                     with ui.row().classes("w-full gap-2 items-center no-wrap"):
-                        self.adv_value = ui.number("Paid for others", value=init.advance_value, min=0, on_change=ch)
+                        self.adv_value = ui.number(t("Paid for others"), value=init.advance_value, min=0, on_change=ch)
                         self.adv_value.props("dense outlined").classes("flex-1 min-w-0")
-                        self.adv_mode = segmented({"percent": "%", "amount": "Amount"}, init.advance_mode, on_change=ch)
+                        self.adv_mode = segmented(
+                            {"percent": "%", "amount": t("Amount")}, init.advance_mode, on_change=ch
+                        )
                     self.adv_hint = ui.label().classes("caption px-1 -mt-2")
                     self.exp_adv_account = (
-                        ui.select({}, label="Advance Payment Account", on_change=ch)
+                        ui.select({}, label=t("Advance Payment Account"), on_change=ch)
                         .props("dense outlined")
                         .classes("w-full")
                     )
                     self._init_exp_adv_account = init.advance_account if init.type == TX_EXPENDITURE else ""
                     self.debtor = (
-                        ui.input("Debtor", value=init.debtor if init.type == TX_EXPENDITURE else "", on_change=ch)
+                        ui.input(t("Debtor"), value=init.debtor if init.type == TX_EXPENDITURE else "", on_change=ch)
                         .props("dense outlined")
                         .classes("w-full")
                     )
@@ -117,16 +123,16 @@ class TransactionForm:
                     init.category if init.type == TX_INCOME and not init.is_advance else None,
                     on_change=ch,
                 )
-                self.inc_to = self._account_select("To Account", init.to_account if init.type == TX_INCOME else None)
+                self.inc_to = self._account_select(t("To Account"), init.to_account if init.type == TX_INCOME else None)
                 self.inc_adv = ui.switch(
-                    "Repays an advance payment", value=init.is_advance and init.type == TX_INCOME, on_change=ch
+                    t("Repays an advance payment"), value=init.is_advance and init.type == TX_INCOME, on_change=ch
                 ).props("dense")
                 with ui.column().classes("w-full gap-3 subform") as self.inc_adv_box:
                     self.inc_adv_account = ui.select(
-                        {}, label="Advance Payment Account", value=None, on_change=self._inc_adv_account_changed
+                        {}, label=t("Advance Payment Account"), value=None, on_change=self._inc_adv_account_changed
                     )
                     self.inc_adv_account.props("dense outlined").classes("w-full")
-                    self.open_items = ui.select({}, label="Outstanding Payment", on_change=self._open_item_changed)
+                    self.open_items = ui.select({}, label=t("Outstanding Payment"), on_change=self._open_item_changed)
                     self.open_items.props("dense outlined").classes("w-full")
                     self._init_inc_adv = (init.advance_account, init.settles_id) if init.type == TX_INCOME else ("", "")
 
@@ -134,13 +140,15 @@ class TransactionForm:
             with ui.column().classes("w-full gap-1") as self.move_box:
                 init_move = init.type in (TX_TRANSFER, TX_EXCHANGE)
                 with ui.row().classes("w-full gap-2 items-center no-wrap max-sm:flex-wrap"):
-                    self.move_from = self._account_select("From", init.from_account if init_move else None)
+                    self.move_from = self._account_select(
+                        tc("account", "From"), init.from_account if init_move else None
+                    )
                     ui.icon("arrow_forward", size="18px").classes("text-3 max-sm:hidden")
-                    self.move_to = self._account_select("To", init.to_account if init_move else None)
+                    self.move_to = self._account_select(tc("account", "To"), init.to_account if init_move else None)
                 self.exchange_hint = ui.label().classes("caption px-1")
 
             self.comment = (
-                ui.textarea("Note", value=init.comment, placeholder="Optional")
+                ui.textarea(t("Note"), value=init.comment, placeholder=t("Optional"))
                 .props("dense outlined autogrow rows=1")
                 .classes("w-full")
             )
@@ -148,9 +156,9 @@ class TransactionForm:
                 self.status = ui.label().classes("caption")
                 ui.space()
                 if self.on_cancel:
-                    ui.button("Cancel", on_click=self.on_cancel).props("flat").classes("text-primary")
+                    ui.button(t("Cancel"), on_click=self.on_cancel).props("flat").classes("text-primary")
                 self.save_btn = ui.button(
-                    "Save Changes" if self.editing else "Add Transaction", on_click=self._save
+                    t("Save Changes") if self.editing else t("Add Transaction"), on_click=self._save
                 ).props("unelevated")
 
     def _account_select(self, label: str, value: str | None) -> ui.select:
@@ -194,10 +202,10 @@ class TransactionForm:
 
     # ------------------------------------------------------------- dependents
     def _refresh_options(self) -> None:
-        t, cur = self.type.value, self.currency.value
-        self.exp_box.set_visibility(t == TX_EXPENDITURE)
-        self.inc_box.set_visibility(t == TX_INCOME)
-        self.move_box.set_visibility(t in (TX_TRANSFER, TX_EXCHANGE))
+        kind, cur = self.type.value, self.currency.value
+        self.exp_box.set_visibility(kind == TX_EXPENDITURE)
+        self.inc_box.set_visibility(kind == TX_INCOME)
+        self.move_box.set_visibility(kind in (TX_TRANSFER, TX_EXCHANGE))
         self.exp_adv_box.set_visibility(bool(self.exp_adv.value))
         self.inc_adv_box.set_visibility(bool(self.inc_adv.value))
         self.inc_category.set_visibility(not self.inc_adv.value)
@@ -206,10 +214,10 @@ class TransactionForm:
         set_options(self.exp_from, account_options(self.ctx, currency=cur))
         set_options(self.inc_to, account_options(self.ctx, currency=cur))
 
-        adv_opts = {AUTO_ADVANCE: "Advance payments (default)"} | dict(
+        adv_opts = {AUTO_ADVANCE: t("Advance payments (default)")} | dict(
             account_options(self.ctx, ACCOUNT_ADVANCE, cur).items()
         )
-        default_adv = next(
+        default_adv = next(  # the stored account name, so not translated
             (k for k, v in adv_opts.items() if k != AUTO_ADVANCE and v.startswith("Advance payments (")), None
         )
         if default_adv:
@@ -234,13 +242,13 @@ class TransactionForm:
         if self._init_inc_adv[1]:
             settled = self.ctx.store.transactions.get(self._init_inc_adv[1])
             if settled is not None and settled.id not in item_opts:
-                item_opts[settled.id] = f"{settled.date.isoformat()} · {settled.debtor or '—'}"
+                item_opts[settled.id] = f"{i18n.date_label(settled.date)} · {settled.debtor or '—'}"
             self.open_items.set_options(item_opts, value=self._init_inc_adv[1])
             self._init_inc_adv = ("", "")
         else:
             set_options(self.open_items, item_opts)
 
-        if t == TX_EXCHANGE:
+        if kind == TX_EXCHANGE:
             set_options(self.move_from, account_options(self.ctx))
             src = self.ctx.store.accounts.get(self.move_from.value) if self.move_from.value else None
             if src and self.currency.value != src.currency:
@@ -260,33 +268,43 @@ class TransactionForm:
             try:
                 chf, fx_date = self.ctx.to_base_latest(inp.amount, inp.currency)
                 if inp.currency != "CHF":
-                    self.base_hint.set_text(f"= {fmt(chf, 'CHF')} (ECB {fx_date.isoformat()})")
+                    self.base_hint.set_text(
+                        t("= {amount} (ECB rate of {date})", amount=fmt(chf, "CHF"), date=i18n.date_label(fx_date))
+                    )
                 if inp.type == TX_EXPENDITURE and inp.is_advance:
                     share = tx_svc.advance_share(inp)
                     self.adv_hint.set_text(
-                        f"Others: {fmt(share, inp.currency)} · own share: {fmt(inp.amount - share, inp.currency)}"
+                        t(
+                            "Others: {others} · own share: {own}",
+                            others=fmt(share, inp.currency),
+                            own=fmt(inp.amount - share, inp.currency),
+                        )
                     )
                 if inp.type == TX_EXCHANGE and inp.to_account:
                     dst = self.ctx.store.accounts.get(inp.to_account)
                     if dst:
                         to_amt = self.ctx.fx.convert(inp.amount, inp.currency, dst.currency, fx_date)
                         self.exchange_hint.set_text(
-                            f"≈ {fmt(to_amt, dst.currency)} credited (ECB {fx_date.isoformat()})"
+                            t(
+                                "≈ {amount} credited (ECB rate of {date})",
+                                amount=fmt(to_amt, dst.currency),
+                                date=i18n.date_label(fx_date),
+                            )
                         )
             except FxError:  # missing rates: the hints are optional
                 log.debug("No exchange rate for hint", exc_info=True)
 
     # ------------------------------------------------------------------ data
     def read(self) -> TransactionInput:
-        t = self.type.value
+        kind = self.type.value
         inp = TransactionInput(
             date=parse_date(self.date.value),
-            type=t,
+            type=kind,
             amount=self.amount.value,
             currency=self.currency.value or "",
             comment=self.comment.value or "",
         )
-        if t == TX_EXPENDITURE:
+        if kind == TX_EXPENDITURE:
             inp.category = self.exp_category.value or ""
             inp.from_account = self.exp_from.value or ""
             inp.is_advance = bool(self.exp_adv.value)
@@ -296,7 +314,7 @@ class TransactionForm:
                 acc = self.exp_adv_account.value
                 inp.advance_account = "" if acc in (None, AUTO_ADVANCE) else acc
                 inp.debtor = self.debtor.value or ""
-        elif t == TX_INCOME:
+        elif kind == TX_INCOME:
             inp.to_account = self.inc_to.value or ""
             inp.is_advance = bool(self.inc_adv.value)
             if inp.is_advance:
@@ -315,7 +333,7 @@ class TransactionForm:
         except Exception as exc:  # validation and FX errors
             error(str(exc))
             return
-        success("Changes saved" if self.editing else "Transaction added")
+        success(t("Changes saved") if self.editing else t("Transaction added"))
         if self.on_saved:
             self.on_saved(tx)
         if not self.editing:
@@ -360,5 +378,5 @@ def open_transaction_sheet(
         if on_saved:
             on_saved()
 
-    with sheet("Edit Transaction" if editing else "New Transaction", width="34rem") as dlg:
+    with sheet(t("Edit Transaction") if editing else t("New Transaction"), width="34rem") as dlg:
         TransactionForm(ctx, editing=editing, on_saved=saved, on_cancel=dlg.close)

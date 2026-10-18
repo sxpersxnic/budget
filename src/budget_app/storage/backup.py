@@ -22,10 +22,8 @@ _BACKUP_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}_.+_to_.+$")
 
 
 def data_files(data_dir: Path) -> list[Path]:
-    """The user's records: the CSV tables and the settings (the ECB file can be downloaded again)."""
-    files = sorted(p for p in data_dir.glob("*.csv") if p.is_file())
-    settings = data_dir / "settings.json"
-    return files + ([settings] if settings.is_file() else [])
+    """The user's records: the CSV tables, settings and import profiles (the ECB file can be downloaded again)."""
+    return sorted(p for p in [*data_dir.glob("*.csv"), *data_dir.glob("*.json")] if p.is_file())
 
 
 def backup_on_version_change(data_dir: Path, version: str, now: datetime | None = None) -> Path | None:

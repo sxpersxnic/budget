@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 from nicegui import ui
 
 from budget_app.domain import months
+from budget_app.i18n import N_, t
 from budget_app.services import export as export_svc
 from budget_app.services import reports
 from budget_app.services import wealth as wealth_svc
@@ -26,14 +27,14 @@ from budget_app.ui.theme import CHART_GRID, NEGATIVE, NEUTRAL, POSITIVE, SERIES,
 from budget_app.ui.widgets.selects import currency_select
 
 CHART_TYPES = {
-    "wealth": "Wealth Over Time",
-    "flows": "Income and Expenditure",
-    "waterfall": "Change per Account",
+    "wealth": N_("Wealth Over Time"),
+    "flows": N_("Income and Expenditure"),
+    "waterfall": N_("Change per Account"),
 }
 CHART_HINTS = {
-    "wealth": "Recorded balances, then the budget projection",
-    "flows": "Monthly totals or chosen categories",
-    "waterfall": "How each account moved between two month ends",
+    "wealth": N_("Recorded balances, then the budget projection"),
+    "flows": N_("Monthly totals or chosen categories"),
+    "waterfall": N_("How each account moved between two month ends"),
 }
 
 
@@ -48,18 +49,18 @@ class ChartCard:
         with container, ui.element("div").classes("surface flex flex-col gap-3") as self.card:
             with ui.row().classes("w-full items-start gap-2 no-wrap"):
                 with ui.column().classes("gap-0 min-w-0"):
-                    ui.label(CHART_TYPES[kind]).classes("section-title")
-                    ui.label(CHART_HINTS[kind]).classes("caption")
+                    ui.label(t(CHART_TYPES[kind])).classes("section-title")
+                    ui.label(t(CHART_HINTS[kind])).classes("caption")
                 ui.space()
                 with (
                     ui.button(icon="more_horiz").props("flat round dense").classes("text-primary"),
                     ui.menu().props("auto-close"),
                 ):
-                    ui.menu_item("Save Image…", on_click=self.download_png)
-                    ui.menu_item("Export Data as CSV…", on_click=lambda: self.download("csv"))
-                    ui.menu_item("Export Data as Excel…", on_click=lambda: self.download("xlsx"))
+                    ui.menu_item(t("Save Image…"), on_click=self.download_png)
+                    ui.menu_item(t("Export Data as CSV…"), on_click=lambda: self.download("csv"))
+                    ui.menu_item(t("Export Data as Excel…"), on_click=lambda: self.download("xlsx"))
                     ui.separator()
-                    ui.menu_item("Remove Chart", on_click=lambda: on_remove(self)).classes("text-negative")
+                    ui.menu_item(t("Remove Chart"), on_click=lambda: on_remove(self)).classes("text-negative")
             with ui.row().classes("w-full items-start gap-2 flex-wrap"):
                 opts = month_options(first, last)
                 if kind == "flows":
@@ -67,20 +68,20 @@ class ChartCard:
                         ui.select(
                             opts,
                             value=months.add_months(cm, -6) if months.add_months(cm, -6) in opts else first,
-                            label="From",
+                            label=t("From"),
                         )
                         .props("dense outlined options-dense")
                         .classes("w-32")
                     )
                     self.end = (
-                        ui.select(opts, value=cm, label="To").props("dense outlined options-dense").classes("w-32")
+                        ui.select(opts, value=cm, label=t("To")).props("dense outlined options-dense").classes("w-32")
                     )
-                    self.style = segmented({"bar": "Bars", "line": "Lines"}, "bar")
-                    self.budget = ui.switch("Budget").props("dense")
+                    self.style = segmented({"bar": t("Bars"), "line": t("Lines")}, "bar")
+                    self.budget = ui.switch(t("Budget")).props("dense")
                     self.series = ui.select(
                         reports.series_keys(ctx),
                         value=["EXP:TOTAL", "INC:TOTAL"],
-                        label="Categories",
+                        label=t("Categories"),
                         multiple=True,
                         with_input=True,
                     )
@@ -92,13 +93,13 @@ class ChartCard:
                         ui.select(
                             opts,
                             value=months.add_months(prev, -1) if months.add_months(prev, -1) in opts else first,
-                            label="From end of",
+                            label=t("From end of"),
                         )
                         .props("dense outlined options-dense")
                         .classes("w-36")
                     )
                     self.end = (
-                        ui.select(opts, value=prev if prev in opts else last, label="To end of")
+                        ui.select(opts, value=prev if prev in opts else last, label=t("To end of"))
                         .props("dense outlined options-dense")
                         .classes("w-36")
                     )
@@ -116,7 +117,7 @@ class ChartCard:
         try:
             fig = getattr(self, f"_fig_{self.kind}")(cur)
         except Exception as exc:
-            error(f"Chart error: {exc}")
+            error(t("Chart error: {error}", error=exc))
             return
         self.plot.update_figure(figure_dict(fig))
 
@@ -128,13 +129,14 @@ class ChartCard:
         fig = go.Figure()
         actual = [(m, v) for m, v, p in series if not p]
         projected = [(m, v) for m, v, p in series if p]
+        recorded_name = t("Recorded")
         if actual and projected:
             projected.insert(0, actual[-1])  # connect the projection to the last actual value
         if actual:
             fig.add_scatter(
                 x=[m for m, _ in actual],
                 y=[v for _, v in actual],
-                name="Recorded",
+                name=recorded_name,
                 mode="lines",
                 line=dict(color=SERIES[0], width=2.5, shape="spline", smoothing=0.4),
                 fill="tozeroy",
@@ -144,7 +146,7 @@ class ChartCard:
             fig.add_scatter(
                 x=[m for m, _ in projected],
                 y=[v for _, v in projected],
-                name="Projected",
+                name=t("Projected"),
                 mode="lines",
                 line=dict(color=SERIES[0], width=2, dash="dot"),
             )
@@ -154,7 +156,7 @@ class ChartCard:
             lo, hi = min(values), max(values)
             pad = max((hi - lo) * 0.15, hi * 0.02)
             fig.update_yaxes(range=[max(lo - pad, 0), hi + pad])
-            fig.update_traces(fill=None, selector=dict(name="Recorded"))
+            fig.update_traces(fill=None, selector=dict(name=recorded_name))
         return fig
 
     def _fig_flows(self, cur: str) -> go.Figure:
@@ -164,8 +166,9 @@ class ChartCard:
         self.data = pd.DataFrame(rows)
         fig = go.Figure()
         cols = [c for c in self.data.columns if c != "month"]
+        budget_cols = {reports.budget_label(c) for c in cols}  # names match the report, in any language
         for i, col in enumerate(cols):
-            is_budget = col.endswith("(budget)")
+            is_budget = col in budget_cols
             color = SERIES[(i // 2 if self.budget.value else i) % len(SERIES)]
             if self.style.value == "bar":
                 fig.add_bar(
@@ -197,7 +200,11 @@ class ChartCard:
         self.data = pd.DataFrame(changes)
         w0 = sum(c["start"] for c in changes)
         w1 = sum(c["end"] for c in changes)
-        x = [f"Wealth {months.label(start)}"] + [c["account"] for c in changes] + [f"Wealth {months.label(end)}"]
+        x = (
+            [t("Wealth {month}", month=months.label(start))]
+            + [c["account"] for c in changes]
+            + [t("Wealth {month}", month=months.label(end))]
+        )
         y = [w0] + [c["change"] for c in changes] + [w1]
         fig = go.Figure(
             go.Waterfall(
@@ -237,7 +244,7 @@ class ChartCard:
 
 
 def page() -> None:
-    with frame("Overview", "/") as (ctx, actions):
+    with frame(t("Overview"), "/") as (ctx, actions):
         currency = {"value": ctx.store.settings.display_currency}
         charts: list[ChartCard] = []
 
@@ -249,17 +256,23 @@ def page() -> None:
                 current = wealth_svc.current_wealth(ctx, cur)
                 projected = wealth_svc.projected_wealth(ctx, horizon, cur)
             except Exception as exc:
-                error(f"Cannot compute wealth: {exc}")
+                error(t("Cannot compute wealth: {error}", error=exc))
                 return
             change = projected - current
             with ui.element("div").classes("surface"), ui.element("div").classes("metrics").style("--n: 2"):
-                metric("Wealth", current, cur, f"End of {months.label(months.previous_month())}", hero=True)
+                metric(
+                    t("Wealth"),
+                    current,
+                    cur,
+                    t("End of {month}", month=months.label(months.previous_month())),
+                    hero=True,
+                )
                 with ui.element("div").classes("metric"):
-                    ui.label(f"Projected for {months.label(horizon)}").classes("metric-label")
+                    ui.label(t("Projected for {month}", month=months.label(horizon))).classes("metric-label")
                     ui.html(money_html(projected, cur)).classes("metric-value")
-                    ui.label(f"{'+' if change >= 0 else ''}{fmt(change, cur)} by the end of the plan").classes(
-                        "metric-sub " + ("text-pos" if change >= 0 else "text-neg")
-                    )
+                    ui.label(
+                        t("{amount} by the end of the plan", amount=f"{'+' if change >= 0 else ''}{fmt(change, cur)}")
+                    ).classes("metric-sub " + ("text-pos" if change >= 0 else "text-neg"))
 
         def set_currency(e) -> None:
             currency["value"] = e.value
@@ -273,12 +286,12 @@ def page() -> None:
                 c.render()
 
         with actions:
-            currency_select(ctx, currency["value"], on_change=set_currency, label="Currency")
-            with ui.button("Add Chart", icon="add").props("unelevated"), ui.menu().props("auto-close"):
+            currency_select(ctx, currency["value"], on_change=set_currency, label=t("Currency"))
+            with ui.button(t("Add Chart"), icon="add").props("unelevated"), ui.menu().props("auto-close"):
                 for key, title in CHART_TYPES.items():
                     with ui.menu_item(on_click=lambda k=key: add(k)), ui.column().classes("gap-0 py-1"):
-                        ui.label(title)
-                        ui.label(CHART_HINTS[key]).classes("caption")
+                        ui.label(t(title))
+                        ui.label(t(CHART_HINTS[key])).classes("caption")
         kpis()
         grid = ui.element("div").classes("w-full grid grid-cols-1 xl:grid-cols-2 gap-5")
 

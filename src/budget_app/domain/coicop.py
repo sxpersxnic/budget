@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import csv
+import json
 from dataclasses import dataclass, field
-from functools import lru_cache
+from functools import cache, lru_cache
 
-from budget_app.config import COICOP_FILE
+from budget_app import i18n
+from budget_app.config import COICOP_FILE, RESOURCES_DIR
+from budget_app.i18n import N_, t
 
 TAX = "TAX"
 ADV = "ADV"
 UNACCOUNTED = "UNACCOUNTED"
-PSEUDO_NAMES = {TAX: "Taxes", ADV: "Advance payments", UNACCOUNTED: "Unaccounted Expenditure"}
+PSEUDO_NAMES = {TAX: N_("Taxes"), ADV: N_("Advance payments"), UNACCOUNTED: N_("Unaccounted Expenditure")}
 
 
 @dataclass
@@ -23,10 +26,17 @@ class Category:
     children: list[str] = field(default_factory=list)
 
     @property
+    def display_name(self) -> str:
+        """The name in the interface language (COICOP names have their own translation file)."""
+        if self.code in PSEUDO_NAMES:
+            return t(self.name)
+        return coicop_names(i18n.language()).get(self.name, self.name)
+
+    @property
     def label(self) -> str:
         if self.code in PSEUDO_NAMES:
-            return self.name
-        return f"{self.code} {self.name}"
+            return self.display_name
+        return f"{self.code} {self.display_name}"
 
 
 class Coicop:
@@ -67,8 +77,15 @@ class Coicop:
     def selectable(self) -> dict[str, str]:
         """Options for an expenditure category dropdown: every COICOP level plus taxes."""
         opts = {c.code: (" " * (c.level - 1)) + c.label for c in self.categories.values() if c.code not in PSEUDO_NAMES}
-        opts[TAX] = PSEUDO_NAMES[TAX]
+        opts[TAX] = t(PSEUDO_NAMES[TAX])
         return opts
+
+
+@cache
+def coicop_names(lang: str) -> dict[str, str]:
+    """English COICOP name -> name in `lang` (empty for English)."""
+    path = RESOURCES_DIR / "i18n" / f"coicop_{lang}.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 @lru_cache(maxsize=1)

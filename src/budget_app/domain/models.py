@@ -7,6 +7,8 @@ import datetime as dt
 import uuid
 from dataclasses import dataclass, field
 
+from budget_app.i18n import N_
+
 
 def new_id() -> str:
     return uuid.uuid4().hex[:12]
@@ -20,10 +22,10 @@ TX_INCOME = "income"
 TX_TRANSFER = "transfer"
 TX_EXCHANGE = "exchange"
 TX_TYPES = {
-    TX_EXPENDITURE: "Expenditure",
-    TX_INCOME: "Income",
-    TX_TRANSFER: "Account transfer",
-    TX_EXCHANGE: "Currency exchange",
+    TX_EXPENDITURE: N_("Expenditure"),
+    TX_INCOME: N_("Income"),
+    TX_TRANSFER: N_("Account transfer"),
+    TX_EXCHANGE: N_("Currency exchange"),
 }
 
 BUDGET_INCOME = "income"
@@ -64,6 +66,9 @@ class Transaction:
     debtor: str = ""
     settles_id: str = ""  # income repayment: id of the advanced expenditure being settled
     comment: str = ""
+    # set for imported rows: identifies the source row (duplicate detection) and means the CHF amount
+    # uses the ECB rate of the booking date instead of the latest one
+    import_ref: str = ""
     id: str = field(default_factory=new_id)
 
 
@@ -104,3 +109,4 @@ class Settings:
     budget_horizon: str = ""
     display_currency: str = "CHF"
     last_fx_download: str = ""
+    language: str = ""  # "" = follow the system; otherwise a key of i18n.LANGUAGES

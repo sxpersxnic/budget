@@ -38,6 +38,14 @@ class Context:
             return round(float(amount), 6), fx_date
         return round(fx.convert(amount, currency, BASE_CURRENCY, fx_date), 6), fx_date
 
+    def to_base_on(self, amount: float, currency: str, booking: date) -> tuple[float, date]:
+        """Convert to CHF with the ECB rate of the booking date (the last rate on or before it)."""
+        fx = self.fx
+        fx_date = fx.rate_date_on_or_before(booking) or booking
+        if currency == BASE_CURRENCY:
+            return round(float(amount), 6), fx_date
+        return round(fx.convert(amount, currency, BASE_CURRENCY, fx_date), 6), fx_date
+
     def month_rate_date(self, month: str) -> date:
         """ECB date used to value account balances of a month: the last rate within that month."""
         d = self.fx.rate_date_on_or_before(months.last_day(month))

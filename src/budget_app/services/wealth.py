@@ -8,6 +8,7 @@ from datetime import date
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months
 from budget_app.domain.models import ACCOUNT_REGULAR, BUDGET_EXPENDITURE, BUDGET_INCOME, Account, AccountEntry
+from budget_app.i18n import t
 from budget_app.services import accounts as acc_svc
 from budget_app.services.context import Context, ValidationError
 
@@ -40,11 +41,11 @@ def balance_entry(ctx: Context, account_id: str, month: str) -> AccountEntry | N
 def upsert_entry(ctx: Context, account_id: str, month: str, amount: float | None) -> AccountEntry:
     acc = ctx.store.accounts.get(account_id)
     if acc is None:
-        raise ValidationError("Select an account")
+        raise ValidationError(t("Select an account"))
     if not month:
-        raise ValidationError("Select a month")
+        raise ValidationError(t("Select a month"))
     if amount is None:
-        raise ValidationError("Enter the amount")
+        raise ValidationError(t("Enter the amount"))
     rate_date = ctx.month_rate_date(month)
     amount = round(float(amount), 2)
     amount_chf = round(ctx.convert_on(amount, acc.currency, BASE_CURRENCY, rate_date), 6)
