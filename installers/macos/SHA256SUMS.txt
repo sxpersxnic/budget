@@ -1,0 +1,1 @@
+ff574293e54bc1f4ec12924d3bf645083055fe4bf4ea3dc0d1036dee7ec446d5  Budget-0.1.0-macOS-arm64.dmg

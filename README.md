@@ -9,6 +9,14 @@ A local personal-budgeting app.
 
 The installers bundle everything the app needs. You do **not** need Python, uv or any other tools to use it.
 
+**Download:** the installers are in the [`installers/`](installers/README.md) folder of this
+repository:
+
+- macOS: [`installers/macos/`](installers/macos)
+- Windows: [`installers/windows/`](installers/windows/README.md)
+
+On GitHub, open the file and click **Download raw file**.
+
 - [Install on macOS](#install-on-macos)
 - [Install on Windows](#install-on-windows)
 - [Your data, updates and uninstalling](#your-data-updates-and-uninstalling)
@@ -21,8 +29,8 @@ The installers bundle everything the app needs. You do **not** need Python, uv o
 Requirements: macOS 11 (Big Sur) or later. The installer must match your Mac: an installer
 built on an Apple Silicon Mac (`…-macOS-arm64.dmg`) runs on Apple Silicon Macs.
 
-1. Double-click **`Budget-<version>-macOS-arm64.dmg`**. A window with **Budget** and
-   **Applications** opens.
+1. Download **`Budget-<version>-macOS-arm64.dmg`** from [`installers/macos/`](installers/macos)
+   and double-click it. A window with **Budget** and **Applications** opens.
 2. Drag **Budget** onto **Applications**.
 3. Eject the "Budget" disk in the Finder sidebar. You can then delete the `.dmg` file.
 4. Open **Budget** from Applications, Launchpad or Spotlight.
@@ -42,7 +50,9 @@ You only have to do this once. Later launches open the app directly.
 Requirements: Windows 10 or 11, 64-bit. The app uses Microsoft Edge WebView2, which is
 included in Windows 10 and 11.
 
-1. Double-click **`Budget-<version>-Windows-Setup.exe`**.
+1. Download **`Budget-<version>-Windows-Setup.exe`** from [`installers/windows/`](installers/windows/README.md)
+   and double-click it. If it isn't there yet, it has to be built on a Windows PC first; see
+   [Building the installers](#building-the-installers).
 2. If SmartScreen shows *"Windows protected your PC"*, click **More info → Run anyway**.
    The installer is not code-signed.
 3. Follow the wizard:
@@ -115,7 +125,8 @@ Each build script:
 1. checks the prerequisites;
 2. installs the locked dependencies;
 3. runs the tests;
-4. writes the installer to `dist/`.
+4. writes the installer to `dist/`, and copies it, with a SHA-256 checksum, to `installers/<os>/`
+   so it can be committed.
 
 A build takes 2–5 minutes. The version number comes from `pyproject.toml`. Signing and other
 details are in [packaging/README.md](packaging/README.md).
