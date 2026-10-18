@@ -38,8 +38,9 @@ storage/    typed CSV tables + settings JSON
 | `domain/fx.py` | `FxRates` (parse ECB CSV, rate lookup with date fallback, cross-rate conversion) and `FxService` (daily download, atomic file replacement). |
 | `domain/coicop.py` | COICOP tree (ancestors, children, labels) plus pseudo-categories `TAX`, `ADV`, `UNACCOUNTED`. |
 | `domain/models.py` | Dataclasses `Account`, `IncomeCategory`, `Transaction`, `AccountEntry`, `BudgetEntry`, `Settings`. |
-| `storage/csv_store.py` | Generic `CsvTable[T]`: in-memory records, atomic rewrite (temp file + rename) on every change. |
-| `storage/store.py` | `Store` bundling all tables and settings. |
+| `storage/csv_store.py` | Generic `CsvTable[T]`: in-memory records, atomic rewrite (temp file, fsync, rename) on every change. Unknown columns are kept and written back. |
+| `storage/store.py` | `Store` bundling all tables and settings. Unknown settings keys are kept. |
+| `storage/backup.py` | On the first start of a new app version, copies the data files to `<data>/backups/` before the store loads them. The version that last opened the folder is in `<data>/.app_version`. |
 | `storage/lock.py` | Single-instance lock on `<data>/.lock`, so two processes cannot overwrite each other's files. |
 | `services/context.py` | `Context` (store + FX), conversion helpers, budget horizon, `ValidationError`. |
 | `services/accounts.py` | Accounts, advance-payment accounts and income categories, with their deletion rules. |
@@ -48,8 +49,9 @@ storage/    typed CSV tables + settings JSON
 | `services/wealth.py` | Account balances, wealth, projected wealth, wealth time series. |
 | `services/reports.py` | Monthly statement (expenditure tree, income, budget vs. actual, unaccounted), chart series. |
 | `services/export.py` | Statement as Excel/PDF; chart data as CSV/Excel. |
-| `ui/layout.py` | Task bar, formatting (`1'234.50 CHF`), date picker, month options. |
-| `ui/widgets/` | Searchable selects, transaction form (shared by add and edit), AG Grid helpers. |
+| `ui/theme.py` | Design tokens (light and dark), Quasar and AG Grid overrides, chart styling. See `docs/DESIGN_REVIEW.md`. |
+| `ui/layout.py` | Sidebar frame, sheets (dialogs), segmented control, month stepper, metrics, formatting (`1'234.50 CHF`), date picker. |
+| `ui/widgets/` | Searchable selects, transaction form (page, add sheet and edit sheet), AG Grid helpers. |
 | `ui/pages/` | One module per page (see §6). |
 
 ## 3. Data model (`data/`)
@@ -183,13 +185,15 @@ currency dropdowns list every currency the ECB quoted on its latest date, plus E
 
 | Route | Page | Notes |
 | --- | --- | --- |
-| `/` | Overview (start page) | Current and projected wealth at the horizon. Chart builder: wealth line (actual and dashed projection), income/expenditure bars or lines with category multi-select and optional budget, waterfall of per-account change. Charts sit side by side; each offers CSV, Excel and PNG download. |
-| `/budget` | Budget overview | Month and currency selection. KPI cards. Accounts with add/edit balance buttons (a "not recorded" badge marks missing entries whose last balance was non-zero). "Add budget recording" dialog. Expandable expenditure tree. Income table. Budget cells editable in incomplete months. Excel/PDF statement export. |
-| `/add-transaction` | Add transaction | The four transaction types with dependent fields. Account dropdowns are filtered by currency. Live CHF preview. Save stays disabled until the form validates. After saving, every field except date, currency and type resets. |
-| `/transactions` | Transactions | AG Grid: filters (date range, amount range, account, type, text), sort on every column, multi-select delete with confirmation, edit via "Edit selected" or double-click. |
-| `/add-budget` | Add budget entry | Month range or "Forever", recurrence, type, currency, amount, category, overwrite option, comment. Live preview of the months that will be created. |
-| `/budget-entries` | Budget entries | Same grid pattern. The edit dialog can apply changes to all following months of a series. |
-| `/settings` | Settings | Budget horizon, display currency, accounts, advance-payment accounts (with outstanding balances), income categories. |
+| `/` | Overview (start page) | Current wealth and the projection at the horizon in one hero card. Chart builder ("Add Chart" menu): wealth line (recorded, then dotted projection), income/expenditure bars or lines with category multi-select and optional budget, waterfall of per-account change. Each chart's "…" menu saves a PNG, exports CSV or Excel, or removes it. |
+| `/budget` | Budget | Month stepper (‹ month ›) and currency. A callout names accounts without a balance for a past month. Metric strip (current wealth, wealth or projected wealth at month end, net income). Income and expenditure ledgers share one column layout: budget meter, actual, budget, difference; zero values show as a dash. The expenditure tree expands by clicking a category. Budget amounts are editable (pencil on hover) in incomplete months. Balances list for past months. Statement export sits in the share menu. "Record Balance" opens the balance sheet. |
+| `/add-transaction` | New Transaction | The same form also opens as a sheet from the sidebar's "New Transaction" button on every page; the page behind refreshes after saving. Type first (segmented control), then amount, currency and date, then the type's fields. Account dropdowns are filtered by currency. Live CHF preview. Save stays disabled until the form validates, and the reason is shown once the user has started. After saving, every field except date, currency and type resets. |
+| `/transactions` | Transactions | Search field, filters (date range, amount range, account, type) behind "Filters". AG Grid with signed, coloured amounts, sort on every column. Selecting rows reveals Edit and Delete; double-click edits in a sheet. |
+| `/add-budget` | New Budget Entry | Also a sheet on Budget Plan. Type, amount, currency, category, month range or "Forever", repeat interval, replace option, note. Live summary of the months that will be created. |
+| `/budget-entries` | Budget Plan | Same list pattern as Transactions. The edit sheet can apply changes to all later months of a series. |
+| `/settings` | Settings | Grouped lists: plan horizon (Apply appears when changed), display and base currency, accounts, advance-payment accounts (with outstanding balances), income categories. Add, edit and rename open small sheets. |
+
+Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 
 ## 7. Decisions and assumptions
 

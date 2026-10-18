@@ -19,7 +19,8 @@ On GitHub, open the file and click **Download raw file**.
 
 - [Install on macOS](#install-on-macos)
 - [Install on Windows](#install-on-windows)
-- [Your data, updates and uninstalling](#your-data-updates-and-uninstalling)
+- [Update to a new version](#update-to-a-new-version)
+- [Your data, backups and uninstalling](#your-data-backups-and-uninstalling)
 - [First steps](#first-steps)
 - [Building the installers](#building-the-installers)
 - [Run from source (developers)](#run-from-source-developers)
@@ -65,7 +66,34 @@ included in Windows 10 and 11.
 4. Leave **Launch Budget** ticked and click **Finish**. Afterwards, start the app from the
    **Start menu → Budget** (or the desktop shortcut).
 
-## Your data, updates and uninstalling
+## Update to a new version
+
+Your installed version is shown at the bottom of the app's sidebar, for example
+*Budget 0.1.0*. Newer installers are in [`installers/`](installers/README.md).
+
+**Your data is kept.** Updating replaces only the program. Your records live in the
+[data folder](#your-data-backups-and-uninstalling), which neither installer touches. As an extra
+safeguard, the first start of a new version copies your data files to
+`backups/<date>_<old>_to_<new>/` inside the data folder before it reads them. The ten most
+recent of these copies are kept.
+
+**macOS**
+
+1. Quit Budget (**Budget → Quit** or ⌘Q). A running app can't be replaced.
+2. Open the new `.dmg`. The window title shows its version, for example *Budget 0.2.0*.
+3. Drag **Budget** onto **Applications** and click **Replace**.
+4. Eject the disk and open Budget. macOS treats every new version as a new download, so
+   confirm it once more with **Open Anyway**, as on the [first launch](#install-on-macos).
+
+**Windows**
+
+1. Run the new `Budget-<version>-Windows-Setup.exe`. If Budget is open, Setup offers to
+   close it.
+2. Setup recognises the existing installation and keeps its folder, language and shortcuts.
+   The last page before installing says *Update: Budget 0.1.0 will be replaced by
+   version 0.2.0*. Click **Install**, then **Finish**.
+
+## Your data, backups and uninstalling
 
 The app opens in its own window and keeps all data in your user folder:
 
@@ -75,11 +103,12 @@ The app opens in its own window and keeps all data in your user folder:
 | Windows | `%APPDATA%\Budget` (type it into the Explorer address bar) |
 
 - **Backup:** copy the data folder. It contains your CSV files and settings.
-- **Update:** install the new version over the old one:
-  - macOS: drag it to Applications and choose **Replace**.
-  - Windows: run the new Setup.exe.
-
-  Your data stays untouched.
+- **Restore after an update:** quit Budget, then copy the files from the newest folder in
+  `backups/` back into the data folder, replacing the current ones.
+- **Older versions:** opening your data with an older version is safe too; it keeps fields it
+  doesn't know about instead of dropping them.
+- **Update:** see [Update to a new version](#update-to-a-new-version). Your data stays
+  untouched.
 - **Uninstall:**
   - macOS: move **Budget** from Applications to the Bin.
   - Windows: **Settings → Apps → Installed apps → Budget → Uninstall**.
@@ -96,17 +125,16 @@ The app opens in its own window and keeps all data in your user folder:
 1. **Settings:**
    - Add your accounts, each with its currency.
    - Add your income categories.
-   - Choose the budget horizon and the display currency.
-2. **Budget overview → Add budget recording:** enter each account's balance at the end
-   of last month.
-3. **Add transaction:** record expenditures (with a COICOP category or taxes), income,
-   transfers and currency exchanges. Tick *Advance payment* when part of a payment was
-   for someone else. Record their repayment later as income with
-   *Repayment of an advance payment*.
-4. **Add budget entry:** plan recurring income and expenditure. Use "Forever" for open-ended
-   budgets.
-5. **Overview / Budget overview:** compare actual against budget, check the projected
-   wealth, build charts, and export statements as Excel or PDF.
+   - Choose how far ahead to plan (*Plan Until*) and the display currency.
+2. **Budget → Record Balance:** enter each account's balance at the end of last month.
+3. **New Transaction** (top of the sidebar, available on every page): record expenditures
+   (with a COICOP category or taxes), income, transfers and currency exchanges. Turn on
+   *Partly paid for others* when part of a payment was for someone else. Record their
+   repayment later as income with *Repays an advance payment*.
+4. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
+   for open-ended budgets.
+5. **Overview / Budget:** compare actual against budget, check the projected wealth, build
+   charts, and export statements as Excel or PDF (share button on the Budget page).
 
 ## Building the installers
 
@@ -146,7 +174,17 @@ uv run budget                 # opens http://127.0.0.1:8080 in the browser
 | `--no-show` | Don't open a browser tab. |
 | `--host 0.0.0.0` | Listen on all network interfaces. The default is localhost only. The app has no login, so use this only on a trusted network. |
 
-Checks:
+With [just](https://just.systems) installed, the common tasks are one command each
+(`just` lists them all):
+
+```bash
+just dev          # desktop window that restarts when a file in src/ changes
+just dev-web      # the same in the browser, http://127.0.0.1:8080
+just check        # lint, formatting, type check and tests
+just build        # installer for this OS (see Building the installers)
+```
+
+Without just:
 
 ```bash
 uv run pytest                                   # unit tests
