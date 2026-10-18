@@ -1,0 +1,603 @@
+code,parent,level,name
+01,,1,Food and non-alcoholic beverages
+01.1,01,2,Food
+01.1.1,01.1,3,Cereals and cereal products
+01.1.1.1,01.1.1,4,Cereals
+01.1.1.2,01.1.1,4,Flour of cereals
+01.1.1.3,01.1.1,4,Bread and bakery products
+01.1.1.4,01.1.1,4,Breakfast cereals
+01.1.1.5,01.1.1,4,"Macaroni, noodles, couscous and similar pasta products"
+01.1.1.9,01.1.1,4,Other milled cereal and grain products
+01.1.2,01.1,3,"Live animals, and meat and other parts of slaughtered land animals"
+01.1.2.1,01.1.2,4,Live land animals
+01.1.2.2,01.1.2,4,"Meat, fresh, chilled or frozen"
+01.1.2.3,01.1.2,4,"Meat, dried, salted, in brine or smoked"
+01.1.2.4,01.1.2,4,"Offal, blood and other parts of slaughtered animals, fresh, chilled or frozen, dried, salted, in brine or smoked"
+01.1.2.5,01.1.2,4,"Preparations of meat, offal, blood and other parts of slaughtered animals"
+01.1.3,01.1,3,Fish and other seafood
+01.1.3.1,01.1.3,4,"Fish, live, fresh, chilled or frozen"
+01.1.3.2,01.1.3,4,"Fish, dried, salted, in brine or smoked"
+01.1.3.3,01.1.3,4,Fish preparations
+01.1.3.4,01.1.3,4,"Other seafood, live, fresh, chilled or frozen"
+01.1.3.5,01.1.3,4,"Other seafood, dried, salted, in brine or smoked"
+01.1.3.6,01.1.3,4,Other seafood preparations
+01.1.3.7,01.1.3,4,"Livers, roes and other offal of fish and of other seafood in all forms"
+01.1.4,01.1,3,"Milk, other dairy products and eggs"
+01.1.4.1,01.1.4,4,Raw and whole milk
+01.1.4.2,01.1.4,4,Skimmed milk
+01.1.4.3,01.1.4,4,Other milk and cream
+01.1.4.4,01.1.4,4,Non-animal milk
+01.1.4.5,01.1.4,4,Cheese
+01.1.4.6,01.1.4,4,Yoghurt and similar products
+01.1.4.7,01.1.4,4,Milk-based dessert and beverages
+01.1.4.8,01.1.4,4,Eggs
+01.1.4.9,01.1.4,4,Other dairy products
+01.1.5,01.1,3,Oils and fats
+01.1.5.1,01.1.5,4,Vegetable oils
+01.1.5.2,01.1.5,4,Butter and other oils and fats derived from milk
+01.1.5.3,01.1.5,4,Margarine and similar preparations
+01.1.5.9,01.1.5,4,Other animal oils and fats
+01.1.6,01.1,3,Fruits and nuts
+01.1.6.1,01.1.6,4,"Dates, figs and tropical fruits, fresh"
+01.1.6.2,01.1.6,4,"Citrus fruits, fresh"
+01.1.6.3,01.1.6,4,"Stone fruits and pome fruits, fresh"
+01.1.6.4,01.1.6,4,"Berries, fresh"
+01.1.6.5,01.1.6,4,"Other fruits, fresh"
+01.1.6.6,01.1.6,4,"Fruits, frozen"
+01.1.6.7,01.1.6,4,"Fruits, dried and dehydrated"
+01.1.6.8,01.1.6,4,"Nuts, in shell or shelled"
+01.1.6.9,01.1.6,4,"Fruits and nuts, ground, and in other preparations"
+01.1.7,01.1,3,"Vegetables, tubers, plantains, cooking bananas and pulses"
+01.1.7.1,01.1.7,4,"Leafy or stem vegetables, fresh or chilled"
+01.1.7.2,01.1.7,4,"Fruit-bearing vegetables, fresh or chilled"
+01.1.7.3,01.1.7,4,"Green leguminous vegetables, fresh or chilled"
+01.1.7.4,01.1.7,4,"Other vegetables, fresh or chilled"
+01.1.7.5,01.1.7,4,"Tubers, plantains and cooking bananas, fresh or chilled"
+01.1.7.6,01.1.7,4,Pulses
+01.1.7.7,01.1.7,4,"Other vegetables, tubers, plantains and cooking bananas, dried and dehydrated"
+01.1.7.8,01.1.7,4,"Vegetables, tubers, plantains and cooking bananas, frozen"
+01.1.7.9,01.1.7,4,"Vegetables, tubers, plantains, cooking bananas and pulses, ground, and in other preparations"
+01.1.8,01.1,3,"Sugar, confectionery and desserts"
+01.1.8.1,01.1.8,4,Cane sugar and beet sugar
+01.1.8.2,01.1.8,4,Other sugars and sugar substitutes
+01.1.8.3,01.1.8,4,"Jams, marmalades, fruit jellies, purées and pastes, and honey"
+01.1.8.4,01.1.8,4,"Nut purées, nut butters and nut pastes"
+01.1.8.5,01.1.8,4,"Chocolate, cocoa and cocoa-based food products"
+01.1.8.6,01.1.8,4,"Ice, ice cream and sorbets"
+01.1.8.9,01.1.8,4,Other sugar confectionery and desserts n.e.c.
+01.1.9,01.1,3,Ready-made food and other food products
+01.1.9.1,01.1.9,4,Ready-made food
+01.1.9.2,01.1.9,4,Baby food
+01.1.9.3,01.1.9,4,"Salt, condiments and sauces"
+01.1.9.4,01.1.9,4,"Spices, culinary herbs and seeds"
+01.1.9.9,01.1.9,4,Other food products n.e.c.
+01.2,01,2,Non-alcoholic beverages
+01.2.1,01.2,3,Fruit and vegetable juices
+01.2.1.0,01.2.1,4,Fruit and vegetable juices
+01.2.2,01.2,3,Coffee and coffee substitutes
+01.2.2.0,01.2.2,4,Coffee and coffee substitutes
+01.2.3,01.2,3,"Tea, maté and other plant-derived products for infusion"
+01.2.3.0,01.2.3,4,"Tea, maté and other plant-derived products for infusion"
+01.2.4,01.2,3,Cocoa drinks
+01.2.4.0,01.2.4,4,Cocoa drinks
+01.2.5,01.2,3,Water
+01.2.5.0,01.2.5,4,Water
+01.2.6,01.2,3,Soft drinks
+01.2.6.0,01.2.6,4,Soft drinks
+01.2.9,01.2,3,Other non-alcoholic beverages
+01.2.9.0,01.2.9,4,Other non-alcoholic beverages
+01.3,01,2,Services for processing primary goods for food and non-alcoholic beverages
+01.3.0,01.3,3,Services for processing primary goods for food and non-alcoholic beverages
+01.3.0.0,01.3.0,4,Services for processing primary goods for food and non-alcoholic beverages
+02,,1,"Alcoholic beverages, tobacco and narcotics"
+02.1,02,2,Alcoholic beverages
+02.1.1,02.1,3,Spirits and liquors
+02.1.1.0,02.1.1,4,Spirits and liquors
+02.1.2,02.1,3,Wine
+02.1.2.1,02.1.2,4,Wine from grapes
+02.1.2.2,02.1.2,4,Wine from other sources
+02.1.3,02.1,3,Beer
+02.1.3.0,02.1.3,4,Beer
+02.1.9,02.1,3,Other alcoholic beverages
+02.1.9.0,02.1.9,4,Other alcoholic beverages
+02.2,02,2,Alcohol production services
+02.2.0,02.2,3,Alcohol production services
+02.2.0.0,02.2.0,4,Alcohol production services
+02.3,02,2,Tobacco
+02.3.0,02.3,3,Tobacco
+02.3.0.1,02.3.0,4,Cigarettes
+02.3.0.2,02.3.0,4,Cigars
+02.3.0.9,02.3.0,4,Other tobacco products
+02.4,02,2,Narcotics
+02.4.0,02.4,3,Narcotics
+02.4.0.0,02.4.0,4,Narcotics
+03,,1,Clothing and footwear
+03.1,03,2,Clothing
+03.1.1,03.1,3,Clothing materials
+03.1.1.0,03.1.1,4,Clothing materials
+03.1.2,03.1,3,Garments
+03.1.2.1,03.1.2,4,Garments for men or boys
+03.1.2.2,03.1.2,4,Garments for women or girls
+03.1.2.3,03.1.2,4,Garments for infants (under 2 years of age)
+03.1.2.4,03.1.2,4,School uniforms
+03.1.3,03.1,3,Other articles of clothing and clothing accessories
+03.1.3.1,03.1.3,4,Other articles of clothing
+03.1.3.2,03.1.3,4,Clothing accessories
+03.1.4,03.1,3,"Cleaning, repair, tailoring and hire of clothing"
+03.1.4.1,03.1.4,4,Cleaning of clothing
+03.1.4.2,03.1.4,4,"Repair, tailoring and hire of clothing"
+03.2,03,2,Footwear
+03.2.1,03.2,3,Shoes and other footwear
+03.2.1.1,03.2.1,4,Footwear for men
+03.2.1.2,03.2.1,4,Footwear for women
+03.2.1.3,03.2.1,4,Footwear for infants and children
+03.2.2,03.2,3,"Cleaning, repair and hire of footwear"
+03.2.2.0,03.2.2,4,"Cleaning, repair and hire of footwear"
+04,,1,"Housing, water, electricity, gas and other fuels"
+04.1,04,2,Actual rental payments made for housing
+04.1.1,04.1,3,Actual rental payments made by tenants for main residence
+04.1.1.0,04.1.1,4,Actual rental payments made by tenants for main residence
+04.1.2,04.1,3,Other actual rental payments
+04.1.2.1,04.1.2,4,Actual rental payments made by tenants for secondary residences
+04.1.2.2,04.1.2,4,Garage rental payments and other rental payments made by tenants
+04.2,04,2,Imputed rental payments for housing
+04.2.1,04.2,3,Imputed rental payments of owner-occupiers for their main residence
+04.2.1.0,04.2.1,4,Imputed rental payments of owner-occupiers for their main residence
+04.2.2,04.2,3,Other imputed rentals
+04.2.2.0,04.2.2,4,Other imputed rentals
+04.3,04,2,"Maintenance, repair and security of the dwelling"
+04.3.1,04.3,3,Security equipment and materials for dwelling maintenance and repair
+04.3.1.1,04.3.1,4,Materials for the maintenance and repair of the dwelling
+04.3.1.2,04.3.1,4,Security equipment
+04.3.2,04.3,3,"Services for the maintenance, repair and security of the dwelling"
+04.3.2.0,04.3.2,4,"Services for the maintenance, repair and security of the dwelling"
+04.4,04,2,Water supply and miscellaneous services relating to the dwelling
+04.4.1,04.4,3,Water supply
+04.4.1.1,04.4.1,4,Water supply delivered through network systems
+04.4.1.2,04.4.1,4,Water supply delivered through other systems
+04.4.2,04.4,3,Refuse collection
+04.4.2.0,04.4.2,4,Refuse collection
+04.4.3,04.4,3,Sewage collection
+04.4.3.1,04.4.3,4,Sewage collection through sewer systems
+04.4.3.2,04.4.3,4,Sewage collection through on-site sanitation systems
+04.4.4,04.4,3,Other services related to the dwelling
+04.4.4.1,04.4.4,4,Charges for maintenance of multi-occupied buildings
+04.4.4.9,04.4.4,4,Other services related to the dwelling n.e.c.
+04.5,04,2,"Electricity, gas and other fuels"
+04.5.1,04.5,3,Electricity
+04.5.1.0,04.5.1,4,Electricity
+04.5.2,04.5,3,Gas
+04.5.2.1,04.5.2,4,Natural gas through networks
+04.5.2.2,04.5.2,4,Liquefied hydrocarbons
+04.5.3,04.5,3,Liquid fuels
+04.5.3.0,04.5.3,4,Liquid fuels
+04.5.4,04.5,3,Solid fuels
+04.5.4.1,04.5.4,4,"Coal, coal briquettes, peat and peat briquettes"
+04.5.4.2,04.5.4,4,"Wood fuel, including pellets and briquettes"
+04.5.4.3,04.5.4,4,Charcoal
+04.5.4.9,04.5.4,4,Other solid fuels
+04.5.5,04.5,3,Other energy for heating and cooling
+04.5.5.0,04.5.5,4,Other energy for heating and cooling
+05,,1,"Furnishings, household equipment and routine household maintenance"
+05.1,05,2,"Furniture, furnishings, and loose carpets"
+05.1.1,05.1,3,"Furniture, furnishings and loose carpets"
+05.1.1.1,05.1.1,4,Household furniture
+05.1.1.2,05.1.1,4,Garden and camping furniture
+05.1.1.3,05.1.1,4,Lighting equipment
+05.1.1.4,05.1.1,4,"Furnishings, loose carpets and rugs"
+05.1.2,05.1,3,"Repair, installation and hire of furniture, furnishings and loose carpets"
+05.1.2.0,05.1.2,4,"Repair, installation and hire of furniture, furnishings and loose carpets"
+05.2,05,2,Household textiles
+05.2.1,05.2,3,Household textiles
+05.2.1.1,05.2.1,4,Furnishing fabrics and curtains
+05.2.1.2,05.2.1,4,Bed linen and bedding
+05.2.1.3,05.2.1,4,Table linen and bathroom linen
+05.2.1.9,05.2.1,4,Other household textiles
+05.2.2,05.2,3,"Repair, hire and sewing services of household textiles"
+05.2.2.0,05.2.2,4,"Repair, hire and sewing services of household textiles"
+05.3,05,2,Household appliances
+05.3.1,05.3,3,Major electric and other household appliances
+05.3.1.1,05.3.1,4,Major kitchen appliances
+05.3.1.2,05.3.1,4,Major laundry appliances
+05.3.1.3,05.3.1,4,Heaters and air conditioners
+05.3.1.4,05.3.1,4,Cleaning equipment
+05.3.1.9,05.3.1,4,Other major household appliances
+05.3.2,05.3,3,Small household appliances
+05.3.2.1,05.3.2,4,Small appliances for the cooking and processing of food
+05.3.2.2,05.3.2,4,Small appliances for the preparation of beverages
+05.3.2.9,05.3.2,4,Other small household appliances
+05.3.3,05.3,3,"Repair, installation and hire of household appliances"
+05.3.3.0,05.3.3,4,"Repair, installation and hire of household appliances"
+05.4,05,2,"Glassware, tableware and household utensils"
+05.4.0,05.4,3,"Glassware, tableware and household utensils"
+05.4.0.1,05.4.0,4,"Glassware, crystal ware, ceramic ware and china ware"
+05.4.0.2,05.4.0,4,"Cutlery, flatware and silverware"
+05.4.0.3,05.4.0,4,Kitchen utensils and articles
+05.4.0.4,05.4.0,4,"Repair and hire of glassware, tableware and household utensils"
+05.5,05,2,Tools and equipment for house and garden
+05.5.1,05.5,3,Motorized tools and equipment
+05.5.1.0,05.5.1,4,Motorized tools and equipment
+05.5.2,05.5,3,Non-motorized tools and miscellaneous accessories
+05.5.2.1,05.5.2,4,Non-motorized tools
+05.5.2.2,05.5.2,4,Miscellaneous accessories
+05.5.3,05.5,3,Repair and hire of motorized and non-motorized tools and equipment
+05.5.3.0,05.5.3,4,Repair and hire of motorized and non-motorized tools and equipment
+05.6,05,2,Goods and services for routine household maintenance
+05.6.1,05.6,3,Non-durable household goods
+05.6.1.1,05.6.1,4,Household cleaning and maintenance products
+05.6.1.9,05.6.1,4,Other non-durable household goods
+05.6.2,05.6,3,Domestic services and household services
+05.6.2.1,05.6.2,4,Domestic services provided by paid staff
+05.6.2.9,05.6.2,4,Other household services
+06,,1,Health
+06.1,06,2,Medicines and health products
+06.1.1,06.1,3,Medicines
+06.1.1.1,06.1.1,4,"Medicines, vaccines and other pharmaceutical preparations"
+06.1.1.2,06.1.1,4,Herbal medicines and homeopathic products
+06.1.2,06.1,3,Medical products
+06.1.2.1,06.1.2,4,Medical diagnostic products
+06.1.2.2,06.1.2,4,Preventive and protective devices
+06.1.2.3,06.1.2,4,Treatment devices for personal use
+06.1.3,06.1,3,Assistive products
+06.1.3.1,06.1.3,4,Assistive products for vision
+06.1.3.2,06.1.3,4,Assistive products for hearing and communication
+06.1.3.3,06.1.3,4,Assistive products for mobility and daily living
+06.1.4,06.1,3,"Repair, rental and maintenance of medical and assistive products"
+06.1.4.0,06.1.4,4,"Repair, rental and maintenance of medical and assistive products"
+06.2,06,2,Outpatient care services
+06.2.1,06.2,3,Preventive care services
+06.2.1.1,06.2.1,4,Immunization services
+06.2.1.9,06.2.1,4,Other preventive care services
+06.2.2,06.2,3,Outpatient dental services
+06.2.2.1,06.2.2,4,Dental preventive services
+06.2.2.9,06.2.2,4,Other outpatient dental services
+06.2.3,06.2,3,Other outpatient care services
+06.2.3.1,06.2.3,4,Outpatient curative and rehabilitative services
+06.2.3.2,06.2.3,4,Outpatient long-term care services
+06.3,06,2,Inpatient care services
+06.3.1,06.3,3,Inpatient curative and rehabilitative services
+06.3.1.0,06.3.1,4,Inpatient curative and rehabilitative services
+06.3.2,06.3,3,Inpatient long-term care services
+06.3.2.0,06.3.2,4,Inpatient long-term care services
+06.4,06,2,Other health services
+06.4.1,06.4,3,Diagnostic imaging services and medical laboratory services
+06.4.1.0,06.4.1,4,Diagnostic imaging services and medical laboratory services
+06.4.2,06.4,3,Patient emergency transportation and emergency rescue services
+06.4.2.0,06.4.2,4,Patient emergency transportation and emergency rescue services
+07,,1,Transport
+07.1,07,2,Purchase of vehicles
+07.1.1,07.1,3,Motor cars
+07.1.1.1,07.1.1,4,New motor cars
+07.1.1.2,07.1.1,4,Second-hand motor cars
+07.1.2,07.1,3,Motorcycles
+07.1.2.0,07.1.2,4,Motorcycles
+07.1.3,07.1,3,Bicycles
+07.1.3.0,07.1.3,4,Bicycles
+07.1.4,07.1,3,Animal-drawn vehicles
+07.1.4.0,07.1.4,4,Animal-drawn vehicles
+07.2,07,2,Operation of personal transport equipment
+07.2.1,07.2,3,Parts and accessories for personal transport equipment
+07.2.1.1,07.2.1,4,Tyres
+07.2.1.2,07.2.1,4,Parts for personal transport equipment
+07.2.1.3,07.2.1,4,Accessories for personal transport equipment
+07.2.2,07.2,3,Fuels and lubricants for personal transport equipment
+07.2.2.1,07.2.2,4,Diesel
+07.2.2.2,07.2.2,4,Petrol
+07.2.2.3,07.2.2,4,Other fuels for personal transport equipment
+07.2.2.4,07.2.2,4,Lubricants
+07.2.3,07.2,3,Maintenance and repair of personal transport equipment
+07.2.3.0,07.2.3,4,Maintenance and repair of personal transport equipment
+07.2.4,07.2,3,Other services related to personal transport equipment
+07.2.4.1,07.2.4,4,Parking services
+07.2.4.2,07.2.4,4,Toll facilities
+07.2.4.3,07.2.4,4,"Driving lessons, tests, licences and roadworthiness tests"
+07.2.4.4,07.2.4,4,Hire of personal transport equipment without driver
+07.3,07,2,Passenger transport services
+07.3.1,07.3,3,Passenger transport by railway
+07.3.1.1,07.3.1,4,Passenger transport by train
+07.3.1.2,07.3.1,4,Passenger transport by rapid transit and tram
+07.3.2,07.3,3,Passenger transport by road
+07.3.2.1,07.3.2,4,Passenger transport by bus and coach
+07.3.2.2,07.3.2,4,Passenger transport by taxi and hired vehicle with driver
+07.3.2.3,07.3.2,4,Passenger transport for students to and from school
+07.3.2.9,07.3.2,4,Other passenger transport by road
+07.3.3,07.3,3,Passenger transport by air
+07.3.3.1,07.3.3,4,"Passenger transport by air, domestic"
+07.3.3.2,07.3.3,4,"Passenger transport by air, international"
+07.3.4,07.3,3,Passenger transport by sea and inland waterway
+07.3.4.0,07.3.4,4,Passenger transport by sea and inland waterway
+07.3.5,07.3,3,Combined passenger transport
+07.3.5.0,07.3.5,4,Combined passenger transport
+07.3.6,07.3,3,Other passenger transport services
+07.3.6.0,07.3.6,4,Other passenger transport services
+07.4,07,2,Transport services for goods
+07.4.1,07.4,3,Postal and courier services
+07.4.1.1,07.4.1,4,Letter handling services
+07.4.1.2,07.4.1,4,Courier and parcel delivery services
+07.4.9,07.4,3,Other transport of goods
+07.4.9.1,07.4.9,4,Removal and storage services
+07.4.9.2,07.4.9,4,Delivery of goods
+08,,1,Information and communication
+08.1,08,2,Information and communication equipment
+08.1.1,08.1,3,Fixed telephone equipment
+08.1.1.0,08.1.1,4,Fixed telephone equipment
+08.1.2,08.1,3,Mobile telephone equipment
+08.1.2.0,08.1.2,4,Mobile telephone equipment
+08.1.3,08.1,3,Information processing equipment
+08.1.3.1,08.1.3,4,"Computers, laptops and tablets"
+08.1.3.2,08.1.3,4,Peripheral equipment and its consumable components
+08.1.4,08.1,3,"Equipment for the reception, recording and reproduction of sound and vision"
+08.1.4.0,08.1.4,4,"Equipment for the reception, recording and reproduction of sound and vision"
+08.1.5,08.1,3,Unrecorded recording media
+08.1.5.0,08.1.5,4,Unrecorded recording media
+08.1.9,08.1,3,Other information and communication equipment and accessories
+08.1.9.1,08.1.9,4,Other information and communication equipment
+08.1.9.2,08.1.9,4,Other information and communication accessories
+08.2,08,2,"Software, excluding games"
+08.2.0,08.2,3,"Software, excluding games"
+08.2.0.0,08.2.0,4,"Software, excluding games"
+08.3,08,2,Information and communication services
+08.3.1,08.3,3,Fixed communication services
+08.3.1.0,08.3.1,4,Fixed communication services
+08.3.2,08.3,3,Mobile communication services
+08.3.2.0,08.3.2,4,Mobile communication services
+08.3.3,08.3,3,Internet access provision services and online storage services
+08.3.3.0,08.3.3,4,Internet access provision services and online storage services
+08.3.4,08.3,3,Bundled telecommunication services
+08.3.4.0,08.3.4,4,Bundled telecommunication services
+08.3.5,08.3,3,Repair and rental of information and communication equipment
+08.3.5.0,08.3.5,4,Repair and rental of information and communication equipment
+08.3.9,08.3,3,Other information and communication services
+08.3.9.1,08.3.9,4,Television and radio licences and fees
+08.3.9.2,08.3.9,4,Subscriptions to audiovisual streaming services and rental of audiovisual content
+08.3.9.9,08.3.9,4,Other information and communication services n.e.c.
+09,,1,"Recreation, sport and culture"
+09.1,09,2,Recreational durables
+09.1.1,09.1,3,Photographic and cinematographic equipment and optical instruments
+09.1.1.1,09.1.1,4,Cameras
+09.1.1.2,09.1.1,4,Accessories for photographic and cinematographic equipment
+09.1.1.3,09.1.1,4,Optical instruments
+09.1.2,09.1,3,Major recreational durables
+09.1.2.1,09.1.2,4,"Camper vans, caravans and trailers"
+09.1.2.2,09.1.2,4,"Aeroplanes, microlight aircraft, gliders, hang gliders and hot-air balloons"
+09.1.2.3,09.1.2,4,"Boats, yachts, outboard motors and other water-sport equipment"
+09.1.2.4,09.1.2,4,"Horses, ponies, camels and dromedaries and accessories"
+09.1.2.9,09.1.2,4,Other major recreational durables
+09.2,09,2,Other recreational goods
+09.2.1,09.2,3,"Games, toys and hobby-related articles"
+09.2.1.1,09.2.1,4,"Video game computers, consoles, game applications and software"
+09.2.1.2,09.2.1,4,"Other games, toys and hobby-related articles"
+09.2.1.3,09.2.1,4,Celebration articles
+09.2.2,09.2,3,"Sporting, camping and open-air recreation equipment"
+09.2.2.1,09.2.2,4,Sporting equipment
+09.2.2.2,09.2.2,4,Camping and open-air recreation equipment
+09.3,09,2,Garden products and pets
+09.3.1,09.3,3,"Garden products, plants and flowers"
+09.3.1.1,09.3.1,4,Garden products
+09.3.1.2,09.3.1,4,"Plants, seeds and flowers"
+09.3.2,09.3,3,Pets and pet products
+09.3.2.1,09.3.2,4,Pets
+09.3.2.2,09.3.2,4,Products for pets and other household animals
+09.4,09,2,Recreational services
+09.4.1,09.4,3,Hire and repair of photographic and cinematographic equipment and optical instruments
+09.4.1.0,09.4.1,4,Hire and repair of photographic and cinematographic equipment and optical instruments
+09.4.2,09.4,3,"Hire, maintenance and repair of major recreational durables"
+09.4.2.1,09.4.2,4,"Hire, maintenance and repair of camper vans and caravans"
+09.4.2.2,09.4.2,4,"Hire, maintenance and repair of other major recreational durables"
+09.4.3,09.4,3,"Hire and repair of games, toys and hobby-related articles"
+09.4.3.1,09.4.3,4,Hire of game software and subscription to online games
+09.4.3.2,09.4.3,4,"Hire and repair of other games, toys and hobby-related articles"
+09.4.4,09.4,3,"Hire and repair of sporting, camping and open-air recreational equipment"
+09.4.4.0,09.4.4,4,"Hire and repair of sporting, camping and open-air recreational equipment"
+09.4.5,09.4,3,Veterinary and other services for pets
+09.4.5.0,09.4.5,4,Veterinary and other services for pets
+09.4.6,09.4,3,Recreational and sporting services
+09.4.6.1,09.4.6,4,Recreational and leisure services
+09.4.6.2,09.4.6,4,Services associated with the practice of sports
+09.4.6.3,09.4.6,4,Services associated with attendance at sporting events
+09.4.7,09.4,3,Games of chance
+09.4.7.0,09.4.7,4,Games of chance
+09.5,09,2,Cultural goods
+09.5.1,09.5,3,Musical instruments
+09.5.1.0,09.5.1,4,Musical instruments
+09.5.2,09.5,3,Audiovisual media
+09.5.2.0,09.5.2,4,Audiovisual media
+09.6,09,2,Cultural services
+09.6.1,09.6,3,"Services provided by cinemas, theatres and concert venues"
+09.6.1.0,09.6.1,4,"Services provided by cinemas, theatres and concert venues"
+09.6.2,09.6,3,"Services provided by museums, libraries and cultural sites"
+09.6.2.0,09.6.2,4,"Services provided by museums, libraries and cultural sites"
+09.6.3,09.6,3,Photographic services
+09.6.3.0,09.6.3,4,Photographic services
+09.6.9,09.6,3,Other cultural services
+09.6.9.0,09.6.9,4,Other cultural services
+09.7,09,2,"Newspapers, books and stationery"
+09.7.1,09.7,3,Books
+09.7.1.1,09.7.1,4,Educational books and textbooks
+09.7.1.9,09.7.1,4,Other books
+09.7.2,09.7,3,Newspapers and periodicals
+09.7.2.1,09.7.2,4,Newspapers
+09.7.2.2,09.7.2,4,Magazines and periodicals
+09.7.3,09.7,3,Miscellaneous printed matter
+09.7.3.0,09.7.3,4,Miscellaneous printed matter
+09.7.4,09.7,3,Stationery and drawing materials
+09.7.4.0,09.7.4,4,Stationery and drawing materials
+09.8,09,2,Package holidays
+09.8.0,09.8,3,Package holidays
+09.8.0.0,09.8.0,4,Package holidays
+10,,1,Education services
+10.1,10,2,Early childhood and primary education
+10.1.0,10.1,3,Early childhood and primary education
+10.1.0.1,10.1.0,4,Early childhood education
+10.1.0.2,10.1.0,4,Primary education
+10.2,10,2,Secondary education
+10.2.0,10.2,3,Secondary education
+10.2.0.0,10.2.0,4,Secondary education
+10.3,10,2,Post-secondary non-tertiary education
+10.3.0,10.3,3,Post-secondary non-tertiary education
+10.3.0.0,10.3.0,4,Post-secondary non-tertiary education
+10.4,10,2,Tertiary education
+10.4.0,10.4,3,Tertiary education
+10.4.0.0,10.4.0,4,Tertiary education
+10.5,10,2,Education not defined by level
+10.5.0,10.5,3,Education not defined by level
+10.5.0.1,10.5.0,4,Tutoring
+10.5.0.9,10.5.0,4,Other education not defined by level
+11,,1,Restaurants and accommodation services
+11.1,11,2,Food and beverage serving services
+11.1.1,11.1,3,"Restaurants, cafés and the like"
+11.1.1.1,11.1.1,4,"Restaurants, cafés and the like – with full service"
+11.1.1.2,11.1.1,4,"Restaurants, cafés and the like – with limited service"
+11.1.2,11.1,3,"Canteens, cafeterias and refectories"
+11.1.2.1,11.1.2,4,"Canteens and cafeterias of universities, schools and kindergartens"
+11.1.2.9,11.1.2,4,"Other canteens, cafeterias and refectories"
+11.2,11,2,Accommodation services
+11.2.0,11.2,3,Accommodation services
+11.2.0.1,11.2.0,4,"Hotels, motels, inns and similar accommodation services"
+11.2.0.2,11.2.0,4,"Holiday centres, camping sites, youth hostels and similar accommodation services"
+11.2.0.3,11.2.0,4,"Accommodation services of boarding schools, universities and other educational establishments"
+11.2.0.9,11.2.0,4,Other accommodation services
+12,,1,Insurance and financial services
+12.1,12,2,Insurance
+12.1.1,12.1,3,Life and accident insurance
+12.1.1.0,12.1.1,4,Life and accident insurance
+12.1.2,12.1,3,Insurance connected with health
+12.1.2.0,12.1.2,4,Insurance connected with health
+12.1.3,12.1,3,Insurance connected with dwellings
+12.1.3.0,12.1.3,4,Insurance connected with dwellings
+12.1.4,12.1,3,Insurance connected with transport
+12.1.4.1,12.1.4,4,Personal transport insurance
+12.1.4.2,12.1.4,4,Travel insurance
+12.1.9,12.1,3,Other insurance
+12.1.9.0,12.1.9,4,Other insurance
+12.2,12,2,Financial services
+12.2.1,12.2,3,Financial intermediation services indirectly measured
+12.2.1.0,12.2.1,4,Financial intermediation services indirectly measured
+12.2.2,12.2,3,Explicit charges by deposit-taking corporations
+12.2.2.0,12.2.2,4,Explicit charges by deposit-taking corporations
+12.2.9,12.2,3,Other financial services
+12.2.9.1,12.2.9,4,Remittances fees
+12.2.9.9,12.2.9,4,Other financial services n.e.c.
+13,,1,"Personal care, social protection and miscellaneous goods and services"
+13.1,13,2,Personal care
+13.1.1,13.1,3,Electric appliances for personal care
+13.1.1.1,13.1.1,4,Purchase of electric appliances for personal care
+13.1.1.2,13.1.1,4,Repair of electric appliances for personal care
+13.1.2,13.1,3,"Other appliances, articles and products for personal care"
+13.1.2.0,13.1.2,4,"Other appliances, articles and products for personal care"
+13.1.3,13.1,3,Hairdressing salons and personal grooming establishments
+13.1.3.1,13.1.3,4,Hairdressing
+13.1.3.2,13.1.3,4,Personal grooming treatments
+13.2,13,2,Other personal effects
+13.2.1,13.2,3,Jewellery and watches
+13.2.1.1,13.2.1,4,Purchase of jewellery and watches
+13.2.1.2,13.2.1,4,"Repair and hire of jewellery, clocks and watches"
+13.2.2,13.2,3,Devotional articles and articles for religious and ritual celebrations
+13.2.2.0,13.2.2,4,Devotional articles and articles for religious and ritual celebrations
+13.2.9,13.2,3,Other personal effects n.e.c.
+13.2.9.1,13.2.9,4,"Travel goods, baby articles and other personal effects n.e.c."
+13.2.9.2,13.2.9,4,Repair and hire of other personal effects
+13.3,13,2,Social protection
+13.3.0,13.3,3,Social protection
+13.3.0.1,13.3.0,4,Childcare services
+13.3.0.2,13.3.0,4,"Retirement homes for elderly persons and residences for disabled persons, not providing medical care"
+13.3.0.3,13.3.0,4,Home care services for elderly and disabled
+13.3.0.9,13.3.0,4,Other social protection services
+13.9,13,2,Other services
+13.9.0,13.9,3,Other services
+13.9.0.1,13.9.0,4,Prostitution
+13.9.0.2,13.9.0,4,Religious services
+13.9.0.9,13.9.0,4,Other services n.e.c.
+14,,1,Individual consumption expenditure of Non-profit Institutions Serving Households
+14.1,14,2,Housing
+14.1.0,14.1,3,Housing
+14.1.0.0,14.1.0,4,Housing
+14.2,14,2,Health
+14.2.1,14.2,3,Pharmaceutical products
+14.2.1.0,14.2.1,4,Pharmaceutical products
+14.2.2,14.2,3,Other medical products
+14.2.2.0,14.2.2,4,Other medical products
+14.2.3,14.2,3,Therapeutic appliances and equipment
+14.2.3.0,14.2.3,4,Therapeutic appliances and equipment
+14.2.4,14.2,3,Outpatient medical services
+14.2.4.0,14.2.4,4,Outpatient medical services
+14.2.5,14.2,3,Outpatient dental services
+14.2.5.0,14.2.5,4,Outpatient dental services
+14.2.6,14.2,3,Outpatient paramedical services
+14.2.6.0,14.2.6,4,Outpatient paramedical services
+14.2.7,14.2,3,Hospital services
+14.2.7.0,14.2.7,4,Hospital services
+14.2.8,14.2,3,Other health services
+14.2.8.0,14.2.8,4,Other health services
+14.3,14,2,Recreation and culture
+14.3.1,14.3,3,Recreational and sporting services
+14.3.1.0,14.3.1,4,Recreational and sporting services
+14.3.2,14.3,3,Cultural services
+14.3.2.0,14.3.2,4,Cultural services
+14.4,14,2,Education
+14.4.1,14.4,3,Pre-primary and primary education
+14.4.1.0,14.4.1,4,Pre-primary and primary education
+14.4.2,14.4,3,Secondary education
+14.4.2.0,14.4.2,4,Secondary education
+14.4.3,14.4,3,Post-secondary non-tertiary education
+14.4.3.0,14.4.3,4,Post-secondary non-tertiary education
+14.4.4,14.4,3,Tertiary education
+14.4.4.0,14.4.4,4,Tertiary education
+14.4.5,14.4,3,Education not defined by level
+14.4.5.0,14.4.5,4,Education not defined by level
+14.4.6,14.4,3,Other educational services
+14.4.6.0,14.4.6,4,Other educational services
+14.5,14,2,Social protection
+14.5.0,14.5,3,Social protection
+14.5.0.0,14.5.0,4,Social protection
+14.6,14,2,Other services
+14.6.1,14.6,3,Religion
+14.6.1.0,14.6.1,4,Religion
+14.6.2,14.6,3,"Political parties, labour and professional organizations"
+14.6.2.0,14.6.2,4,"Political parties, labour and professional organizations"
+14.6.3,14.6,3,Environmental protection
+14.6.3.0,14.6.3,4,Environmental protection
+14.6.4,14.6,3,Services n.e.c.
+14.6.4.0,14.6.4,4,Services n.e.c.
+15,,1,Individual consumption expenditure of general government
+15.1,15,2,Housing
+15.1.0,15.1,3,Housing
+15.1.0.0,15.1.0,4,Housing
+15.2,15,2,Health
+15.2.1,15.2,3,Pharmaceutical products
+15.2.1.0,15.2.1,4,Pharmaceutical products
+15.2.2,15.2,3,Other medical products
+15.2.2.0,15.2.2,4,Other medical products
+15.2.3,15.2,3,Therapeutic appliances and equipment
+15.2.3.0,15.2.3,4,Therapeutic appliances and equipment
+15.2.4,15.2,3,Outpatient medical services
+15.2.4.0,15.2.4,4,Outpatient medical services
+15.2.5,15.2,3,Outpatient dental services
+15.2.5.0,15.2.5,4,Outpatient dental services
+15.2.6,15.2,3,Outpatient paramedical services
+15.2.6.0,15.2.6,4,Outpatient paramedical services
+15.2.7,15.2,3,Hospital services
+15.2.7.0,15.2.7,4,Hospital services
+15.2.8,15.2,3,Public health services
+15.2.8.0,15.2.8,4,Public health services
+15.3,15,2,Recreation and culture
+15.3.1,15.3,3,Recreational and sporting services
+15.3.1.0,15.3.1,4,Recreational and sporting services
+15.3.2,15.3,3,Cultural services
+15.3.2.0,15.3.2,4,Cultural services
+15.4,15,2,Education
+15.4.1,15.4,3,Pre-primary and primary education
+15.4.1.0,15.4.1,4,Pre-primary and primary education
+15.4.2,15.4,3,Secondary education
+15.4.2.0,15.4.2,4,Secondary education
+15.4.3,15.4,3,Post-secondary non-tertiary education
+15.4.3.0,15.4.3,4,Post-secondary non-tertiary education
+15.4.4,15.4,3,Tertiary education
+15.4.4.0,15.4.4,4,Tertiary education
+15.4.5,15.4,3,Education not defined by level
+15.4.5.0,15.4.5,4,Education not defined by level
+15.4.6,15.4,3,Subsidiary services to education
+15.4.6.0,15.4.6,4,Subsidiary services to education
+15.5,15,2,Social protection
+15.5.0,15.5,3,Social protection
+15.5.0.0,15.5.0,4,Social protection
