@@ -1,0 +1,95 @@
+General instructions:
+- The budgeting app should be a local app running on Python.
+- Transactions, account entries and budget entries are stored as csv files.
+- The base currency is the one that cannot be changed. It is set to CHF. All transactions and account entries are stored in the base currency as well.
+- All transactions, account entries and budget entries are stored in the selected currency and in the base currency. Every time the app opens on a new day it downloads the file from here for all exchange rates and replaces the old one: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip?0a220d633471964b427451aece0f2cbe
+
+The application has the following pages, which can be selected from a task bar:
+
+- Settings
+	- A selection until which month it should to be budgeted for. If this period is extended the budget entries that have "Forever" as their final month are extended.
+	- Set currency
+		- The displayed currency is a dropdown menu, where all the currencies are listed that the ECB covers here: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip?0a220d633471964b427451aece0f2cbe. It is the currency the budget is displayed in by default.
+	- Accounts
+		- An overview of all accounts where accounts can be renamed and edited. When an account is added the currency also needs to be indicated. All transaction connected to that account need to be in that currency. 
+		- Accounts can be deleted but only if there are no transactions concerning that account.
+	- Advance Payment accounts
+		- The functionality is exactly the same as with accounts but their category is advance payments.
+	- Income categories
+		- Income categories can be added and their name can be edited. They can only be deleted if there is no entry to that category.
+- Adding a transaction
+	- All transactions are stored in a csv file 
+	- The adding a transaction window needs to have to following features:
+		- Date (set to the current date)
+		- Amount (only allows for positive values)
+		- Currency set to the displayed currency with a dropdown menu
+		- Type of transaction
+			- Expenditure
+				- From a dropdown window the COICOP category needs to be selected. The dropdown menu has a search field. It also includes an additional entry for taxes.
+				- A category on any level can be selected.
+				- The "From" Account needs to be chosen from a dropdown menu. Only the ones with the corresponding currency are shown
+				- A checkmark can be selected for advance payment. A percentage or specific amount needs to be indicated that has been paid by others. By default it is added to the account "advance payments". If that account does not exist yet in that currency, one is created. Other "advance payment" accounts in that currency can also be selected. In the "Debtor" field the debtor can be entered.
+			- Income
+				- The income category needs to be chosen from a dropdown menu.
+				- The "To" Account needs to be selected
+				- A checkmark can be selected for advance payment.  An advance payment account needs to be selected. All the outstanding payments are listed. The corresponding can be chosen and the amount will be deducted by it.
+			- Account Transfer
+				- The "To" and "From" account need to selected. Only those matching the selected currency are shown.
+			- Currency exchange
+				- The "To" and "From" account need to selected. The amount in the currency of the from account needs to be entered.
+		- Comment text field (optional)
+	- Save button that only works if all the fields have been filled out (except for the comment one which is optional). Once saved, the transaction is recorded in a csv file with columns for each of the fields. All the fields are reset except the currency and date field. The amount of the base currency is always calculated with the exchange rate from the last entry of the csv file from the ECB. The date of the selected exchange rate is also recorded.
+- Budget overview
+	- It always displays the total current wealth, which is the wealth at the end of last month, in the displayed currency, no matter which month is selected.
+	- The currency can be changed in a dropdown menu. The amounts for the account, income and expenditure entries are summed up by first multiplying each entry with the exchange rate for the recorded date from which the exchange rate has been used and then the amounts are added in the corresponding currency. Account entries are always calculated for the last entry of the month. Budgeted income and expenditure is always calculated based on the last available exchange rate.
+	- The month is set to the current month. Month can be selected by dropdown menu.
+	- It displays in a list all the accounts that have a non-zero amount. Next to the account name it shows the amount in the selected currency of the view. Next to it it also shows the amount in the currency of the account. If there has not been entered a recording yet for an account in a past month and that account has had a non-zero recording in its last entry, then a button is displayed next to the name to add a budget recording. Or to edit if it already exists. If a month that has not fully been passed yet is selected, not the accounts are shown but just the projected total wealth. 
+	- On top there is a button to add an a budget recording. This is how the window is set up:
+		- Select month in dropdown. Set to previous month.
+		- Select an account
+		- Type in amount. If the entry for the account already exists, display the amount.
+		- Click "Save" if all the entries are filled out. Change the amount for the corresponding account and month if the entry already exists.
+	- There is a table with all the expenditures
+		- All the top-level COICOP categories are shown with the amount in the selected currency next to them. This amount is the sum of all expenses of its lower categories summed up. For example: The category 01 contains all the entries of 01.1 and 01.2 as well as the entries that have directly been recorded for 01. This system continues on lower levels.
+		- When clicking on a COICOP category the lower levels are also shown in the table
+		- There is an additional entry for all advance payments.
+		- There is an additional entry for the remainder that results out of the total change in wealth minus the total income minus the recorded expenditure. This entry is called "Unaccounted Expenditure"
+		- There is an entry for taxes
+		- Total expenditure is shown on top of the table
+		- If a month that has not fully been passed yet is selected, the budgeted amounts for each COICOP category are shown.
+		- Show the difference to the budgeted amount for each category.
+	- There is a table with all the income
+		- All the income categories that are non-zero are displayed in the selected currency.
+		- Total income is shown on top of the table
+		-  If a month that has not fully been passed yet is selected, the budgeted amounts for each income category, whose value is non-zero, are shown.
+		- Show the difference to the budgeted amount for each category.
+	- The projected wealth is based on the total sum of budgeted income and expenditure since the last month where there has been at least one entry for an account.
+	- If a month is selected that has not fully ben passed yet and the budgeted amounts for income and expenditure are shown, the entries for each category can be selected and edited.
+	- Option to export the income and account statement of the month as an excel or PDF file.
+- Transaction overview table
+	- All transactions can be searched with filters for date, amount, account (to and from), type of transaction, and a search text field
+	- They can also be sorted by each category
+	- A single transaction can be selected to edit.
+	- One or several can be selected to be deleted.
+- Adding budgeting entry
+	- Select range of months where it should be added. As a final month "Forever" can be selected. The final month can be selected until the one that has been set in the settings. There is the option for it to recur on a certain amount such as every month or every year.
+	- Select if is income or expenditure
+	- Select currency
+	- Type in amount
+	- It shows the same income and expenditure categories as when adding a transaction.
+	- There is a checkmark whether the budget entry should overwrite all entries for the selected months that has the same income or expenditure category.
+	- There is an optional comment field.
+- Budget entry overview
+	- Same as transaction overview but for budget entries.
+- Overview page
+	- Is the first page that is shown when the application is opened.
+	- Shows the current wealth and the projected wealth at the last future month set in the settings.
+	- It contains the option to create different types of charts such as:
+		- Line Chart showing the actual and the projected wealth over time
+		- Bar or line chart showing the expenditures and income for a selected period
+			- Also only certain categories can be selected
+		- Waterfall chart showing the change in the amounts of each account.
+	- Several charts can be shown next to eachother
+	- Data from charts can be downloaded as csv or excel file
+	- Chart can be downloaded as image
+

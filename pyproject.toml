@@ -1,0 +1,51 @@
+[project]
+name = "budget-app"
+version = "0.1.0"
+description = "Local personal budgeting app (CSV storage, CHF base currency, ECB exchange rates)"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "nicegui>=2.0",
+    "pandas>=2.2",
+    "plotly>=5.24",
+    "openpyxl>=3.1",
+    "reportlab>=4.2",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+native = ["pywebview>=5.0"]
+
+[project.scripts]
+budget = "budget_app.main:run"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+# installer builds (see packaging/README.md)
+build = ["pyinstaller>=6.10", "pywebview>=5.3", "pillow>=10"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/budget_app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "B", "I", "UP", "SIM", "S", "RUF", "C4", "PIE", "RET", "PTH", "PL"]
+ignore = [
+    "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917", "PLR2004",  # complexity thresholds
+    "C408",                                                            # dict(...) is idiomatic for plotly kwargs
+    "RUF001", "RUF002", "RUF003",                                      # intentional unicode (–, …, ≈)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
