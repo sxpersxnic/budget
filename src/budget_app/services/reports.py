@@ -8,84 +8,27 @@ Display conversion rules:
 
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date
 
-from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months
-from budget_app.domain.coicop import ADV, TAX, UNACCOUNTED, get_coicop
-from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, TX_EXPENDITURE, TX_INCOME, Transaction
-from budget_app.i18n import N_, t
+from budget_app.domain.coicop import ADV, TAX, get_coicop
+from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME
+from budget_app.i18n import t
 from budget_app.services import wealth as wealth_svc
+from budget_app.services.aggregates import (  # noqa: F401 - re-exported for callers of reports
+    ADV_REPAY,
+    ADV_REPAY_NAME,
+    actual_expenditure,
+    actual_income,
+    budgeted,
+    expenditure_parts,
+    income_key,
+    rollup,
+    top_expenditure_codes,
+    tx_value,
+)
 from budget_app.services.context import Context
-
-ADV_REPAY = "ADV_REPAY"
-ADV_REPAY_NAME = N_("Advance repayments")  # display with t()
-
-
-def tx_value(ctx: Context, tx: Transaction, view_cur: str) -> float:
-    """Transaction amount in the view currency, using the rate recorded with the transaction."""
-    if tx.currency == view_cur:
-        return tx.amount
-    return ctx.convert_on(tx.amount_chf, BASE_CURRENCY, view_cur, tx.fx_date)
-
-
-def expenditure_parts(ctx: Context, tx: Transaction, view_cur: str) -> list[tuple[str, float]]:
-    """(category, amount) parts of an expenditure: own share to its category, advance share to ADV."""
-    total = tx_value(ctx, tx, view_cur)
-    if tx.is_advance and tx.advance_amount > 0 and tx.amount > 0:
-        adv = total * tx.advance_amount / tx.amount
-        parts = [(ADV, adv)]
-        if total - adv > 0.0049:
-            parts.insert(0, (tx.category, total - adv))
-        return parts
-    return [(tx.category, total)]
-
-
-def income_key(tx: Transaction) -> str:
-    return ADV_REPAY if tx.is_advance else tx.category
-
-
-def _in_months(d: date, month_set: set[str]) -> bool:
-    return months.month_of(d) in month_set
-
-
-# ------------------------------------------------------------------ aggregates
-def actual_expenditure(ctx: Context, month_set: set[str], view_cur: str) -> dict[str, float]:
-    """Direct (not rolled up) actual expenditure per category code."""
-    out: dict[str, float] = defaultdict(float)
-    for tx in ctx.store.transactions.all():
-        if tx.type == TX_EXPENDITURE and _in_months(tx.date, month_set):
-            for code, value in expenditure_parts(ctx, tx, view_cur):
-                out[code] += value
-    return dict(out)
-
-
-def actual_income(ctx: Context, month_set: set[str], view_cur: str) -> dict[str, float]:
-    out: dict[str, float] = defaultdict(float)
-    for tx in ctx.store.transactions.all():
-        if tx.type == TX_INCOME and _in_months(tx.date, month_set):
-            out[income_key(tx)] += tx_value(ctx, tx, view_cur)
-    return dict(out)
-
-
-def budgeted(ctx: Context, month_set: set[str], type_: str, view_cur: str) -> dict[str, float]:
-    out: dict[str, float] = defaultdict(float)
-    for b in ctx.store.budget.all():
-        if b.type == type_ and b.month in month_set:
-            out[b.category] += ctx.convert_on(b.amount, b.currency, view_cur, None)
-    return dict(out)
-
-
-def rollup(direct: dict[str, float]) -> dict[str, float]:
-    """Sum every amount into its own code and all ancestor codes."""
-    coicop = get_coicop()
-    out: dict[str, float] = defaultdict(float)
-    for code, value in direct.items():
-        for anc in coicop.ancestors(code):
-            out[anc] += value
-    return dict(out)
 
 
 # ------------------------------------------------------------- month statement
@@ -114,9 +57,11 @@ class MonthReport:
     income_lines: list[Line] = field(default_factory=list)
     total_expenditure: Line = field(default_factory=lambda: Line("TOTAL", t("Total expenditure")))
     total_income: Line = field(default_factory=lambda: Line("TOTAL", t("Total income")))
-    unaccounted: float | None = None
     wealth_start: float | None = None
     wealth_end: float | None = None
+    # reconciliation (F42), for complete months with balances at both ends
+    balance_change: float | None = None  # wealth_end - wealth_start
+    unexplained: float | None = None  # balance_change - (income - expenditure); negative: money unaccounted for
     accounts: list[wealth_svc.AccountRow] = field(default_factory=list)
     projected_wealth: float | None = None
 
@@ -152,13 +97,13 @@ def month_report(ctx: Context, month: str, view_cur: str, today: date | None = N
             has_children=bool(cat and cat.children),
             editable=code != ADV,
         )
-    for code in [*coicop.divisions, TAX, ADV]:
+    for code in top_expenditure_codes():
         if code not in rep.expenditure_tree:
             cat = coicop.categories[code]  # divisions and pseudo-categories always exist
             rep.expenditure_tree[code] = Line(
                 code, cat.label, level=1, has_children=bool(cat.children), editable=code != ADV
             )
-    rep.top_expenditure = [*coicop.divisions, TAX, ADV]
+    rep.top_expenditure = top_expenditure_codes()
 
     act_inc = actual_income(ctx, mset, view_cur)
     bud_inc = budgeted(ctx, mset, BUDGET_INCOME, view_cur)
@@ -175,19 +120,19 @@ def month_report(ctx: Context, month: str, view_cur: str, today: date | None = N
     if complete and wealth_svc.has_wealth_data(ctx, months.add_months(month, -1)):
         rep.wealth_start = wealth_svc.wealth(ctx, months.add_months(month, -1), view_cur)
         rep.wealth_end = wealth_svc.wealth(ctx, month, view_cur)
-        rep.unaccounted = total_inc_act - recorded_exp - (rep.wealth_end - rep.wealth_start)
-        rep.expenditure_tree[UNACCOUNTED] = Line(UNACCOUNTED, coicop.label(UNACCOUNTED), rep.unaccounted)
-        rep.top_expenditure.append(UNACCOUNTED)
+        rep.balance_change = rep.wealth_end - rep.wealth_start
+        rep.unexplained = rep.balance_change - (total_inc_act - recorded_exp)
 
-    rep.total_expenditure = Line(
-        "TOTAL", t("Total expenditure"), recorded_exp + (rep.unaccounted or 0.0), total_exp_budget
-    )
+    rep.total_expenditure = Line("TOTAL", t("Total expenditure"), recorded_exp, total_exp_budget)
     rep.total_income = Line("TOTAL", t("Total income"), total_inc_act, sum(bud_inc.values()))
 
     if complete:
-        rep.accounts = [
-            r for r in wealth_svc.account_rows(ctx, month, view_cur) if abs(r.amount) > 0.005 or r.has_entry
-        ]
+        prev = months.add_months(month, -1)
+        for r in wealth_svc.account_rows(ctx, month, view_cur):
+            before = wealth_svc.balance_entry(ctx, r.account.id, prev)
+            r.opening = before.amount if before else None
+            if abs(r.amount) > 0.005 or r.has_entry or abs(r.opening or 0.0) > 0.005:
+                rep.accounts.append(r)
     else:
         rep.projected_wealth = wealth_svc.projected_wealth(ctx, month, view_cur)
     return rep
@@ -203,7 +148,23 @@ def series_keys(ctx: Context) -> dict[str, str]:
     for c in ctx.store.income_categories.all():
         out[f"INC:{c.id}"] = t("Income: {name}", name=c.name)
     out[f"INC:{ADV_REPAY}"] = t("Income: {name}", name=t(ADV_REPAY_NAME))
+    out[UNEXPLAINED_KEY] = t("Unexplained difference")
     return out
+
+
+UNEXPLAINED_KEY = "REC:UNEXPLAINED"
+
+
+def unexplained(ctx: Context, month: str, view_cur: str, today: date | None = None) -> float | None:
+    """Change in balances minus recorded net for a complete month with balances at both ends."""
+    if not months.is_complete(month, today) or not wealth_svc.has_wealth_data(ctx, months.add_months(month, -1)):
+        return None
+    mset = {month}
+    recorded = sum(actual_income(ctx, mset, view_cur).values()) - sum(
+        rollup(actual_expenditure(ctx, mset, view_cur)).get(c, 0.0) for c in top_expenditure_codes()
+    )
+    change = wealth_svc.wealth(ctx, month, view_cur) - wealth_svc.wealth(ctx, months.add_months(month, -1), view_cur)
+    return change - recorded
 
 
 def budget_label(label: str) -> str:
@@ -225,10 +186,14 @@ def monthly_series(
         bexp = rollup(budgeted(ctx, mset, BUDGET_EXPENDITURE, view_cur)) if include_budget else {}
         binc = budgeted(ctx, mset, BUDGET_INCOME, view_cur) if include_budget else {}
         for key in keys:
+            if key == UNEXPLAINED_KEY:  # no budget; empty for months without balances at both ends
+                gap = unexplained(ctx, m, view_cur)
+                row[labels[key]] = None if gap is None else round(gap, 2)
+                continue
             kind, code = key.split(":", 1)
             src, bsrc = (exp, bexp) if kind == "EXP" else (inc, binc)
             if code == "TOTAL":
-                top = [*get_coicop().divisions, TAX, ADV] if kind == "EXP" else list(src)
+                top = top_expenditure_codes() if kind == "EXP" else list(src)
                 value = sum(src.get(c, 0.0) for c in top)
                 bvalue = sum(bsrc.get(c, 0.0) for c in (top if kind == "EXP" else bsrc))
             else:

@@ -13,8 +13,7 @@ from budget_app.i18n import N_, t
 
 TAX = "TAX"
 ADV = "ADV"
-UNACCOUNTED = "UNACCOUNTED"
-PSEUDO_NAMES = {TAX: N_("Taxes"), ADV: N_("Advance payments"), UNACCOUNTED: N_("Unaccounted Expenditure")}
+PSEUDO_NAMES = {TAX: N_("Taxes"), ADV: N_("Advance payments")}
 
 
 @dataclass
@@ -47,7 +46,7 @@ class Coicop:
         for cat in self.categories.values():
             if cat.parent:
                 self.categories[cat.parent].children.append(cat.code)
-        for code in (TAX, ADV, UNACCOUNTED):
+        for code in (TAX, ADV):
             self.categories[code] = Category(code, PSEUDO_NAMES[code], 1)
 
     @property

@@ -36,7 +36,7 @@ storage/    typed CSV tables + settings JSON
 | `config.py` | Base currency `CHF`, ECB URL, data/resource paths (`BUDGET_DATA_DIR` env override). |
 | `domain/months.py` | `YYYY-MM` month arithmetic and the "month complete" rule. |
 | `domain/fx.py` | `FxRates` (parse ECB CSV, rate lookup with date fallback, cross-rate conversion) and `FxService` (daily download, atomic file replacement). |
-| `domain/coicop.py` | COICOP tree (ancestors, children, labels) plus pseudo-categories `TAX`, `ADV`, `UNACCOUNTED`. |
+| `domain/coicop.py` | COICOP tree (ancestors, children, labels) plus pseudo-categories `TAX` and `ADV`. |
 | `domain/models.py` | Dataclasses `Account`, `IncomeCategory`, `Transaction`, `AccountEntry`, `BudgetEntry`, `Settings`. |
 | `storage/csv_store.py` | Generic `CsvTable[T]`: in-memory records, atomic rewrite (temp file, fsync, rename) on every change. Unknown columns are kept and written back. |
 | `storage/store.py` | `Store` bundling all tables and settings. Unknown settings keys are kept. |
@@ -48,7 +48,8 @@ storage/    typed CSV tables + settings JSON
 | `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement. |
 | `services/budget.py` | Budget series expansion, overwrite, horizon change and "Forever" extension. |
 | `services/wealth.py` | Account balances, wealth, projected wealth, wealth time series. |
-| `services/reports.py` | Monthly statement (expenditure tree, income, budget vs. actual, unaccounted), chart series. |
+| `services/aggregates.py` | Sums of transactions and budget entries per category and month; `projected_net` (the higher of recorded and budget per category). Shared by reports and the wealth projection. |
+| `services/reports.py` | Monthly statement (expenditure tree, income, budget vs. actual, reconciliation, opening balances), chart series. |
 | `services/export.py` | Statement as Excel/PDF; chart data and list views as CSV/Excel; every record as one JSON document (`format: budget-app/export`, `version: 1`), not meant to be imported back. |
 | `services/archive.py` | Full backup of the data folder's records as a ZIP (with a `budget-backup.json` manifest) and restoring one: plain CSV/JSON names only, size limits, every table must load before anything changes; the current files go to `backups/<timestamp>_before-restore/` first, then the store is reloaded. |
 | `services/importer.py` | CSV import: encoding, separator and header detection, column mapping and bank profiles, duplicate marking, category suggestions, saving in one write. |
@@ -134,9 +135,15 @@ holidays. Dates before the start of the file use its first rate.
 - **Current wealth** is Wealth(previous month). It is shown on the Overview and the Budget
   overview whatever month is selected.
 - **Projected wealth(M):** let L be the last month with at least one account entry. Then
-  - projected wealth(M) = Wealth(L) + Σ (budgeted income − budgeted expenditure) for
-    months L+1 … M;
-  - for M ≤ L it is simply Wealth(M).
+  - projected wealth(M) = Wealth(L) + Σ expected net for months L+1 … M;
+  - a month's **expected net** (`aggregates.projected_net`, F47) takes, per top-level
+    expenditure row (COICOP division, taxes, advances) and per income category, the
+    **higher of recorded and budgeted**: overspending or extra income that is already
+    recorded counts, and a budget not yet used still counts. Advances and repayments have
+    no budget and count as recorded. The rule applies to every month after L, including
+    months that are over but have no balances yet (decision 5);
+  - for M ≤ L it is simply Wealth(M). Without any balances the projection starts at 0 in the
+    first month with a budget entry or a transaction.
 
 ### 4.3 Monthly statement (`reports.month_report`)
 
@@ -146,15 +153,23 @@ holidays. Dates before the start of the file use its first rate.
 - **Expenditure tree:** a category's amount is its own direct entries plus everything
   recorded in any descendant code. For example, `01` includes `01`, `01.1`, `01.1.1`
   and `01.1.1.1`.
-  - Top-level rows: the 15 COICOP divisions, **Taxes**, **Advance payments** (the
-    `advance_amount` shares) and, for complete months, **Unaccounted Expenditure**.
+  - Top-level rows: the 15 COICOP divisions, **Taxes** and **Advance payments** (the
+    `advance_amount` shares).
   - An advanced expenditure contributes `amount − advance_amount` to its COICOP code and
     `advance_amount` to *Advance payments*.
 - **Income:** non-zero income categories, plus **Advance repayments** (the repayments).
-- **Unaccounted Expenditure** = total income − recorded expenditure − (Wealth(M) − Wealth(M−1)).
-  - It is computed only for complete months that have balance data for M−1.
-  - A positive value is money that left the accounts without being recorded.
-- **Total expenditure** = recorded expenditure + unaccounted expenditure.
+- **Reconciliation** (F42, replaces the former *Unaccounted Expenditure* row): for complete
+  months with balance data for M−1, the Budget page shows above the tables
+  - recorded net = total income − total expenditure,
+  - change in balances = Wealth(M) − Wealth(M−1),
+  - **unexplained** = change in balances − recorded net. A negative value is money that left
+    the accounts without being recorded; a positive one arrived without a record. The
+    *Income and Expenditure* chart offers it as the series *Unexplained difference*.
+- **Total expenditure** = recorded expenditure only, on the page, in the charts and in the
+  statement export.
+- **Account balances** (F41): for each account the opening balance (end of M−1, carried
+  forward), the closing balance and the change, in the account's currency; the total row
+  shows Wealth(M−1), Wealth(M) and their change in the view currency.
 - **Difference** = actual − budget. It is shown in red when expenditure exceeds the
   budget or income falls short of it.
 
@@ -228,13 +243,13 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 
 1. **Advances sit outside wealth** (agreed during planning). Advanced shares appear as the
    expenditure line *Advance payments*, and repayments count as income. This keeps
-   *Unaccounted Expenditure* consistent, because the receivable is not also counted
+   the reconciliation consistent, because the receivable is not also counted
    in wealth.
 2. **An advance is a single row** with an `advance_amount` column, not two linked rows.
    Editing and deleting stay atomic, and the reports split the amount.
 3. **Exchange `to_amount` is the amount actually received** (issue 01, B06; it used to be
    computed from ECB rates). The difference to the ECB amount, the bank's spread, still shows
-   up in Unaccounted Expenditure once balances are recorded, until F44 books it as a
+   up in the reconciliation's unexplained difference once balances are recorded, until F44 books it as a
    revaluation.
 4. **Balances carry forward.** A month with no entry for an account reuses the account's
    last recorded balance. The Budget overview flags such accounts and offers an "Add"
@@ -282,7 +297,7 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     and the currency check;
   - translation completeness and language switching;
   - edit valuation and locking of repaid advances;
-  - wealth with carry-forward, projected wealth and the unaccounted-expenditure formula.
+  - wealth with carry-forward, projected wealth (higher of recorded and budget) and the reconciliation.
 - The UI was exercised end-to-end with Playwright against a seeded data set:
   - all pages and the forms with advance and repayment;
   - the grid filters, edit and multi-delete;

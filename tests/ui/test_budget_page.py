@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import sys
 from datetime import date
 from types import SimpleNamespace
@@ -176,10 +177,24 @@ async def test_month_without_data(user: User, demo) -> None:
     await user.should_see("No budget set")
 
 
-async def test_first_recorded_month_has_no_unaccounted_expenditure(user: User, demo) -> None:
+async def test_first_recorded_month_has_no_reconciliation_yet(user: User, demo) -> None:
     await open_budget(user, months.add_months(CM, -6))
-    await user.should_see("Unaccounted expenditure appears once balances are recorded")
+    await user.should_see("Appears once balances are recorded for this and the previous month.")
     await user.should_see("90.00 left of 2'750.00 CHF")  # 2'660 spent
+    await user.should_not_see("Unexplained")
+
+
+async def test_reconciliation_line_shows_the_gap(user: User, demo, ctx) -> None:
+    rep = reports.month_report(ctx, PREV, "CHF")
+    assert rep.unexplained is not None and rep.unexplained < 0  # the demo balances fall faster than booked
+    await open_budget(user, PREV)
+    await user.should_see("Reconciliation")
+    await user.should_see("Recorded Net")
+    await user.should_see("Change in Balances")
+    await user.should_see("Money that left without a record")
+    amounts = [e.content for e in find_all(user, ui.html)]
+    assert any(html.escape(fmt(rep.unexplained)) in c for c in amounts)  # amounts are HTML (number + currency)
+    # no row for it in the expenditure table any more (F42, B04)
     await user.should_not_see("Unaccounted Expenditure")
 
 
@@ -208,13 +223,23 @@ async def test_over_and_above_budget_summaries(user: User, demo, ctx) -> None:
             to_account=demo["chf"].id,
         ),
     )
+    tx_svc.save(
+        ctx,
+        TransactionInput(
+            date=date(y, m, 12),
+            type="expenditure",
+            amount=400,
+            currency="CHF",
+            category="09.1",
+            from_account=demo["chf"].id,
+        ),
+    )
     rep = reports.month_report(ctx, PREV, "CHF")
     over = rep.total_expenditure.actual - rep.total_expenditure.budget
-    assert over > 0  # the balances say much more went out than was booked
+    assert over > 0  # 2'660 + 400 recorded against a budget of 2'750
     await open_budget(user, PREV)
     await user.should_see(f"{fmt(over)} over the 2'750.00 CHF budget")
     await user.should_see("300.00 above the 6'200.00 CHF budget")
-    await user.should_see("Unaccounted Expenditure")
     assert any("over" in e.classes for e in find_all(user, ui.element) if "meter" in e.classes)
 
 

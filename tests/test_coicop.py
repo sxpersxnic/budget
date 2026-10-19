@@ -5,7 +5,7 @@ from budget_app.services.reports import rollup
 def test_coicop_has_four_levels():
     c = get_coicop()
     assert len(c.divisions) == 15
-    levels = [cat.level for cat in c.categories.values() if cat.code not in (TAX, ADV, "UNACCOUNTED")]
+    levels = [cat.level for cat in c.categories.values() if cat.code not in (TAX, ADV)]
     assert {lvl: levels.count(lvl) for lvl in set(levels)} == {1: 15, 2: 63, 3: 186, 4: 338}
     assert c.ancestors("01.1.1.3") == ["01.1.1.3", "01.1.1", "01.1", "01"]
     assert TAX in c.selectable() and ADV not in c.selectable()

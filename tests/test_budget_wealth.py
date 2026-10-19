@@ -165,10 +165,15 @@ def test_wealth_projection_and_unaccounted(ctx, setup):
         ),
     )
     rep = reports.month_report(ctx, "2026-09", "CHF", TODAY)
-    # delta wealth = 499, income 800, recorded 200 -> unaccounted = 800 - 200 - 499 = 101
-    assert rep.unaccounted == pytest.approx(101.0)
+    # change in balances 499, recorded net 800 - 200 = 600 -> 101 left without a record (F42)
+    assert rep.balance_change == pytest.approx(499.0)
+    assert rep.unexplained == pytest.approx(-101.0)
     assert rep.expenditure_tree["01"].actual == pytest.approx(200.0)
-    assert rep.total_expenditure.actual == pytest.approx(301.0)
+    assert rep.total_expenditure.actual == pytest.approx(200.0)  # recorded spending only
+    assert [(r.account.name, r.opening, r.change) for r in rep.accounts] == [
+        ("Bank", 1000.0, 500.0),
+        ("Euro account", 100.0, 0.0),
+    ]
 
     budget_svc.create(
         ctx,
@@ -193,3 +198,63 @@ def test_wealth_projection_and_unaccounted(ctx, setup):
     oct_rep = reports.month_report(ctx, "2026-10", "CHF", TODAY)
     assert not oct_rep.complete and oct_rep.expenditure_tree["01"].budget == pytest.approx(90.0)
     assert oct_rep.projected_wealth == pytest.approx(1594 + 910)
+
+
+def test_projection_takes_the_higher_of_recorded_and_budget(ctx, setup):
+    """F47: per category, recorded overspending or extra income counts; an unused budget still counts."""
+    chf, salary = setup["chf"].id, setup["salary"].id
+    wealth_svc.upsert_entry(ctx, chf, "2026-08", 1000)  # the last recorded balances
+    for cat, amount in (("01", 100), ("07", 200)):
+        budget_svc.create(
+            ctx,
+            BudgetInput(
+                start_month="2026-09", forever=True, type="expenditure", currency="CHF", amount=amount, category=cat
+            ),
+        )
+    budget_svc.create(
+        ctx,
+        BudgetInput(start_month="2026-09", forever=True, type="income", currency="CHF", amount=1000, category=salary),
+    )
+
+    def spend(day: date, amount: float, category: str) -> None:
+        tx_svc.save(
+            ctx,
+            TransactionInput(
+                date=day, type=TX_EXPENDITURE, amount=amount, currency="CHF", category=category, from_account=chf
+            ),
+        )
+
+    # September is over but has no balances (decision 5: same rule): food 300 > 100, transport 0 < 200
+    spend(date(2026, 9, 5), 300, "01.1")
+    # October is running: food 50 < 100; income 1200 > 1000
+    spend(date(2026, 10, 3), 50, "01.1")
+    tx_svc.save(
+        ctx,
+        TransactionInput(
+            date=date(2026, 10, 1), type=TX_INCOME, amount=1200, currency="CHF", category=salary, to_account=chf
+        ),
+    )
+    sept = 1000 - (300 + 200)
+    october = 1200 - (100 + 200)
+    november = 1000 - (100 + 200)
+    assert wealth_svc.projected_wealth(ctx, "2026-09", "CHF") == pytest.approx(1000 + sept)
+    assert wealth_svc.projected_wealth(ctx, "2026-11", "CHF") == pytest.approx(1000 + sept + october + november)
+    series = {m: v for m, v, projected in wealth_svc.wealth_series(ctx, "CHF", "2026-11", TODAY) if projected}
+    assert series["2026-10"] == pytest.approx(1000 + sept + october)
+    assert reports.month_report(ctx, "2026-10", "CHF", TODAY).projected_wealth == pytest.approx(1000 + sept + october)
+
+
+def test_projection_without_any_balances_starts_with_the_first_activity(ctx, setup):
+    budget_svc.create(
+        ctx,
+        BudgetInput(
+            start_month="2026-11",
+            end_month="2026-12",
+            type="income",
+            currency="CHF",
+            amount=500,
+            category=setup["salary"].id,
+        ),
+    )
+    assert wealth_svc.projected_wealth(ctx, "2026-10", "CHF") == 0
+    assert wealth_svc.projected_wealth(ctx, "2026-12", "CHF") == pytest.approx(1000)

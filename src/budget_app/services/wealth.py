@@ -1,4 +1,4 @@
-"""Wealth from monthly account balances (account entries) and projections from the budget."""
+"""Wealth from monthly account balances (account entries), and its projection from budget and records."""
 
 from __future__ import annotations
 
@@ -7,9 +7,10 @@ from datetime import date
 
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months
-from budget_app.domain.models import ACCOUNT_REGULAR, BUDGET_EXPENDITURE, BUDGET_INCOME, Account, AccountEntry
+from budget_app.domain.models import ACCOUNT_REGULAR, Account, AccountEntry
 from budget_app.i18n import t
 from budget_app.services import accounts as acc_svc
+from budget_app.services.aggregates import projected_net
 from budget_app.services.context import Context, ValidationError
 
 
@@ -20,6 +21,12 @@ class AccountRow:
     amount_view: float  # in the view currency
     has_entry: bool  # an entry exists for exactly this month
     needs_entry: bool  # no entry for this month but the last entry was non-zero
+    opening: float | None = None  # balance at the end of the previous month (account currency), if any
+
+    @property
+    def change(self) -> float | None:
+        """Change over the month in the account's currency (F41); None without an opening balance."""
+        return None if self.opening is None else self.amount - self.opening
 
 
 def entry_for(ctx: Context, account_id: str, month: str) -> AccountEntry | None:
@@ -105,34 +112,34 @@ def has_wealth_data(ctx: Context, month: str) -> bool:
     return first is not None and first <= month
 
 
-def budget_net_by_month(ctx: Context, view_cur: str) -> dict[str, float]:
-    """Budgeted income minus budgeted expenditure per month (latest exchange rates)."""
-    out: dict[str, float] = {}
-    for b in ctx.store.budget.all():
-        value = ctx.convert_on(b.amount, b.currency, view_cur, None)
-        sign = 1.0 if b.type == BUDGET_INCOME else -1.0 if b.type == BUDGET_EXPENDITURE else 0.0
-        out[b.month] = out.get(b.month, 0.0) + sign * value
-    return out
+def _first_activity_month(ctx: Context) -> str | None:
+    """Earliest month with a budget entry or a transaction (where a projection without balances starts)."""
+    found = [b.month for b in ctx.store.budget.all()]
+    found += [months.month_of(tx.date) for tx in ctx.store.transactions.all()]
+    return min(found) if found else None
 
 
-def _projection_start(ctx: Context, view_cur: str, net: dict[str, float]) -> tuple[str | None, float]:
+def _projection_start(ctx: Context, view_cur: str) -> tuple[str | None, float]:
     """First projected month and the wealth it builds on (last recorded month's wealth)."""
     last = last_recorded_month(ctx)
     if last is None:
-        return (min(net) if net else None), 0.0
+        return _first_activity_month(ctx), 0.0
     return months.add_months(last, 1), wealth(ctx, last, view_cur)
 
 
 def projected_wealth(ctx: Context, month: str, view_cur: str) -> float:
-    """Wealth of the last recorded month plus the budgeted net of every month after it up to `month`."""
+    """Wealth of the last recorded month plus the expected net of every month after it up to `month`.
+
+    A month's expected net takes, per category, the higher of recorded and budgeted amounts
+    (`aggregates.projected_net`); this holds for months that are over but have no balances yet too.
+    """
     last = last_recorded_month(ctx)
     if last is not None and month <= last:
         return wealth(ctx, month, view_cur)
-    net = budget_net_by_month(ctx, view_cur)
-    start, base = _projection_start(ctx, view_cur, net)
-    if start is None:
+    start, base = _projection_start(ctx, view_cur)
+    if start is None or start > month:
         return base
-    return base + sum(v for m, v in net.items() if start <= m <= month)
+    return base + sum(projected_net(ctx, m, view_cur) for m in months.month_range(start, month))
 
 
 def current_wealth(ctx: Context, view_cur: str, today: date | None = None) -> float:
@@ -150,12 +157,11 @@ def wealth_series(
     first = first_recorded_month(ctx)
     if last is not None and first is not None:
         out = [(m, wealth(ctx, m, view_cur), False) for m in months.month_range(first, min(last, end))]
-    net = budget_net_by_month(ctx, view_cur)
-    start, running = _projection_start(ctx, view_cur, net)
+    start, running = _projection_start(ctx, view_cur)
     if last is None:
         start = min(start or months.current_month(today), months.current_month(today))
     if start is not None:
         for m in months.month_range(start, end):
-            running += net.get(m, 0.0)
+            running += projected_net(ctx, m, view_cur)
             out.append((m, running, True))
     return out

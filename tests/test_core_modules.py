@@ -784,9 +784,10 @@ def test_month_report_with_advances_and_repayments(ctx, setup):
         ("Salary", 2000, True),
     ]
     assert (rep.wealth_start, rep.wealth_end) == (1000, 1500)
-    assert rep.unaccounted == pytest.approx(2060 - 387.5 - 500)
-    assert rep.top_expenditure[-1] == "UNACCOUNTED"
-    assert rep.total_expenditure.actual == pytest.approx(1560)
+    assert rep.balance_change == 500
+    assert rep.unexplained == pytest.approx(500 - (2060 - 387.5))
+    assert rep.top_expenditure[-1] == "ADV"
+    assert rep.total_expenditure.actual == pytest.approx(387.5)
     assert rep.total_income.actual == 2060
     assert [r.account.name for r in rep.accounts] == ["Bank"]
     assert [line.key for line in rep.children("01")] == ["01.1"]
@@ -795,7 +796,7 @@ def test_month_report_with_advances_and_repayments(ctx, setup):
 
     october = reports.month_report(ctx, "2026-10", "CHF", today=date(2026, 10, 18))
     assert not october.complete
-    assert october.unaccounted is None and october.accounts == []
+    assert october.unexplained is None and october.accounts == []
     assert october.projected_wealth is not None
 
 

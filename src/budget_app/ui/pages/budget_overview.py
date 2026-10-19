@@ -7,7 +7,7 @@ import html
 from nicegui import ui
 
 from budget_app.domain import months
-from budget_app.domain.coicop import ADV, UNACCOUNTED
+from budget_app.domain.coicop import ADV
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, BudgetEntry
 from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
@@ -24,6 +24,7 @@ from budget_app.ui.layout import (
     fmt_signed,
     frame,
     metric,
+    money_html,
     month_options,
     month_stepper,
     on_data_changed,
@@ -328,6 +329,8 @@ def page() -> None:
                 net_budget = rep.total_income.budget - rep.total_expenditure.budget
                 metric(t("Net Income"), net, cur, t("Budgeted {amount}", amount=fmt(net_budget)))
 
+            if rep.complete:
+                reconciliation_card(rep)
             ledger_card(rep, tc("heading", "Income"), rep.total_income, BUDGET_INCOME, lambda: income_rows(rep))
             ledger_card(
                 rep,
@@ -338,6 +341,33 @@ def page() -> None:
             )
             if rep.complete:
                 accounts_card(rep)
+
+        # ------------------------------------------------------------ reconciliation (F42)
+        def reconciliation_card(rep: reports.MonthReport) -> None:
+            """What the records say against what the balances say; the gap is what nobody recorded."""
+            with ui.element("div").classes("surface"):
+                ui.label(t("Reconciliation")).classes("section-title")
+                if rep.unexplained is None or rep.balance_change is None:
+                    ui.label(t("Appears once balances are recorded for this and the previous month.")).classes(
+                        "caption"
+                    )
+                    return
+                recorded = rep.total_income.actual - rep.total_expenditure.actual
+                with ui.element("div").classes("metrics pt-2").style("--n: 3"):
+                    metric(t("Recorded Net"), recorded, rep.currency, t("Income minus expenditure"))
+                    metric(t("Change in Balances"), rep.balance_change, rep.currency, t("All accounts, month end"))
+                    with ui.element("div").classes("metric"):
+                        ui.label(t("Unexplained")).classes("metric-label")
+                        ui.html(money_html(rep.unexplained, rep.currency)).classes(
+                            "metric-value" + (" text-neg" if rep.unexplained < -EPS else "")
+                        )
+                        ui.label(
+                            t("Money that left without a record")
+                            if rep.unexplained < -EPS
+                            else t("Money that arrived without a record")
+                            if rep.unexplained > EPS
+                            else t("Records and balances agree")
+                        ).classes("metric-sub")
 
         # ------------------------------------------------------------ ledger
         def ledger_card(rep: reports.MonthReport, title: str, total: reports.Line, type_: str, rows) -> None:
@@ -365,13 +395,6 @@ def page() -> None:
                     rows()
                 if is_exp:
                     with ui.row().classes("w-full items-center pt-2"):
-                        if rep.complete and rep.unaccounted is None:
-                            ui.label(
-                                t(
-                                    "Unaccounted expenditure appears once balances are recorded "
-                                    "for this and the previous month."
-                                )
-                            ).classes("caption")
                         ui.space()
                         ui.switch(
                             t("Show all subcategories"),
@@ -382,7 +405,7 @@ def page() -> None:
         def line_row(rep: reports.MonthReport, line: reports.Line, type_: str, depth: int = 0, children=None) -> None:
             expanded = line.key in state["expanded"]
             empty = _is_zero(line.actual) and _is_zero(line.budget)
-            editable = not rep.complete and line.editable and line.key not in ("TOTAL", UNACCOUNTED)
+            editable = not rep.complete and line.editable and line.key != "TOTAL"
             with ui.element("div").classes("ledger-row" + (" dim" if empty else "")):
                 label_cell = ui.element("div").classes("cell-label").style(f"padding-left: {depth * 18}px")
                 with label_cell:
@@ -396,8 +419,8 @@ def page() -> None:
                     lbl._props["title"] = line.label  # full name on hover; long COICOP names are truncated
                 _meter(line.actual, line.budget)
                 _amount(line.actual)
-                _amount(None if line.key == UNACCOUNTED else line.budget)
-                diff = None if line.key == UNACCOUNTED or empty else line.diff
+                _amount(line.budget)
+                diff = None if empty else line.diff
                 over = diff is not None and (diff > EPS if type_ == BUDGET_EXPENDITURE else diff < -EPS)
                 ui.label(fmt_signed(diff)).classes("r c-diff " + ("text-neg" if over else "text-2"))
                 if editable:
@@ -456,22 +479,37 @@ def page() -> None:
 
         # ------------------------------------------------------------ accounts
         def accounts_card(rep: reports.MonthReport) -> None:
+            """Opening, closing and change per account in its own currency (F41), and the value shown in totals."""
+            cur = rep.currency
             with ui.element("div").classes("w-full"):
                 ui.label(t("Balances · End of {month}", month=months.label(rep.month))).classes("group-header")
                 with ui.element("div").classes("group accounts"):
                     if not rep.accounts:
                         with ui.element("div").classes("group-row"):
                             ui.label(t("No balances recorded yet.")).classes("text-2")
+                        return
+                    with ui.element("div").classes("group-row acct-row head"):
+                        ui.label(t("Account")).classes("c-name")
+                        ui.label(t("Opening")).classes("c-open")
+                        ui.label(t("Closing")).classes("c-close")
+                        ui.label(t("Change")).classes("c-change")
+                        ui.label(t("In {currency}", currency=cur)).classes("c-view")
                     for r in rep.accounts:
-                        foreign = r.account.currency != rep.currency
-                        with ui.element("div").classes("group-row acct-row" + (" has-native" if foreign else "")):
+                        acc_cur = r.account.currency
+                        with ui.element("div").classes("group-row acct-row"):
                             with ui.column().classes("c-name gap-0"):
                                 ui.label(r.account.name).classes("truncate w-full")
                                 if r.needs_entry:
                                     ui.label(t("Not recorded, last balance carried over")).classes("caption")
-                            if foreign:
-                                ui.label(fmt(r.amount, r.account.currency)).classes("c-native num text-2 text-[13px]")
-                            ui.label(fmt(r.amount_view, rep.currency)).classes("c-view num font-medium")
+                            ui.label(fmt(r.opening, acc_cur) if r.opening is not None else "–").classes(
+                                "c-open num text-2"
+                            )
+                            ui.label(fmt(r.amount, acc_cur)).classes("c-close num font-medium")
+                            change = r.change
+                            ui.label(
+                                (fmt_signed(change) or fmt(0)) + f" {acc_cur}" if change is not None else "–"
+                            ).classes("c-change num " + ("text-neg" if (change or 0) < -EPS else "text-2"))
+                            ui.label(fmt(r.amount_view, cur)).classes("c-view num text-2")
                             if r.needs_entry or r.has_entry:
                                 ui.button(
                                     t("Record") if r.needs_entry else t("Edit"),
@@ -482,11 +520,19 @@ def page() -> None:
                                 ).props("flat dense no-wrap").classes(
                                     "c-action text-primary" + ("" if r.needs_entry else " row-actions")
                                 )
-                    with ui.element("div").classes("group-row acct-row"):
+                    with ui.element("div").classes("group-row acct-row total"):
                         ui.label(t("Total")).classes("c-name font-semibold")
-                        ui.label(fmt(sum(r.amount_view for r in rep.accounts), rep.currency)).classes(
-                            "c-view num font-semibold"
+                        ui.label(fmt(rep.wealth_start, cur) if rep.wealth_start is not None else "–").classes(
+                            "c-open num text-2"
                         )
+                        ui.label(fmt(sum(r.amount_view for r in rep.accounts), cur)).classes(
+                            "c-close num font-semibold"
+                        )
+                        ui.label(
+                            (fmt_signed(rep.balance_change) or fmt(0)) + f" {cur}"
+                            if rep.balance_change is not None
+                            else "–"
+                        ).classes("c-change num")
 
         content()
         on_data_changed(content.refresh)

@@ -36,3 +36,15 @@ def setup(ctx):
     eur = acc_svc.add_account(ctx, "Euro account", "EUR")
     salary = acc_svc.add_income_category(ctx, "Salary")
     return {"chf": chf, "eur": eur, "salary": salary}
+
+
+def pytest_unconfigure(config):
+    """If the process is still alive 30 s after the session ends, print every thread's stack and exit.
+
+    A leftover non-daemon thread once kept pytest (and with it the pre-push hook) running forever
+    after all tests had passed; this turns such a hang into a visible, diagnosable failure.
+    """
+    import faulthandler  # noqa: PLC0415
+    import sys  # noqa: PLC0415
+
+    faulthandler.dump_traceback_later(30, exit=True, file=sys.__stderr__)

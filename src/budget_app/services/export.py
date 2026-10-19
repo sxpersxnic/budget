@@ -76,12 +76,20 @@ def statement_frames(rep: MonthReport) -> dict[str, pd.DataFrame]:
     expenditure = [_line_row(tot_e.label, tot_e), *_expenditure_rows(rep)]
     account, currency, amount = t("Account"), t("Currency"), t("Amount")
     amount_view = t("Amount ({currency})", currency=rep.currency)
+    opening, change = t("Opening"), t("Change")
+
+    def rounded(v: float | None) -> float | None:
+        return None if v is None else round(v, 2)
+
+    frames: dict[str, pd.DataFrame] = {}
     if rep.complete:
         accounts = [
             {
                 account: r.account.name,
                 currency: r.account.currency,
+                opening: rounded(r.opening),
                 amount: round(r.amount, 2),
+                change: rounded(r.change),
                 amount_view: round(r.amount_view, 2),
             }
             for r in rep.accounts
@@ -90,10 +98,21 @@ def statement_frames(rep: MonthReport) -> dict[str, pd.DataFrame]:
             {
                 account: t("Total wealth"),
                 currency: rep.currency,
+                opening: rounded(rep.wealth_start),
                 amount: None,
+                change: rounded(rep.balance_change),
                 amount_view: round(sum(r.amount_view for r in rep.accounts), 2),
             }
         )
+        if rep.unexplained is not None and rep.balance_change is not None:
+            item, value = t("Item"), amount_view
+            frames[t("Reconciliation")] = pd.DataFrame(
+                [
+                    {item: t("Recorded Net"), value: round(tot_i.actual - tot_e.actual, 2)},
+                    {item: t("Change in Balances"), value: round(rep.balance_change, 2)},
+                    {item: t("Unexplained"), value: round(rep.unexplained, 2)},
+                ]
+            )
     else:
         accounts = [
             {
@@ -104,6 +123,7 @@ def statement_frames(rep: MonthReport) -> dict[str, pd.DataFrame]:
             }
         ]
     return {
+        **frames,
         t("Income"): pd.DataFrame(income),
         t("Expenditure"): pd.DataFrame(expenditure),
         t("Accounts"): pd.DataFrame(accounts),
@@ -155,11 +175,12 @@ def statement_pdf(rep: MonthReport) -> bytes:
     for name, df in statement_frames(rep).items():
         story.append(Paragraph(name, styles["Heading2"]))
         data = [list(df.columns)] + [[_fmt(v) for v in row] for row in df.itertuples(index=False)]
+        first = 80 if len(df.columns) <= 4 else 45  # wide tables (accounts) need room for their numbers
         table = Table(
             data,
             repeatRows=1,
             hAlign="LEFT",
-            colWidths=[80 * mm] + [(180 - 80) / (len(df.columns) - 1) * mm] * (len(df.columns) - 1),
+            colWidths=[first * mm] + [(180 - first) / (len(df.columns) - 1) * mm] * (len(df.columns) - 1),
         )
         table.setStyle(
             TableStyle(
