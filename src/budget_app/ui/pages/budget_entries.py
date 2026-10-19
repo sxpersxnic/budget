@@ -9,6 +9,7 @@ from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, BudgetEntry
 from budget_app.i18n import N_, t, tn
 from budget_app.services import budget as budget_svc
+from budget_app.services.budget import BudgetInput
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import (
     data_month_range,
@@ -20,7 +21,7 @@ from budget_app.ui.layout import (
     sheet_buttons,
     success,
 )
-from budget_app.ui.pages.add_budget import RECURRENCE, open_budget_sheet
+from budget_app.ui.pages.add_budget import FOREVER, RECURRENCE, open_budget_sheet, recurrence_options, until_options
 from budget_app.ui.widgets.grid import confirm, make_grid, money_col, month_col, num_col
 from budget_app.ui.widgets.selects import currency_select, expenditure_category_select, income_category_select
 
@@ -47,11 +48,10 @@ def category_label(ctx: Context, b: BudgetEntry) -> str:
 
 
 def edit_dialog(ctx: Context, entry: BudgetEntry, on_saved) -> None:
-    later = [
-        b
-        for b in ctx.store.budget.all()
-        if entry.series_id and b.series_id == entry.series_id and b.month > entry.month
-    ]
+    later = budget_svc.later_in_series(ctx, entry)
+    sched = budget_svc.schedule_of(ctx, entry)
+    until_value = FOREVER if sched.forever else sched.end_month
+    until_opts = until_options(entry.month, ctx.horizon(), extra=sched.end_month)
     with sheet(t("Budget for {month}", month=months.label(entry.month)), width="30rem") as dlg:
         if entry.type == BUDGET_EXPENDITURE:
             cat = expenditure_category_select(entry.category)
@@ -64,6 +64,20 @@ def edit_dialog(ctx: Context, entry: BudgetEntry, on_saved) -> None:
                 .classes("flex-1 min-w-0")
             )
             cur = currency_select(ctx, entry.currency)
+        with ui.row().classes("w-full gap-2 no-wrap"):
+            until = (
+                ui.select(until_opts, value=until_value, label=t("Until"))
+                .props("dense outlined options-dense")
+                .classes("flex-1 min-w-0")
+            )
+            recur = (
+                ui.select(recurrence_options(), value=sched.recur_months, label=t("Repeat"))
+                .props("dense outlined options-dense")
+                .classes("flex-1 min-w-0")
+            )
+        replan_hint = ui.label(
+            t("Changing Until or Repeat replans this budget from {month} on.", month=months.label(entry.month))
+        ).classes("caption px-1 -mt-1")
         comment = ui.textarea(t("Note"), value=entry.comment).props("dense outlined autogrow rows=1").classes("w-full")
         following = (
             ui.switch(
@@ -77,10 +91,37 @@ def edit_dialog(ctx: Context, entry: BudgetEntry, on_saved) -> None:
             else None
         )
 
+        def replanned() -> bool:
+            return until.value != until_value or int(recur.value or 1) != sched.recur_months
+
+        def show_replan() -> None:
+            replan_hint.set_visibility(replanned())
+            if following is not None:
+                following.set_visibility(not replanned())  # a replan always covers the later months
+
+        until.on_value_change(show_replan)
+        recur.on_value_change(show_replan)
+        show_replan()
+
         def save() -> None:
             try:
-                for target in [entry] + (later if following and following.value else []):
-                    budget_svc.update_entry(ctx, target.id, amount.value, cur.value, comment.value, cat.value)
+                if replanned():
+                    budget_svc.reschedule(
+                        ctx,
+                        entry.id,
+                        BudgetInput(
+                            end_month="" if until.value == FOREVER else until.value or "",
+                            forever=until.value == FOREVER,
+                            recur_months=int(recur.value or 1),
+                            currency=cur.value or "",
+                            amount=amount.value,
+                            category=cat.value or "",
+                            comment=comment.value or "",
+                        ),
+                    )
+                else:
+                    for target in [entry] + (later if following and following.value else []):
+                        budget_svc.update_entry(ctx, target.id, amount.value, cur.value, comment.value, cat.value)
             except ValidationError as exc:
                 error(str(exc))
                 return

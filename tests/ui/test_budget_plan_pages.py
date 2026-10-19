@@ -237,6 +237,30 @@ async def test_edit_can_change_the_later_months_too(user: User, ctx, demo) -> No
     assert all(b.amount == 700 for b in series(ctx, "01.1"))
 
 
+async def test_edit_replans_the_series_with_until_and_repeat(user: User, ctx, demo) -> None:
+    await user.open("/budget-entries")
+    food = series(ctx, "01.1")
+    entry = food[2]
+    UserInteraction(user, {grid(user)}, None).trigger("rowDoubleClicked", {"data": {"id": entry.id}})
+    dlg = top_dialog(user)
+    until, repeat = field(dlg, ui.select, "Until"), field(dlg, ui.select, "Repeat")
+    assert (until.value, repeat.value) == ("forever", 1)
+    hint = next(e for e in dlg.descendants() if isinstance(e, ui.label) and "replans this budget" in e.text)
+    assert not hint.visible
+    end = months.add_months(entry.month, 6)
+    set_value(user, until, end)
+    set_value(user, repeat, 3)
+    assert hint.visible and not field(dlg, ui.switch).visible  # a replan always covers the later months
+    set_value(user, field(dlg, ui.select, "Category"), "01.2")
+    set_value(user, field(dlg, ui.number, "Amount"), 900)
+    button(user, dlg, "Save").click()
+    await user.should_see("Budget updated")
+    replanned = series(ctx, "01.2")
+    assert [b.month for b in replanned] == [entry.month, months.add_months(entry.month, 3), end]
+    assert all(b.amount == 900 and not b.forever for b in replanned)
+    assert [b.month for b in series(ctx, "01.1")] == [b.month for b in food[:2]]  # earlier months stay
+
+
 async def test_edit_refuses_an_invalid_amount(user: User, ctx, demo) -> None:
     await user.open("/budget-entries")
     entry = series(ctx, "04.1")[0]

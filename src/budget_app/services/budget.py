@@ -191,7 +191,8 @@ def later_in_series(ctx: Context, entry: BudgetEntry) -> list[BudgetEntry]:
 
 
 def reschedule(ctx: Context, entry_id: str, inp: BudgetInput) -> list[BudgetEntry]:
-    """Replan an entry's series from the entry's month on, with `inp`'s schedule, amount and note.
+    """Replan an entry's series from the entry's month on, with `inp`'s schedule, amount and note
+    (and category, if `inp` names one).
 
     Months before the entry keep their values and end there; the replanned part becomes a series of
     its own, so 'Forever' extension continues the new plan, not the old one.
@@ -199,7 +200,8 @@ def reschedule(ctx: Context, entry_id: str, inp: BudgetInput) -> list[BudgetEntr
     entry = ctx.store.budget.get(entry_id)
     if entry is None:
         raise ValidationError(t("Budget entry not found"))
-    inp = replace(inp, start_month=entry.month, type=entry.type, category=entry.category, overwrite=False)
+    category = inp.category or entry.category
+    inp = replace(inp, start_month=entry.month, type=entry.type, category=category, overwrite=False)
     validate(ctx, inp)
     earlier = [
         replace(b, forever=False, generated_until="")

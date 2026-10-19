@@ -1,7 +1,6 @@
 from datetime import date
 
 import pytest
-from conftest import TODAY
 
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME
 from budget_app.services import budget as budget_svc
@@ -11,6 +10,8 @@ from budget_app.services import wealth as wealth_svc
 from budget_app.services.budget import BudgetInput
 from budget_app.services.context import ValidationError
 from budget_app.services.transactions import TransactionInput
+
+TODAY = date(2026, 10, 18)  # the day the fixed exchange rates in conftest.py lead up to
 
 
 def test_series_expansion_and_forever_extension(ctx, setup):
