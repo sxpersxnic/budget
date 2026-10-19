@@ -7,7 +7,8 @@ The app's ground rules still apply to every feature: local first (data in CSV fi
 user's computer), CHF as the base currency with ECB rates, COICOP 2018 for expenditure, and
 nothing uploaded without the user asking for it.
 
-**Status:** ✅ done · 🔶 partly done · ⬜ open.
+**Status:** ☑ Done · ◐ Partly done · ☐ Open. Every table has a *Status* column, and every
+feature description starts with its status.
 **Effort:** S = up to a day · M = a few days · L = one to two weeks · XL = more than two weeks.
 **Network:** *Local* runs fully offline · *Optional* works offline, with an online extra the
 user turns on · *Online* needs a service.
@@ -15,9 +16,23 @@ user turns on · *Online* needs a service.
 *Issue 01* is the product owner's GitHub issue (local copy `docs/issues.local/ISSUE_01.md`,
 not committed). The bugs B01–B15 and the features F36–F47 come from it or from testing it.
 
-**Contents:** [Open now](#open-now) · [All features](#all-features) ·
+**Contents:** [Progress](#progress) · [Open now](#open-now) · [All features](#all-features) ·
 [Open features from issue 01](#open-features-from-issue-01) · [Backlog](#backlog) ·
 [Reference](#reference) · [Done](#done)
+
+## Progress
+
+| Milestone | Status | Done |
+| --- | --- | --- |
+| 1 · Bugs from issue 01 | ☑ Done | 6 of 6 steps |
+| Follow-up fixes (B10–B15) | ☐ Open | 0 of 3 steps |
+| 2 · Accounts and reconciliation | ☐ Open | 0 of 3 steps |
+| 3 · Revaluations | ☐ Open | 0 of 4 steps |
+| 4 · Import and charts | ☐ Open | 0 of 3 steps |
+| 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
+| Bugs B01–B15 | ◐ Partly | 8 of 15 fixed |
+| Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
+| Engineering: CI and installers for macOS, Windows, Linux | ◐ Partly | built; the first CI run is pending |
 
 ## Open now
 
@@ -29,27 +44,35 @@ numbered as in [Decisions for the product owner](#decisions-for-the-product-owne
 
 | Step | Status | Task | Needs | Effort |
 | --- | --- | --- | --- | --- |
-| 6a | ⬜ | **B10 · Close sheets for good**: remove a dialog from the page when it closes. | – | S |
-| 6b | ⬜ | **B14 · Until and repeat on the Budget Plan page** too (reuses `budget.reschedule` from B09). | – | S |
-| 6c | ⬜ | **B11, B12, B13 · Wording fixes** in Settings and the New Budget Entry form; **B15** chart axis labels. | – | S |
-| 7 | ⬜ | **F41 · Opening balance and change per account.** | – | S |
-| 8 | ⬜ | **F42 · Reconciliation line** above the income and expenditure tables; closes B04. | decision 2 | S |
-| 9 | ⬜ | **F47 · Projection uses the higher of actual and budget** per category. | decision 5 | S–M |
+| 6a | ☐ Open | **B10 · Close sheets for good**: remove a dialog from the page when it closes. | – | S |
+| 6b | ☐ Open | **B14 · Until and repeat on the Budget Plan page** too (reuses `budget.reschedule` from B09). | – | S |
+| 6c | ☐ Open | **B11, B12, B13 · Wording fixes** in Settings and the New Budget Entry form; **B15** chart axis labels. | – | S |
+| 7 | ☐ Open | **F41 · Opening balance and change per account.** | – | S |
+| 8 | ☐ Open | **F42 · Reconciliation line** above the income and expenditure tables; closes B04. | decision 2 | S |
+| 9 | ☐ Open | **F47 · Projection uses the higher of actual and budget** per category. | decision 5 | S–M |
 
-### Open bugs
+### Bugs
 
-| ID | Status | Bug | Cause | Effort |
-| --- | --- | --- | --- | --- |
-| B04 | ⬜ | *Income and expenditure* chart leaves out unaccounted expenditure | The chart totals only recorded categories, while the budget page includes *Unaccounted*. Closed by F42: totals then mean recorded spending everywhere, and the gap can be added to the chart as its own line. | – (F42) |
-| B10 | ⬜ | Closed sheets stay in the page | `layout.sheet()` closes the dialog but never deletes it, so every opened New Transaction, edit or confirm sheet keeps its form in the page until it is reloaded. Some save handlers still touch the form after closing, so the fix needs care. | S |
-| B11 | ⬜ | Settings says an account's currency is locked by transactions | Recorded balances lock it as well (`accounts.account_in_use`), so the caption gives the wrong reason for an account with balances only. | S |
-| B12 | ⬜ | Deleting an income category shows no confirmation message | Deleting an account shows "Deleted *name*"; the income category path has no message. | S |
-| B13 | ⬜ | *Forever* gives a confusing message when the plan has ended | With the plan's last month in the past, *Forever* reports "The final month must not be before the first month". The caption above already says to extend the plan; the status line should say the same. | S |
-| B14 | ⬜ | The Budget Plan page's edit dialog has no *Until* and *Repeat* | B09 added them to the Budget page's dialog, the one the issue names. | S |
+All bugs from issue 01 and its follow-ups, open ones first. B10–B14 were found while writing
+the UI tests on 2026-10-19, B15 while testing the Linux build.
 
-| B15 | ⬜ | Chart axes repeat labels when the values are small | The y-axis format rounds to whole units (`tickformat=",.0f"` in `theme.chart_layout`), so an empty chart shows "1 CHF" for both 0.5 and 1. | S |
-
-B10–B14 were found while writing the UI tests on 2026-10-19, B15 while testing the Linux build.
+| ID | Status | Bug | Cause | Effort | Fixed in |
+| --- | --- | --- | --- | --- | --- |
+| B04 | ☐ Open | *Income and expenditure* chart leaves out unaccounted expenditure | The chart totals only recorded categories, while the budget page includes *Unaccounted*. Closed by F42: totals then mean recorded spending everywhere, and the gap can be added to the chart as its own line. | – (F42) | – |
+| B10 | ☐ Open | Closed sheets stay in the page | `layout.sheet()` closes the dialog but never deletes it, so every opened New Transaction, edit or confirm sheet keeps its form in the page until it is reloaded. Some save handlers still touch the form after closing, so the fix needs care. | S | – |
+| B11 | ☐ Open | Settings says an account's currency is locked by transactions | Recorded balances lock it as well (`accounts.account_in_use`), so the caption gives the wrong reason for an account with balances only. | S | – |
+| B12 | ☐ Open | Deleting an income category shows no confirmation message | Deleting an account shows "Deleted *name*"; the income category path has no message. | S | – |
+| B13 | ☐ Open | *Forever* gives a confusing message when the plan has ended | With the plan's last month in the past, *Forever* reports "The final month must not be before the first month". The caption above already says to extend the plan; the status line should say the same. | S | – |
+| B14 | ☐ Open | The Budget Plan page's edit dialog has no *Until* and *Repeat* | B09 added them to the Budget page's dialog, the one the issue names. | S | – |
+| B15 | ☐ Open | Chart axes repeat labels when the values are small | The y-axis format rounds to whole units (`tickformat=",.0f"` in `theme.chart_layout`), so an empty chart shows "1 CHF" for both 0.5 and 1. | S | – |
+| B01 | ☑ Fixed | Excel and PDF buttons in the budget overview did nothing | See [Done](#done). | – | `cc05db9` |
+| B02 | ☑ Fixed | Chart image, CSV and PDF export didn't work | See [Done](#done). | – | `cc05db9`, `ffa9733` |
+| B03 | ☑ Fixed | Transactions used the latest exchange rate, not the one of their date | See [Done](#done). | – | `332eb81` |
+| B05 | ☑ Fixed | Selecting and adding a chart didn't work | See [Done](#done). | – | `8e9ca8e`, `ffa9733` |
+| B06 | ☑ Fixed | Currency exchange converted the received amount instead of asking for it | See [Done](#done). | – | `b73d8fe` |
+| B07 | ☑ Fixed | Accounts on the budget page didn't adapt to the window size | See [Done](#done). | – | `6f34640` |
+| B08 | ☑ Fixed | Income and expenditure should stack when the window is narrow | See [Done](#done). | – | `6f34640` |
+| B09 | ☑ Fixed | Editing a budget entry on the budget page lacked *Until*, *Repeat* and *Note* | See [Done](#done). | – | `ef5da63` |
 
 ### Decisions for the product owner
 
@@ -70,18 +93,18 @@ Collected from the entries below. Decision 2 blocks milestone 2.
 
 | Step | Status | Task | Needs | Effort |
 | --- | --- | --- | --- | --- |
-| 10 | ⬜ | **F43 · Revaluation transactions.** | decision 3 | M |
-| 11 | ⬜ | **F44 · Exchange spread booked as revaluation.** | B03 ✅, B06 ✅, F43 | S–M |
-| 12 | ⬜ | **F45 · Revaluations section** in the budget overview; the reconciliation line from F42 then counts them. | F42, F43, decision 4 | S |
-| 13 | ⬜ | **F46 · Unexplained difference per account**, with a *Book as revaluation* action. | F41, F43 | S–M |
+| 10 | ☐ Open | **F43 · Revaluation transactions.** | decision 3 | M |
+| 11 | ☐ Open | **F44 · Exchange spread booked as revaluation.** | B03 (done), B06 (done), F43 | S–M |
+| 12 | ☐ Open | **F45 · Revaluations section** in the budget overview; the reconciliation line from F42 then counts them. | F42, F43, decision 4 | S |
+| 13 | ☐ Open | **F46 · Unexplained difference per account**, with a *Book as revaluation* action. | F41, F43 | S–M |
 
 #### Milestone 4 · Import and charts
 
 | Step | Status | Task | Needs | Effort |
 | --- | --- | --- | --- | --- |
-| 14 | ⬜ | **F36 · Closing balance from bank files.** | decision 6 | M |
-| 15 | ⬜ | **F38 · Exchange-rate chart.** | – | S |
-| 16 | ⬜ | **F37 · COICOP information page** with codes, names and search. | – | S |
+| 14 | ☐ Open | **F36 · Closing balance from bank files.** | decision 6 | M |
+| 15 | ☐ Open | **F38 · Exchange-rate chart.** | – | S |
+| 16 | ☐ Open | **F37 · COICOP information page** with codes, names and search. | – | S |
 
 #### Milestone 5 · COICOP data
 
@@ -89,76 +112,78 @@ Waits for the source data (decision 7).
 
 | Step | Status | Task | Needs | Effort |
 | --- | --- | --- | --- | --- |
-| 17 | ⬜ | **F40 · COICOP notes in search and on hover**; also shown on the F37 page. | decision 7 | M |
-| 18 | ⬜ | **F39 · COICOP level 5.** | decision 7 | M |
+| 17 | ☐ Open | **F40 · COICOP notes in search and on hover**; also shown on the F37 page. | decision 7 | M |
+| 18 | ☐ Open | **F39 · COICOP level 5.** | decision 7 | M |
 
 #### After issue 01
 
 | Step | Status | Task | Why here |
 | --- | --- | --- | --- |
-| 19 | ⬜ | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from milestone 1. |
-| 20 | ⬜ | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
-| 21 | ⬜ | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
-| 22 | ⬜ | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
-| 23 | ⬜ | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
-| 24 | ⬜ | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ⬜ | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F29 (French, Italian), F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 19 | ☐ Open | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from milestone 1. |
+| 20 | ☐ Open | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
+| 21 | ☐ Open | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
+| 22 | ☐ Open | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
+| 23 | ☐ Open | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
+| 24 | ☐ Open | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
+| 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F29 (French, Italian), F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ## All features
 
 | ID | Status | Feature | Area | Effort | Network | Depends on |
 | --- | --- | --- | --- | --- | --- | --- |
-| F01 | ✅ | CSV import of transactions | Data in | M | Local | – |
-| F02 | ⬜ | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
-| F03 | ⬜ | Swiss QR-bill scanning | Data in | M | Local | – |
-| F04 | ⬜ | Receipt scanning | Data in | L | Optional | F12 |
-| F05 | ⬜ | Recurring transactions | Data in | M | Local | – |
-| F06 | ⬜ | Faster manual entry | Data in | S–M | Local | – |
-| F07 | ⬜ | Automatic categorization | Organizing | M–L | Optional | F09 |
-| F08 | ⬜ | Simpler category picker | Organizing | S | Local | – |
-| F09 | ⬜ | Payees | Organizing | M | Local | – |
-| F10 | ⬜ | Tags | Organizing | M | Local | – |
-| F11 | ⬜ | Split transactions | Organizing | M | Local | – |
-| F12 | ⬜ | Attachments | Organizing | M | Local | – |
-| F13 | ⬜ | Bulk edit | Organizing | S | Local | – |
-| F14 | ⬜ | Savings goals | Planning | M | Local | – |
-| F15 | ⬜ | What-if scenarios | Planning | L | Local | – |
-| F16 | ⬜ | Budget from history | Planning | S | Local | – |
-| F17 | ⬜ | Subscription and recurring-spend detection | Insight | M | Local | F09 |
-| F18 | ⬜ | Trends and unusual spending | Insight | M | Local | – |
-| F19 | ⬜ | Year in review | Insight | M | Local | – |
-| F20 | ⬜ | Swiss tax summary | Insight | M | Local | F10 |
-| F21 | ⬜ | Investments and asset classes | Wealth | L | Optional | – |
-| F22 | ⬜ | Loans and mortgages | Wealth | M | Local | – |
-| F23 | ⬜ | Who owes what (shared expenses) | Wealth | M | Local | – |
-| F24 | ⬜ | Export to CSV and JSON | Data out | S–M | Local | – |
-| F25 | ⬜ | Full backup and restore | Data out | S | Local | – |
-| F26 | ⬜ | Sync through a cloud folder | Data out | L | Optional | F28 |
-| F27 | ⬜ | Encryption and app lock | Security | L | Local | – |
-| F28 | ⬜ | Undo and change history | Security | M | Local | – |
-| F29 | 🔶 | Multi-language support | Experience | L | Local | – |
-| F30 | ⬜ | Onboarding and demo data | Experience | M | Local | – |
-| F31 | ⬜ | Reminders and alerts | Experience | M | Local | – |
-| F32 | ⬜ | Keyboard shortcuts and accessibility | Experience | M | Local | – |
-| F33 | ⬜ | In-app update check | Experience | S | Optional | – |
-| F34 | ⬜ | Several households or profiles | Experience | M | Local | – |
-| F35 | ⬜ | Phone companion | Experience | XL | Optional | F27 |
-| F36 | ⬜ | Closing balance from bank files | Data in | M | Local | F01 |
-| F37 | ⬜ | COICOP information page | Organizing | S | Local | – (F40 adds notes) |
-| F38 | ⬜ | Exchange-rate chart | Insight | S | Local | – |
-| F39 | ⬜ | COICOP level 5 | Organizing | M | Local | source data |
-| F40 | ⬜ | COICOP notes in search and on hover | Organizing | M | Local | source data |
-| F41 | ⬜ | Opening balance and change per account | Wealth | S | Local | – |
-| F42 | ⬜ | Reconciliation line instead of *Unaccounted* | Insight | S | Local | – |
-| F43 | ⬜ | Revaluation transactions | Wealth | M | Local | – |
-| F44 | ⬜ | Exchange spread booked as revaluation | Wealth | S–M | Local | B03, B06, F43 |
-| F45 | ⬜ | Revaluations in the budget overview | Insight | S | Local | F43 |
-| F46 | ⬜ | Unexplained difference per account | Wealth | S–M | Local | F41, F43 |
-| F47 | ⬜ | Projection uses the higher of actual and budget | Planning | S–M | Local | – |
+| F01 | ☑ Done | CSV import of transactions | Data in | M | Local | – |
+| F02 | ☐ Open | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
+| F03 | ☐ Open | Swiss QR-bill scanning | Data in | M | Local | – |
+| F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
+| F05 | ☐ Open | Recurring transactions | Data in | M | Local | – |
+| F06 | ☐ Open | Faster manual entry | Data in | S–M | Local | – |
+| F07 | ☐ Open | Automatic categorization | Organizing | M–L | Optional | F09 |
+| F08 | ☐ Open | Simpler category picker | Organizing | S | Local | – |
+| F09 | ☐ Open | Payees | Organizing | M | Local | – |
+| F10 | ☐ Open | Tags | Organizing | M | Local | – |
+| F11 | ☐ Open | Split transactions | Organizing | M | Local | – |
+| F12 | ☐ Open | Attachments | Organizing | M | Local | – |
+| F13 | ☐ Open | Bulk edit | Organizing | S | Local | – |
+| F14 | ☐ Open | Savings goals | Planning | M | Local | – |
+| F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
+| F16 | ☐ Open | Budget from history | Planning | S | Local | – |
+| F17 | ☐ Open | Subscription and recurring-spend detection | Insight | M | Local | F09 |
+| F18 | ☐ Open | Trends and unusual spending | Insight | M | Local | – |
+| F19 | ☐ Open | Year in review | Insight | M | Local | – |
+| F20 | ☐ Open | Swiss tax summary | Insight | M | Local | F10 |
+| F21 | ☐ Open | Investments and asset classes | Wealth | L | Optional | – |
+| F22 | ☐ Open | Loans and mortgages | Wealth | M | Local | – |
+| F23 | ☐ Open | Who owes what (shared expenses) | Wealth | M | Local | – |
+| F24 | ☐ Open | Export to CSV and JSON | Data out | S–M | Local | – |
+| F25 | ☐ Open | Full backup and restore | Data out | S | Local | – |
+| F26 | ☐ Open | Sync through a cloud folder | Data out | L | Optional | F28 |
+| F27 | ☐ Open | Encryption and app lock | Security | L | Local | – |
+| F28 | ☐ Open | Undo and change history | Security | M | Local | – |
+| F29 | ◐ Partly | Multi-language support | Experience | L | Local | – |
+| F30 | ☐ Open | Onboarding and demo data | Experience | M | Local | – |
+| F31 | ☐ Open | Reminders and alerts | Experience | M | Local | – |
+| F32 | ☐ Open | Keyboard shortcuts and accessibility | Experience | M | Local | – |
+| F33 | ☐ Open | In-app update check | Experience | S | Optional | – |
+| F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
+| F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
+| F36 | ☐ Open | Closing balance from bank files | Data in | M | Local | F01 |
+| F37 | ☐ Open | COICOP information page | Organizing | S | Local | – (F40 adds notes) |
+| F38 | ☐ Open | Exchange-rate chart | Insight | S | Local | – |
+| F39 | ☐ Open | COICOP level 5 | Organizing | M | Local | source data |
+| F40 | ☐ Open | COICOP notes in search and on hover | Organizing | M | Local | source data |
+| F41 | ☐ Open | Opening balance and change per account | Wealth | S | Local | – |
+| F42 | ☐ Open | Reconciliation line instead of *Unaccounted* | Insight | S | Local | – |
+| F43 | ☐ Open | Revaluation transactions | Wealth | M | Local | – |
+| F44 | ☐ Open | Exchange spread booked as revaluation | Wealth | S–M | Local | B03, B06, F43 |
+| F45 | ☐ Open | Revaluations in the budget overview | Insight | S | Local | F43 |
+| F46 | ☐ Open | Unexplained difference per account | Wealth | S–M | Local | F41, F43 |
+| F47 | ☐ Open | Projection uses the higher of actual and budget | Planning | S–M | Local | – |
 
 ## Open features from issue 01
 
 ### F36 · Closing balance from bank files
+
+**Status:** ☐ Open
 
 Bank exports usually carry a running balance (*Saldo*, *Kontostand*, *Balance*). Today the
 import ignores it.
@@ -175,17 +200,23 @@ import ignores it.
 
 ### F37 · COICOP information page
 
+**Status:** ☐ Open
+
 A page listing all COICOP categories as a tree with code and name, in the interface
 language, with a search box. Linked from the sidebar or Settings. With F40, each category
 also shows what it includes.
 
 ### F38 · Exchange-rate chart
 
+**Status:** ☐ Open
+
 A fourth chart type on the Overview: the ECB rates of chosen currencies against the display
 currency over a period, daily or at month end (the rates balances are valued with). Optional
 index view (start = 100) when currencies differ in scale. Exportable like the other charts.
 
 ### F39 · COICOP level 5
+
+**Status:** ☐ Open
 
 COICOP 2018 itself has four levels (division, group, class, subclass), and the app already
 ships all of them. A fifth level exists only in national extensions.
@@ -198,6 +229,8 @@ ships all of them. A fifth level exists only in national extensions.
 
 ### F40 · COICOP notes in search and on hover
 
+**Status:** ☐ Open
+
 The official COICOP 2018 publication describes each category with *includes*, *also
 includes* and *excludes* notes. The shipped file has names only.
 
@@ -209,11 +242,15 @@ includes* and *excludes* notes. The shipped file has names only.
 
 ### F41 · Opening balance and change per account
 
+**Status:** ☐ Open
+
 The budget page shows for each account the balance at the end of the previous month, the
 balance at the end of this month and the difference, in the account's currency (and the
 closing value in the display currency, as today). Accounts emptied this month stay visible.
 
 ### F42 · Reconciliation line instead of *Unaccounted*
+
+**Status:** ☐ Open
 
 *Unaccounted expenditure* stops being a row of the expenditure table. Instead, a line above
 the income and expenditure tables shows:
@@ -228,6 +265,8 @@ revaluations are part of the line.
 
 ### F43 · Revaluation transactions
 
+**Status:** ☐ Open
+
 A fifth transaction type for value changes that are neither income nor spending.
 
 - One account; enter either the old and new value or just the difference (positive or
@@ -238,6 +277,8 @@ A fifth transaction type for value changes that are neither income nor spending.
 - **Decide:** whether revaluations count towards *Net income* on the budget page.
 
 ### F44 · Exchange spread booked as revaluation
+
+**Status:** ☐ Open
 
 With the received amount typed in (B06), the bank's rate differs from the ECB rate. The
 difference becomes a linked revaluation of the kind *Capital gains on currency exchange* on
@@ -251,6 +292,8 @@ the receiving account, usually a loss.
 
 ### F45 · Revaluations in the budget overview
 
+**Status:** ☐ Open
+
 A third section next to income and expenditure listing the month's revaluations by kind,
 with a total, also in the statement export. Optionally as lines in the *Income and
 expenditure* chart.
@@ -260,12 +303,16 @@ difference until booked.
 
 ### F46 · Unexplained difference per account
 
+**Status:** ☐ Open
+
 Next to each account, the difference between the actual change of its balance and the sum
 of its transactions in the month (income, spending, transfers, exchanges, revaluations), in
 the account's currency. Shown only when both month-end balances are recorded. A *Book as
 revaluation* action fills in F43's form with the difference.
 
 ### F47 · Projection uses the higher of actual and budget
+
+**Status:** ☐ Open
 
 For a month that isn't over, the projected wealth takes, for each category, the recorded
 amount if it is higher than the budget, and the budget otherwise. Applies to income and
@@ -286,6 +333,8 @@ F29 is done for English and German.
 
 #### F02 · Swiss bank statement import (camt.053 / camt.054)
 
+**Status:** ☐ Open
+
 Swiss banks deliver statements as ISO 20022 XML (camt.053 for account statements, camt.054
 for notifications); since the SIX migration this is the standard e-banking export.
 
@@ -295,6 +344,8 @@ for notifications); since the SIX migration this is the standard e-banking expor
 - **Decide:** whether to also read the older MT940 format some banks still offer.
 
 #### F03 · Swiss QR-bill scanning
+
+**Status:** ☐ Open
 
 Every Swiss invoice carries a QR code with the amount, currency, creditor and reference.
 
@@ -307,6 +358,8 @@ Every Swiss invoice carries a QR code with the amount, currency, creditor and re
   the payment.
 
 #### F04 · Receipt scanning
+
+**Status:** ☐ Open
 
 Photograph or drop a till receipt; the app reads merchant, date, total and, ideally, the
 lines.
@@ -323,6 +376,8 @@ lines.
 
 #### F05 · Recurring transactions
 
+**Status:** ☐ Open
+
 Rent, insurance premiums and subscriptions repeat every month or year.
 
 - Define a series (amount, accounts, category, rhythm, start and end) once.
@@ -332,6 +387,8 @@ Rent, insurance premiums and subscriptions repeat every month or year.
 - **Decide:** auto-create versus confirm; how edits to a series affect past transactions.
 
 #### F06 · Faster manual entry
+
+**Status:** ☐ Open
 
 Small changes for the most frequent task:
 
@@ -344,6 +401,8 @@ Small changes for the most frequent task:
 ### Organizing
 
 #### F07 · Automatic categorization
+
+**Status:** ☐ Open
 
 Suggest the category (and account) for new or imported transactions.
 
@@ -361,6 +420,8 @@ automatically.
 
 #### F08 · Simpler category picker
 
+**Status:** ☐ Open
+
 COICOP names are statistical ("Individual consumption expenditure of non-profit institutions
 serving households"). Keep COICOP as the storage format, but:
 
@@ -370,6 +431,8 @@ serving households"). Keep COICOP as the storage format, but:
 
 #### F09 · Payees
 
+**Status:** ☐ Open
+
 A payee or merchant field, normalized ("MIGROS ZUERICH HB 1234" → "Migros").
 
 - Payee list with merge and rename; payee filter and search in Transactions.
@@ -378,6 +441,8 @@ A payee or merchant field, normalized ("MIGROS ZUERICH HB 1234" → "Migros").
 
 #### F10 · Tags
 
+**Status:** ☐ Open
+
 Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
 - Several tags per transaction; filter, total and chart by tag.
@@ -385,6 +450,8 @@ Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 - Required for the tax summary (F20), where "deductible" is a tag.
 
 #### F11 · Split transactions
+
+**Status:** ☐ Open
 
 One payment, several categories: a supermarket receipt with food, household goods and a
 gift.
@@ -396,6 +463,8 @@ gift.
 
 #### F12 · Attachments
 
+**Status:** ☐ Open
+
 Keep receipts, invoices and contracts with the transaction.
 
 - Files are stored in the data folder (`attachments/<transaction id>/`), so backups and sync
@@ -405,12 +474,16 @@ Keep receipts, invoices and contracts with the transaction.
 
 #### F13 · Bulk edit
 
+**Status:** ☐ Open
+
 Select many transactions → change category, account, tag or note in one step. The selection
 bar on the Transactions page already exists; this adds an *Edit* sheet for several rows.
 
 ### Planning and insight
 
 #### F14 · Savings goals
+
+**Status:** ☐ Open
 
 "Holiday 4'000 CHF by June", "Emergency fund 3 months of spending".
 
@@ -419,6 +492,8 @@ bar on the Transactions page already exists; this adds an *Edit* sheet for sever
 - Optionally reserves money in the projection, so the projected free wealth is honest.
 
 #### F15 · What-if scenarios
+
+**Status:** ☐ Open
 
 Compare futures: "What if I reduce to 80 % work from January?", "Buy a car for 25'000 CHF in
 March".
@@ -429,15 +504,21 @@ March".
 
 #### F16 · Budget from history
 
+**Status:** ☐ Open
+
 Propose a budget from what actually happened: the average (or median) of the last 3, 6 or 12
 months per category, as a starting point the user edits. A one-sheet action on Budget Plan.
 
 #### F17 · Subscription and recurring-spend detection
 
+**Status:** ☐ Open
+
 Find charges that repeat with similar amounts (streaming, phone, gym) and list them with
 the yearly total. One click turns a detected subscription into a recurring transaction (F05).
 
 #### F18 · Trends and unusual spending
+
+**Status:** ☐ Open
 
 - Month-over-month and year-over-year change per category on the Budget page.
 - A short "Notable this month" list on the Overview: categories well above their usual
@@ -445,11 +526,15 @@ the yearly total. One click turns a detected subscription into a recurring trans
 
 #### F19 · Year in review
 
+**Status:** ☐ Open
+
 A yearly report: income, spending by category, savings rate, wealth change, biggest
 expenses, comparison with the previous year. On screen and as a PDF, built on the existing
 statement export.
 
 #### F20 · Swiss tax summary
+
+**Status:** ☐ Open
 
 Help with the annual tax declaration, without trying to file it:
 
@@ -464,6 +549,8 @@ Cantonal rules differ, so the app lists amounts and leaves the judgment to the u
 
 #### F21 · Investments and asset classes
 
+**Status:** ☐ Open
+
 Today wealth comes from recorded account balances. Add:
 
 - asset classes (cash, securities, pillar 2/3a, real estate, crypto, other) and net worth
@@ -477,11 +564,15 @@ F21 would create them from price changes.
 
 #### F22 · Loans and mortgages
 
+**Status:** ☐ Open
+
 Liabilities with interest rate and repayment plan; interest payments are categorized
 automatically. Projected wealth includes amortization; a mortgage renewal date can trigger
 a reminder (F31).
 
 #### F23 · Who owes what (shared expenses)
+
+**Status:** ☐ Open
 
 Advance payments already record money paid for others. Build on that:
 
@@ -493,6 +584,8 @@ Advance payments already record money paid for others. Build on that:
 
 #### F24 · Export to CSV and JSON
 
+**Status:** ☐ Open
+
 - Export the current Transactions or Budget Plan view (with its filters) as CSV or Excel.
 - Export everything as one JSON file: accounts, categories, transactions, balances, budget,
   settings, with a format version, readable by other tools.
@@ -500,12 +593,16 @@ Advance payments already record money paid for others. Build on that:
 
 #### F25 · Full backup and restore
 
+**Status:** ☐ Open
+
 - *Back up now* writes a dated ZIP of the data folder to a place the user picks.
 - *Restore* replaces the data from a ZIP after confirmation, with an automatic backup of the
   current state first.
 - The update backups in `backups/` can be listed and restored from the same screen.
 
 #### F26 · Sync through a cloud folder
+
+**Status:** ☐ Open
 
 Use the app on two computers by keeping the data folder in iCloud Drive, OneDrive or
 Dropbox.
@@ -518,6 +615,8 @@ Dropbox.
 
 #### F27 · Encryption and app lock
 
+**Status:** ☐ Open
+
 The CSV files are readable by anyone with access to the computer.
 
 - **App lock:** password, or Touch ID / Windows Hello, before the app opens.
@@ -527,6 +626,8 @@ The CSV files are readable by anyone with access to the computer.
 
 #### F28 · Undo and change history
 
+**Status:** ☐ Open
+
 - *Undo* for the last action (delete, edit, import), offered in the confirmation toast.
 - A change log (who, when, before and after) for transactions, balances and budget entries.
 - Makes imports safe to try, and enables merging in F26.
@@ -534,6 +635,8 @@ The CSV files are readable by anyone with access to the computer.
 ### Experience
 
 #### F29 · Multi-language support
+
+**Status:** ◐ Partly done: English and German; French and Italian are open
 
 Interface in English, German, French and Italian, matching Switzerland and the installer,
 which already speaks English, German and French.
@@ -551,11 +654,15 @@ which already speaks English, German and French.
 
 #### F30 · Onboarding and demo data
 
+**Status:** ☐ Open
+
 - A first-start guide: language, display currency, accounts with their current balance,
   income categories, plan horizon. It ends on the Budget page with something to see.
 - *Try with sample data:* a separate demo data folder to explore without touching real data.
 
 #### F31 · Reminders and alerts
+
+**Status:** ☐ Open
 
 Desktop notifications, all optional:
 
@@ -568,11 +675,15 @@ Shown when the app runs; reminders while it's closed would need a small backgrou
 
 #### F32 · Keyboard shortcuts and accessibility
 
+**Status:** ☐ Open
+
 - Shortcuts: new transaction, save, search, previous/next month (`←` `→`), switch pages.
 - Screen-reader labels, visible focus, logical tab order, sufficient contrast in both
   appearances (the colour tokens make the contrast checkable).
 
 #### F33 · In-app update check
+
+**Status:** ☐ Open
 
 Once a day, read the latest version number from the GitHub repository (the same kind of
 read-only request as the ECB download). If it's newer, the sidebar shows "Budget 0.2.0 is
@@ -581,11 +692,15 @@ Settings; the README's privacy note then needs one more line.
 
 #### F34 · Several households or profiles
 
+**Status:** ☐ Open
+
 Separate budgets (personal, joint household, a small association) in separate data folders,
 switchable from the sidebar. Builds on the existing `--data-dir` support; mainly a picker and
 per-profile settings.
 
 #### F35 · Phone companion
+
+**Status:** ☐ Open
 
 Record expenses on the phone where they happen.
 
@@ -627,7 +742,7 @@ These come up in several features; deciding them once keeps the features consist
 
 ## Done
 
-### Milestone 1 · Bugs from issue 01 ✅
+### Milestone 1 · Bugs from issue 01
 
 Merged into `main` on 2026-10-19.
 
@@ -656,13 +771,15 @@ months end there. The Budget Plan page's dialog still lacks these fields (B14).
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| F01 · CSV import of transactions | ✅ | Details below. |
-| F29 · Multi-language support | 🔶 | English and German, including the COICOP names; French and Italian are open. |
-| Item lists on transactions | ✅ | Name, quantity and unit price per expenditure or income; search finds item names. Covers part of F11 and gives F04 a place for receipt lines. |
-| Test suite and git hooks | ✅ | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
-| CI and installers for macOS, Windows and Linux | 🔶 | GitHub Actions run the checks on every push and build the three installers; a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. Done once the first CI run has built all three; the Windows installer has never been run on a real PC. See [packaging/README.md](../packaging/README.md). |
+| F01 · CSV import of transactions | ☑ Done | Details below. |
+| F29 · Multi-language support | ◐ Partly | English and German, including the COICOP names; French and Italian are open. |
+| Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. Covers part of F11 and gives F04 a place for receipt lines. |
+| Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
+| CI and installers for macOS, Windows and Linux | ◐ Partly | GitHub Actions run the checks on every push and build the three installers; a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. Done once the first CI run has built all three; the Windows installer has never been run on a real PC. See [packaging/README.md](../packaging/README.md). |
 
 #### F01 · CSV import of transactions
+
+**Status:** ☑ Done
 
 Today every transaction is typed by hand. Import a bank or card export instead.
 
