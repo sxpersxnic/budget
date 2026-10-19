@@ -25,46 +25,42 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | Milestone | Status | Done |
 | --- | --- | --- |
 | 1 · Bugs from issue 01 | ☑ Done | 6 of 6 steps |
-| Follow-up fixes (B10–B15) | ☐ Open | 0 of 3 steps |
+| Follow-up fixes (B10–B15) | ☑ Done | 3 of 3 steps |
 | 2 · Accounts and reconciliation | ☐ Open | 0 of 3 steps |
 | 3 · Revaluations | ☐ Open | 0 of 4 steps |
 | 4 · Import and charts | ☐ Open | 0 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
-| Bugs B01–B15 | ◐ Partly | 8 of 15 fixed |
+| Bugs B01–B15 | ◐ Partly | 14 of 15 fixed; B04 closes with F42 (milestone 2) |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ◐ Partly | built; the first CI run is pending |
 
 ## Open now
 
-State on 2026-10-19: milestone 1 is done and merged; the follow-up fixes and milestone 2 are
-next. Steps run in the order given; *Needs* lists what has to be done first, and decisions are
-numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
+State on 2026-10-19: milestone 1 and the follow-up fixes are done; milestone 2 is next, and its
+reconciliation step waits for decision 2. Steps run in the order given; *Needs* lists what has
+to be done first, and decisions are numbered as in
+[Decisions for the product owner](#decisions-for-the-product-owner).
 
-### Next: follow-up fixes and milestone 2
+### Next: milestone 2 (after the follow-up fixes)
 
 | Step | Status | Task | Needs | Effort |
 | --- | --- | --- | --- | --- |
-| 6a | ☐ Open | **B10 · Close sheets for good**: remove a dialog from the page when it closes. | – | S |
-| 6b | ☐ Open | **B14 · Until and repeat on the Budget Plan page** too (reuses `budget.reschedule` from B09). | – | S |
-| 6c | ☐ Open | **B11, B12, B13 · Wording fixes** in Settings and the New Budget Entry form; **B15** chart axis labels. | – | S |
+| 6a | ☑ Done | **B10 · Close sheets for good**: remove a dialog from the page when it closes. | – | S |
+| 6b | ☑ Done | **B14 · Until and repeat on the Budget Plan page** too (reuses `budget.reschedule` from B09). | – | S |
+| 6c | ☑ Done | **B11, B12, B13 · Wording fixes** in Settings and the New Budget Entry form; **B15** chart axis labels. | – | S |
 | 7 | ☐ Open | **F41 · Opening balance and change per account.** | – | S |
 | 8 | ☐ Open | **F42 · Reconciliation line** above the income and expenditure tables; closes B04. | decision 2 | S |
 | 9 | ☐ Open | **F47 · Projection uses the higher of actual and budget** per category. | decision 5 | S–M |
 
 ### Bugs
 
-All bugs from issue 01 and its follow-ups, open ones first. B10–B14 were found while writing
-the UI tests on 2026-10-19, B15 while testing the Linux build.
+All bugs from issue 01 and its follow-ups, open ones first. For a fixed bug, *Cause* says
+what changed. B10–B14 were found while writing the UI tests on 2026-10-19, B15 while testing
+the Linux build.
 
 | ID | Status | Bug | Cause | Effort | Fixed in |
 | --- | --- | --- | --- | --- | --- |
 | B04 | ☐ Open | *Income and expenditure* chart leaves out unaccounted expenditure | The chart totals only recorded categories, while the budget page includes *Unaccounted*. Closed by F42: totals then mean recorded spending everywhere, and the gap can be added to the chart as its own line. | – (F42) | – |
-| B10 | ☐ Open | Closed sheets stay in the page | `layout.sheet()` closes the dialog but never deletes it, so every opened New Transaction, edit or confirm sheet keeps its form in the page until it is reloaded. Some save handlers still touch the form after closing, so the fix needs care. | S | – |
-| B11 | ☐ Open | Settings says an account's currency is locked by transactions | Recorded balances lock it as well (`accounts.account_in_use`), so the caption gives the wrong reason for an account with balances only. | S | – |
-| B12 | ☐ Open | Deleting an income category shows no confirmation message | Deleting an account shows "Deleted *name*"; the income category path has no message. | S | – |
-| B13 | ☐ Open | *Forever* gives a confusing message when the plan has ended | With the plan's last month in the past, *Forever* reports "The final month must not be before the first month". The caption above already says to extend the plan; the status line should say the same. | S | – |
-| B14 | ☐ Open | The Budget Plan page's edit dialog has no *Until* and *Repeat* | B09 added them to the Budget page's dialog, the one the issue names. | S | – |
-| B15 | ☐ Open | Chart axes repeat labels when the values are small | The y-axis format rounds to whole units (`tickformat=",.0f"` in `theme.chart_layout`), so an empty chart shows "1 CHF" for both 0.5 and 1. | S | – |
 | B01 | ☑ Fixed | Excel and PDF buttons in the budget overview did nothing | See [Done](#done). | – | `cc05db9` |
 | B02 | ☑ Fixed | Chart image, CSV and PDF export didn't work | See [Done](#done). | – | `cc05db9`, `ffa9733` |
 | B03 | ☑ Fixed | Transactions used the latest exchange rate, not the one of their date | See [Done](#done). | – | `332eb81` |
@@ -73,6 +69,12 @@ the UI tests on 2026-10-19, B15 while testing the Linux build.
 | B07 | ☑ Fixed | Accounts on the budget page didn't adapt to the window size | See [Done](#done). | – | `6f34640` |
 | B08 | ☑ Fixed | Income and expenditure should stack when the window is narrow | See [Done](#done). | – | `6f34640` |
 | B09 | ☑ Fixed | Editing a budget entry on the budget page lacked *Until*, *Repeat* and *Note* | See [Done](#done). | – | `ef5da63` |
+| B10 | ☑ Fixed | Closed sheets stay in the page | A sheet deletes itself on Quasar's *hide* event, after the closing animation. | – | `6ddb7d1` |
+| B11 | ☑ Fixed | Settings says an account's currency is locked by transactions | The caption names recorded balances too. | – | `cb13b2a` |
+| B12 | ☑ Fixed | Deleting an income category shows no confirmation message | "Deleted *name*" after deleting an income category. | – | `cb13b2a` |
+| B13 | ☑ Fixed | *Forever* gives a confusing message when the plan has ended | The status line says the plan ends before the first month and points to Settings. | – | `cb13b2a` |
+| B14 | ☑ Fixed | The Budget Plan page's edit dialog has no *Until* and *Repeat* | Until and Repeat in the Budget Plan dialog; a change replans the series from that month on. | – | `f1ab8b2` |
+| B15 | ☑ Fixed | Chart axes repeat labels when the values are small | Axis format `,~f`: whole numbers stay whole, small steps keep their decimals. | – | `8249156` |
 
 ### Decisions for the product owner
 
@@ -765,7 +767,7 @@ replaces the specification's rule that manual entries use the latest rate.
 **B09 as built.** Budget entries are stored one row per month, linked by a series ID. The
 dialog shows the series' end month (or *Forever*), its rhythm and an editable note; changing
 the schedule replans the series from the edited month on, as a new series, and the earlier
-months end there. The Budget Plan page's dialog still lacks these fields (B14).
+months end there. The Budget Plan page's dialog has the same fields since B14.
 
 ### Built features
 
