@@ -180,7 +180,7 @@ def page() -> None:
         async def selection_changed() -> None:
             rows = await grid.get_selected_rows()
             bar.set_visibility(bool(rows))
-            selected_label.set_text(t("{n} selected", n=len(rows)))
+            selected_label.set_text(tn("{n} selected", "{n} selected", len(rows)))
 
         async def edit_selected() -> None:
             rows = await grid.get_selected_rows()

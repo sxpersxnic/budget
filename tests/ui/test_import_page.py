@@ -338,5 +338,5 @@ async def test_an_empty_file_is_refused(user: User) -> None:
 
 async def test_the_choose_button_opens_the_file_dialog(user: User) -> None:
     await user.open("/import")
-    click(user, button(user, "Choose CSV File…"))  # handled by the browser; must not fail
+    click(user, button(user, "Choose File…"))  # handled by the browser; must not fail
     await user.should_see("1 · File")

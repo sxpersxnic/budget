@@ -1,10 +1,12 @@
 {
  "1 · File": "1 · File",
  "2 · Columns": "2 · Colonne",
+ "2 · Review": "2 · Verifica",
  "3 · Review": "3 · Verifica",
  "= {amount} (ECB rate of {date})": "= {amount} (tasso BCE del {date})",
  "Account": "Conto",
  "Account not found": "Conto non trovato",
+ "Account remembered from the last import of this IBAN.": "Conto ripreso dall’ultima importazione di questo IBAN.",
  "Account transfer": "Trasferimento tra conti",
  "Accounts": "Conti",
  "Accounts with transactions cannot be deleted": "I conti con transazioni non possono essere eliminati",
@@ -40,6 +42,7 @@
  "Amount ({currency})": "Importo ({currency})",
  "Amount Received": "Importo ricevuto",
  "Amount and date are required": "Importo e data sono obbligatori",
+ "Amount in {currency}, not in the statement's currency": "Importo in {currency}, non nella valuta dell’estratto",
  "Amount must be a positive number": "L’importo deve essere positivo",
  "Amounts are shown in this currency unless a page says otherwise.": "Gli importi sono indicati in questa valuta, salvo diversa indicazione della pagina.",
  "Amounts in {currency}": "Importi in {currency}",
@@ -56,7 +59,7 @@
  "Base Currency": "Valuta di base",
  "Before a restore": "Prima di un ripristino",
  "Before an update": "Prima di un aggiornamento",
- "Bring in a CSV export from your bank or credit card": "Caricare un’esportazione CSV della banca o della carta di credito",
+ "Bring in a CSV export or a camt statement from your bank or credit card": "Riprendere un’esportazione CSV o un estratto camt della banca o della carta di credito",
  "Budget": "Budget",
  "Budget Another Category": "Metti a budget un’altra categoria",
  "Budget Plan": "Piano di budget",
@@ -76,7 +79,7 @@
  "Changing Until or Repeat replans this budget from {month} on.": "Modificando «Fino a» o «Ripeti», questo budget viene ripianificato a partire da {month}.",
  "Chart error: {error}": "Errore del grafico: {error}",
  "Choose Backup…": "Scegli backup…",
- "Choose CSV File…": "Scegli file CSV…",
+ "Choose File…": "Scegli file…",
  "Choose a category first": "Scegliere prima una categoria",
  "Choose the account the file belongs to": "Scegliere il conto a cui appartiene il file",
  "Choose the account this file belongs to.": "Scegliere il conto a cui appartiene questo file.",
@@ -158,7 +161,7 @@
  "Export failed: {error}": "Esportazione non riuscita: {error}",
  "Export statement": "Esporta estratto",
  "Export the list": "Esporta l’elenco",
- "Export the transactions from your e-banking as CSV. Nothing leaves your computer.": "Esportare le transazioni dall’e-banking in formato CSV. Nessun dato lascia il computer.",
+ "Export the transactions from your e-banking as CSV, or as a camt.053 or camt.054 statement (XML). Nothing leaves your computer.": "Esportare le transazioni dall’e-banking in CSV, o come estratto camt.053 o camt.054 (XML). Nulla lascia il computer.",
  "Extending it continues every budget entry that runs forever.": "Prolungandolo, tutte le voci di budget senza scadenza vengono estese.",
  "Filters": "Filtri",
  "For a currency exchange the accounts need different currencies": "Per un cambio valuta i conti devono avere valute diverse",
@@ -311,6 +314,9 @@
  "That month has passed, so extend it first.": "Questo mese è già passato: prolungare prima la pianificazione.",
  "The From account must be in {currency}": "Il conto di addebito deve essere in {currency}",
  "The To account must be in {currency}": "Il conto di accredito deve essere in {currency}",
+ "The XML file declares a document type, which bank statements never do": "Il file XML dichiara un tipo di documento, cosa che gli estratti bancari non fanno mai",
+ "The XML file is not a camt.053 or camt.054 bank statement": "Il file XML non è un estratto bancario camt.053 o camt.054",
+ "The account is remembered for this IBAN after the import.": "Il conto viene memorizzato per questo IBAN dopo l’importazione.",
  "The advance payment account must be in {currency}": "Il conto anticipi deve essere in {currency}",
  "The advance share must be greater than 0 and at most the amount": "La quota per altri deve essere maggiore di 0 e al massimo pari all’importo",
  "The amount must be entered in the currency of the From account": "L’importo deve essere inserito nella valuta del conto di addebito",
@@ -322,8 +328,10 @@
  "The currency cannot be changed while transactions or entries use this account": "La valuta non può essere modificata finché transazioni o registrazioni utilizzano questo conto",
  "The currency can’t change while transactions or recorded balances use this account.": "La valuta non può essere modificata finché transazioni o saldi registrati utilizzano questo conto.",
  "The current records are copied to the backups folder first, so this can be undone.": "I dati attuali vengono prima copiati nella cartella dei backup, quindi l’operazione può essere annullata.",
+ "The file holds statements for several accounts ({ibans}); export one account per file": "Il file contiene estratti di più conti ({ibans}); esportare un conto per file",
  "The file is empty": "Il file è vuoto",
  "The file is larger than 20 MB": "Il file supera i 20 MB",
+ "The file is not valid XML (line {line})": "Il file non è un XML valido (riga {line})",
  "The file's text encoding is not supported": "La codifica dei caratteri del file non è supportata",
  "The final month cannot be after the budget horizon ({month})": "L’ultimo mese non può essere successivo all’orizzonte di pianificazione ({month})",
  "The final month must not be before the first month": "L’ultimo mese non può precedere il primo",
@@ -332,6 +340,8 @@
  "The plan ends in {month}, before the first month. Extend it in Settings.": "La pianificazione termina con {month}, prima del primo mese. Prolungarla nelle Impostazioni.",
  "The recurrence must be at least every month": "La ripetizione deve essere almeno mensile",
  "The repayment exceeds the outstanding amount ({amount})": "Il rimborso supera l’importo in sospeso ({amount})",
+ "The statement has no booked entries": "L’estratto non contiene registrazioni contabilizzate",
+ "The statement is in {currency}, but “{account}” is in {account_currency}. Choose an account in {currency}.": "L’estratto è in {currency}, ma «{account}» è in {account_currency}. Scegliere un conto in {currency}.",
  "This advance already has repayments: its currency and advance payment account cannot change": "Per questo anticipo esistono già rimborsi: la valuta e il conto anticipi non possono più essere modificati",
  "This backup was made by a newer version of Budget. Update the app first.": "Questo backup è stato creato da una versione più recente di Budget. Aggiornare prima l’app.",
  "This can’t be undone.": "L’operazione non può essere annullata.",
@@ -380,6 +390,10 @@
  "{count} · {difference} not itemised": "{count} · {difference} senza dettaglio",
  "{count} · {total}": "{count} · {total}",
  "{date} · {debtor} · {amount} open": "{date} · {debtor} · {amount} in sospeso",
+ "{details} · {n} entry": [
+  "{details} · {n} registrazione",
+  "{details} · {n} registrazioni"
+ ],
  "{name} · {n} line": [
   "{name} · {n} riga",
   "{name} · {n} righe"
@@ -388,7 +402,10 @@
   "{name} · {n} riga · riconosciuto come «{profile}»",
   "{name} · {n} righe · riconosciuto come «{profile}»"
  ],
- "{n} already imported": "Già importate: {n}",
+ "{n} already imported": [
+  "{n} già importata",
+  "{n} già importate"
+ ],
  "{n} budget entry": [
   "{n} voce di budget",
   "{n} voci di budget"
@@ -405,7 +422,14 @@
   "{n} mese, {span}, esteso con la pianificazione",
   "{n} mesi, {span}, estesi con la pianificazione"
  ],
- "{n} new": "Nuove: {n}",
+ "{n} new": [
+  "{n} nuova",
+  "{n} nuove"
+ ],
+ "{n} pending entry left out": [
+  "{n} registrazione in sospeso esclusa",
+  "{n} registrazioni in sospeso escluse"
+ ],
  "{n} possible duplicate": [
   "{n} possibile duplicato",
   "{n} possibili duplicati"
@@ -422,12 +446,18 @@
   "{n} riga ignorata: questa categoria vale solo per le uscite",
   "{n} righe ignorate: questa categoria vale solo per le uscite"
  ],
- "{n} selected": "Selezionate: {n}",
+ "{n} selected": [
+  "{n} selezionata",
+  "{n} selezionate"
+ ],
  "{n} transaction": [
   "{n} transazione",
   "{n} transazioni"
  ],
- "{n} unreadable": "Illeggibili: {n}",
+ "{n} unreadable": [
+  "{n} illeggibile",
+  "{n} illeggibili"
+ ],
  "{repeat}, forever": "{repeat}, senza scadenza",
  "{series} (budget)": "{series} (budget)",
  "{shown} of {n} transaction": [

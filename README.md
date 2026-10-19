@@ -179,7 +179,8 @@ The app opens in its own window and keeps all data in your user folder:
 4. **Transactions → Import…** (optional): bring in a CSV export from your e-banking
    instead of typing. Choose the account, check the detected columns, give the new rows a
    category and import. The column settings can be saved per bank; transactions already
-   imported are recognised and skipped.
+   imported are recognised and skipped. A camt.053 or camt.054 statement (XML, the Swiss
+   e-banking standard) needs no column step at all, and the app remembers its account by IBAN.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
 6. **Overview / Budget:** compare actual against budget, check the projected wealth, build

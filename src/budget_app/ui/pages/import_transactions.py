@@ -1,4 +1,5 @@
-"""Import transactions from a bank or card CSV export: file → columns → review → import."""
+"""Import transactions from a bank or card CSV export (file → columns → review → import) or from a
+camt.053 / camt.054 statement (file → review → import: the XML needs no column mapping)."""
 
 from __future__ import annotations
 
@@ -6,9 +7,9 @@ from nicegui import events, ui
 
 from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import TX_INCOME
-from budget_app.i18n import N_, t, tn
+from budget_app.i18n import N_, date_label, t, tn
 from budget_app.services import accounts as acc_svc
-from budget_app.services import importer
+from budget_app.services import camt, importer
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import error, frame, segmented, success
 from budget_app.ui.widgets.grid import date_col, make_grid, num_col
@@ -57,28 +58,32 @@ def page() -> None:
     with frame(
         t("Import Transactions"),
         "/import",
-        subtitle=t("Bring in a CSV export from your bank or credit card"),
+        subtitle=t("Bring in a CSV export or a camt statement from your bank or credit card"),
         narrow=False,
     ) as (ctx, _):
         profiles = importer.load_profiles(ctx.store.data_dir)
-        state: dict = {"parsed": None, "rows": []}
+        # parsed: the CSV file; statement: the camt file (one of them is set); problem: why it can't be imported
+        state: dict = {"parsed": None, "statement": None, "rows": [], "problem": ""}
         category_labels = _category_options(ctx)
 
         # ---------------------------------------------------------- 1 · file
         with ui.element("div").classes("surface flex flex-col gap-3"):
             ui.label(t("1 · File")).classes("section-title")
-            ui.label(t("Export the transactions from your e-banking as CSV. Nothing leaves your computer.")).classes(
-                "caption -mt-2"
-            )
+            ui.label(
+                t(
+                    "Export the transactions from your e-banking as CSV, or as a camt.053 or camt.054 "
+                    "statement (XML). Nothing leaves your computer."
+                )
+            ).classes("caption -mt-2")
             # Quasar's uploader panel is hidden; a plain button opens the system file dialog instead
             upload = (
                 ui.upload(auto_upload=True, max_file_size=importer.MAX_BYTES, on_upload=lambda e: on_file(e))  # noqa: PLW0108 - defined below
-                .props('accept=".csv,.txt,text/csv"')
+                .props('accept=".csv,.txt,.xml,text/csv,text/xml,application/xml"')
                 .classes("hidden")
             )
             with ui.row().classes("items-center gap-3"):
                 ui.button(
-                    t("Choose CSV File…"), icon="o_upload_file", on_click=lambda: upload.run_method("pickFiles")
+                    t("Choose File…"), icon="o_upload_file", on_click=lambda: upload.run_method("pickFiles")
                 ).props("unelevated")
                 file_info = ui.label().classes("caption")
 
@@ -92,7 +97,7 @@ def page() -> None:
                     .props("dense outlined options-dense")
                     .classes("w-56")
                 )
-            with ui.row().classes("w-full gap-3 items-start flex-wrap"):
+            with ui.row().classes("w-full gap-3 items-start flex-wrap") as account_row:
                 account = (
                     ui.select(account_options(ctx), label=t("Account"), with_input=True)
                     .props("dense outlined")
@@ -136,8 +141,12 @@ def page() -> None:
 
         # ---------------------------------------------------------- 3 · review
         with ui.element("div").classes("surface flex flex-col gap-3") as review_card:
-            ui.label(t("3 · Review")).classes("section-title")
+            review_title = ui.label(t("3 · Review")).classes("section-title")
             summary = ui.label().classes("caption -mt-2")
+            # a camt statement skips the columns step: the account is chosen here (moved from step 2)
+            with ui.row().classes("w-full gap-3 items-center flex-wrap") as statement_row:
+                account_hint = ui.label().classes("caption")
+            statement_row.set_visibility(False)
             with ui.element("div").classes("selection-bar") as bar:
                 selected_label = ui.label().classes("font-medium")
                 ui.space()
@@ -212,13 +221,62 @@ def page() -> None:
             )
 
         async def on_file(e: events.UploadEventArguments) -> None:
+            statement, parsed = None, None
             try:
-                parsed = importer.read_file(e.file.name, await e.file.read())
+                data = await e.file.read()
+                if camt.looks_like_xml(data):
+                    statement = camt.read_statement(e.file.name, data)
+                else:
+                    parsed = importer.read_file(e.file.name, data)
             except ValidationError as exc:
                 error(str(exc))
                 return
             finally:
                 upload.reset()
+            if statement is not None:
+                open_statement(statement)
+            elif parsed is not None:
+                open_csv(parsed)
+
+        def open_statement(statement: camt.Statement) -> None:
+            state["parsed"], state["statement"] = None, statement
+            period = (
+                f"{date_label(statement.start)} – {date_label(statement.end)}"
+                if statement.start and statement.end
+                else ""
+            )
+            details = " · ".join(
+                p for p in (statement.name, statement.message, camt.format_iban(statement.iban), period) if p
+            )
+            info = tn("{details} · {n} entry", "{details} · {n} entries", len(statement.rows), details=details)
+            if statement.pending:
+                info += " · " + tn("{n} pending entry left out", "{n} pending entries left out", statement.pending)
+            file_info.set_text(info)
+            columns_card.set_visibility(False)
+            review_card.set_visibility(True)
+            review_title.set_text(t("2 · Review"))
+            statement_row.set_visibility(True)
+            account.move(statement_row, 0)
+            remembered = camt.remembered_account(ctx.store.data_dir, statement.iban)
+            known = bool(remembered and ctx.store.accounts.get(remembered))
+            account_hint.set_text(
+                t("Account remembered from the last import of this IBAN.")
+                if known
+                else t("The account is remembered for this IBAN after the import.")
+            )
+            busy["value"] = True
+            try:
+                account.value = remembered if known else None
+            finally:
+                busy["value"] = False
+            refresh_rows()
+
+        def open_csv(parsed: importer.ParsedFile) -> None:
+            if state["statement"] is not None:  # back from a camt file to the CSV steps
+                state["statement"], state["problem"] = None, ""
+                account.move(account_row, 0)
+                statement_row.set_visibility(False)
+                review_title.set_text(t("3 · Review"))
             state["parsed"] = parsed
             profile = importer.guess_profile(parsed, profiles)
             n = len(parsed.data)
@@ -251,7 +309,10 @@ def page() -> None:
             apply_profile(guess)
 
         def refresh_rows() -> None:
-            if busy["value"] or state["parsed"] is None:
+            if busy["value"] or (state["parsed"] is None and state["statement"] is None):
+                return
+            if state["statement"] is not None:
+                refresh_statement()
                 return
             amount_sel.set_visibility(amount_mode.value == "single")
             debit_sel.set_visibility(amount_mode.value == "split")
@@ -262,9 +323,21 @@ def page() -> None:
             state["rows"] = rows
             render()
 
+        def refresh_statement() -> None:
+            statement = state["statement"]
+            problem = camt.currency_problem(ctx, statement, account.value) if account.value else ""
+            rows = statement.fresh_rows()
+            if account.value and not problem:
+                rows = importer.analyse(ctx, rows, account.value)
+            elif problem:
+                error(problem)
+            state["rows"], state["problem"] = rows, problem
+            render()
+
         def render() -> None:
             acc = ctx.store.accounts.get(account.value) if account.value else None
-            grid.options["columnDefs"] = _columns(acc.currency if acc else "")
+            currency = state["statement"].currency if state["statement"] else acc.currency if acc else ""
+            grid.options["columnDefs"] = _columns(currency)
             grid.options["rowData"] = [
                 {
                     "id": str(r.index),
@@ -291,14 +364,14 @@ def page() -> None:
             rows = state["rows"]
             counts = {s: sum(1 for r in rows if r.status == s) for s in STATUS}
             errors = sum(1 for r in rows if r.status == importer.ERROR)
-            parts = [t("{n} new", n=counts[importer.NEW])]
+            parts = [tn("{n} new", "{n} new", counts[importer.NEW])]
             if counts[importer.DUPLICATE]:
-                parts.append(t("{n} already imported", n=counts[importer.DUPLICATE]))
+                parts.append(tn("{n} already imported", "{n} already imported", counts[importer.DUPLICATE]))
             if counts[importer.POSSIBLE_DUPLICATE]:
                 n = counts[importer.POSSIBLE_DUPLICATE]
                 parts.append(tn("{n} possible duplicate", "{n} possible duplicates", n))
             if errors:
-                parts.append(t("{n} unreadable", n=errors))
+                parts.append(tn("{n} unreadable", "{n} unreadable", errors))
             summary.set_text(
                 t(
                     "{counts}. Duplicates and unreadable lines are left out; tick them to import anyway.",
@@ -310,6 +383,8 @@ def page() -> None:
             import_btn.set_text(tn("Import {n} Transaction", "Import {n} Transactions", len(chosen)))
             if not account.value:
                 status.set_text(t("Choose the account this file belongs to."))
+            elif state["problem"]:
+                status.set_text(state["problem"])
             elif missing:
                 status.set_text(
                     tn(
@@ -320,7 +395,7 @@ def page() -> None:
                 )
             else:
                 status.set_text("")
-            import_btn.set_enabled(bool(account.value and chosen and not missing))
+            import_btn.set_enabled(bool(account.value and chosen and not missing and not state["problem"]))
 
         async def selected_rows() -> list[importer.ImportRow]:
             ids = {int(r["id"]) for r in await grid.get_selected_rows()}
@@ -329,7 +404,7 @@ def page() -> None:
         async def selection_changed() -> None:
             rows = await selected_rows()
             bar.set_visibility(bool(rows))
-            selected_label.set_text(t("{n} selected", n=len(rows)))
+            selected_label.set_text(tn("{n} selected", "{n} selected", len(rows)))
 
         async def apply_category() -> None:
             if not bulk_cat.value:
@@ -393,7 +468,10 @@ def page() -> None:
 
         def do_import() -> None:
             try:
-                saved = importer.commit(ctx, state["rows"], account.value)
+                if state["statement"] is not None:
+                    saved = camt.commit(ctx, state["statement"], state["rows"], account.value)
+                else:
+                    saved = importer.commit(ctx, state["rows"], account.value)
             except ValidationError as exc:
                 error(str(exc))
                 return
