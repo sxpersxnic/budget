@@ -90,7 +90,7 @@ the Linux build.
 
 | ID | Status | Bug | Cause | Effort | Fixed in |
 | --- | --- | --- | --- | --- | --- |
-| B04 | ☑ Fixed | *Income and expenditure* chart leaves out unaccounted expenditure | Closed by F42: total expenditure means recorded spending everywhere, and the chart offers *Unexplained difference* as its own series. | – | `f537d17` |
+| B04 | ☑ Fixed | *Income and expenditure* chart leaves out unaccounted expenditure | Closed by F42: total expenditure means recorded spending everywhere, and the chart offers *Unexplained difference* as its own series. | – | `fc4cb19` |
 | B01 | ☑ Fixed | Excel and PDF buttons in the budget overview did nothing | See [Done](#done). | – | `cc05db9` |
 | B02 | ☑ Fixed | Chart image, CSV and PDF export didn't work | See [Done](#done). | – | `cc05db9`, `ffa9733` |
 | B03 | ☑ Fixed | Transactions used the latest exchange rate, not the one of their date | See [Done](#done). | – | `332eb81` |
@@ -237,7 +237,7 @@ includes* and *excludes* notes. The shipped file has names only.
 
 ### F41 · Opening balance and change per account
 
-**Status:** ☑ Done (2026-10-19, `f537d17`)
+**Status:** ☑ Done (2026-10-19, `fc4cb19`)
 
 The budget page shows for each account the balance at the end of the previous month, the
 balance at the end of this month and the difference, in the account's currency (and the
@@ -245,7 +245,7 @@ closing value in the display currency, as today). Accounts emptied this month st
 
 ### F42 · Reconciliation line instead of *Unaccounted*
 
-**Status:** ☑ Done (2026-10-19, `f537d17`)
+**Status:** ☑ Done (2026-10-19, `fc4cb19`)
 
 *Unaccounted expenditure* stops being a row of the expenditure table. Instead, a line above
 the income and expenditure tables shows:
@@ -307,7 +307,7 @@ revaluation* action fills in F43's form with the difference.
 
 ### F47 · Projection uses the higher of actual and budget
 
-**Status:** ☑ Done (2026-10-19, `f537d17`)
+**Status:** ☑ Done (2026-10-19, `fc4cb19`)
 
 For a month that isn't over, the projected wealth takes, for each category, the recorded
 amount if it is higher than the budget, and the budget otherwise. Applies to income and
