@@ -27,7 +27,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 1 · Bugs from issue 01 | ☑ Done | 6 of 6 steps |
 | Follow-up fixes (B10–B15) | ☑ Done | 3 of 3 steps |
 | 2 · Accounts and reconciliation | ☑ Done | 3 of 3 steps |
-| 3 · Revaluations | ☐ Open | 0 of 4 steps |
+| 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☐ Open | 0 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
 | After issue 01 (steps 19–25) | ◐ Partly | F24, F25, F02 and F29 done (step 19, F25 of step 20, step 23); F28 and steps 21, 22, 24, 25 open |
@@ -37,21 +37,12 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 ## Open now
 
-State on 2026-10-19: milestones 1 and 2 and the follow-up fixes are done (see [Done](#done));
-milestone 3, revaluations, is next. Steps run in the order given; *Needs* lists what has to be
+State on 2026-10-19: milestones 1–3 and the follow-up fixes are done (see [Done](#done));
+milestone 4 is next, and its first step (F36) waits for decision 6. Steps run in the order given; *Needs* lists what has to be
 done first, and decisions are numbered as in
 [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
-
-#### Milestone 3 · Revaluations
-
-| Step | Status | Task | Needs | Effort |
-| --- | --- | --- | --- | --- |
-| 10 | ☐ Open | **F43 · Revaluation transactions.** | decision 3 (decided) | M |
-| 11 | ☐ Open | **F44 · Exchange spread booked as revaluation.** | B03 (done), B06 (done), F43 | S–M |
-| 12 | ☐ Open | **F45 · Revaluations section** in the budget overview; the reconciliation line from F42 then counts them. | F42 (done), F43, decision 4 (decided) | S |
-| 13 | ☐ Open | **F46 · Unexplained difference per account**, with a *Book as revaluation* action. | F41 (done), F43 | S–M |
 
 #### Milestone 4 · Import and charts
 
@@ -90,7 +81,7 @@ the Linux build.
 
 | ID | Status | Bug | Cause | Effort | Fixed in |
 | --- | --- | --- | --- | --- | --- |
-| B04 | ☑ Fixed | *Income and expenditure* chart leaves out unaccounted expenditure | Closed by F42: total expenditure means recorded spending everywhere, and the chart offers *Unexplained difference* as its own series. | – | `f537d17` |
+| B04 | ☑ Fixed | *Income and expenditure* chart leaves out unaccounted expenditure | Closed by F42: total expenditure means recorded spending everywhere, and the chart offers *Unexplained difference* as its own series. | – | `fc4cb19` |
 | B01 | ☑ Fixed | Excel and PDF buttons in the budget overview did nothing | See [Done](#done). | – | `cc05db9` |
 | B02 | ☑ Fixed | Chart image, CSV and PDF export didn't work | See [Done](#done). | – | `cc05db9`, `ffa9733` |
 | B03 | ☑ Fixed | Transactions used the latest exchange rate, not the one of their date | See [Done](#done). | – | `332eb81` |
@@ -168,10 +159,10 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F40 | ☐ Open | COICOP notes in search and on hover | Organizing | M | Local | source data |
 | F41 | ☑ Done | Opening balance and change per account | Wealth | S | Local | – |
 | F42 | ☑ Done | Reconciliation line instead of *Unaccounted* | Insight | S | Local | – |
-| F43 | ☐ Open | Revaluation transactions | Wealth | M | Local | – |
-| F44 | ☐ Open | Exchange spread booked as revaluation | Wealth | S–M | Local | B03, B06, F43 |
-| F45 | ☐ Open | Revaluations in the budget overview | Insight | S | Local | F43 |
-| F46 | ☐ Open | Unexplained difference per account | Wealth | S–M | Local | F41, F43 |
+| F43 | ☑ Done | Revaluation transactions | Wealth | M | Local | – |
+| F44 | ☑ Done | Exchange spread booked as revaluation | Wealth | S–M | Local | B03, B06, F43 |
+| F45 | ☑ Done | Revaluations in the budget overview | Insight | S | Local | F43 |
+| F46 | ☑ Done | Unexplained difference per account | Wealth | S–M | Local | F41, F43 |
 | F47 | ☑ Done | Projection uses the higher of actual and budget | Planning | S–M | Local | – |
 
 ## Open features from issue 01
@@ -237,7 +228,7 @@ includes* and *excludes* notes. The shipped file has names only.
 
 ### F41 · Opening balance and change per account
 
-**Status:** ☑ Done (2026-10-19, `f537d17`)
+**Status:** ☑ Done (2026-10-19, `fc4cb19`)
 
 The budget page shows for each account the balance at the end of the previous month, the
 balance at the end of this month and the difference, in the account's currency (and the
@@ -245,7 +236,7 @@ closing value in the display currency, as today). Accounts emptied this month st
 
 ### F42 · Reconciliation line instead of *Unaccounted*
 
-**Status:** ☑ Done (2026-10-19, `f537d17`)
+**Status:** ☑ Done (2026-10-19, `fc4cb19`)
 
 *Unaccounted expenditure* stops being a row of the expenditure table. Instead, a line above
 the income and expenditure tables shows:
@@ -260,7 +251,7 @@ revaluations are part of the line.
 
 ### F43 · Revaluation transactions
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-19, `16c72f5`)
 
 A fifth transaction type for value changes that are neither income nor spending.
 
@@ -273,7 +264,7 @@ A fifth transaction type for value changes that are neither income nor spending.
 
 ### F44 · Exchange spread booked as revaluation
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-19, `16c72f5`)
 
 With the received amount typed in (B06), the bank's rate differs from the ECB rate. The
 difference becomes a linked revaluation of the kind *Capital gains on currency exchange* on
@@ -287,7 +278,7 @@ the receiving account, usually a loss.
 
 ### F45 · Revaluations in the budget overview
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-19, `16c72f5`) — the optional chart lines are not built.
 
 A third section next to income and expenditure listing the month's revaluations by kind,
 with a total, also in the statement export. Optionally as lines in the *Income and
@@ -298,7 +289,7 @@ difference until booked.
 
 ### F46 · Unexplained difference per account
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-19, `16c72f5`)
 
 Next to each account, the difference between the actual change of its balance and the sum
 of its transactions in the month (income, spending, transfers, exchanges, revaluations), in
@@ -307,7 +298,7 @@ revaluation* action fills in F43's form with the difference.
 
 ### F47 · Projection uses the higher of actual and budget
 
-**Status:** ☑ Done (2026-10-19, `f537d17`)
+**Status:** ☑ Done (2026-10-19, `fc4cb19`)
 
 For a month that isn't over, the projected wealth takes, for each category, the recorded
 amount if it is higher than the budget, and the budget otherwise. Applies to income and
@@ -799,6 +790,15 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | 7 | ☑ Done | **F41 · Opening balance and change per account.** | – | S |
 | 8 | ☑ Done | **F42 · Reconciliation line** above the income and expenditure tables; closes B04. | decision 2 (decided) | S |
 | 9 | ☑ Done | **F47 · Projection uses the higher of actual and budget** per category. | decision 5 (decided) | S–M |
+
+### Milestone 3 · Revaluations
+
+| Step | Status | Task | Needs | Effort |
+| --- | --- | --- | --- | --- |
+| 10 | ☑ Done | **F43 · Revaluation transactions.** | decision 3 (decided) | M |
+| 11 | ☑ Done | **F44 · Exchange spread booked as revaluation.** | B03 (done), B06 (done), F43 | S–M |
+| 12 | ☑ Done | **F45 · Revaluations section** in the budget overview; the reconciliation line from F42 then counts them. | F42 (done), F43, decision 4 (decided) | S |
+| 13 | ☑ Done | **F46 · Unexplained difference per account**, with a *Book as revaluation* action. | F41 (done), F43 | S–M |
 
 ### Built features
 
