@@ -192,7 +192,8 @@ async def test_edit_account_in_use_keeps_its_currency(user: User, ctx, setup) ->
     wealth_svc.upsert_entry(ctx, setup["chf"].id, "2026-09", 500)
     await user.open("/settings")
     row_button(user, "Bank", "o_edit").click()
-    assert "The currency can’t change while transactions use this account." in dialog_texts(user)
+    # a recorded balance is enough to lock the currency, and the caption says so (B11)
+    assert "The currency can’t change while transactions or recorded balances use this account." in dialog_texts(user)
     assert not dialog_field(user, ui.select, "Currency").enabled
     set_value(user, dialog_field(user, ui.input, "Name"), "Main bank")
     dialog_button(user, "Save").click()
@@ -278,6 +279,7 @@ async def test_delete_unused_income_category(user: User, ctx, setup) -> None:
     assert "Categories that are in use can’t be deleted." in dialog_texts(user)
     dialog_button(user, "Delete").click()
     assert ctx.store.income_categories.all() == []
+    assert user.notify.contains("Deleted Salary")  # like deleting an account (B12)
     await no_label(user, "Salary")
 
 

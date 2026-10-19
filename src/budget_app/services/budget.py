@@ -40,6 +40,10 @@ def plan_months(ctx: Context, inp: BudgetInput) -> list[str]:
     horizon = ctx.horizon()
     if not inp.start_month:
         raise ValidationError(t("Select the first month"))
+    if horizon < inp.start_month:  # no final month can work: say why, instead of blaming the choice
+        raise ValidationError(
+            t("The plan ends in {month}, before the first month. Extend it in Settings.", month=months.label(horizon))
+        )
     end = horizon if inp.forever else inp.end_month
     if not end:
         raise ValidationError(t("Select the final month"))

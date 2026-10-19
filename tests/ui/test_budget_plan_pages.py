@@ -543,7 +543,9 @@ async def test_form_warns_when_the_horizon_has_passed(user: User, ctx, setup) ->
     set_value(user, field(root, ui.number, "Amount"), 10)
     set_value(user, field(root, ui.select, "Category"), "01.1")
     set_value(user, field(root, ui.select, "Until"), FOREVER)
-    assert status_label(root).text == "The final month must not be before the first month"
+    assert status_label(root).text == (  # B13: the reason, not "final month before the first month"
+        f"The plan ends in {months.label(past)}, before the first month. Extend it in Settings."
+    )
 
 
 def test_until_options_lists_forever_first_and_keeps_a_stored_month() -> None:

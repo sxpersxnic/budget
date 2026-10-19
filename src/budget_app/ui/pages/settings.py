@@ -34,7 +34,9 @@ def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
         cur = currency_select(ctx, acc.currency if acc else ctx.store.settings.display_currency)
         if in_use:
             cur.disable()
-            ui.label(t("The currency can’t change while transactions use this account.")).classes("caption -mt-2")
+            ui.label(t("The currency can’t change while transactions or recorded balances use this account.")).classes(
+                "caption -mt-2"
+            )
         elif not acc:
             ui.label(t("Every transaction on this account will be in this currency.")).classes("caption -mt-2")
 
@@ -157,6 +159,8 @@ def _income_group(ctx: Context) -> None:
                                     acc_svc.delete_income_category(ctx, c.id)
                                 except ValidationError as exc:
                                     error(str(exc))
+                                else:
+                                    success(t("Deleted {name}", name=c.name))
                                 body.refresh()
 
                             confirm(
