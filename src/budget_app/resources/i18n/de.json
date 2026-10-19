@@ -1,10 +1,12 @@
 {
  "1 · File": "1 · Datei",
  "2 · Columns": "2 · Spalten",
+ "2 · Review": "2 · Prüfen",
  "3 · Review": "3 · Prüfen",
  "= {amount} (ECB rate of {date})": "= {amount} (EZB-Kurs vom {date})",
  "Account": "Konto",
  "Account not found": "Konto nicht gefunden",
+ "Account remembered from the last import of this IBAN.": "Konto vom letzten Import dieser IBAN übernommen.",
  "Account transfer": "Kontoübertrag",
  "Accounts": "Konten",
  "Accounts with transactions cannot be deleted": "Konten mit Buchungen können nicht gelöscht werden",
@@ -38,6 +40,7 @@
  "Amount ({currency})": "Betrag ({currency})",
  "Amount Received": "Erhaltener Betrag",
  "Amount and date are required": "Betrag und Datum sind erforderlich",
+ "Amount in {currency}, not in the statement's currency": "Betrag in {currency}, nicht in der Währung des Auszugs",
  "Amount must be a positive number": "Der Betrag muss positiv sein",
  "Amounts are shown in this currency unless a page says otherwise.": "Beträge werden in dieser Währung angezeigt, sofern eine Seite nichts anderes angibt.",
  "Amounts in {currency}": "Beträge in {currency}",
@@ -49,7 +52,7 @@
  "Balances · End of {month}": "Salden · Ende {month}",
  "Bars": "Balken",
  "Base Currency": "Basiswährung",
- "Bring in a CSV export from your bank or credit card": "CSV-Export der Bank oder Kreditkarte übernehmen",
+ "Bring in a CSV export or a camt statement from your bank or credit card": "CSV-Export oder camt-Auszug der Bank oder Kreditkarte übernehmen",
  "Budget": "Budget",
  "Budget Another Category": "Weitere Kategorie budgetieren",
  "Budget Plan": "Budgetplan",
@@ -145,7 +148,7 @@
  "Export as PDF…": "Als PDF exportieren …",
  "Export failed: {error}": "Export fehlgeschlagen: {error}",
  "Export statement": "Auszug exportieren",
- "Export the transactions from your e-banking as CSV. Nothing leaves your computer.": "Die Buchungen im E-Banking als CSV exportieren. Nichts verlässt den Computer.",
+ "Export the transactions from your e-banking as CSV, or as a camt.053 or camt.054 statement (XML). Nothing leaves your computer.": "Die Buchungen im E-Banking als CSV oder als camt.053- bzw. camt.054-Auszug (XML) exportieren. Nichts verlässt den Computer.",
  "Extending it continues every budget entry that runs forever.": "Eine Verlängerung führt alle unbefristeten Budgeteinträge weiter.",
  "Filters": "Filter",
  "For a currency exchange the accounts need different currencies": "Für einen Währungswechsel brauchen die Konten verschiedene Währungen",
@@ -293,13 +296,18 @@
  "That month has passed, so extend it first.": "Dieser Monat ist vorbei, bitte zuerst verlängern.",
  "The From account must be in {currency}": "Das Belastungskonto muss in {currency} geführt sein",
  "The To account must be in {currency}": "Das Gutschriftskonto muss in {currency} geführt sein",
+ "The XML file declares a document type, which bank statements never do": "Die XML-Datei deklariert einen Dokumenttyp, was Bankauszüge nie tun",
+ "The XML file is not a camt.053 or camt.054 bank statement": "Die XML-Datei ist kein camt.053- oder camt.054-Bankauszug",
+ "The account is remembered for this IBAN after the import.": "Das Konto wird nach dem Import für diese IBAN gemerkt.",
  "The advance payment account must be in {currency}": "Das Auslagenkonto muss in {currency} geführt sein",
  "The advance share must be greater than 0 and at most the amount": "Der Anteil für andere muss grösser als 0 und höchstens so gross wie der Betrag sein",
  "The amount must be entered in the currency of the From account": "Der Betrag muss in der Währung des Belastungskontos erfasst werden",
  "The currency cannot be changed while transactions or entries use this account": "Die Währung kann nicht geändert werden, solange Buchungen oder Einträge dieses Konto verwenden",
  "The currency can’t change while transactions or recorded balances use this account.": "Die Währung kann nicht geändert werden, solange Buchungen oder erfasste Salden dieses Konto verwenden.",
+ "The file holds statements for several accounts ({ibans}); export one account per file": "Die Datei enthält Auszüge mehrerer Konten ({ibans}); bitte pro Konto eine Datei exportieren",
  "The file is empty": "Die Datei ist leer",
  "The file is larger than 20 MB": "Die Datei ist grösser als 20 MB",
+ "The file is not valid XML (line {line})": "Die Datei ist kein gültiges XML (Zeile {line})",
  "The file's text encoding is not supported": "Die Zeichenkodierung der Datei wird nicht unterstützt",
  "The final month cannot be after the budget horizon ({month})": "Der letzte Monat darf nicht nach dem Planungshorizont ({month}) liegen",
  "The final month must not be before the first month": "Der letzte Monat darf nicht vor dem ersten liegen",
@@ -308,6 +316,8 @@
  "The plan ends in {month}, before the first month. Extend it in Settings.": "Die Planung endet {month}, vor dem ersten Monat. In den Einstellungen verlängern.",
  "The recurrence must be at least every month": "Die Wiederholung muss mindestens monatlich sein",
  "The repayment exceeds the outstanding amount ({amount})": "Die Rückzahlung ist höher als der offene Betrag ({amount})",
+ "The statement has no booked entries": "Der Auszug enthält keine gebuchten Posten",
+ "The statement is in {currency}, but “{account}” is in {account_currency}. Choose an account in {currency}.": "Der Auszug ist in {currency}, aber «{account}» in {account_currency}. Bitte ein Konto in {currency} wählen.",
  "This advance already has repayments: its currency and advance payment account cannot change": "Zu dieser Auslage gibt es bereits Rückzahlungen: Währung und Auslagenkonto können nicht mehr ändern",
  "This can’t be undone.": "Dies kann nicht rückgängig gemacht werden.",
  "To": "Bis",
@@ -351,6 +361,10 @@
  "{count} · {difference} not itemised": "{count} · {difference} nicht aufgeschlüsselt",
  "{count} · {total}": "{count} · {total}",
  "{date} · {debtor} · {amount} open": "{date} · {debtor} · {amount} offen",
+ "{details} · {n} entry": [
+  "{details} · {n} Buchung",
+  "{details} · {n} Buchungen"
+ ],
  "{name} · {n} line": [
   "{name} · {n} Zeile",
   "{name} · {n} Zeilen"
@@ -377,6 +391,10 @@
   "{n} Monate, {span}, werden mit der Planung verlängert"
  ],
  "{n} new": "{n} neu",
+ "{n} pending entry left out": [
+  "{n} vorgemerkte Buchung weggelassen",
+  "{n} vorgemerkte Buchungen weggelassen"
+ ],
  "{n} possible duplicate": [
   "{n} mögliches Duplikat",
   "{n} mögliche Duplikate"

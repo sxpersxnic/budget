@@ -3,6 +3,7 @@
 Flow: `read_file` detects encoding, delimiter and header line; `guess_profile` maps the columns;
 `parse_rows` turns lines into signed amounts; `analyse` marks duplicates and suggests categories;
 `commit` saves the chosen rows. Column settings can be saved per bank as a profile.
+camt.053 / camt.054 statements (`camt.py`) produce the same rows and go through `analyse` and `commit` too.
 
 Like every transaction, imported rows are valued at the ECB rate of their booking date.
 """
@@ -329,22 +330,33 @@ def _norm(text: str, keep_digits: bool = True) -> str:
 
 
 def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[ImportRow]:
-    """Set import references, mark duplicates and suggest categories from earlier transactions."""
+    """Set import references, mark duplicates and suggest categories from earlier transactions.
+
+    Rows from a camt statement arrive with the bank's reference (`camt:…`) and keep it; CSV rows get a
+    fingerprint. A row matching a transaction entered by hand, or imported from the other kind of file,
+    on the same day with the same type and amount is a possible duplicate.
+    """
     existing = [tx for tx in ctx.store.transactions.all() if account_id in (tx.from_account, tx.to_account)]
     refs = {tx.import_ref for tx in existing if tx.import_ref}
-    by_day: Counter[tuple] = Counter((tx.date, tx.type, round(tx.amount, 2)) for tx in existing if not tx.import_ref)
+    by_day: dict[str, Counter[tuple]] = defaultdict(Counter)  # source ("" = typed by hand) -> (day, type, amount)
+    for tx in existing:
+        by_day[_source(tx.import_ref)][(tx.date, tx.type, round(tx.amount, 2))] += 1
     history = _category_history(ctx)
     seen: Counter[str] = Counter()
     for row in rows:
         if row.status == ERROR or row.date is None or row.amount is None:
             continue
-        key = f"{account_id}|{row.date.isoformat()}|{row.amount:.2f}|{_norm(row.text)}"
-        seen[key] += 1  # identical rows (two coffees on one day) stay distinct
-        row.import_ref = "csv:" + hashlib.sha256(f"{key}#{seen[key]}".encode()).hexdigest()[:20]
+        if not row.import_ref.startswith("camt:"):
+            key = f"{account_id}|{row.date.isoformat()}|{row.amount:.2f}|{_norm(row.text)}"
+            seen[key] += 1  # identical rows (two coffees on one day) stay distinct
+            row.import_ref = "csv:" + hashlib.sha256(f"{key}#{seen[key]}".encode()).hexdigest()[:20]
+        day = (row.date, row.type, round(abs(row.amount), 2))
+        # one earlier entry matches one row
+        other = next((c for s, c in by_day.items() if s != _source(row.import_ref) and c[day] > 0), None)
         if row.import_ref in refs:
             row.status, row.include = DUPLICATE, False
-        elif by_day[(row.date, row.type, round(abs(row.amount), 2))] > 0:
-            by_day[(row.date, row.type, round(abs(row.amount), 2))] -= 1  # one manual entry matches one row
+        elif other is not None:
+            other[day] -= 1
             row.status, row.include = POSSIBLE_DUPLICATE, False
         else:
             row.status, row.include = NEW, True
@@ -353,6 +365,11 @@ def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Import
             if suggestion:
                 row.category, row.suggested = suggestion, True
     return rows
+
+
+def _source(import_ref: str) -> str:
+    """'csv', 'camt', or '' for a transaction typed by hand."""
+    return import_ref.split(":", 1)[0] if import_ref else ""
 
 
 def _category_history(ctx: Context) -> dict[tuple[str, str], str]:
