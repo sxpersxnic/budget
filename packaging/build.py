@@ -1,13 +1,15 @@
 """Build a double-clickable installer for the current platform.
 
-    macOS   -> dist/Budget-<version>-macOS-<arch>.dmg   (Budget.app, drag to Applications)
-    Windows -> dist/Budget-<version>-Windows-Setup.exe  (per-user install, Start menu entry, uninstaller)
+    macOS   -> dist/Budget-<version>-macOS-<arch>.dmg      (Budget.app, drag to Applications)
+    Windows -> dist/Budget-<version>-Windows-Setup.exe     (per-user install, Start menu entry, uninstaller)
+    Linux   -> dist/Budget-<version>-Linux-<arch>.tar.gz   (app folder + install.sh: per-user install, menu entry)
 
-The finished installer is also copied to installers/<os>/ (replacing older versions) together
-with a SHA-256 checksum, so it can be committed and downloaded from the repository.
+The finished macOS and Windows installers are also copied to installers/<os>/ (replacing older
+versions) together with a SHA-256 checksum. All three are attached to GitHub releases by CI.
 
-PyInstaller cannot cross-compile: build the macOS installer on a Mac and the Windows installer on
-a Windows PC. The wrappers packaging/macos/build.sh and packaging/windows/build.bat check the
+PyInstaller cannot cross-compile: build each installer on its own operating system (the GitHub
+Actions workflow .github/workflows/installers.yml does all three). The wrappers
+packaging/macos/build.sh, packaging/windows/build.bat and packaging/linux/build.sh check the
 prerequisites, run the tests and then call this script.
 
 Usage:  uv sync --group build && uv run --group build python packaging/build.py
@@ -25,6 +27,7 @@ import plistlib
 import shutil
 import subprocess  # nosec B404 - build tool running fixed commands
 import sys
+import tarfile
 import tomllib
 from pathlib import Path
 
@@ -42,6 +45,14 @@ BUNDLE_ID = "app.budget.local"
 UNUSED_NICEGUI_BUNDLES = ("mermaid", "codemirror", "echart", "json_editor", "scene", "leaflet", "xterm")
 # plotly's own JS (Jupyter widget + offline HTML export); NiceGUI renders charts with its own plotly.js
 UNUSED_PLOTLY_FILES = ("widgetbundle.js", "plotly.min.js")
+# Linux window: pywebview's Qt backend, reached through qtpy's dynamic imports
+LINUX_HIDDEN_IMPORTS = (
+    "webview.platforms.qt",
+    "PyQt6.QtWebEngineWidgets",
+    "PyQt6.QtWebEngineCore",
+    "PyQt6.QtWebChannel",
+    "PyQt6.QtNetwork",
+)
 
 
 def version() -> str:
@@ -56,7 +67,7 @@ def run(cmd: list[str | Path]) -> None:
 
 def pyinstaller() -> Path:
     sep = os.pathsep
-    icon = PACKAGING / "assets" / ("icon.icns" if sys.platform == "darwin" else "icon.ico")
+    icon = PACKAGING / "assets" / {"darwin": "icon.icns", "win32": "icon.ico"}.get(sys.platform, "icon.png")
     cmd: list[str | Path] = [
         sys.executable,
         "-m",
@@ -89,6 +100,10 @@ def pyinstaller() -> Path:
     ]
     if sys.platform == "darwin":
         cmd += ["--osx-bundle-identifier", BUNDLE_ID]
+    if sys.platform.startswith("linux"):
+        for module in LINUX_HIDDEN_IMPORTS:
+            cmd += ["--hidden-import", module]
+        cmd += ["--exclude-module", "PyQt5", "--exclude-module", "PySide2", "--exclude-module", "PySide6"]
     cmd.append(PACKAGING / "launcher.py")
     run(cmd)
     return DIST / (f"{NAME}.app" if sys.platform == "darwin" else NAME)
@@ -186,6 +201,45 @@ def build_windows(app_dir: Path) -> Path:
     return DIST / f"{NAME}-{version()}-Windows-Setup.exe"
 
 
+def check_linux_libraries(app_dir: Path) -> None:
+    """Fail when a Qt WebEngine library can't be resolved: the package would start without a window.
+
+    PyInstaller bundles the libraries it finds on the build machine; the ones it can't find
+    (installed by the CI's "Qt libraries for the build" step) are missing at runtime too.
+    """
+    internal = app_dir / "_internal"
+    qt = internal / "PyQt6" / "Qt6"
+    env = {**os.environ, "LD_LIBRARY_PATH": os.pathsep.join([str(internal), str(qt / "lib")])}
+    missing: set[str] = set()
+    for binary in [*qt.glob("lib/libQt6WebEngine*.so*"), qt / "libexec" / "QtWebEngineProcess"]:
+        if binary.exists():
+            out = subprocess.run(["ldd", str(binary)], capture_output=True, text=True, env=env, check=False)  # noqa: S603, S607  # nosec B603 B607
+            missing |= {line.split()[0] for line in out.stdout.splitlines() if "not found" in line}
+    if missing:
+        raise SystemExit(
+            "Libraries missing from the Linux package (install them on the build machine and build again): "
+            + ", ".join(sorted(missing))
+        )
+
+
+def build_linux(app_dir: Path) -> Path:
+    """A .tar.gz with the app folder and install.sh, which installs it for the current user."""
+    check_linux_libraries(app_dir)
+    stem = f"{NAME}-{version()}-Linux-{platform.machine()}"
+    staging = WORK / "linux" / stem
+    shutil.rmtree(staging.parent, ignore_errors=True)
+    staging.mkdir(parents=True)
+    shutil.copytree(app_dir, staging / NAME, symlinks=True)
+    shutil.copy2(PACKAGING / "linux" / "install.sh", staging / "install.sh")
+    shutil.copy2(PACKAGING / "assets" / "icon.png", staging / "budget.png")
+    (staging / "VERSION").write_text(version() + "\n", encoding="utf-8")
+    archive = DIST / f"{stem}.tar.gz"
+    archive.unlink(missing_ok=True)
+    with tarfile.open(archive, "w:gz") as tar:  # keeps the executable bits and symlinks
+        tar.add(staging, arcname=stem)
+    return archive
+
+
 def main() -> None:
     app = pyinstaller()
     strip_unused(app)
@@ -194,8 +248,7 @@ def main() -> None:
     elif sys.platform == "win32":
         out = publish(build_windows(app), "windows", f"{NAME}-*-Windows-Setup.exe")
     else:
-        out = app
-        print("Linux: no installer format configured; the app folder is", app)
+        out = build_linux(app)  # Qt WebEngine makes it too large to commit; published as a release asset only
     print(f"\nBuilt {out}")
 
 

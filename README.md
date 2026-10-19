@@ -10,16 +10,21 @@ A local personal-budgeting app.
 
 The installers bundle everything the app needs. You do **not** need Python, uv or any other tools to use it.
 
-**Download:** the installers are in the [`installers/`](installers/README.md) folder of this
-repository:
+**Download:** the installers are attached to each
+[release on GitHub](https://github.com/sxpersxnic/budget/releases/latest), with a
+`SHA256SUMS.txt` to check them:
 
-- macOS: [`installers/macos/`](installers/macos)
-- Windows: [`installers/windows/`](installers/windows/README.md)
+- macOS: `Budget-<version>-macOS-arm64.dmg`
+- Windows: `Budget-<version>-Windows-Setup.exe`
+- Linux: `Budget-<version>-Linux-x86_64.tar.gz`
 
-On GitHub, open the file and click **Download raw file**.
+They are built automatically from the code in this repository (see
+[Building the installers](#building-the-installers)). The first macOS installer, 0.1.0, is also
+in the [`installers/`](installers/README.md) folder.
 
 - [Install on macOS](#install-on-macos)
 - [Install on Windows](#install-on-windows)
+- [Install on Linux](#install-on-linux)
 - [Update to a new version](#update-to-a-new-version)
 - [Your data, backups and uninstalling](#your-data-backups-and-uninstalling)
 - [First steps](#first-steps)
@@ -31,8 +36,8 @@ On GitHub, open the file and click **Download raw file**.
 Requirements: macOS 11 (Big Sur) or later. The installer must match your Mac: an installer
 built on an Apple Silicon Mac (`…-macOS-arm64.dmg`) runs on Apple Silicon Macs.
 
-1. Download **`Budget-<version>-macOS-arm64.dmg`** from [`installers/macos/`](installers/macos)
-   and double-click it. A window with **Budget** and **Applications** opens.
+1. Download **`Budget-<version>-macOS-arm64.dmg`** from the
+   [latest release](https://github.com/sxpersxnic/budget/releases/latest) and double-click it. A window with **Budget** and **Applications** opens.
 2. Drag **Budget** onto **Applications**.
 3. Eject the "Budget" disk in the Finder sidebar. You can then delete the `.dmg` file.
 4. Open **Budget** from Applications, Launchpad or Spotlight.
@@ -52,9 +57,8 @@ You only have to do this once. Later launches open the app directly.
 Requirements: Windows 10 or 11, 64-bit. The app uses Microsoft Edge WebView2, which is
 included in Windows 10 and 11.
 
-1. Download **`Budget-<version>-Windows-Setup.exe`** from [`installers/windows/`](installers/windows/README.md)
-   and double-click it. If it isn't there yet, it has to be built on a Windows PC first; see
-   [Building the installers](#building-the-installers).
+1. Download **`Budget-<version>-Windows-Setup.exe`** from the
+   [latest release](https://github.com/sxpersxnic/budget/releases/latest) and double-click it.
 2. If SmartScreen shows *"Windows protected your PC"*, click **More info → Run anyway**.
    The installer is not code-signed.
 3. Follow the wizard:
@@ -67,10 +71,32 @@ included in Windows 10 and 11.
 4. Leave **Launch Budget** ticked and click **Finish**. Afterwards, start the app from the
    **Start menu → Budget** (or the desktop shortcut).
 
+## Install on Linux
+
+Requirements: a 64-bit (x86_64) desktop Linux with glibc 2.34 or newer, for example Ubuntu
+22.04, Debian 12, Fedora 36, Linux Mint 21 or later. The app window uses Qt WebEngine, which is
+bundled. Desktop installations have the system libraries it needs; on a minimal system, install
+`libxcb-cursor0` and `libnss3` (Debian and Ubuntu package names) if the window doesn't open.
+
+1. Download **`Budget-<version>-Linux-x86_64.tar.gz`** from the
+   [latest release](https://github.com/sxpersxnic/budget/releases/latest).
+2. Unpack it and run the installer from a terminal:
+
+   ```bash
+   tar -xzf Budget-*-Linux-x86_64.tar.gz
+   ./Budget-*-Linux-x86_64/install.sh
+   ```
+
+   No administrator rights are needed. The app installs for your user account only, into
+   `~/.local/opt/Budget`, with a menu entry and the command `budget` (in `~/.local/bin`).
+3. Start **Budget** from the application menu, or run `budget`. You can delete the downloaded
+   and unpacked files afterwards.
+
 ## Update to a new version
 
 Your installed version is shown at the bottom of the app's sidebar, for example
-*Budget 0.1.0*. Newer installers are in [`installers/`](installers/README.md).
+*Budget 0.1.0*. Newer installers are on the
+[releases page](https://github.com/sxpersxnic/budget/releases).
 
 **Your data is kept.** Updating replaces only the program. Your records live in the
 [data folder](#your-data-backups-and-uninstalling), which neither installer touches. As an extra
@@ -94,6 +120,12 @@ recent of these copies are kept.
    The last page before installing says *Update: Budget 0.1.0 will be replaced by
    version 0.2.0*. Click **Install**, then **Finish**.
 
+**Linux**
+
+1. Quit Budget.
+2. Unpack the new `.tar.gz` and run its `install.sh`, as for the
+   [first installation](#install-on-linux). It replaces the program folder and keeps your data.
+
 ## Your data, backups and uninstalling
 
 The app opens in its own window and keeps all data in your user folder:
@@ -102,6 +134,7 @@ The app opens in its own window and keeps all data in your user folder:
 | --- | --- |
 | macOS | `~/Library/Application Support/Budget` (in the Finder: **Go → Go to Folder…**) |
 | Windows | `%APPDATA%\Budget` (type it into the Explorer address bar) |
+| Linux | `~/.local/share/budget` (or `$XDG_DATA_HOME/budget`) |
 
 - **Backup:** copy the data folder. It contains your CSV files and settings.
 - **Restore after an update:** quit Budget, then copy the files from the newest folder in
@@ -113,6 +146,7 @@ The app opens in its own window and keeps all data in your user folder:
 - **Uninstall:**
   - macOS: move **Budget** from Applications to the Bin.
   - Windows: **Settings → Apps → Installed apps → Budget → Uninstall**.
+  - Linux: run `~/.local/opt/Budget/install.sh --uninstall`.
 
   The data folder is kept on purpose. Delete it by hand if you want to remove your data too.
 - **Internet:** only needed for the daily exchange-rate download. Offline, the app uses the
@@ -146,7 +180,18 @@ The app opens in its own window and keeps all data in your user folder:
 
 ## Building the installers
 
-Each installer is built locally on its own operating system. A Mac cannot build the Windows
+**Automatically (GitHub Actions):** every push to `main` builds all three installers after the
+checks pass; they are attached to the workflow run as artifacts. To publish a release, raise
+`version` in `pyproject.toml`, commit, then tag and push:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+The tag must match the version. The [Installers workflow](.github/workflows/installers.yml) then
+creates the GitHub release with the three installers and `SHA256SUMS.txt`.
+
+**Locally:** each installer is built on its own operating system. A Mac cannot build the Windows
 installer, and Windows cannot build the macOS one. Building needs
 [uv](https://docs.astral.sh/uv/), which downloads Python and every dependency automatically.
 Users of the finished installer do not need it.
@@ -155,14 +200,15 @@ Users of the finished installer do not need it.
 | --- | --- | --- | --- |
 | macOS `.dmg` | a Mac | uv (`brew install uv`) | `./packaging/macos/build.sh` |
 | Windows `Setup.exe` | a Windows 10/11 PC | uv (`winget install --id astral-sh.uv -e`) and Inno Setup 6 (`winget install --id JRSoftware.InnoSetup -e`) | double-click `packaging\windows\build.bat` |
+| Linux `.tar.gz` | Linux x86_64, glibc 2.34+ | uv (`curl -LsSf https://astral.sh/uv/install.sh \| sh`) | `./packaging/linux/build.sh` |
 
 Each build script:
 
 1. checks the prerequisites;
 2. installs the locked dependencies;
 3. runs the tests;
-4. writes the installer to `dist/`, and copies it, with a SHA-256 checksum, to `installers/<os>/`
-   so it can be committed.
+4. writes the installer to `dist/`. The macOS and Windows installers are also copied, with a
+   SHA-256 checksum, to `installers/<os>/`.
 
 A build takes 2–5 minutes. The version number comes from `pyproject.toml`. Signing and other
 details are in [packaging/README.md](packaging/README.md).

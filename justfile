@@ -55,7 +55,7 @@ typecheck:
 # Everything CI cares about: lint, types, tests with coverage
 check: lint typecheck cov
 
-# Build the installer for this OS into installers/ (macOS: .dmg; Windows: Setup.exe, needs Inno Setup 6)
+# Build the installer for this OS (macOS: .dmg; Windows: Setup.exe, needs Inno Setup 6; Linux: .tar.gz)
 [macos]
 build:
     ./packaging/macos/build.sh
@@ -66,7 +66,7 @@ build:
 
 [linux]
 build:
-    @echo "Installers are built on macOS or Windows only (PyInstaller cannot cross-compile)." && exit 1
+    ./packaging/linux/build.sh
 
 # Regenerate the app icons in packaging/assets/
 icons:

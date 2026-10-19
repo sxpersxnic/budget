@@ -1,14 +1,32 @@
 # Building the installers
 
 These steps produce stand-alone installers that bundle Python and every dependency. End users
-need neither uv nor Python. Everything runs locally; no CI service is involved.
+need neither uv nor Python.
 
 | Platform | Output | Build on |
 | --- | --- | --- |
 | macOS | `dist/Budget-<version>-macOS-<arch>.dmg` (contains `Budget.app`) | a Mac. The architecture matches the build machine: arm64 on Apple Silicon, x86_64 on Intel. |
 | Windows | `dist/Budget-<version>-Windows-Setup.exe` (Inno Setup, per-user install) | a Windows 10/11 PC |
+| Linux | `dist/Budget-<version>-Linux-<arch>.tar.gz` (app folder and `install.sh`, per-user install) | Linux with glibc 2.34+ (the CI uses Ubuntu 22.04) |
 
-PyInstaller cannot cross-compile, so build each installer on its own operating system.
+PyInstaller cannot cross-compile, so each installer is built on its own operating system.
+
+## GitHub Actions
+
+Two workflows in [`.github/workflows/`](../.github/workflows):
+
+- **CI** (`ci.yml`): lint, formatting, types, tests and the coverage gate on every push to
+  `main` and every pull request.
+- **Installers** (`installers.yml`): runs CI first, then builds the three installers on
+  `macos-latest` (arm64), `windows-latest` and `ubuntu-22.04`.
+  - Every push to `main`, and *Run workflow* on the Actions tab: the installers are attached to
+    the run as artifacts (kept 30 days).
+  - A tag `v<version>`: also creates the GitHub release with the installers and
+    `SHA256SUMS.txt`. The tag must match `[project] version` in `pyproject.toml`, or the
+    release job stops.
+
+The CI builds are unsigned, like the local ones (see [Signing](#signing-optional)). Code-signing
+secrets can be added to the build job later.
 
 ## macOS
 
@@ -35,9 +53,19 @@ brew install uv                # once; or see https://docs.astral.sh/uv/
 If Inno Setup is installed elsewhere, set the `ISCC` environment variable to the full path of
 `ISCC.exe`.
 
+## Linux
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh   # once
+./packaging/linux/build.sh
+```
+
+The build machine needs the X11 and EGL libraries Qt loads while PyInstaller analyses it; the
+package list is in the *Qt libraries for the build* step of `installers.yml`.
+
 ## What the build does
 
-Both wrappers:
+The three wrappers:
 
 1. check the prerequisites;
 2. run `uv sync --locked --group build --group dev`;
@@ -86,14 +114,17 @@ What makes the new installer an update rather than a second copy:
 | `build.py` | Runs PyInstaller (`--windowed --onedir`, plus the NiceGUI static files and the COICOP data). Then, on macOS, sets the version in `Info.plist`, signs the app and creates the DMG with an *Applications* shortcut. On Windows, it runs Inno Setup. |
 | `macos/build.sh` | One-command macOS build. |
 | `windows/build.bat`, `windows/build.ps1` | One-command Windows build. |
+| `linux/build.sh` | One-command Linux build. |
+| `linux/install.sh` | Shipped in the Linux package. Installs for the current user into `~/.local/opt/Budget`, with a menu entry (`~/.local/share/applications/budget.desktop`) and the command `~/.local/bin/budget`; replaces the whole program folder on updates; `--uninstall` removes it and keeps the data. |
 | `windows/budget.iss` | Inno Setup script. Installs into `%LOCALAPPDATA%\Programs\Budget` (or Program Files when run as admin), with a Start-menu entry, an optional desktop icon and an uninstaller. |
-| `launcher.py` | Frozen entry point. It calls `multiprocessing.freeze_support()` before the app is imported, because the native window runs in a child process. |
+| `launcher.py` | Frozen entry point. It calls `multiprocessing.freeze_support()` before the app is imported, because the native window runs in a child process. On Linux it selects pywebview's Qt backend, the one that is bundled. |
 | `make_icons.py` | Regenerates `assets/icon.png`, `icon.icns` and `icon.ico`. |
 
 Build output goes to `dist/` and intermediate files to `build/`. Both are git-ignored. The
-finished installer is also copied to [`installers/macos/`](../installers) or `installers/windows/`.
-That copy replaces any older version and refreshes `SHA256SUMS.txt`. It is committed so users
-can download it from the repository.
+finished macOS or Windows installer is also copied to [`installers/macos/`](../installers) or
+`installers/windows/`, replacing any older version and refreshing `SHA256SUMS.txt`. The Linux
+package (about 250 MB with Qt WebEngine) exceeds GitHub's file size limit and is published only
+as a release asset.
 
 To keep the DMG under GitHub's 50 MiB recommended file size, `build.py` removes JavaScript
 payloads the app never loads: unused NiceGUI element bundles, and Plotly's Jupyter widget and
@@ -117,11 +148,11 @@ offline-HTML scripts. NiceGUI renders charts with its own plotly.js.
 
 ## Runtime behaviour of installed builds
 
-- The app opens in a native window: WebKit on macOS, the WebView2 runtime on Windows. WebView2
-  is preinstalled on Windows 10/11.
+- The app opens in a native window: WebKit on macOS, the WebView2 runtime on Windows, Qt
+  WebEngine (bundled) on Linux. WebView2 is preinstalled on Windows 10/11.
 - The server listens on `127.0.0.1`, on a free port between 8000 and 8999.
-- Data is kept in `~/Library/Application Support/Budget` (macOS) or `%APPDATA%\Budget` (Windows).
-  It is not removed on uninstall.
+- Data is kept in `~/Library/Application Support/Budget` (macOS), `%APPDATA%\Budget` (Windows)
+  or `~/.local/share/budget` (Linux). It is not removed on uninstall.
 - If no console is attached (windowed Windows build), the log goes to `budget.log` in the
   data folder.
 - Only one instance can use a data folder at a time. A second launch exits immediately.
@@ -133,5 +164,11 @@ offline-HTML scripts. NiceGUI renders charts with its own plotly.js.
   - The ECB download over HTTPS works.
   - All pages and exports work in the frozen app.
   - Closing the window shuts the app down.
-- **Windows:** the scripts are written for Windows 10/11 but have not been run yet. Check the
-  first build on a Windows PC: start the installed app, open every page, and try one export.
+- **Windows:** built by CI on `windows-latest`; the installed app has not been tried on a
+  Windows PC yet. Check the first build: start the installed app, open every page, and try one
+  export.
+- **Linux:** built and tested in Ubuntu 24.04 containers (arm64): the package installs and
+  uninstalls with `install.sh`, the browser mode serves every page, and the Qt WebEngine window
+  opens on a virtual display and shows the app, also on a system without the extra libraries
+  bundled from the build machine. The x86_64 package from CI is guarded by the library check
+  in `build.py`; try it once on a desktop.
