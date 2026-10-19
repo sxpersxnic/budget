@@ -27,6 +27,7 @@ dev = [
     "pytest>=8",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
+    "pytest-timeout>=2.4.0",
     "ruff>=0.17.1",
 ]
 # installer builds (see packaging/README.md)
@@ -45,6 +46,7 @@ pythonpath = ["src", "tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 main_file = ""  # UI tests pass their own main file (tests/ui/ui_main.py)
+timeout = 120  # a hanging test fails with a traceback instead of blocking the pre-push hook
 
 [tool.ruff]
 line-length = 120
