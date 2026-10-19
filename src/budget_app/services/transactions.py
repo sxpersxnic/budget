@@ -51,6 +51,7 @@ class TransactionInput:
     advance_account: str = ""  # empty: default "Advance payments" account
     debtor: str = ""
     settles_id: str = ""
+    to_amount: float | None = None  # exchange: amount received, in the To account's currency
     comment: str = ""
     import_ref: str = ""  # non-empty for imported transactions: identifies the source row
 
@@ -165,6 +166,8 @@ def validate(ctx: Context, inp: TransactionInput, editing_id: str = "") -> None:
             raise ValidationError(t("For a currency exchange the accounts need different currencies"))
         if inp.currency != src.currency:
             raise ValidationError(t("The amount must be entered in the currency of the From account"))
+        if inp.to_amount is None or inp.to_amount <= 0:
+            raise ValidationError(t("Enter the amount received in {currency}", currency=dst.currency))
 
 
 def is_complete(ctx: Context, inp: TransactionInput) -> bool:
@@ -221,7 +224,7 @@ def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Tra
         if dst is None:
             raise ValidationError(t(_SELECT_ACCOUNT[TO]))
         tx.from_account, tx.to_account, tx.to_currency = inp.from_account, inp.to_account, dst.currency
-        tx.to_amount = round(ctx.fx.convert(amount, inp.currency, dst.currency, fx_date), 2)
+        tx.to_amount = round(float(inp.to_amount or 0), 2)  # what the bank credited, not a conversion
     return tx
 
 
@@ -300,6 +303,8 @@ def to_input(tx: Transaction) -> TransactionInput:
     )
     if tx.type == TX_EXPENDITURE and tx.is_advance:
         inp.advance_mode, inp.advance_value = "amount", tx.advance_amount
+    if tx.type == TX_EXCHANGE:
+        inp.to_amount = tx.to_amount
     return inp
 
 

@@ -91,9 +91,24 @@ def test_transfer_and_exchange(ctx, setup):
             currency="CHF",
             from_account=setup["chf"].id,
             to_account=setup["eur"].id,
+            to_amount=93.80,
         ),
     )
-    assert ex.to_currency == "EUR" and ex.to_amount == pytest.approx(94.74)  # 90 CHF / 0.95 (29 Aug)
+    # the amount received is stored as typed (the ECB rate would give 94.74 EUR)
+    assert ex.to_currency == "EUR" and ex.to_amount == pytest.approx(93.80)
+    assert tx_svc.to_input(ex).to_amount == pytest.approx(93.80)
+    with pytest.raises(ValidationError, match="amount received"):
+        tx_svc.save(
+            ctx,
+            TransactionInput(
+                date=date(2026, 9, 1),
+                type=TX_EXCHANGE,
+                amount=90,
+                currency="CHF",
+                from_account=setup["chf"].id,
+                to_account=setup["eur"].id,
+            ),
+        )
     with pytest.raises(ValidationError):
         tx_svc.save(
             ctx,

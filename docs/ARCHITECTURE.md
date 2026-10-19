@@ -83,7 +83,8 @@ ECB date of the rate used** (`fx_date`).
   - `from_account` and `to_account` are different regular accounts in the transaction currency.
 - `exchange`
   - `amount` is in the currency of `from_account`.
-  - `to_amount` and `to_currency` are computed with the ECB cross-rate of `fx_date`.
+  - `to_amount` is the amount received, typed in by the user, in `to_currency` (the currency of
+    `to_account`). The form shows the ECB amount and both rates for comparison.
 
 **Advance payments.** An advanced expenditure is stored as **one row**:
 
@@ -226,9 +227,10 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
    in wealth.
 2. **An advance is a single row** with an `advance_amount` column, not two linked rows.
    Editing and deleting stay atomic, and the reports split the amount.
-3. **Exchange `to_amount` is computed from ECB rates**, as the spec requires. Real-world
-   spreads and fees therefore show up in Unaccounted Expenditure once balances are
-   recorded.
+3. **Exchange `to_amount` is the amount actually received** (issue 01, B06; it used to be
+   computed from ECB rates). The difference to the ECB amount, the bank's spread, still shows
+   up in Unaccounted Expenditure once balances are recorded, until F44 books it as a
+   revaluation.
 4. **Balances carry forward.** A month with no entry for an account reuses the account's
    last recorded balance. The Budget overview flags such accounts and offers an "Add"
    button.

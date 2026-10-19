@@ -36,6 +36,7 @@
  ],
  "Amount": "Betrag",
  "Amount ({currency})": "Betrag ({currency})",
+ "Amount Received": "Erhaltener Betrag",
  "Amount and date are required": "Betrag und Datum sind erforderlich",
  "Amount must be a positive number": "Der Betrag muss positiv sein",
  "Amounts are shown in this currency unless a page says otherwise.": "Beträge werden in dieser Währung angezeigt, sofern eine Seite nichts anderes angibt.",
@@ -112,6 +113,7 @@
  "ECB CSV is unexpectedly large; aborted": "Die EZB-CSV-Datei ist unerwartet gross; abgebrochen",
  "ECB archive does not contain a CSV file": "Das EZB-Archiv enthält keine CSV-Datei",
  "ECB download is unexpectedly large; aborted": "Der EZB-Download ist unerwartet gross; abgebrochen",
+ "ECB rate of {date}: {rate} → {amount}": "EZB-Kurs vom {date}: {rate} → {amount}",
  "ECB rates of {date}": "EZB-Kurse vom {date}",
  "Edit": "Bearbeiten",
  "Edit Account": "Konto bearbeiten",
@@ -121,6 +123,7 @@
  "End of {month}": "Ende {month}",
  "Enter a name for these settings": "Bitte einen Namen für diese Einstellungen eingeben",
  "Enter the amount": "Bitte den Betrag eingeben",
+ "Enter the amount received in {currency}": "Den erhaltenen Betrag in {currency} eingeben",
  "Enter the debtor": "Bitte den Schuldner eingeben",
  "Every 2 months": "Alle 2 Monate",
  "Every 4 months": "Alle 4 Monate",
@@ -237,6 +240,7 @@
  "Projected wealth": "Voraussichtliches Vermögen",
  "Qty": "Menge",
  "Rate Date": "Kursdatum",
+ "Rate received: {rate} · {difference} against the ECB rate": "Erhaltener Kurs: {rate} · {difference} gegenüber dem EZB-Kurs",
  "Record": "Erfassen",
  "Record Balance": "Saldo erfassen",
  "Recorded": "Erfasst",
@@ -398,6 +402,5 @@
  "{shown} of {n} transaction": [
   "{shown} von {n} Buchung",
   "{shown} von {n} Buchungen"
- ],
- "≈ {amount} credited (ECB rate of {date})": "≈ {amount} gutgeschrieben (EZB-Kurs vom {date})"
+ ]
 }

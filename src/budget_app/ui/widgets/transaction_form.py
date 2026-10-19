@@ -24,7 +24,7 @@ from budget_app.services import items as items_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
-from budget_app.ui.layout import date_input, error, fmt, parse_date, segmented, sheet, success
+from budget_app.ui.layout import date_input, error, fmt, fmt_signed, parse_date, segmented, sheet, success
 from budget_app.ui.widgets.item_list import ItemList
 from budget_app.ui.widgets.selects import (
     account_options,
@@ -147,7 +147,16 @@ class TransactionForm:
                     )
                     ui.icon("arrow_forward", size="18px").classes("text-3 max-sm:hidden")
                     self.move_to = self._account_select(tc("account", "To"), init.to_account if init_move else None)
-                self.exchange_hint = ui.label().classes("caption px-1")
+                self.to_amount = ui.number(
+                    t("Amount Received"),
+                    value=init.to_amount if init.type == TX_EXCHANGE else None,
+                    min=0,
+                    format="%.2f",
+                    on_change=ch,
+                    validation={t("Must be positive"): lambda v: v is None or v > 0},
+                )
+                self.to_amount.props("outlined inputmode=decimal").classes("w-full mt-2")
+                self.exchange_hint = ui.label().classes("caption px-1 whitespace-pre-line")
 
             with ui.column().classes("w-full") as self.items_box:
                 self.items = ItemList(
@@ -221,6 +230,7 @@ class TransactionForm:
         self.exp_box.set_visibility(kind == TX_EXPENDITURE)
         self.inc_box.set_visibility(kind == TX_INCOME)
         self.move_box.set_visibility(kind in (TX_TRANSFER, TX_EXCHANGE))
+        self.to_amount.set_visibility(kind == TX_EXCHANGE)
         self.items_box.set_visibility(kind in (TX_EXPENDITURE, TX_INCOME))
         self.exp_adv_box.set_visibility(bool(self.exp_adv.value))
         self.inc_adv_box.set_visibility(bool(self.inc_adv.value))
@@ -271,6 +281,8 @@ class TransactionForm:
                 self.currency.set_value(src.currency)
             set_options(self.move_to, account_options(self.ctx, exclude_currency=src.currency if src else None))
             self.currency.disable()
+            dst = self.ctx.store.accounts.get(self.move_to.value) if self.move_to.value else None
+            self.to_amount.props(f'suffix="{dst.currency}"' if dst else "remove=suffix")
         else:
             self.currency.enable()
             set_options(self.move_from, account_options(self.ctx, currency=cur))
@@ -299,16 +311,37 @@ class TransactionForm:
                 if inp.type == TX_EXCHANGE and inp.to_account:
                     dst = self.ctx.store.accounts.get(inp.to_account)
                     if dst:
-                        to_amt = self.ctx.fx.convert(inp.amount, inp.currency, dst.currency, fx_date)
-                        self.exchange_hint.set_text(
-                            t(
-                                "≈ {amount} credited (ECB rate of {date})",
-                                amount=fmt(to_amt, dst.currency),
-                                date=i18n.date_label(fx_date),
-                            )
-                        )
+                        self.exchange_hint.set_text(self._exchange_hint(inp, dst.currency, fx_date))
             except FxError:  # missing rates: the hints are optional
                 log.debug("No exchange rate for hint", exc_info=True)
+
+    def _exchange_hint(self, inp: TransactionInput, to_cur: str, fx_date: date) -> str:
+        """The ECB rate next to the bank's, so a typing error or a costly exchange stands out."""
+        amount = inp.amount
+        if not amount:
+            return ""
+        ecb_amount = self.ctx.fx.convert(amount, inp.currency, to_cur, fx_date)
+
+        def rate(received: float) -> str:
+            return f"1 {inp.currency} = {received / amount:.4f} {to_cur}"
+
+        lines = [
+            t(
+                "ECB rate of {date}: {rate} → {amount}",
+                date=i18n.date_label(fx_date),
+                rate=rate(ecb_amount),
+                amount=fmt(ecb_amount, to_cur),
+            )
+        ]
+        if inp.to_amount:
+            lines.append(
+                t(
+                    "Rate received: {rate} · {difference} against the ECB rate",
+                    rate=rate(inp.to_amount),
+                    difference=f"{fmt_signed(inp.to_amount - ecb_amount) or fmt(0)} {to_cur}",
+                )
+            )
+        return "\n".join(lines)
 
     # ------------------------------------------------------------------ data
     def read(self) -> TransactionInput:
@@ -341,6 +374,8 @@ class TransactionForm:
         else:
             inp.from_account = self.move_from.value or ""
             inp.to_account = self.move_to.value or ""
+            if kind == TX_EXCHANGE:
+                inp.to_amount = self.to_amount.value
         return inp
 
     def _save(self) -> None:
@@ -375,6 +410,7 @@ class TransactionForm:
                 self.open_items,
                 self.move_from,
                 self.move_to,
+                self.to_amount,
             ):
                 el.set_value(None)
             self.exp_adv.set_value(False)
