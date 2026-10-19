@@ -173,7 +173,7 @@ def statement_pdf(rep: MonthReport) -> bytes:
 def chart_pdf(png: bytes, title: str, subtitle: str = "") -> bytes:
     """One chart image on a landscape A4 page, under its title."""
     buf = io.BytesIO()
-    page_w, _ = landscape(A4)
+    page_w, page_h = landscape(A4)
     margin = 15 * mm
     doc = SimpleDocTemplate(
         buf,
@@ -186,7 +186,8 @@ def chart_pdf(png: bytes, title: str, subtitle: str = "") -> bytes:
     )
     styles = getSampleStyleSheet()
     img_w, img_h = ImageReader(io.BytesIO(png)).getSize()
-    width = page_w - 2 * margin
+    # fit the page width, but leave room for the title block above a tall image
+    width = min(page_w - 2 * margin, (page_h - 2 * margin - 30 * mm) * img_w / img_h)
     story = [Paragraph(title, styles["Title"])]
     if subtitle:
         story.append(Paragraph(subtitle, styles["Normal"]))

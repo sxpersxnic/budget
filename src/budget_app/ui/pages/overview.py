@@ -246,14 +246,14 @@ class ChartCard:
             url = await self.plot.run_plot_method(
                 "toImage", {"format": "png", "width": 1200, "height": 600, "scale": 2}, timeout=15
             )
-            png = base64.b64decode(str(url).split(",", 1)[1])
+            data = base64.b64decode(str(url).split(",", 1)[1])
+            if kind == "pdf":
+                title = t(CHART_TYPES[self.kind])
+                data = export_svc.chart_pdf(data, title, t("Amounts in {currency}", currency=self.currency["value"]))
         except Exception as exc:
             error(t("Could not create the image: {error}", error=exc))
             return
-        if kind == "pdf":
-            title = t(CHART_TYPES[self.kind])
-            png = export_svc.chart_pdf(png, title, t("Amounts in {currency}", currency=self.currency["value"]))
-        await save_file(png, self.file_name(kind))
+        await save_file(data, self.file_name(kind))
 
 
 def page() -> None:
@@ -314,9 +314,12 @@ def page() -> None:
 
         def add(k: str, focus: bool = True) -> None:
             """Add a chart; one the user adds goes first and scrolls into view, so it can't land out of sight."""
+            before = len(grid.default_slot.children)
             try:
                 chart = ChartCard(ctx, k, currency, grid, remove)
             except Exception as exc:
+                for half_built in grid.default_slot.children[before:]:
+                    grid.remove(half_built)
                 error(t("Chart error: {error}", error=exc))
                 return
             charts.append(chart)
