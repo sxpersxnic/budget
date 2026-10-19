@@ -49,7 +49,8 @@ storage/    typed CSV tables + settings JSON
 | `services/budget.py` | Budget series expansion, overwrite, horizon change and "Forever" extension. |
 | `services/wealth.py` | Account balances, wealth, projected wealth, wealth time series. |
 | `services/reports.py` | Monthly statement (expenditure tree, income, budget vs. actual, unaccounted), chart series. |
-| `services/export.py` | Statement as Excel/PDF; chart data as CSV/Excel. |
+| `services/export.py` | Statement as Excel/PDF; chart data and list views as CSV/Excel; every record as one JSON document (`format: budget-app/export`, `version: 1`), not meant to be imported back. |
+| `services/archive.py` | Full backup of the data folder's records as a ZIP (with a `budget-backup.json` manifest) and restoring one: plain CSV/JSON names only, size limits, every table must load before anything changes; the current files go to `backups/<timestamp>_before-restore/` first, then the store is reloaded. |
 | `ui/theme.py` | Design tokens (light and dark), Quasar and AG Grid overrides, chart styling. See `docs/DESIGN_REVIEW.md`. |
 | `ui/layout.py` | Sidebar frame, sheets (dialogs), segmented control, month stepper, metrics, formatting (`1'234.50 CHF`), date picker. |
 | `ui/widgets/` | Searchable selects, transaction form (page, add sheet and edit sheet), AG Grid helpers. |
@@ -193,11 +194,11 @@ currency dropdowns list every currency the ECB quoted on its latest date, plus E
 | `/` | Overview (start page) | Current wealth and the projection at the horizon in one hero card. Chart builder ("Add Chart" menu): wealth line (recorded, then dotted projection), income/expenditure bars or lines with category multi-select and optional budget, waterfall of per-account change. Each chart's "…" menu saves a PNG, exports CSV or Excel, or removes it. |
 | `/budget` | Budget | Month stepper (‹ month ›) and currency. A callout names accounts without a balance for a past month. Metric strip (current wealth, wealth or projected wealth at month end, net income). Income and expenditure ledgers share one column layout: budget meter, actual, budget, difference; zero values show as a dash. The expenditure tree expands by clicking a category. Budget amounts are editable (pencil on hover) in incomplete months: amount, currency, until (or forever), repeat and note per entry; changing until or repeat replans the series from that month on (`budget.reschedule`), the earlier months keep their values and end there. Balances list for past months. Statement export sits in the share menu. "Record Balance" opens the balance sheet. |
 | `/add-transaction` | New Transaction | The same form also opens as a sheet from the sidebar's "New Transaction" button on every page; the page behind refreshes after saving. Type first (segmented control), then amount, currency and date, then the type's fields. Account dropdowns are filtered by currency. Live CHF preview. Save stays disabled until the form validates, and the reason is shown once the user has started. After saving, every field except date, currency and type resets. Expenditures and income can carry a product list (item, quantity, unit price; negative prices for discounts): Enter on a price starts the next line, item names are suggested from earlier lists, and the list's total is compared with the amount ("Use Total as Amount") but never changes it on its own. |
-| `/transactions` | Transactions | Search field, filters (date range, amount range, account, type) behind "Filters". AG Grid with signed, coloured amounts, the number of items per transaction, sort on every column. The search also finds item names. Selecting rows reveals Edit and Delete; double-click edits in a sheet. "Import…" opens the CSV import. |
+| `/transactions` | Transactions | Search field, filters (date range, amount range, account, type) behind "Filters". AG Grid with signed, coloured amounts, the number of items per transaction, sort on every column. The search also finds item names. Selecting rows reveals Edit and Delete; double-click edits in a sheet. "Import…" opens the CSV import. The share button exports the rows the filters show as CSV or Excel. |
 | `/import` | Import Transactions | 1 · file: encoding (UTF-8, Windows-1252), separator and header line (bank preambles are skipped) are detected. 2 · columns: account, date column and format, one signed amount or debit/credit columns, decimal style, description columns, sign inversion for card statements; the mapping can be saved per bank (`import_profiles.json`) and is recognised by the header line next time. 3 · review: rows already imported (same `import_ref`) or matching a manual entry (same account, day, type and amount) are left out; categories are suggested from earlier transactions with the same text; selected rows get a category, are included or excluded in bulk. Saving is one write; nothing is saved while a row is invalid. |
 | `/add-budget` | New Budget Entry | Also a sheet on Budget Plan. Type, amount, currency, category, month range or "Forever", repeat interval, replace option, note. Live summary of the months that will be created. |
-| `/budget-entries` | Budget Plan | Same list pattern as Transactions. The edit sheet can apply changes to all later months of a series. |
-| `/settings` | Settings | Grouped lists: interface language (system, English, Deutsch), plan horizon (Apply appears when changed), display and base currency, accounts, advance-payment accounts (with outstanding balances), income categories. Add, edit and rename open small sheets. |
+| `/budget-entries` | Budget Plan | Same list pattern as Transactions, with the same export. The edit sheet can apply changes to all later months of a series, or replan it with Until and Repeat. |
+| `/settings` | Settings | Grouped lists: interface language (system, English, Deutsch, Français, Italiano), plan horizon (Apply appears when changed), display and base currency, accounts, advance-payment accounts (with outstanding balances), income categories. Add, edit and rename open small sheets. *Data*: back up now (ZIP), restore from a backup file, export everything as JSON, the data folder's path; *Automatic Backups* lists the update and before-restore copies with a Restore action. |
 
 Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 
@@ -208,16 +209,18 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
   (`i18n.py`). Where one English word needs different German words, `tc(context, text)` looks up
   `"context|text"` first (`tc("heading", "Income")` → "Einnahmen"; the transaction type "Income"
   stays "Einnahme").
-- German texts live in `resources/i18n/de.json` (English text → German; plural texts map to
-  `[singular, plural]`). COICOP names are in `resources/i18n/coicop_de.json`, keyed by the
-  English name. They are the app's own translation in Swiss spelling (no "ß"), not the official
-  Destatis wording.
+- Translations live in `resources/i18n/<lang>.json` for German, French and Italian (English text
+  → translation; plural texts map to `[singular, plural]`). COICOP names are in
+  `resources/i18n/coicop_<lang>.json`, keyed by the English name. They are the app's own
+  translations (German in Swiss spelling, no "ß"; French and Italian follow the Eurostat/ISTAT
+  wording where known), not certified official texts.
 - The language is a setting (`settings.json` → `language`; empty means follow the system:
   `LANG`, macOS `AppleLanguages`, or the Windows locale). Changing it reloads the page. Quasar
-  (date picker) uses `de-CH` / `en-GB`, AG Grid gets German `localeText`, and dates in the grids
-  use the browser's `de-CH` / `en-GB` formatting. Amounts keep the Swiss format in both languages.
-- `tests/test_i18n.py` fails when a marked text has no German translation, when placeholders
-  differ, or when a translation is no longer used.
+  (date picker) uses `de-CH` / `fr` / `it` / `en-GB`, AG Grid gets `localeText` per language, and
+  dates in the grids use the browser's `de-CH` / `fr-CH` / `it-CH` / `en-GB` formatting. Amounts
+  keep the Swiss format in every language. The Windows installer speaks the same four languages.
+- `tests/test_i18n.py` fails, for each language, when a marked text has no translation, when
+  placeholders differ, when a translation is no longer used, or when a COICOP name is missing.
 
 ## 7. Decisions and assumptions
 

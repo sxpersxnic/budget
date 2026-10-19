@@ -17,8 +17,8 @@ log = logging.getLogger(__name__)
 
 MARKER = ".app_version"  # version that last opened this data folder
 BACKUP_DIR = "backups"
-KEEP = 10  # update backups to keep; older ones are removed
-_BACKUP_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}_.+_to_.+$")
+KEEP = 10  # backups to keep (update and before-restore ones); older ones are removed
+BACKUP_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}_(.+_to_.+|before-restore)$")
 
 
 def data_files(data_dir: Path) -> list[Path]:
@@ -49,7 +49,7 @@ def backup_on_version_change(data_dir: Path, version: str, now: datetime | None 
             log.exception("Could not back up the data files to %s", target)
             return None
         log.info("Backed up %d data files to %s", len(files), target)
-        _prune(data_dir / BACKUP_DIR)
+        prune(data_dir / BACKUP_DIR)
     tmp = marker.with_suffix(".tmp")
     tmp.write_text(version, encoding="utf-8")
     tmp.replace(marker)
@@ -60,7 +60,8 @@ def _safe(text: str) -> str:
     return re.sub(r"[^0-9A-Za-z.+-]", "-", text)
 
 
-def _prune(root: Path) -> None:
-    backups = sorted(p for p in root.iterdir() if p.is_dir() and _BACKUP_NAME.match(p.name))
+def prune(root: Path) -> None:
+    """Keep the newest KEEP backup folders the app made; other folders in `root` are left alone."""
+    backups = sorted(p for p in root.iterdir() if p.is_dir() and BACKUP_NAME.match(p.name))
     for old in backups[:-KEEP]:
         shutil.rmtree(old, ignore_errors=True)

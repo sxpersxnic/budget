@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 import html
+from collections.abc import Callable
+from datetime import date
 
 from nicegui import ui
 
 from budget_app import i18n
 from budget_app.i18n import t
-from budget_app.ui.layout import sheet
+from budget_app.services import export as export_svc
+from budget_app.ui.layout import error, save_file, sheet
 
 # Amounts keep the Swiss format in every language.
 NUMBER = "toLocaleString('de-CH', {minimumFractionDigits: 2, maximumFractionDigits: 2}).replace('-', '−')"
-# AG Grid's own texts (pagination, filters) in German; English is AG Grid's default.
-AG_GRID_DE = {
+# AG Grid's own texts (pagination, filters) per language; English is AG Grid's default.
+AG_GRID_LOCALE: dict[str, dict[str, str]] = {}
+AG_GRID_LOCALE["de"] = {
     "page": "Seite",
     "of": "von",
     "to": "bis",
@@ -53,6 +57,88 @@ AG_GRID_DE = {
     "cancelFilter": "Abbrechen",
     "ariaChecked": "ausgewählt",
     "ariaUnchecked": "nicht ausgewählt",
+}
+AG_GRID_LOCALE["fr"] = {
+    "page": "Page",
+    "of": "sur",
+    "to": "à",
+    "more": "plus",
+    "pageSizeSelectorLabel": "Lignes par page :",
+    "firstPage": "Première page",
+    "previousPage": "Page précédente",
+    "nextPage": "Page suivante",
+    "lastPage": "Dernière page",
+    "noRowsToShow": "Aucune entrée",
+    "loadingOoo": "Chargement…",
+    "selectAll": "Tout sélectionner",
+    "searchOoo": "Rechercher…",
+    "blanks": "(Vide)",
+    "filterOoo": "Filtrer…",
+    "equals": "Égal à",
+    "notEqual": "Différent de",
+    "blank": "Vide",
+    "notBlank": "Non vide",
+    "empty": "Choisir",
+    "lessThan": "Inférieur à",
+    "greaterThan": "Supérieur à",
+    "lessThanOrEqual": "Inférieur ou égal à",
+    "greaterThanOrEqual": "Supérieur ou égal à",
+    "inRange": "Entre",
+    "inRangeStart": "De",
+    "inRangeEnd": "À",
+    "contains": "Contient",
+    "notContains": "Ne contient pas",
+    "startsWith": "Commence par",
+    "endsWith": "Se termine par",
+    "andCondition": "ET",
+    "orCondition": "OU",
+    "applyFilter": "Appliquer",
+    "resetFilter": "Réinitialiser",
+    "clearFilter": "Effacer",
+    "cancelFilter": "Annuler",
+    "ariaChecked": "sélectionné",
+    "ariaUnchecked": "non sélectionné",
+}
+AG_GRID_LOCALE["it"] = {
+    "page": "Pagina",
+    "of": "di",
+    "to": "a",
+    "more": "altro",
+    "pageSizeSelectorLabel": "Righe per pagina:",
+    "firstPage": "Prima pagina",
+    "previousPage": "Pagina precedente",
+    "nextPage": "Pagina successiva",
+    "lastPage": "Ultima pagina",
+    "noRowsToShow": "Nessuna voce",
+    "loadingOoo": "Caricamento…",
+    "selectAll": "Seleziona tutto",
+    "searchOoo": "Cerca…",
+    "blanks": "(Vuoto)",
+    "filterOoo": "Filtra…",
+    "equals": "Uguale a",
+    "notEqual": "Diverso da",
+    "blank": "Vuoto",
+    "notBlank": "Non vuoto",
+    "empty": "Scegliere",
+    "lessThan": "Minore di",
+    "greaterThan": "Maggiore di",
+    "lessThanOrEqual": "Minore o uguale a",
+    "greaterThanOrEqual": "Maggiore o uguale a",
+    "inRange": "Tra",
+    "inRangeStart": "Da",
+    "inRangeEnd": "A",
+    "contains": "Contiene",
+    "notContains": "Non contiene",
+    "startsWith": "Inizia con",
+    "endsWith": "Finisce con",
+    "andCondition": "E",
+    "orCondition": "O",
+    "applyFilter": "Applica",
+    "resetFilter": "Reimposta",
+    "clearFilter": "Cancella",
+    "cancelFilter": "Annulla",
+    "ariaChecked": "selezionato",
+    "ariaUnchecked": "non selezionato",
 }
 
 
@@ -114,7 +200,7 @@ def make_grid(columns: list[dict], height: str = "calc(100vh - 230px)") -> ui.ag
             "overlayNoRowsTemplate": '<span style="color: var(--label-2)">'
             + html.escape(t("Nothing matches these filters."))
             + "</span>",
-            "localeText": AG_GRID_DE if i18n.language() == "de" else {},
+            "localeText": AG_GRID_LOCALE.get(i18n.language(), {}),
         },
         auto_size_columns=False,
     )
@@ -130,3 +216,23 @@ def confirm(message: str, on_yes, action: str | None = None, detail: str = "") -
             ui.button(action or t("Delete"), color="negative", on_click=lambda: (dlg.close(), on_yes())).props(
                 "unelevated"
             )
+
+
+def export_menu(name: str, title: str, columns: Callable[[], list[dict]], rows: Callable[[], list[dict]]) -> None:
+    """Share button with CSV and Excel exports of a list page's rows as currently filtered (F24)."""
+
+    async def export(kind: str) -> None:
+        try:
+            df = export_svc.view_frame(columns(), rows(), currency_header=t("Currency"))
+            data = export_svc.frame_csv(df) if kind == "csv" else export_svc.frame_xlsx(df, title)
+        except Exception as exc:
+            error(t("Export failed: {error}", error=exc))
+            return
+        await save_file(data, f"{name}_{date.today().isoformat()}.{kind}")
+
+    with (
+        ui.button(icon="ios_share").props("flat round").classes("text-primary").tooltip(t("Export the list")),
+        ui.menu().props("auto-close"),
+    ):
+        ui.menu_item(t("Export as CSV…"), on_click=lambda: export("csv"))
+        ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))

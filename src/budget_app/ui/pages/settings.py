@@ -1,8 +1,10 @@
-"""Settings: budget horizon, display currency, accounts, advance accounts, income categories."""
+"""Settings: budget horizon, display currency, accounts, advance accounts, income categories, data."""
 
 from __future__ import annotations
 
-from nicegui import ui
+from datetime import date
+
+from nicegui import events, ui
 
 from budget_app import i18n
 from budget_app.config import BASE_CURRENCY
@@ -10,11 +12,13 @@ from budget_app.domain import months
 from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR
 from budget_app.i18n import t, tn
 from budget_app.services import accounts as acc_svc
+from budget_app.services import archive
 from budget_app.services import budget as budget_svc
+from budget_app.services import export as export_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, fmt, frame, month_options, sheet, sheet_buttons, success
+from budget_app.ui.layout import error, fmt, frame, month_options, save_file, sheet, sheet_buttons, success
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select
 
@@ -182,6 +186,113 @@ def _income_group(ctx: Context) -> None:
         body()
 
 
+def _restore(ctx: Context, files: dict[str, bytes], source: str) -> None:
+    """Ask, then replace every record with `files`; the current ones go to the backups folder first."""
+
+    def do() -> None:
+        try:
+            safety = archive.restore(ctx, files)
+        except ValidationError as exc:
+            error(str(exc))
+            return
+        i18n.set_language(ctx.store.settings.language)
+        success(t("Restored. The previous records are kept in {folder}.", folder=safety.name))
+        ui.navigate.reload()
+
+    confirm(
+        t("Replace all records with {source}?", source=source),
+        do,
+        action=t("Restore"),
+        detail=t("The current records are copied to the backups folder first, so this can be undone."),
+    )
+
+
+def _data_group(ctx: Context) -> None:
+    async def export_json() -> None:
+        await save_file(export_svc.everything_json(ctx), f"budget-export_{date.today().isoformat()}.json")
+
+    async def back_up() -> None:
+        await save_file(archive.create(ctx), archive.file_name())
+
+    async def on_backup_file(e: events.UploadEventArguments) -> None:
+        try:
+            files = archive.read(await e.file.read())
+            archive.check(files)
+        except ValidationError as exc:
+            error(str(exc))
+            return
+        finally:
+            upload.reset()
+        _restore(ctx, files, t("the backup “{name}”", name=e.file.name))
+
+    def restore_saved(b: archive.SavedBackup) -> None:
+        try:
+            files = archive.files_in(b.path)
+        except ValidationError as exc:
+            error(str(exc))
+            return
+        _restore(ctx, files, t("the backup of {date}", date=_backup_date(b)))
+
+    upload = (
+        ui.upload(auto_upload=True, max_file_size=archive.MAX_TOTAL_BYTES, on_upload=on_backup_file)
+        .props('accept=".zip,application/zip"')
+        .classes("hidden")
+    )
+    with ui.column().classes("w-full gap-0"):
+        ui.label(t("Data")).classes("group-header")
+        with ui.element("div").classes("group"):
+            with ui.element("div").classes("group-row"):
+                with ui.column().classes("gap-0 flex-1 min-w-0"):
+                    ui.label(t("Back Up"))
+                    ui.label(
+                        t("All records in one ZIP file. Keep it somewhere safe; it can be restored here.")
+                    ).classes("caption")
+                ui.button(t("Back Up Now…"), on_click=back_up).props("flat dense no-caps").classes("text-primary")
+            with ui.element("div").classes("group-row"):
+                with ui.column().classes("gap-0 flex-1 min-w-0"):
+                    ui.label(t("Restore"))
+                    ui.label(t("Replaces all records with those of a backup file.")).classes("caption")
+                ui.button(t("Choose Backup…"), on_click=lambda: upload.run_method("pickFiles")).props(
+                    "flat dense no-caps"
+                ).classes("text-primary")
+            with ui.element("div").classes("group-row"):
+                with ui.column().classes("gap-0 flex-1 min-w-0"):
+                    ui.label(t("Export Everything"))
+                    ui.label(t("All records as one JSON file, for other programs. It can’t be restored.")).classes(
+                        "caption"
+                    )
+                ui.button(t("Export as JSON…"), on_click=export_json).props("flat dense no-caps").classes(
+                    "text-primary"
+                )
+            with ui.element("div").classes("group-row"), ui.column().classes("gap-0 flex-1 min-w-0"):
+                ui.label(t("Data Folder"))
+                ui.label(str(ctx.store.data_dir)).classes("caption break-all select-all")
+
+    saved = archive.saved_backups(ctx)
+    with ui.column().classes("w-full gap-0"):
+        ui.label(t("Automatic Backups")).classes("group-header")
+        with ui.element("div").classes("group"):
+            if not saved:
+                with ui.element("div").classes("group-row"):
+                    ui.label(t("The app copies your records here before an update or a restore. None so far.")).classes(
+                        "text-2"
+                    )
+            for b in saved:
+                with ui.element("div").classes("group-row"):
+                    with ui.column().classes("gap-0 flex-1 min-w-0"):
+                        ui.label(_backup_date(b))
+                        ui.label(t("Before a restore") if b.reason == "restore" else t("Before an update")).classes(
+                            "caption"
+                        )
+                    ui.button(t("Restore…"), on_click=lambda b=b: restore_saved(b)).props("flat dense no-caps").classes(
+                        "text-primary row-actions"
+                    )
+
+
+def _backup_date(b: archive.SavedBackup) -> str:
+    return f"{i18n.date_label(b.created.date())}, {b.created:%H:%M}"
+
+
 def page() -> None:
     with frame(t("Settings"), "/settings", narrow=True) as (ctx, _):
         with ui.column().classes("w-full gap-0"):
@@ -257,3 +368,4 @@ def page() -> None:
         _accounts_group(ctx, ACCOUNT_REGULAR, t("Accounts"))
         _accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"))
         _income_group(ctx)
+        _data_group(ctx)

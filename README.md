@@ -136,9 +136,15 @@ The app opens in its own window and keeps all data in your user folder:
 | Windows | `%APPDATA%\Budget` (type it into the Explorer address bar) |
 | Linux | `~/.local/share/budget` (or `$XDG_DATA_HOME/budget`) |
 
-- **Backup:** copy the data folder. It contains your CSV files and settings.
-- **Restore after an update:** quit Budget, then copy the files from the newest folder in
-  `backups/` back into the data folder, replacing the current ones.
+- **Backup:** **Settings → Data → Back Up Now…** saves all your records as one ZIP file
+  (`Budget-backup-<date>.zip`). Keep it somewhere safe, for example on another drive.
+- **Restore:** **Settings → Data → Choose Backup…** replaces all records with those of a backup
+  file. The app also keeps its own copies under **Automatic Backups**: one before each update and
+  one before each restore, the ten most recent. Each can be restored with **Restore…**. A restore
+  first copies the current records to the backups folder, so it can be undone the same way.
+- **Export:** the Transactions and Budget Plan lists export what they show (with their filters)
+  as CSV or Excel (share button). **Settings → Data → Export as JSON…** writes every record into
+  one JSON file for other programs; it can't be restored.
 - **Older versions:** opening your data with an older version is safe too; it keeps fields it
   doesn't know about instead of dropping them.
 - **Update:** see [Update to a new version](#update-to-a-new-version). Your data stays
@@ -158,7 +164,8 @@ The app opens in its own window and keeps all data in your user folder:
 ## First steps
 
 1. **Settings:**
-   - Choose the language (English or Deutsch; by default it follows your system).
+   - Choose the language (English, Deutsch, Français or Italiano; by default it follows your
+     system).
    - Add your accounts, each with its currency.
    - Add your income categories.
    - Choose how far ahead to plan (*Plan Until*) and the display currency.

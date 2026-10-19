@@ -1,8 +1,11 @@
-"""Excel / PDF / CSV exports."""
+"""Excel / PDF / CSV / JSON exports."""
 
 from __future__ import annotations
 
+import dataclasses
 import io
+import json
+from datetime import date, datetime
 
 import pandas as pd
 from reportlab.lib import colors
@@ -12,9 +15,14 @@ from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from budget_app.config import BASE_CURRENCY, app_version
 from budget_app.domain import months
 from budget_app.i18n import t
+from budget_app.services.context import Context
 from budget_app.services.reports import Line, MonthReport
+
+JSON_FORMAT = "budget-app/export"
+JSON_VERSION = 1
 
 _FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
@@ -205,3 +213,48 @@ def frame_xlsx(df: pd.DataFrame, sheet: str = "") -> bytes:
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         safe_frame(df).to_excel(writer, sheet_name=(sheet or t("Data"))[:31], index=False)
     return buf.getvalue()
+
+
+def view_frame(columns: list[dict], rows: list[dict], currency_header: str = "") -> pd.DataFrame:
+    """The rows of a list page as shown: its columns with their headers, in that order.
+
+    Fields starting with "_" and the row id stay internal. The amount column shows the currency
+    next to the amount on screen; with `currency_header`, it becomes a column of its own after it.
+    """
+    fields: list[tuple[str, str]] = []  # (row field, header)
+    for col in columns:
+        fields.append((col["field"], col["headerName"]))
+        if currency_header and col["field"] == "amount":
+            fields.append(("currency", currency_header))
+    return pd.DataFrame([[r.get(f) for f, _ in fields] for r in rows], columns=[h for _, h in fields])
+
+
+def _plain(value):
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    return value
+
+
+def everything_json(ctx: Context) -> bytes:
+    """Every record as one JSON document, for other tools (F24). It is not meant to be imported back;
+    full backups (services/archive.py) are."""
+    store = ctx.store
+
+    def table(rows) -> list[dict]:
+        return [{k: _plain(v) for k, v in dataclasses.asdict(r).items()} for r in rows]
+
+    doc = {
+        "format": JSON_FORMAT,
+        "version": JSON_VERSION,
+        "app_version": app_version(),
+        "exported": datetime.now().isoformat(timespec="seconds"),
+        "base_currency": BASE_CURRENCY,
+        "settings": dataclasses.asdict(store.settings),
+        "accounts": table(store.accounts.all()),
+        "income_categories": table(store.income_categories.all()),
+        "transactions": table(sorted(store.transactions.all(), key=lambda x: (x.date, x.id))),
+        "transaction_items": table(store.transaction_items.all()),
+        "account_entries": table(sorted(store.account_entries.all(), key=lambda e: (e.month, e.account_id))),
+        "budget_entries": table(sorted(store.budget.all(), key=lambda b: (b.month, b.type, b.category))),
+    }
+    return json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8")

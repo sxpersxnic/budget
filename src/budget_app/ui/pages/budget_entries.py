@@ -22,7 +22,7 @@ from budget_app.ui.layout import (
     success,
 )
 from budget_app.ui.pages.add_budget import FOREVER, RECURRENCE, open_budget_sheet, recurrence_options, until_options
-from budget_app.ui.widgets.grid import confirm, make_grid, money_col, month_col, num_col
+from budget_app.ui.widgets.grid import confirm, export_menu, make_grid, money_col, month_col, num_col
 from budget_app.ui.widgets.selects import currency_select, expenditure_category_select, income_category_select
 
 TYPES = {BUDGET_EXPENDITURE: N_("Expenditure"), BUDGET_INCOME: N_("Income")}
@@ -145,6 +145,7 @@ def page() -> None:
             with text.add_slot("prepend"):
                 ui.icon("search", size="18px").classes("text-3")
             filter_btn = ui.button(t("Filters"), icon="o_filter_list").props("flat").classes("text-primary")
+            export_menu("budget-plan", t("Budget Plan"), _columns, lambda: shown)
             ui.button(t("New Budget Entry"), icon="add", on_click=lambda: open_budget_sheet(ctx, apply_filters)).props(
                 "unelevated"
             )
@@ -180,6 +181,7 @@ def page() -> None:
         bar.set_visibility(False)
         grid = make_grid(_columns())
         count = ui.label().classes("caption px-1")
+        shown: list[dict] = []  # the rows the filters let through, for the export
 
         def apply_filters() -> None:
             q = (text.value or "").lower().strip()
@@ -215,6 +217,8 @@ def page() -> None:
                         "comment": b.comment,
                     }
                 )
+            rows.sort(key=lambda r: (r["month"], r["type"], r["category"]))
+            shown[:] = rows
             grid.options["rowData"] = rows
             grid.update()
             count.set_text(tn("{n} budget entry", "{n} budget entries", len(rows)))

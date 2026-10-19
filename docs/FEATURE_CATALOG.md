@@ -121,13 +121,13 @@ Waits for the source data (decision 7).
 
 | Step | Status | Task | Why here |
 | --- | --- | --- | --- |
-| 19 | ☐ Open | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from milestone 1. |
-| 20 | ☐ Open | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
+| 19 | ☑ Done | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from milestone 1. |
+| 20 | ◐ Partly | **F25** Full backup and restore (done), **F28** Undo and change history | Safety before more import features. |
 | 21 | ☐ Open | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
 | 22 | ☐ Open | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☐ Open | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☐ Open | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F29 (French, Italian), F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ## All features
 
@@ -156,12 +156,12 @@ Waits for the source data (decision 7).
 | F21 | ☐ Open | Investments and asset classes | Wealth | L | Optional | – |
 | F22 | ☐ Open | Loans and mortgages | Wealth | M | Local | – |
 | F23 | ☐ Open | Who owes what (shared expenses) | Wealth | M | Local | – |
-| F24 | ☐ Open | Export to CSV and JSON | Data out | S–M | Local | – |
-| F25 | ☐ Open | Full backup and restore | Data out | S | Local | – |
+| F24 | ☑ Done | Export to CSV and JSON | Data out | S–M | Local | – |
+| F25 | ☑ Done | Full backup and restore | Data out | S | Local | – |
 | F26 | ☐ Open | Sync through a cloud folder | Data out | L | Optional | F28 |
 | F27 | ☐ Open | Encryption and app lock | Security | L | Local | – |
 | F28 | ☐ Open | Undo and change history | Security | M | Local | – |
-| F29 | ◐ Partly | Multi-language support | Experience | L | Local | – |
+| F29 | ☑ Done | Multi-language support | Experience | L | Local | – |
 | F30 | ☐ Open | Onboarding and demo data | Experience | M | Local | – |
 | F31 | ☐ Open | Reminders and alerts | Experience | M | Local | – |
 | F32 | ☐ Open | Keyboard shortcuts and accessibility | Experience | M | Local | – |
@@ -586,7 +586,12 @@ Advance payments already record money paid for others. Build on that:
 
 #### F24 · Export to CSV and JSON
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-19)
+
+**As built:** a share button on Transactions and Budget Plan exports the rows the filters show,
+in the list's column order, as CSV or Excel. *Settings → Data → Export as JSON…* writes every
+record into one document (`format: budget-app/export`, `version: 1`). Decided: the JSON export is
+for other programs and is not imported back; full backups (F25) are the restore format.
 
 - Export the current Transactions or Budget Plan view (with its filters) as CSV or Excel.
 - Export everything as one JSON file: accounts, categories, transactions, balances, budget,
@@ -595,7 +600,13 @@ Advance payments already record money paid for others. Build on that:
 
 #### F25 · Full backup and restore
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-19)
+
+**As built:** *Settings → Data*: *Back Up Now…* saves `Budget-backup-<date>.zip` (the records
+plus a manifest; the ECB file is downloaded again instead). *Choose Backup…* restores one after a
+confirmation; the archive is checked completely first (plain CSV/JSON names only, size limits,
+every table must load), and the current records go to `backups/<timestamp>_before-restore/`.
+*Automatic Backups* lists those and the update backups (the ten most recent) with *Restore…*.
 
 - *Back up now* writes a dated ZIP of the data folder to a place the user picks.
 - *Restore* replaces the data from a ZIP after confirmation, with an automatic backup of the
@@ -638,7 +649,15 @@ The CSV files are readable by anyone with access to the computer.
 
 #### F29 · Multi-language support
 
-**Status:** ◐ Partly done: English and German; French and Italian are open
+**Status:** ☑ Done (2026-10-19): English, German, French and Italian
+
+**As built:** every interface text and all 438 COICOP names in German, French and Italian
+(`resources/i18n/<lang>.json`, `coicop_<lang>.json`); the language follows the system or is chosen
+in Settings. Dates per language (`9. Okt. 2026`, `9 oct. 2026`, `9 ott 2026`); amounts keep the
+Swiss format everywhere. The grid's own texts and the date picker follow the language, and the
+Windows installer offers all four. The COICOP names are the app's own translations, following
+the Eurostat/ISTAT wording where known, not certified official texts. Decided: user-entered
+names (accounts, income categories) are not translated.
 
 Interface in English, German, French and Italian, matching Switzerland and the installer,
 which already speaks English, German and French.
@@ -739,8 +758,8 @@ These come up in several features; deciding them once keeps the features consist
 3. **Data format changes:** payees, tags, splits and attachments add fields and files. Each
    needs a default for old data (the update backup covers mistakes); see
    [packaging/README.md](../packaging/README.md#releasing-an-update).
-4. **Languages** (F29): decide before building many new screens, so new text is translatable
-   from the start.
+4. **Languages** (F29): decided and built — English, German, French and Italian. Every new
+   text needs all three translations; the tests enforce it.
 
 ## Done
 
@@ -774,7 +793,7 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | Item | Status | Notes |
 | --- | --- | --- |
 | F01 · CSV import of transactions | ☑ Done | Details below. |
-| F29 · Multi-language support | ◐ Partly | English and German, including the COICOP names; French and Italian are open. |
+| F29 · Multi-language support | ☑ Done | English, German, French and Italian, including the COICOP names. |
 | Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. Covers part of F11 and gives F04 a place for receipt lines. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
 | CI and installers for macOS, Windows and Linux | ◐ Partly | GitHub Actions run the checks on every push and build the three installers; a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. Done once the first CI run has built all three; the Windows installer has never been run on a real PC. See [packaging/README.md](../packaging/README.md). |

@@ -13,7 +13,7 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services.context import ValidationError
 from budget_app.services.reports import ADV_REPAY_NAME
 from budget_app.ui.layout import date_input, error, frame, on_data_changed, parse_date, success
-from budget_app.ui.widgets.grid import confirm, date_col, make_grid, money_col, num_col
+from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 
@@ -93,6 +93,7 @@ def page() -> None:
             with text.add_slot("prepend"):
                 ui.icon("search", size="18px").classes("text-3")
             filter_btn = ui.button(t("Filters"), icon="o_filter_list").props("flat").classes("text-primary")
+            export_menu("transactions", t("Transactions"), _columns, lambda: shown)
             ui.button(t("Import…"), icon="o_file_upload", on_click=lambda: ui.navigate.to("/import")).props(
                 "flat"
             ).classes("text-primary")
@@ -130,6 +131,7 @@ def page() -> None:
         bar.set_visibility(False)
         grid = make_grid(_columns())
         count = ui.label().classes("caption px-1")
+        shown: list[dict] = []  # the rows the filters let through, for the export
 
         def apply_filters() -> None:
             start, end = parse_date(d_from.value), parse_date(d_to.value)
@@ -153,6 +155,8 @@ def page() -> None:
                 if q and q not in r["_search"]:
                     continue
                 rows.append(r)
+            rows.sort(key=lambda r: r["date"], reverse=True)  # the grid's default order
+            shown[:] = rows
             grid.options["rowData"] = rows
             grid.update()
             total = len(ctx.store.transactions.all())
