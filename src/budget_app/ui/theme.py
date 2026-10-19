@@ -173,9 +173,27 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 @media (hover: none) { .ledger-row .edit { opacity: 1; } }
 .ledger-row .chev { color: var(--label-3); transition: transform .15s; }
 .ledger-row .chev.open { transform: rotate(90deg); }
-@media (max-width: 700px) {
+/* the tables follow their own width, not the window's (the sidebar comes and goes) */
+.ledger { container-type: inline-size; }
+@container (max-width: 560px) {
   .ledger-row { grid-template-columns: minmax(0, 1fr) auto auto 1.5rem; column-gap: 10px; padding: 0 2px; }
   .ledger-row .c-bar, .ledger-row .c-diff { display: none; }
+}
+
+/* account balances: name · amount in the account's currency · amount in the view currency · action */
+.accounts { container-type: inline-size; }
+.acct-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 9rem 6rem; column-gap: 12px;
+  grid-template-areas: "name native view action"; align-content: center; row-gap: 0; }
+.acct-row .c-name { grid-area: name; min-width: 0; }
+.acct-row .c-native { grid-area: native; white-space: nowrap; }
+.acct-row .c-view { grid-area: view; text-align: right; white-space: nowrap; }
+.acct-row .c-action { grid-area: action; justify-self: end; }
+@container (max-width: 520px) {
+  .acct-row { grid-template-columns: minmax(0, 1fr) auto 2.25rem; column-gap: 8px;
+    grid-template-areas: "name view action"; }
+  .acct-row.has-native { grid-template-areas: "name view action" "native view action"; }
+  .acct-row .c-native { font-size: 12px !important; }
+  .acct-row .c-action .block { display: none; }  /* icon only */
 }
 .meter { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; width: 100%; }
 .meter > div { height: 100%; border-radius: 3px; background: var(--accent); }

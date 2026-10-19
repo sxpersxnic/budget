@@ -379,32 +379,34 @@ def page() -> None:
         def accounts_card(rep: reports.MonthReport) -> None:
             with ui.element("div").classes("w-full"):
                 ui.label(t("Balances · End of {month}", month=months.label(rep.month))).classes("group-header")
-                with ui.element("div").classes("group"):
+                with ui.element("div").classes("group accounts"):
                     if not rep.accounts:
                         with ui.element("div").classes("group-row"):
                             ui.label(t("No balances recorded yet.")).classes("text-2")
                     for r in rep.accounts:
-                        with ui.element("div").classes("group-row"):
-                            with ui.column().classes("gap-0 flex-1 min-w-0"):
-                                ui.label(r.account.name).classes("truncate")
+                        foreign = r.account.currency != rep.currency
+                        with ui.element("div").classes("group-row acct-row" + (" has-native" if foreign else "")):
+                            with ui.column().classes("c-name gap-0"):
+                                ui.label(r.account.name).classes("truncate w-full")
                                 if r.needs_entry:
                                     ui.label(t("Not recorded, last balance carried over")).classes("caption")
-                            if r.account.currency != rep.currency:
-                                ui.label(fmt(r.amount, r.account.currency)).classes("num text-2 text-[13px]")
-                            ui.label(fmt(r.amount_view, rep.currency)).classes("num font-medium w-36 text-right")
+                            if foreign:
+                                ui.label(fmt(r.amount, r.account.currency)).classes("c-native num text-2 text-[13px]")
+                            ui.label(fmt(r.amount_view, rep.currency)).classes("c-view num font-medium")
                             if r.needs_entry or r.has_entry:
                                 ui.button(
                                     t("Record") if r.needs_entry else t("Edit"),
+                                    icon="add" if r.needs_entry else "o_edit",
                                     on_click=lambda a=r.account.id: account_entry_dialog(
                                         ctx, content.refresh, rep.month, a
                                     ),
-                                ).props("flat dense").classes(
-                                    "text-primary" + ("" if r.needs_entry else " row-actions")
+                                ).props("flat dense no-wrap").classes(
+                                    "c-action text-primary" + ("" if r.needs_entry else " row-actions")
                                 )
-                    with ui.element("div").classes("group-row"):
-                        ui.label(t("Total")).classes("font-semibold flex-1")
+                    with ui.element("div").classes("group-row acct-row"):
+                        ui.label(t("Total")).classes("c-name font-semibold")
                         ui.label(fmt(sum(r.amount_view for r in rep.accounts), rep.currency)).classes(
-                            "num font-semibold"
+                            "c-view num font-semibold"
                         )
 
         content()
