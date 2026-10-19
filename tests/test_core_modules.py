@@ -900,3 +900,13 @@ def test_extend_forever_is_idempotent(ctx, setup):
     assert budget_svc.set_horizon(ctx, "2027-05") == 2
     assert Store(Path(ctx.store.data_dir)).settings.budget_horizon == "2027-05"
     assert budget_svc.extend_forever(ctx, "2027-05") == 0
+
+
+def test_chart_axis_keeps_decimals_for_small_values() -> None:
+    """B15: ',.0f' rounded 0.5 to 1, so an empty chart showed '1 CHF' twice."""
+    import plotly.graph_objects as go  # noqa: PLC0415
+
+    from budget_app.ui.theme import chart_layout  # noqa: PLC0415
+
+    axis = chart_layout(go.Figure(), "CHF").layout.yaxis
+    assert axis.tickformat == ",~f" and axis.ticksuffix == " CHF"

@@ -324,7 +324,7 @@ def chart_layout(fig, currency: str):
             zeroline=False,
             separatethousands=True,
             ticksuffix=f" {currency}" if currency else "",
-            tickformat=",.0f",
+            tickformat=",~f",  # whole numbers stay whole; small ranges keep their decimals (0.5)
             automargin=True,
             side="right",
         ),
