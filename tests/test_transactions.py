@@ -26,8 +26,8 @@ def expense(setup, **kw):
 
 def test_expenditure_stores_base_amount_and_fx_date(ctx, setup):
     tx = tx_svc.save(ctx, expense(setup, currency="EUR", from_account=setup["eur"].id))
-    assert tx.amount_chf == pytest.approx(90.0)  # 100 EUR * 0.90 (latest rate)
-    assert tx.fx_date == date(2026, 10, 16)
+    assert tx.amount_chf == pytest.approx(95.0)  # 100 EUR * 0.95, the rate of 29 Aug, last before 10 Sep
+    assert tx.fx_date == date(2026, 8, 29)
 
 
 def test_validation_rules(ctx, setup):
@@ -93,7 +93,7 @@ def test_transfer_and_exchange(ctx, setup):
             to_account=setup["eur"].id,
         ),
     )
-    assert ex.to_currency == "EUR" and ex.to_amount == pytest.approx(100.0)
+    assert ex.to_currency == "EUR" and ex.to_amount == pytest.approx(94.74)  # 90 CHF / 0.95 (29 Aug)
     with pytest.raises(ValidationError):
         tx_svc.save(
             ctx,
@@ -161,20 +161,35 @@ def test_store_get_returns_copy(ctx, setup):
     assert ctx.store.accounts.get(setup["chf"].id).name == "Bank"
 
 
-def test_imported_transactions_use_the_rate_of_their_booking_date(ctx, setup):
+def test_transactions_use_the_rate_of_their_date(ctx, setup):
     base = dict(type="expenditure", amount=100, currency="EUR", category="01.1", from_account=setup["eur"].id)
     manual = tx_svc.save(ctx, TransactionInput(date=date(2026, 9, 15), **base))
     imported = tx_svc.save(ctx, TransactionInput(date=date(2026, 9, 15), import_ref="f1", **base))
-    # manual entries: latest ECB rate (16 Oct: 0.90 CHF per EUR); imports: last rate on or before 15 Sep
-    assert manual.fx_date == date(2026, 10, 16) and manual.amount_chf == pytest.approx(90.0)
-    assert imported.fx_date == date(2026, 8, 29) and imported.amount_chf == pytest.approx(95.0)
+    # manual and imported alike: the last rate on or before 15 Sep (29 Aug: 0.95 CHF per EUR)
+    for tx in (manual, imported):
+        assert tx.fx_date == date(2026, 8, 29) and tx.amount_chf == pytest.approx(95.0)
+    future = tx_svc.save(ctx, TransactionInput(date=date(2026, 12, 24), **base))
+    assert future.fx_date == date(2026, 10, 16)  # no rate yet: the latest available
 
-    # editing the date of an imported row revalues it; editing the note does not
-    moved = tx_svc.save(ctx, TransactionInput(date=date(2026, 10, 1), import_ref="f1", **base), editing_id=imported.id)
+    # editing the date revalues; editing the note does not
+    moved = tx_svc.save(ctx, TransactionInput(date=date(2026, 10, 1), **base), editing_id=manual.id)
     assert moved.fx_date == date(2026, 9, 30) and moved.amount_chf == pytest.approx(94.0)
-    noted = tx_svc.save(
-        ctx,
-        TransactionInput(date=date(2026, 10, 1), import_ref="f1", comment="x", **base),
-        editing_id=imported.id,
-    )
+    noted = tx_svc.save(ctx, TransactionInput(date=date(2026, 10, 1), comment="x", **base), editing_id=manual.id)
     assert noted.fx_date == date(2026, 9, 30)
+
+
+def test_revalue_to_transaction_dates(ctx, setup):
+    base = dict(type="expenditure", amount=100, currency="EUR", category="01.1", from_account=setup["eur"].id)
+    tx = tx_svc.save(ctx, TransactionInput(date=date(2026, 9, 15), **base))
+    chf = tx_svc.save(ctx, expense(setup, date=date(2026, 9, 15)))
+    # as an older version stored them: valued at the then latest rate
+    for old in (tx, chf):
+        old.fx_date = date(2026, 10, 16)
+        old.amount_chf = 90.0 if old.currency == "EUR" else old.amount_chf
+    ctx.store.transactions.update_many([tx, chf])
+
+    assert tx_svc.revalue_to_transaction_dates(ctx) == 2
+    fixed = ctx.store.transactions.get(tx.id)
+    assert fixed.fx_date == date(2026, 8, 29) and fixed.amount_chf == pytest.approx(95.0)
+    assert ctx.store.transactions.get(chf.id).fx_date == date(2026, 8, 29)  # CHF rows: same amount, new date
+    assert tx_svc.revalue_to_transaction_dates(ctx) == 0  # nothing left to do

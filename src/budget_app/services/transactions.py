@@ -52,7 +52,7 @@ class TransactionInput:
     debtor: str = ""
     settles_id: str = ""
     comment: str = ""
-    import_ref: str = ""  # non-empty for imported transactions: valued at the booking date's rate
+    import_ref: str = ""  # non-empty for imported transactions: identifies the source row
 
 
 @dataclass
@@ -181,17 +181,12 @@ def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Tra
         raise ValidationError(t("Amount and date are required"))
     amount = round(float(inp.amount), 2)
     unchanged = (
-        base is not None
-        and abs(base.amount - amount) < EPS
-        and base.currency == inp.currency
-        and (not inp.import_ref or base.date == inp.date)  # an imported row's rate follows its booking date
+        base is not None and abs(base.amount - amount) < EPS and base.currency == inp.currency and base.date == inp.date
     )
     if base is not None and unchanged:
-        amount_chf, fx_date = base.amount_chf, base.fx_date  # editing other fields keeps the original valuation
-    elif inp.import_ref:
-        amount_chf, fx_date = ctx.to_base_on(amount, inp.currency, inp.date)
+        amount_chf, fx_date = base.amount_chf, base.fx_date  # editing other fields keeps the valuation
     else:
-        amount_chf, fx_date = ctx.to_base_latest(amount, inp.currency)
+        amount_chf, fx_date = ctx.to_base_on(amount, inp.currency, inp.date)
     tx = Transaction(
         date=inp.date,
         type=inp.type,
@@ -262,6 +257,28 @@ def save_many(ctx: Context, inputs: list[TransactionInput]) -> list[Transaction]
         except ValidationError as exc:
             raise ValidationError(t("Row {n}: {error}", n=i + 1, error=exc)) from exc
     return ctx.store.transactions.add_many([_build(ctx, inp, None) for inp in inputs])
+
+
+def revalue_to_transaction_dates(ctx: Context) -> int:
+    """Value every transaction at the ECB rate of its date (the last rate on or before it).
+
+    Brings old entries, valued at the then latest rate, in line, and catches up rows whose date had
+    no rate yet when they were saved (entered before the ECB published, or dated in the future).
+    Exchange amounts in the target currency are kept: they record what was actually received.
+    Returns the number of transactions changed; does nothing without exchange rates.
+    """
+    if ctx.fx.latest_date() is None:
+        return 0
+    changed = []
+    for tx in ctx.store.transactions.all():
+        target = ctx.fx.rate_date_on_or_before(tx.date)
+        if target is None or target == tx.fx_date:
+            continue
+        tx.amount_chf, tx.fx_date = ctx.to_base_on(tx.amount, tx.currency, tx.date)
+        changed.append(tx)
+    if changed:
+        ctx.store.transactions.update_many(changed)
+    return len(changed)
 
 
 def to_input(tx: Transaction) -> TransactionInput:

@@ -4,7 +4,7 @@ Flow: `read_file` detects encoding, delimiter and header line; `guess_profile` m
 `parse_rows` turns lines into signed amounts; `analyse` marks duplicates and suggests categories;
 `commit` saves the chosen rows. Column settings can be saved per bank as a profile.
 
-Imported rows are valued at the ECB rate of their booking date (see `TransactionInput.import_ref`).
+Like every transaction, imported rows are valued at the ECB rate of their booking date.
 """
 
 from __future__ import annotations

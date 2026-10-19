@@ -114,8 +114,9 @@ holidays. Dates before the start of the file use its first rate.
 
 | Use | Rate used |
 | --- | --- |
-| Saving a transaction / budget entry (`amount_chf`) | Last (most recent) row of the ECB file; that date is stored as `fx_date` |
-| Saving an imported transaction (`import_ref` set) | Last ECB date on or before its booking date. Editing it re-values it only when amount, currency or date change |
+| Saving a transaction (`amount_chf`), manual or imported | Last ECB date on or before the transaction date (the latest rate for future dates); stored as `fx_date`. Editing re-values it only when amount, currency or date change |
+| After each rate check (start, then every 30 minutes) | Transactions whose `fx_date` is not the last ECB date on or before their date are re-valued: entries saved by older versions (latest rate), entries made before the ECB published that day, future-dated entries. Exchange target amounts are kept |
+| Saving a budget entry (`amount_chf`) | Last (most recent) row of the ECB file; that date is stored as `fx_date` |
 | Saving an account entry | Last ECB date within that month |
 | Displaying a transaction in another currency | Rate of its recorded `fx_date` |
 | Displaying an account balance | Last ECB date of the month being viewed |

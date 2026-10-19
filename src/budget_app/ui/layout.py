@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import logging
 import weakref
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -15,8 +16,11 @@ from nicegui.client import Client
 from budget_app import config, i18n
 from budget_app.domain import months
 from budget_app.i18n import N_, t
+from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, get_ctx
 from budget_app.ui import theme
+
+log = logging.getLogger(__name__)
 
 # Places only. Creating things ("Add transaction", "Add budget entry") is an action, offered where it is needed.
 NAV = [
@@ -52,7 +56,7 @@ def money_html(value: float | None, currency: str) -> str:
 
 
 async def refresh_rates(ctx: Context) -> None:
-    """Download the ECB file if it has not been downloaded today."""
+    """Download the ECB file if it has not been downloaded today, then value transactions with it."""
     svc, settings = ctx.fx_service, ctx.store.settings
     if svc is None:
         return
@@ -60,6 +64,10 @@ async def refresh_rates(ctx: Context) -> None:
     if downloaded:
         settings.last_fx_download = date.today().isoformat()
         ctx.store.save_settings()
+    # also on the first run after an update: entries saved by older versions used the latest rate
+    changed = await run.io_bound(tx_svc.revalue_to_transaction_dates, ctx)
+    if changed:
+        log.info("Valued %d transactions at the rate of their date", changed)
 
 
 # ------------------------------------------------------------------ data change notification

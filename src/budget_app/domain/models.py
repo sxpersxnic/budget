@@ -66,8 +66,7 @@ class Transaction:
     debtor: str = ""
     settles_id: str = ""  # income repayment: id of the advanced expenditure being settled
     comment: str = ""
-    # set for imported rows: identifies the source row (duplicate detection) and means the CHF amount
-    # uses the ECB rate of the booking date instead of the latest one
+    # set for imported rows: identifies the source row, so a second import skips it
     import_ref: str = ""
     id: str = field(default_factory=new_id)
 

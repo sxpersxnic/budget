@@ -282,7 +282,7 @@ class TransactionForm:
         self.exchange_hint.set_text("")
         if inp.amount and inp.currency:
             try:
-                chf, fx_date = self.ctx.to_base_latest(inp.amount, inp.currency)
+                chf, fx_date = self.ctx.to_base_on(inp.amount, inp.currency, inp.date or date.today())
                 if inp.currency != "CHF":
                     self.base_hint.set_text(
                         t("= {amount} (ECB rate of {date})", amount=fmt(chf, "CHF"), date=i18n.date_label(fx_date))
