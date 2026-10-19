@@ -71,6 +71,8 @@ here (local copy `docs/issues.local/ISSUE_01.md`, not committed); see [From issu
 French and Italian are open. Item lists on transactions (name, quantity, unit price) are built
 (branch `feat/transaction-items`); they cover part of F11 and give F04 a place for receipt
 lines. Issue 01 now comes before F24; see [Implementation order](#implementation-order).
+Milestone 1 (B01–B03, B05–B09) is done on branch `fix/m1-bugs`. B04 waits for F42 in
+milestone 2. B07/B08: the tables stay below each other at every width (decision 1 still open).
 
 ## Implementation order
 
