@@ -6,10 +6,11 @@ import io
 
 import pandas as pd
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.lib.utils import ImageReader
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from budget_app.domain import months
 from budget_app.i18n import t
@@ -165,6 +166,31 @@ def statement_pdf(rep: MonthReport) -> bytes:
             )
         )
         story += [table, Spacer(1, 5 * mm)]
+    doc.build(story)
+    return buf.getvalue()
+
+
+def chart_pdf(png: bytes, title: str, subtitle: str = "") -> bytes:
+    """One chart image on a landscape A4 page, under its title."""
+    buf = io.BytesIO()
+    page_w, _ = landscape(A4)
+    margin = 15 * mm
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=landscape(A4),
+        leftMargin=margin,
+        rightMargin=margin,
+        topMargin=margin,
+        bottomMargin=margin,
+        title=title,
+    )
+    styles = getSampleStyleSheet()
+    img_w, img_h = ImageReader(io.BytesIO(png)).getSize()
+    width = page_w - 2 * margin
+    story = [Paragraph(title, styles["Title"])]
+    if subtitle:
+        story.append(Paragraph(subtitle, styles["Normal"]))
+    story += [Spacer(1, 4 * mm), Image(io.BytesIO(png), width=width, height=width * img_h / img_w)]
     doc.build(story)
     return buf.getvalue()
 

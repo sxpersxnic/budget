@@ -94,6 +94,9 @@ def run() -> None:
         logging.getLogger(__name__).error("%s", exc)
         sys.exit(1)
     setup(data)
+    if args.native:
+        # The app's own exports use the save dialog (layout.save_file); this covers any other download link.
+        app.native.settings["ALLOW_DOWNLOADS"] = True
     port = args.port or (native.find_open_port() if args.native else 8080)
     ui.run(
         title="Budget",

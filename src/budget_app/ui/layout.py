@@ -7,8 +7,9 @@ import weakref
 from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import date
+from pathlib import Path
 
-from nicegui import run, ui
+from nicegui import app, run, ui
 from nicegui.client import Client
 
 from budget_app import config, i18n
@@ -210,6 +211,41 @@ def error(message: str) -> None:
 
 def success(message: str) -> None:
     ui.notify(message, position="bottom", icon="check_circle", color="grey-9", timeout=1800)
+
+
+MEDIA_TYPES = {
+    ".csv": "text/csv",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".pdf": "application/pdf",
+    ".png": "image/png",
+}
+
+
+async def save_file(data: bytes, filename: str) -> None:
+    """Hand a file to the user: the system save dialog in the app window, a download in the browser.
+
+    The app window (pywebview) drops browser downloads, so there the file is written from Python.
+    """
+    window = app.native.main_window
+    if window is None:
+        ui.download.content(data, filename, MEDIA_TYPES.get(Path(filename).suffix, ""))
+        return
+    import webview  # noqa: PLC0415 - only installed with the native extra, the only way to get a window
+
+    save = webview.FileDialog.SAVE if hasattr(webview, "FileDialog") else webview.SAVE_DIALOG
+    downloads = Path.home() / "Downloads"
+    chosen = await window.create_file_dialog(
+        save, directory=str(downloads if downloads.is_dir() else Path.home()), save_filename=filename
+    )
+    if not chosen:
+        return  # cancelled
+    path = Path(chosen if isinstance(chosen, str) else chosen[0])
+    try:
+        await run.io_bound(path.write_bytes, data)
+    except OSError as exc:
+        error(t("Could not save {name}: {error}", name=path.name, error=exc))
+        return
+    success(t("Saved “{name}”", name=path.name))
 
 
 def month_options(start: str, end: str) -> dict[str, str]:

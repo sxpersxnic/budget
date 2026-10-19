@@ -26,3 +26,35 @@ def test_exports_neutralise_formulas():
     csv = export.frame_csv(df).decode()
     assert "'=HYPERLINK" in csv and "'+1" in csv and "Normal" in csv
     assert ",-5.0" in csv  # numbers are untouched
+
+
+def test_statement_exports_build(ctx, setup):
+    from budget_app.services import reports, transactions, wealth  # noqa: PLC0415
+
+    wealth.upsert_entry(ctx, setup["chf"].id, "2026-08", 1000)
+    wealth.upsert_entry(ctx, setup["chf"].id, "2026-09", 1200)
+    transactions.save(
+        ctx,
+        transactions.TransactionInput(
+            date=date(2026, 9, 5),
+            amount=500,
+            currency="CHF",
+            type="income",
+            category=setup["salary"].id,
+            to_account=setup["chf"].id,
+        ),
+    )
+    rep = reports.month_report(ctx, "2026-09", "CHF", date(2026, 10, 18))
+    assert export.statement_xlsx(rep)[:2] == b"PK"  # a zip container
+    assert export.statement_pdf(rep).startswith(b"%PDF")
+
+
+def test_chart_pdf_embeds_the_image():
+    import io  # noqa: PLC0415
+
+    from PIL import Image  # noqa: PLC0415
+
+    buf = io.BytesIO()
+    Image.new("RGB", (240, 120), "white").save(buf, format="PNG")
+    pdf = export.chart_pdf(buf.getvalue(), "Wealth Over Time", "Amounts in CHF")
+    assert pdf.startswith(b"%PDF") and b"/Image" in pdf

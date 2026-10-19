@@ -27,6 +27,7 @@ from budget_app.ui.layout import (
     month_options,
     month_stepper,
     on_data_changed,
+    save_file,
     sheet,
     sheet_buttons,
     success,
@@ -172,11 +173,15 @@ def page() -> None:
             "show_empty": False,
         }
 
-        def export(kind: str) -> None:
-            rep = reports.month_report(ctx, state["month"], state["currency"])
+        async def export(kind: str) -> None:
             name = f"statement_{state['month']}_{state['currency']}.{kind}"
-            data = export_svc.statement_xlsx(rep) if kind == "xlsx" else export_svc.statement_pdf(rep)
-            ui.download.content(data, name)
+            try:
+                rep = reports.month_report(ctx, state["month"], state["currency"])
+                data = export_svc.statement_xlsx(rep) if kind == "xlsx" else export_svc.statement_pdf(rep)
+            except Exception as exc:
+                error(t("Export failed: {error}", error=exc))
+                return
+            await save_file(data, name)
 
         with actions:
             month_stepper(

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+
 import pandas as pd
 import plotly.graph_objects as go
 from nicegui import ui
@@ -21,6 +23,7 @@ from budget_app.ui.layout import (
     money_html,
     month_options,
     on_data_changed,
+    save_file,
     segmented,
 )
 from budget_app.ui.theme import CHART_GRID, NEGATIVE, NEUTRAL, POSITIVE, SERIES, chart_layout, figure_dict
@@ -56,7 +59,8 @@ class ChartCard:
                     ui.button(icon="more_horiz").props("flat round dense").classes("text-primary"),
                     ui.menu().props("auto-close"),
                 ):
-                    ui.menu_item(t("Save Image…"), on_click=self.download_png)
+                    ui.menu_item(t("Save Image…"), on_click=lambda: self.save_image("png"))
+                    ui.menu_item(t("Save as PDF…"), on_click=lambda: self.save_image("pdf"))
                     ui.menu_item(t("Export Data as CSV…"), on_click=lambda: self.download("csv"))
                     ui.menu_item(t("Export Data as Excel…"), on_click=lambda: self.download("xlsx"))
                     ui.separator()
@@ -229,18 +233,27 @@ class ChartCard:
         return fig
 
     # ------------------------------------------------------------------ export
-    def download(self, kind: str) -> None:
-        name = f"{self.kind}_chart_{self.currency['value']}"
-        if kind == "csv":
-            ui.download.content(export_svc.frame_csv(self.data), f"{name}.csv")
-        else:
-            ui.download.content(export_svc.frame_xlsx(self.data, self.kind), f"{name}.xlsx")
+    def file_name(self, ext: str) -> str:
+        return f"{self.kind}_chart_{self.currency['value']}.{ext}"
 
-    def download_png(self) -> None:
-        self.plot.run_plot_method(
-            "downloadImage",
-            {"format": "png", "filename": f"{self.kind}_chart", "width": 1200, "height": 600, "scale": 2},
-        )
+    async def download(self, kind: str) -> None:
+        data = export_svc.frame_csv(self.data) if kind == "csv" else export_svc.frame_xlsx(self.data, self.kind)
+        await save_file(data, self.file_name(kind))
+
+    async def save_image(self, kind: str) -> None:
+        """PNG straight from the chart in the page; the PDF wraps that image with a title."""
+        try:
+            url = await self.plot.run_plot_method(
+                "toImage", {"format": "png", "width": 1200, "height": 600, "scale": 2}, timeout=15
+            )
+            png = base64.b64decode(str(url).split(",", 1)[1])
+        except Exception as exc:
+            error(t("Could not create the image: {error}", error=exc))
+            return
+        if kind == "pdf":
+            title = t(CHART_TYPES[self.kind])
+            png = export_svc.chart_pdf(png, title, t("Amounts in {currency}", currency=self.currency["value"]))
+        await save_file(png, self.file_name(kind))
 
 
 def page() -> None:
