@@ -9,7 +9,7 @@ from nicegui import ui
 from budget_app.domain import months
 from budget_app.domain.coicop import ADV, UNACCOUNTED
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, BudgetEntry
-from budget_app.i18n import t, tc
+from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
@@ -32,6 +32,7 @@ from budget_app.ui.layout import (
     sheet_buttons,
     success,
 )
+from budget_app.ui.pages.add_budget import FOREVER, recurrence_options, until_options
 from budget_app.ui.widgets.selects import account_options, currency_select
 
 EPS = 0.005
@@ -86,53 +87,131 @@ def account_entry_dialog(ctx: Context, on_saved, month: str | None = None, accou
 
 
 def budget_edit_dialog(ctx: Context, month: str, type_: str, category: str, label: str, on_saved) -> None:
-    """Edit the budget entries of one category in one month (or add one)."""
+    """Edit the budget entries of one category in one month, including how each continues, or add one."""
     entries: list[BudgetEntry] = budget_svc.entries_for(ctx, month, type_, category)
-    with sheet(label, width="30rem") as dlg:
+    horizon = ctx.horizon()
+    replan_note = t("Changing Until or Repeat replans this budget from {month} on.", month=months.label(month))
+
+    def schedule_row(until_value: str, recur_value: int, extra: str = "") -> tuple[ui.select, ui.select]:
+        with ui.row().classes("w-full gap-2 no-wrap"):
+            until = (
+                ui.select(until_options(month, horizon, extra), value=until_value, label=t("Until"))
+                .props("dense outlined options-dense")
+                .classes("flex-1 min-w-0")
+            )
+            recur = (
+                ui.select(recurrence_options(), value=recur_value, label=t("Repeat"))
+                .props("dense outlined options-dense")
+                .classes("flex-1 min-w-0")
+            )
+        return until, recur
+
+    def note_field(value: str) -> ui.textarea:
+        return (
+            ui.textarea(t("Note"), value=value, placeholder=t("Optional"))
+            .props("dense outlined autogrow rows=1")
+            .classes("w-full")
+        )
+
+    def schedule_input(until: ui.select, recur: ui.select, amount, currency, note) -> BudgetInput:
+        return BudgetInput(
+            start_month=month,
+            end_month="" if until.value == FOREVER else until.value or "",
+            forever=until.value == FOREVER,
+            recur_months=int(recur.value or 1),
+            type=type_,
+            currency=currency or "",
+            amount=amount,
+            category=category,
+            comment=note or "",
+        )
+
+    with sheet(label, width="34rem") as dlg:
         ui.label(t("Budget for {month}", month=months.label(month))).classes("footnote -mt-2")
         fields = []
         for e in entries:
-            with ui.row().classes("w-full items-center gap-2 no-wrap"):
-                num = (
-                    ui.number(t("Amount"), value=e.amount, min=0, format="%.2f")
-                    .props("dense outlined")
-                    .classes("flex-1 min-w-0")
+            sched = budget_svc.schedule_of(ctx, e)
+            later = budget_svc.later_in_series(ctx, e)
+            with ui.column().classes("w-full gap-2 subform"):
+                with ui.row().classes("w-full items-center gap-2 no-wrap"):
+                    num = (
+                        ui.number(t("Amount"), value=e.amount, min=0, format="%.2f")
+                        .props("dense outlined")
+                        .classes("flex-1 min-w-0")
+                    )
+                    cur = currency_select(ctx, e.currency)
+                    remove = ui.checkbox(t("Remove")).props("dense")
+                start_value = FOREVER if sched.forever else sched.end_month
+                until, recur = schedule_row(start_value, sched.recur_months, extra=sched.end_month)
+                hint = ui.label(replan_note).classes("caption px-1 -mt-1")
+                note = note_field(e.comment)
+                following = (
+                    ui.switch(
+                        tn(
+                            "Also change the {n} later month of this series",
+                            "Also change the {n} later months of this series",
+                            len(later),
+                        )
+                    ).props("dense")
+                    if later
+                    else None
                 )
-                cur = currency_select(ctx, e.currency)
-                remove = ui.checkbox(t("Remove")).props("dense")
-            if e.comment:
-                ui.label(e.comment).classes("caption px-1 -mt-2")
-            fields.append((e, num, cur, remove))
+
+            def show_replan(until=until, recur=recur, hint=hint, following=following, start=(start_value, sched)):
+                changed = until.value != start[0] or int(recur.value or 1) != start[1].recur_months
+                hint.set_visibility(changed)
+                if following:
+                    following.set_visibility(not changed)  # a replan always covers the later months
+
+            until.on_value_change(show_replan)
+            recur.on_value_change(show_replan)
+            show_replan()
+            fields.append((e, start_value, sched, num, cur, remove, until, recur, note, following, later))
+
         ui.label(t("Add to this budget") if entries else t("Amount")).classes("caption px-1 pt-1")
-        with ui.row().classes("w-full items-center gap-2 no-wrap"):
-            new_amount = ui.number(t("Amount"), min=0, format="%.2f").props("dense outlined").classes("flex-1 min-w-0")
-            new_cur = currency_select(ctx, ctx.store.settings.display_currency)
+        with ui.column().classes("w-full gap-2" + (" subform" if entries else "")):
+            with ui.row().classes("w-full items-center gap-2 no-wrap"):
+                new_amount = (
+                    ui.number(t("Amount"), min=0, format="%.2f").props("dense outlined").classes("flex-1 min-w-0")
+                )
+                new_cur = currency_select(ctx, ctx.store.settings.display_currency)
+            new_until, new_recur = schedule_row(month, 1, extra=month)
+            new_note = note_field("")
 
         def save() -> None:
             new_entry = None
             if new_amount.value:
-                new_entry = BudgetInput(
-                    start_month=month,
-                    end_month=month,
-                    type=type_,
-                    currency=new_cur.value,
-                    amount=new_amount.value,
-                    category=category,
-                )
+                new_entry = schedule_input(new_until, new_recur, new_amount.value, new_cur.value, new_note.value)
+            replans = {}
             # validate everything first so that a bad row cannot leave a half-applied change
             try:
-                for _, num, cur, remove in fields:
-                    if not remove.value and (num.value is None or num.value <= 0 or not cur.value):
+                for e, start_value, sched, num, cur, remove, until, recur, note, _, _ in fields:
+                    if remove.value:
+                        continue
+                    if num.value is None or num.value <= 0 or not cur.value:
                         raise ValidationError(t("Every kept amount must be a positive number with a currency"))
+                    if until.value != start_value or int(recur.value or 1) != sched.recur_months:
+                        replans[e.id] = schedule_input(until, recur, num.value, cur.value, note.value)
+                        budget_svc.validate(ctx, replans[e.id])
                 if new_entry is not None:
                     budget_svc.validate(ctx, new_entry)
             except ValidationError as exc:
                 error(str(exc))
                 return
-            budget_svc.delete(ctx, [e.id for e, _, _, remove in fields if remove.value])
-            for e, num, cur, remove in fields:
-                if not remove.value and (num.value != e.amount or cur.value != e.currency):
-                    budget_svc.update_entry(ctx, e.id, num.value, cur.value)
+            budget_svc.delete(ctx, [f[0].id for f in fields if f[5].value])
+            for e, _, _, num, cur, remove, _, _, note, following, later in fields:
+                if remove.value:
+                    continue
+                if e.id in replans:
+                    budget_svc.reschedule(ctx, e.id, replans[e.id])
+                    continue
+                for target in [e] + (later if following is not None and following.value else []):
+                    if (num.value, cur.value, (note.value or "").strip()) != (
+                        target.amount,
+                        target.currency,
+                        target.comment,
+                    ):
+                        budget_svc.update_entry(ctx, target.id, num.value, cur.value, note.value or "")
             if new_entry is not None:
                 budget_svc.create(ctx, new_entry)
             dlg.close()

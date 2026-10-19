@@ -36,6 +36,33 @@ def test_series_expansion_and_forever_extension(ctx, setup):
     assert len(ctx.store.budget.all()) == 5
 
 
+def test_reschedule_replans_from_the_edited_month(ctx, setup):
+    rows = budget_svc.create(
+        ctx,
+        BudgetInput(start_month="2026-10", forever=True, type="expenditure", currency="CHF", amount=100, category="04"),
+    )
+    by_month = {r.month: r for r in rows}
+    assert budget_svc.schedule_of(ctx, by_month["2026-12"]) == budget_svc.Schedule("", True, 1)
+
+    # from December: every quarter until March (the horizon), 150 CHF, with a note
+    new = budget_svc.reschedule(
+        ctx,
+        by_month["2026-12"].id,
+        BudgetInput(end_month="2027-03", recur_months=3, currency="CHF", amount=150, comment="new rent"),
+    )
+    assert [r.month for r in new] == ["2026-12", "2027-03"]
+    assert all(r.amount == 150 and r.comment == "new rent" for r in new)
+    assert budget_svc.schedule_of(ctx, new[0]) == budget_svc.Schedule("2027-03", False, 3)
+    kept = sorted((b.month, b.amount) for b in ctx.store.budget.all() if b.series_id == rows[0].series_id)
+    assert kept == [("2026-10", 100), ("2026-11", 100)]  # earlier months untouched ...
+    assert budget_svc.schedule_of(ctx, by_month["2026-10"]) == budget_svc.Schedule("2026-11", False, 1)  # ... and end
+
+    # extending the horizon continues neither the old nor the finished new plan
+    assert budget_svc.set_horizon(ctx, "2027-12") == 0
+    with pytest.raises(ValidationError):  # after the horizon
+        budget_svc.reschedule(ctx, new[0].id, BudgetInput(end_month="2028-01", currency="CHF", amount=1))
+
+
 def test_forever_series_resume_without_resurrecting_deleted_months(ctx, setup):
     rows = budget_svc.create(
         ctx,

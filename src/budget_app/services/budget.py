@@ -165,5 +165,52 @@ def extend_forever(ctx: Context, horizon: str) -> int:
     return len(new_rows)
 
 
+@dataclass
+class Schedule:
+    """How a budget entry continues: its final month (or forever) and its rhythm."""
+
+    end_month: str  # "" when forever
+    forever: bool
+    recur_months: int
+
+
+def schedule_of(ctx: Context, entry: BudgetEntry) -> Schedule:
+    """The schedule of the series an entry belongs to; a single entry ends in its own month."""
+    rows = [b for b in ctx.store.budget.all() if entry.series_id and b.series_id == entry.series_id] or [entry]
+    if any(b.forever for b in rows):
+        return Schedule("", True, entry.recur_months)
+    return Schedule(max(b.month for b in rows), False, entry.recur_months)
+
+
+def later_in_series(ctx: Context, entry: BudgetEntry) -> list[BudgetEntry]:
+    return [
+        b
+        for b in ctx.store.budget.all()
+        if entry.series_id and b.series_id == entry.series_id and b.month > entry.month
+    ]
+
+
+def reschedule(ctx: Context, entry_id: str, inp: BudgetInput) -> list[BudgetEntry]:
+    """Replan an entry's series from the entry's month on, with `inp`'s schedule, amount and note.
+
+    Months before the entry keep their values and end there; the replanned part becomes a series of
+    its own, so 'Forever' extension continues the new plan, not the old one.
+    """
+    entry = ctx.store.budget.get(entry_id)
+    if entry is None:
+        raise ValidationError(t("Budget entry not found"))
+    inp = replace(inp, start_month=entry.month, type=entry.type, category=entry.category, overwrite=False)
+    validate(ctx, inp)
+    earlier = [
+        replace(b, forever=False, generated_until="")
+        for b in ctx.store.budget.all()
+        if entry.series_id and b.series_id == entry.series_id and b.month < entry.month
+    ]
+    ctx.store.budget.delete([entry.id] + [b.id for b in later_in_series(ctx, entry)])
+    if earlier:
+        ctx.store.budget.update_many(earlier)
+    return create(ctx, inp)
+
+
 def entries_for(ctx: Context, month: str, type_: str, category: str) -> list[BudgetEntry]:
     return [b for b in ctx.store.budget.all() if b.month == month and b.type == type_ and b.category == category]

@@ -26,6 +26,18 @@ RECURRENCE = {
 }
 
 
+def until_options(start: str, horizon: str, extra: str = "") -> dict[str, str]:
+    """'Forever', then every month from `start` to the horizon (plus `extra`, a stored month past it)."""
+    opts = {FOREVER: t("Forever")} | month_options(start, horizon)
+    if extra and extra not in opts:
+        opts[extra] = months.label(extra)
+    return opts
+
+
+def recurrence_options() -> dict[int, str]:
+    return {k: t(v) for k, v in RECURRENCE.items()}
+
+
 def budget_form(ctx: Context, on_saved: Callable[[], None] | None = None, on_cancel=None) -> None:
     horizon = ctx.horizon()
     start_range, _ = data_month_range(ctx)
@@ -56,7 +68,7 @@ def budget_form(ctx: Context, on_saved: Callable[[], None] | None = None, on_can
                 )
                 end = ui.select({}, label=t("Until")).props("dense outlined options-dense").classes("flex-1 min-w-0")
             recur = (
-                ui.select({k: t(v) for k, v in RECURRENCE.items()}, value=1, label=t("Repeat"))
+                ui.select(recurrence_options(), value=1, label=t("Repeat"))
                 .props("dense outlined options-dense")
                 .classes("w-full")
             )
@@ -92,7 +104,7 @@ def budget_form(ctx: Context, on_saved: Callable[[], None] | None = None, on_can
 
     def changed() -> None:
         if start.value:
-            opts = {FOREVER: t("Forever")} | month_options(start.value, horizon)
+            opts = until_options(start.value, horizon)
             if end.value not in opts:
                 end.value = None
             end.set_options(opts, value=end.value)
