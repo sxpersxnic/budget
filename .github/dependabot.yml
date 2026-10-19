@@ -1,0 +1,10 @@
+# Keeps the pinned actions in .github/workflows current (third-party actions are pinned to a commit).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
