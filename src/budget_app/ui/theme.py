@@ -111,6 +111,9 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 body.body--dark .q-card, body.body--dark .surface { border: 0.5px solid var(--separator); }
 .surface { padding: 16px 20px; width: 100%; }
 @media (max-width: 640px) { .surface { padding: 14px 14px; } }
+/* a card the user just added: a short accent ring so the eye finds it */
+@keyframes just-added { from { box-shadow: 0 0 0 3px var(--q-primary), var(--shadow); } }
+.just-added { animation: just-added 1.6s ease-out; scroll-margin-top: 16px; }
 .sheet { padding: 20px 22px 18px !important; border-radius: 14px !important;
   background: var(--surface-raised) !important;
   gap: 14px; }

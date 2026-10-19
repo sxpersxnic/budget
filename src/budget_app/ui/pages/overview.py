@@ -312,9 +312,21 @@ def page() -> None:
             charts.remove(chart)
             grid.remove(chart.card)
 
-        def add(k: str) -> None:
-            charts.append(ChartCard(ctx, k, currency, grid, remove))
+        def add(k: str, focus: bool = True) -> None:
+            """Add a chart; one the user adds goes first and scrolls into view, so it can't land out of sight."""
+            try:
+                chart = ChartCard(ctx, k, currency, grid, remove)
+            except Exception as exc:
+                error(t("Chart error: {error}", error=exc))
+                return
+            charts.append(chart)
+            if focus:
+                chart.card.move(grid, target_index=0)
+                chart.card.classes("just-added")
+                ui.run_javascript(
+                    f'getHtmlElement({chart.card.id}).scrollIntoView({{behavior: "smooth", block: "nearest"}})'
+                )
 
-        add("wealth")
-        add("flows")
+        add("wealth", focus=False)
+        add("flows", focus=False)
         on_data_changed(refresh_all)
