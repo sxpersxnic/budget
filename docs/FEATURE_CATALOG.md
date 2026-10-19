@@ -26,80 +26,32 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | --- | --- | --- |
 | 1 · Bugs from issue 01 | ☑ Done | 6 of 6 steps |
 | Follow-up fixes (B10–B15) | ☑ Done | 3 of 3 steps |
-| 2 · Accounts and reconciliation | ☐ Open | 0 of 3 steps |
+| 2 · Accounts and reconciliation | ☑ Done | 3 of 3 steps |
 | 3 · Revaluations | ☐ Open | 0 of 4 steps |
 | 4 · Import and charts | ☐ Open | 0 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
 | After issue 01 (steps 19–25) | ◐ Partly | F24, F25, F02 and F29 done (step 19, F25 of step 20, step 23); F28 and steps 21, 22, 24, 25 open |
-| Bugs B01–B15 | ◐ Partly | 14 of 15 fixed; B04 closes with F42 (milestone 2) |
+| Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ◐ Partly | built; the first CI run is pending |
 
 ## Open now
 
-State on 2026-10-19: milestone 1 and the follow-up fixes are done; milestone 2 is next, and its
-reconciliation step waits for decision 2. Steps run in the order given; *Needs* lists what has
-to be done first, and decisions are numbered as in
+State on 2026-10-19: milestones 1 and 2 and the follow-up fixes are done (see [Done](#done));
+milestone 3, revaluations, is next. Steps run in the order given; *Needs* lists what has to be
+done first, and decisions are numbered as in
 [Decisions for the product owner](#decisions-for-the-product-owner).
 
-### Next: milestone 2 (after the follow-up fixes)
-
-| Step | Status | Task | Needs | Effort |
-| --- | --- | --- | --- | --- |
-| 6a | ☑ Done | **B10 · Close sheets for good**: remove a dialog from the page when it closes. | – | S |
-| 6b | ☑ Done | **B14 · Until and repeat on the Budget Plan page** too (reuses `budget.reschedule` from B09). | – | S |
-| 6c | ☑ Done | **B11, B12, B13 · Wording fixes** in Settings and the New Budget Entry form; **B15** chart axis labels. | – | S |
-| 7 | ☐ Open | **F41 · Opening balance and change per account.** | – | S |
-| 8 | ☐ Open | **F42 · Reconciliation line** above the income and expenditure tables; closes B04. | decision 2 | S |
-| 9 | ☐ Open | **F47 · Projection uses the higher of actual and budget** per category. | decision 5 | S–M |
-
-### Bugs
-
-All bugs from issue 01 and its follow-ups, open ones first. For a fixed bug, *Cause* says
-what changed. B10–B14 were found while writing the UI tests on 2026-10-19, B15 while testing
-the Linux build.
-
-| ID | Status | Bug | Cause | Effort | Fixed in |
-| --- | --- | --- | --- | --- | --- |
-| B04 | ☐ Open | *Income and expenditure* chart leaves out unaccounted expenditure | The chart totals only recorded categories, while the budget page includes *Unaccounted*. Closed by F42: totals then mean recorded spending everywhere, and the gap can be added to the chart as its own line. | – (F42) | – |
-| B01 | ☑ Fixed | Excel and PDF buttons in the budget overview did nothing | See [Done](#done). | – | `cc05db9` |
-| B02 | ☑ Fixed | Chart image, CSV and PDF export didn't work | See [Done](#done). | – | `cc05db9`, `ffa9733` |
-| B03 | ☑ Fixed | Transactions used the latest exchange rate, not the one of their date | See [Done](#done). | – | `332eb81` |
-| B05 | ☑ Fixed | Selecting and adding a chart didn't work | See [Done](#done). | – | `8e9ca8e`, `ffa9733` |
-| B06 | ☑ Fixed | Currency exchange converted the received amount instead of asking for it | See [Done](#done). | – | `b73d8fe` |
-| B07 | ☑ Fixed | Accounts on the budget page didn't adapt to the window size | See [Done](#done). | – | `6f34640` |
-| B08 | ☑ Fixed | Income and expenditure should stack when the window is narrow | See [Done](#done). | – | `6f34640` |
-| B09 | ☑ Fixed | Editing a budget entry on the budget page lacked *Until*, *Repeat* and *Note* | See [Done](#done). | – | `ef5da63` |
-| B10 | ☑ Fixed | Closed sheets stay in the page | A sheet deletes itself on Quasar's *hide* event, after the closing animation. | – | `6ddb7d1` |
-| B11 | ☑ Fixed | Settings says an account's currency is locked by transactions | The caption names recorded balances too. | – | `cb13b2a` |
-| B12 | ☑ Fixed | Deleting an income category shows no confirmation message | "Deleted *name*" after deleting an income category. | – | `cb13b2a` |
-| B13 | ☑ Fixed | *Forever* gives a confusing message when the plan has ended | The status line says the plan ends before the first month and points to Settings. | – | `cb13b2a` |
-| B14 | ☑ Fixed | The Budget Plan page's edit dialog has no *Until* and *Repeat* | Until and Repeat in the Budget Plan dialog; a change replans the series from that month on. | – | `f1ab8b2` |
-| B15 | ☑ Fixed | Chart axes repeat labels when the values are small | Axis format `,~f`: whole numbers stay whole, small steps keep their decimals. | – | `8249156` |
-
-### Decisions for the product owner
-
-Collected from the entries below. Decision 2 blocks milestone 2.
-
-1. **B08:** side by side on wide windows and stacked on narrow ones — is that the intent? Built for now: stacked at every width, which meets the issue as written.
-2. **F42 / B04:** replace *Unaccounted* by the reconciliation line, with the gap as an
-   optional chart line, instead of adding *Unaccounted* to the chart.
-3. **F43:** do revaluations count towards *Net income*?
-4. **F45:** are value changes of foreign-currency balances automatic currency gains?
-5. **F47:** which rule applies to finished months without recorded balances?
-6. **F36:** what to do with a bank file that ends mid-month?
-7. **F39, F40:** which source for level 5 and for the German notes?
-
-### Later milestones
+### Next milestones
 
 #### Milestone 3 · Revaluations
 
 | Step | Status | Task | Needs | Effort |
 | --- | --- | --- | --- | --- |
-| 10 | ☐ Open | **F43 · Revaluation transactions.** | decision 3 | M |
+| 10 | ☐ Open | **F43 · Revaluation transactions.** | decision 3 (decided) | M |
 | 11 | ☐ Open | **F44 · Exchange spread booked as revaluation.** | B03 (done), B06 (done), F43 | S–M |
-| 12 | ☐ Open | **F45 · Revaluations section** in the budget overview; the reconciliation line from F42 then counts them. | F42, F43, decision 4 | S |
-| 13 | ☐ Open | **F46 · Unexplained difference per account**, with a *Book as revaluation* action. | F41, F43 | S–M |
+| 12 | ☐ Open | **F45 · Revaluations section** in the budget overview; the reconciliation line from F42 then counts them. | F42 (done), F43, decision 4 (decided) | S |
+| 13 | ☐ Open | **F46 · Unexplained difference per account**, with a *Book as revaluation* action. | F41 (done), F43 | S–M |
 
 #### Milestone 4 · Import and charts
 
@@ -129,6 +81,46 @@ Waits for the source data (decision 7).
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☐ Open | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
 | 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+
+### Bugs
+
+All bugs from issue 01 and its follow-ups, open ones first. For a fixed bug, *Cause* says
+what changed. B10–B14 were found while writing the UI tests on 2026-10-19, B15 while testing
+the Linux build.
+
+| ID | Status | Bug | Cause | Effort | Fixed in |
+| --- | --- | --- | --- | --- | --- |
+| B04 | ☑ Fixed | *Income and expenditure* chart leaves out unaccounted expenditure | Closed by F42: total expenditure means recorded spending everywhere, and the chart offers *Unexplained difference* as its own series. | – | `f537d17` |
+| B01 | ☑ Fixed | Excel and PDF buttons in the budget overview did nothing | See [Done](#done). | – | `cc05db9` |
+| B02 | ☑ Fixed | Chart image, CSV and PDF export didn't work | See [Done](#done). | – | `cc05db9`, `ffa9733` |
+| B03 | ☑ Fixed | Transactions used the latest exchange rate, not the one of their date | See [Done](#done). | – | `332eb81` |
+| B05 | ☑ Fixed | Selecting and adding a chart didn't work | See [Done](#done). | – | `8e9ca8e`, `ffa9733` |
+| B06 | ☑ Fixed | Currency exchange converted the received amount instead of asking for it | See [Done](#done). | – | `b73d8fe` |
+| B07 | ☑ Fixed | Accounts on the budget page didn't adapt to the window size | See [Done](#done). | – | `6f34640` |
+| B08 | ☑ Fixed | Income and expenditure should stack when the window is narrow | See [Done](#done). | – | `6f34640` |
+| B09 | ☑ Fixed | Editing a budget entry on the budget page lacked *Until*, *Repeat* and *Note* | See [Done](#done). | – | `ef5da63` |
+| B10 | ☑ Fixed | Closed sheets stay in the page | A sheet deletes itself on Quasar's *hide* event, after the closing animation. | – | `6ddb7d1` |
+| B11 | ☑ Fixed | Settings says an account's currency is locked by transactions | The caption names recorded balances too. | – | `cb13b2a` |
+| B12 | ☑ Fixed | Deleting an income category shows no confirmation message | "Deleted *name*" after deleting an income category. | – | `cb13b2a` |
+| B13 | ☑ Fixed | *Forever* gives a confusing message when the plan has ended | The status line says the plan ends before the first month and points to Settings. | – | `cb13b2a` |
+| B14 | ☑ Fixed | The Budget Plan page's edit dialog has no *Until* and *Repeat* | Until and Repeat in the Budget Plan dialog; a change replans the series from that month on. | – | `f1ab8b2` |
+| B15 | ☑ Fixed | Chart axes repeat labels when the values are small | Axis format `,~f`: whole numbers stay whole, small steps keep their decimals. | – | `8249156` |
+
+### Decisions for the product owner
+
+Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each as recommended.
+
+1. **B08:** side by side on wide windows and stacked on narrow ones — is that the intent? Built for now: stacked at every width, which meets the issue as written.
+2. ☑ **F42 / B04:** decided — replace *Unaccounted* by the reconciliation line, with the gap
+   as an optional chart series. Built.
+3. ☑ **F43:** decided — revaluations do **not** count towards *Net income*; they have their own
+   section and enter only the reconciliation line.
+4. ☑ **F45:** decided — value changes of foreign-currency balances between two month ends are
+   shown automatically as *Capital gains on currency exchange*, without a booking.
+5. ☑ **F47:** decided — finished months without balances use the same rule (the higher of
+   recorded and budget per category). Built.
+6. **F36:** what to do with a bank file that ends mid-month?
+7. **F39, F40:** which source for level 5 and for the German notes?
 
 ## All features
 
@@ -174,13 +166,13 @@ Waits for the source data (decision 7).
 | F38 | ☐ Open | Exchange-rate chart | Insight | S | Local | – |
 | F39 | ☐ Open | COICOP level 5 | Organizing | M | Local | source data |
 | F40 | ☐ Open | COICOP notes in search and on hover | Organizing | M | Local | source data |
-| F41 | ☐ Open | Opening balance and change per account | Wealth | S | Local | – |
-| F42 | ☐ Open | Reconciliation line instead of *Unaccounted* | Insight | S | Local | – |
+| F41 | ☑ Done | Opening balance and change per account | Wealth | S | Local | – |
+| F42 | ☑ Done | Reconciliation line instead of *Unaccounted* | Insight | S | Local | – |
 | F43 | ☐ Open | Revaluation transactions | Wealth | M | Local | – |
 | F44 | ☐ Open | Exchange spread booked as revaluation | Wealth | S–M | Local | B03, B06, F43 |
 | F45 | ☐ Open | Revaluations in the budget overview | Insight | S | Local | F43 |
 | F46 | ☐ Open | Unexplained difference per account | Wealth | S–M | Local | F41, F43 |
-| F47 | ☐ Open | Projection uses the higher of actual and budget | Planning | S–M | Local | – |
+| F47 | ☑ Done | Projection uses the higher of actual and budget | Planning | S–M | Local | – |
 
 ## Open features from issue 01
 
@@ -245,7 +237,7 @@ includes* and *excludes* notes. The shipped file has names only.
 
 ### F41 · Opening balance and change per account
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-19, `f537d17`)
 
 The budget page shows for each account the balance at the end of the previous month, the
 balance at the end of this month and the difference, in the account's currency (and the
@@ -253,7 +245,7 @@ closing value in the display currency, as today). Accounts emptied this month st
 
 ### F42 · Reconciliation line instead of *Unaccounted*
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-19, `f537d17`)
 
 *Unaccounted expenditure* stops being a row of the expenditure table. Instead, a line above
 the income and expenditure tables shows:
@@ -315,7 +307,7 @@ revaluation* action fills in F43's form with the difference.
 
 ### F47 · Projection uses the higher of actual and budget
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-19, `f537d17`)
 
 For a month that isn't over, the projected wealth takes, for each category, the recorded
 amount if it is higher than the budget, and the budget otherwise. Applies to income and
@@ -796,6 +788,17 @@ replaces the specification's rule that manual entries use the latest rate.
 dialog shows the series' end month (or *Forever*), its rhythm and an editable note; changing
 the schedule replans the series from the edited month on, as a new series, and the earlier
 months end there. The Budget Plan page's dialog has the same fields since B14.
+
+### Follow-up fixes and milestone 2
+
+| Step | Status | Task | Needs | Effort |
+| --- | --- | --- | --- | --- |
+| 6a | ☑ Done | **B10 · Close sheets for good**: remove a dialog from the page when it closes. | – | S |
+| 6b | ☑ Done | **B14 · Until and repeat on the Budget Plan page** too (reuses `budget.reschedule` from B09). | – | S |
+| 6c | ☑ Done | **B11, B12, B13 · Wording fixes** in Settings and the New Budget Entry form; **B15** chart axis labels. | – | S |
+| 7 | ☑ Done | **F41 · Opening balance and change per account.** | – | S |
+| 8 | ☑ Done | **F42 · Reconciliation line** above the income and expenditure tables; closes B04. | decision 2 (decided) | S |
+| 9 | ☑ Done | **F47 · Projection uses the higher of actual and budget** per category. | decision 5 (decided) | S–M |
 
 ### Built features
 
