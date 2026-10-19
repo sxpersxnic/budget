@@ -50,9 +50,90 @@ user turns on · *Online* needs a service.
 | F33 | In-app update check | Experience | S | Optional | – |
 | F34 | Several households or profiles | Experience | M | Local | – |
 | F35 | Phone companion | Experience | XL | Optional | F27 |
+| F36 | Closing balance from bank files | Data in | M | Local | F01 |
+| F37 | COICOP information page | Organizing | S | Local | – (F40 adds notes) |
+| F38 | Exchange-rate chart | Insight | S | Local | – |
+| F39 | COICOP level 5 | Organizing | M | Local | source data |
+| F40 | COICOP notes in search and on hover | Organizing | M | Local | source data |
+| F41 | Opening balance and change per account | Wealth | S | Local | – |
+| F42 | Reconciliation line instead of *Unaccounted* | Insight | S | Local | – |
+| F43 | Revaluation transactions | Wealth | M | Local | – |
+| F44 | Exchange spread booked as revaluation | Wealth | S–M | Local | B03, B06, F43 |
+| F45 | Revaluations in the budget overview | Insight | S | Local | F43 |
+| F46 | Unexplained difference per account | Wealth | S–M | Local | F41, F43 |
+| F47 | Projection uses the higher of actual and budget | Planning | S–M | Local | – |
+
+F36–F47 and the bugs B01–B09 come from the product owner's GitHub issue, called *issue 01*
+here (local copy `docs/issues.local/ISSUE_01.md`, not committed); see [From issue 01](#from-issue-01) and
+[Known bugs](#known-bugs-issue-01).
 
 **Status:** F01 is built (branch `feat/import-export`). F29 is built for English and German;
-French and Italian are open. F24 is next on the same branch.
+French and Italian are open. Item lists on transactions (name, quantity, unit price) are built
+(branch `feat/transaction-items`); they cover part of F11 and give F04 a place for receipt
+lines. Issue 01 now comes before F24; see [Implementation order](#implementation-order).
+
+## Implementation order
+
+Issue 01 comes first. Steps run in the order given; *Needs* lists what has to be done first.
+
+### Milestone 1 · Bugs from issue 01
+
+| Step | Task | Needs | Effort |
+| --- | --- | --- | --- |
+| 1 | **B01, B02 · Downloads in the app window.** One save helper for every export: the system save dialog in the app window, a normal download in the browser. Fixes the statement export and the chart image, CSV and Excel exports; adds the missing chart PDF. | – | S |
+| 2 | **B05 · Adding a chart.** Reproduce first; then the new chart scrolls into view and errors are shown instead of only logged. | – | S |
+| 3 | **B07, B08 · Budget page on resize.** Account rows that reflow; income and expenditure side by side on wide windows, below each other on narrow ones. | decision 1 | S |
+| 4 | **B03 · Exchange rate of the transaction date**, with a one-time recalculation of stored transactions. Comes before any step that adds up transactions per account. | – | S–M |
+| 5 | **B06 · Received amount typed in** for currency exchanges. | – | S |
+| 6 | **B09 · Until, repeat and note** in the budget edit dialog. | – | M |
+
+### Milestone 2 · Accounts and reconciliation
+
+| Step | Task | Needs | Effort |
+| --- | --- | --- | --- |
+| 7 | **F41 · Opening balance and change per account.** | – | S |
+| 8 | **F42 · Reconciliation line** above the income and expenditure tables; closes B04. | decision 2 | S |
+| 9 | **F47 · Projection uses the higher of actual and budget** per category. | decision 5 | S–M |
+
+### Milestone 3 · Revaluations
+
+| Step | Task | Needs | Effort |
+| --- | --- | --- | --- |
+| 10 | **F43 · Revaluation transactions.** | decision 3 | M |
+| 11 | **F44 · Exchange spread booked as revaluation.** | B03, B06, F43 | S–M |
+| 12 | **F45 · Revaluations section** in the budget overview; the reconciliation line from F42 then counts them. | F42, F43, decision 4 | S |
+| 13 | **F46 · Unexplained difference per account**, with a *Book as revaluation* action. | F41, F43 | S–M |
+
+### Milestone 4 · Import and charts
+
+| Step | Task | Needs | Effort |
+| --- | --- | --- | --- |
+| 14 | **F36 · Closing balance from bank files.** | decision 6 | M |
+| 15 | **F38 · Exchange-rate chart.** | – | S |
+| 16 | **F37 · COICOP information page** with codes, names and search. | – | S |
+
+### Milestone 5 · COICOP data
+
+Waits for the source data (decision 7).
+
+| Step | Task | Needs | Effort |
+| --- | --- | --- | --- |
+| 17 | **F40 · COICOP notes in search and on hover**; also shown on the F37 page. | decision 7 | M |
+| 18 | **F39 · COICOP level 5.** | decision 7 | M |
+
+### After issue 01
+
+| Step | Task | Why here |
+| --- | --- | --- |
+| 19 | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from step 1. |
+| 20 | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
+| 21 | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
+| 22 | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
+| 23 | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
+| 24 | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
+| 25 | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F29 (French, Italian), F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+
+The decisions are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ---
 
@@ -70,7 +151,10 @@ Today every transaction is typed by hand. Import a bank or card export instead.
 - **Duplicates:** each imported row gets a fingerprint (date, amount, account, text). Rows
   already imported are shown and skipped by default.
 - **Fits:** imported rows become normal transactions, with the CHF amount at the ECB rate of
-  the booking date (decided; manual entries keep the latest rate, as the specification asks).
+  the booking date. Since issue 01 (B03) manual entries use the rate of their date too.
+- **Open since issue 01:** the closing balance in the file is not used yet (F36); categories
+  are set for selected rows only, not per cell; transfers between own accounts can't be
+  marked as such and must be given a category.
 - **Decide:** which banks to support first; whether imports may create accounts; how to treat
   transfers between own accounts that appear in two files.
 
@@ -262,6 +346,9 @@ Today wealth comes from recorded account balances. Add:
   daily prices;
 - performance per holding and in total.
 
+Revaluations of the kind "capital gains on investment" (F43) are the manual first step;
+F21 would create them from price changes.
+
 ### F22 · Loans and mortgages
 
 Liabilities with interest rate and repayment plan; interest payments are categorized
@@ -385,6 +472,169 @@ Record expenses on the phone where they happen.
 
 ---
 
+## Known bugs (issue 01)
+
+| ID | Bug | Cause | Effort |
+| --- | --- | --- | --- |
+| B01 | Excel and PDF buttons in the budget overview do nothing | Downloads are switched off in the app window (pywebview's `ALLOW_DOWNLOADS` is off by default), so the file is dropped without an error. In a browser it works. | S |
+| B02 | Chart image, CSV and PDF export don't work | CSV, Excel and image: same cause as B01. PDF: the menu has no PDF entry. | S |
+| B03 | Transactions use the latest exchange rate, not the one of their date | Manual entries are valued at the newest ECB rate; only imports use the booking date. Account balances already use the last rate of the month, as asked. | S–M |
+| B04 | *Income and expenditure* chart leaves out unaccounted expenditure | The chart totals only recorded categories, while the budget page includes *Unaccounted*. Closed by F42: totals then mean recorded spending everywhere, and the gap can be added to the chart as its own line. | – (F42) |
+| B05 | Selecting and adding a chart doesn't work | Not reproduced. The wiring looks right; most likely the new chart is added below the fold with no feedback, or an error is only logged to the console. | S |
+| B06 | Currency exchange converts the received amount instead of asking for it | The form has no field for it; it is always calculated at the ECB rate. The data file already has the column. | S |
+| B07 | Accounts on the budget page don't adapt to the window size | Fixed-width rows that don't wrap; the account-currency amount wraps, and the name gets squeezed. | S |
+| B08 | Income and expenditure should stack when the window is narrow | Today they are always stacked (since the redesign). Read as: side by side on wide windows, stacked on narrow ones. | S |
+| B09 | Editing a budget entry on the budget page lacks *Until*, *Repeat* and *Note* | The dialog edits amount and currency only; the service can't change a series' schedule. | M |
+
+**B03 details.** Every transaction gets the ECB rate of its date, or the last earlier rate
+on weekends and holidays; future dates get the newest rate. Changing the date revalues the
+entry. Stored transactions are recalculated once after the update (backed up first by the
+update backup). This replaces the earlier decision, and the specification's rule, that manual
+entries use the latest rate. A transaction dated today and entered before the ECB publishes
+(around 16:00) gets yesterday's rate; whether to correct it at the next start is a detail to
+decide when building it.
+
+**B09 details.** Budget entries are stored one row per month, linked by a series ID. The
+dialog shows the series' end month (or *Forever*), its rhythm and an editable note; changing
+the schedule rewrites the series' rows from the edited month on. The same controls should
+come to the edit dialog on the Budget Plan page.
+
+## From issue 01
+
+### F36 · Closing balance from bank files
+
+Bank exports usually carry a running balance (*Saldo*, *Kontostand*, *Balance*). Today the
+import ignores it.
+
+- The bank profile gets a balance column, detected from its name where possible.
+- The review step lists "Balance at end of *month*" for each month the file covers to the
+  end, and shows any recorded balance it would replace. Accepted ones become the account's
+  month-end balance, at the month-end rate.
+- A manual *Closing balance* field covers banks that put the balance outside the table.
+- Small extras that make categorizing imports quicker: a category editor in each row, and
+  "transfer to own account" as a row type.
+- **Decide:** what to do with a file that ends mid-month (skip its last balance, or offer it
+  with a warning).
+
+### F37 · COICOP information page
+
+A page listing all COICOP categories as a tree with code and name, in the interface
+language, with a search box. Linked from the sidebar or Settings. With F40, each category
+also shows what it includes.
+
+### F38 · Exchange-rate chart
+
+A fourth chart type on the Overview: the ECB rates of chosen currencies against the display
+currency over a period, daily or at month end (the rates balances are valued with). Optional
+index view (start = 100) when currencies differ in scale. Exportable like the other charts.
+
+### F39 · COICOP level 5
+
+COICOP 2018 itself has four levels (division, group, class, subclass), and the app already
+ships all of them. A fifth level exists only in national extensions.
+
+- Needs a source with a fifth level whose codes keep the COICOP 2018 codes, so saved data
+  stays valid; German names for the new codes (and French and Italian later).
+- The code is ready for any depth; the work is the data and its translation.
+- **Decide:** which source. A Swiss classification from the Federal Statistical Office
+  would fit the users best, if it extends COICOP 2018.
+
+### F40 · COICOP notes in search and on hover
+
+The official COICOP 2018 publication describes each category with *includes*, *also
+includes* and *excludes* notes. The shipped file has names only.
+
+- Add the notes (about 600) and a German translation of them.
+- Category search in every dropdown also matches the notes; hovering an entry shows them.
+- The import page's category select switches to the same control.
+- **Decide:** where the German notes come from (official translation, if one exists, or our
+  own); whether *excludes* is shown too (helps choosing, not asked for).
+
+### F41 · Opening balance and change per account
+
+The budget page shows for each account the balance at the end of the previous month, the
+balance at the end of this month and the difference, in the account's currency (and the
+closing value in the display currency, as today). Accounts emptied this month stay visible.
+
+### F42 · Reconciliation line instead of *Unaccounted*
+
+*Unaccounted expenditure* stops being a row of the expenditure table. Instead, a line above
+the income and expenditure tables shows:
+
+- recorded income minus recorded expenditure,
+- the change in account balances,
+- the difference between the two (the former *Unaccounted* amount).
+
+Total expenditure then means recorded expenditure on the budget page, in the charts and in
+the statement export. The statement gets the reconciliation as its own section. With F45,
+revaluations are part of the line.
+
+### F43 · Revaluation transactions
+
+A fifth transaction type for value changes that are neither income nor spending.
+
+- One account; enter either the old and new value or just the difference (positive or
+  negative), in the account's currency.
+- Two kinds: *Capital gains on currency exchange* and *Capital gains on investment*.
+- Revaluations count neither as income nor as expenditure; they appear in their own section
+  (F45) and explain account changes (F46).
+- **Decide:** whether revaluations count towards *Net income* on the budget page.
+
+### F44 · Exchange spread booked as revaluation
+
+With the received amount typed in (B06), the bank's rate differs from the ECB rate. The
+difference becomes a linked revaluation of the kind *Capital gains on currency exchange* on
+the receiving account, usually a loss.
+
+- The exchange itself is recorded at the ECB rate; the revaluation brings the receiving
+  account to the amount actually received. Together they match the bank statement.
+- The revaluation is created, updated and deleted with its exchange and can't be edited on
+  its own.
+- Existing exchanges have no spread and stay as they are.
+
+### F45 · Revaluations in the budget overview
+
+A third section next to income and expenditure listing the month's revaluations by kind,
+with a total, also in the statement export. Optionally as lines in the *Income and
+expenditure* chart.
+**Decide:** whether the change in value of foreign-currency balances between two month ends
+counts as *Capital gains on currency exchange* automatically, or stays in the reconciliation
+difference until booked.
+
+### F46 · Unexplained difference per account
+
+Next to each account, the difference between the actual change of its balance and the sum
+of its transactions in the month (income, spending, transfers, exchanges, revaluations), in
+the account's currency. Shown only when both month-end balances are recorded. A *Book as
+revaluation* action fills in F43's form with the difference.
+
+### F47 · Projection uses the higher of actual and budget
+
+For a month that isn't over, the projected wealth takes, for each category, the recorded
+amount if it is higher than the budget, and the budget otherwise. Applies to income and
+expenditure alike, to the projected wealth on the budget page and to the Overview chart.
+
+- Compared per top-level row (COICOP division, taxes, advance payments, income category),
+  so a budget set on a parent category isn't counted twice.
+- Advance payments have no budget and use the recorded amount.
+- **Decide:** months that are over but have no recorded balances yet: budget only (as
+  today) or the same rule.
+
+### Decisions for the product owner
+
+Collected from the entries above; the first two block work in milestone 1 and 2.
+
+1. **B08:** side by side on wide windows and stacked on narrow ones — is that the intent?
+2. **F42 / B04:** replace *Unaccounted* by the reconciliation line, with the gap as an
+   optional chart line, instead of adding *Unaccounted* to the chart.
+3. **F43:** do revaluations count towards *Net income*?
+4. **F45:** are value changes of foreign-currency balances automatic currency gains?
+5. **F47:** which rule applies to finished months without recorded balances?
+6. **F36:** what to do with a bank file that ends mid-month?
+7. **F39, F40:** which source for level 5 and for the German notes?
+
+---
+
 ## Suggested bundles
 
 | Bundle | Features | Why together |
@@ -394,6 +644,7 @@ Record expenses on the phone where they happen.
 | **Everyday speed** | F06, F08, F05, F32 | Small changes to the most frequent tasks. |
 | **Trust** | F24, F25, F28, F27 | Data can leave, come back, be undone and be protected. |
 | **Look ahead** | F14, F15, F16, F18 | Planning beyond the current budget. |
+| **Books that balance** | F41, F42, F43, F44, F45, F46 | Every change in an account is explained by a transaction or a revaluation (issue 01). |
 
 ## Cross-cutting decisions
 
@@ -401,8 +652,10 @@ These come up in several features; deciding them once keeps the features consist
 
 1. **AI and online services** (F04, F07, F21, F33): never, opt-in per use, or opt-in as a
    setting? Which provider, and who pays?
-2. **Exchange rate for imported transactions** (F01, F02, F03, F05): decided — imported rows
-   use the rate of their booking date; manual entries keep the latest rate.
+2. **Exchange rate of transactions** (F01, F02, F03, F05, B03): decided — every transaction
+   uses the ECB rate of its date (the last earlier rate on weekends and holidays); account
+   balances use the last rate of the month; budget entries use the latest rate. Changed by
+   issue 01: manual entries used the latest rate before.
 3. **Data format changes:** payees, tags, splits and attachments add fields and files. Each
    needs a default for old data (the update backup covers mistakes); see
    [packaging/README.md](../packaging/README.md#releasing-an-update).
