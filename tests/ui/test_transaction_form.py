@@ -485,6 +485,9 @@ async def test_a_failed_save_in_the_sheet_keeps_it_open(user: User, ctx, setup, 
     click(user, button(user, "Cancel"))
     dialog = next(e for e in user.find(kind=ui.dialog).elements)
     assert not dialog.value
+    # the browser fires 'hide' after the closing animation; the sheet then leaves the page (B10)
+    user.find(kind=ui.dialog).trigger("hide")
+    assert dialog.is_deleted
 
 
 async def test_editing_an_exchange(user: User, ctx, setup) -> None:

@@ -161,10 +161,15 @@ def card(title: str | None = None, classes: str = ""):
 
 @contextmanager
 def sheet(title: str, width: str = "30rem"):
-    """Modal sheet with a title; yields the dialog. Close it with dlg.close()."""
+    """Modal sheet with a title; yields the dialog. Close it with dlg.close().
+
+    A closed sheet removes itself from the page. That happens on Quasar's 'hide' event, after the
+    closing animation, so code that still reads or resets the form right after close() works.
+    """
     with ui.dialog() as dlg, ui.card().classes("sheet").style(f"width: {width}; max-width: 94vw"):
         ui.label(title).classes("sheet-title")
         yield dlg
+    dlg.on("hide", dlg.delete)
     dlg.open()
 
 
