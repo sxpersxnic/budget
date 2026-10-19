@@ -186,18 +186,24 @@ With [just](https://just.systems) installed, the common tasks are one command ea
 (`just` lists them all):
 
 ```bash
+just setup        # dev dependencies and git hooks
 just dev          # desktop window that restarts when a file in src/ changes
 just dev-web      # the same in the browser, http://127.0.0.1:8080
-just check        # lint, formatting, type check and tests
+just check        # lint, formatting, type check, tests and coverage
 just build        # installer for this OS (see Building the installers)
 ```
 
 Without just:
 
 ```bash
-uv run pytest                                   # unit tests
-uvx ruff check . && uvx ruff format --check .   # lint and formatting (config in pyproject.toml)
+uv sync --group dev && uv run lefthook install   # dev dependencies and git hooks
+uv run pytest --cov                                # tests with coverage (at least 87 %)
+uv run ruff check . && uv run ruff format --check .  # lint and formatting (config in pyproject.toml)
 ```
+
+Tests in `tests/ui/` drive the real pages in NiceGUI's simulated client, without a browser.
+The git hooks ([lefthook.yml](lefthook.yml)) check lint and formatting before each commit, and
+types, tests and coverage before each push.
 
 - The specification is in [docs/Description_Budgeting_App.md](docs/Description_Budgeting_App.md).
 - The implementation (data model, formulas, decisions) is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

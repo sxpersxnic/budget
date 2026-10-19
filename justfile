@@ -9,9 +9,10 @@ data := "data"
 default:
     @just --list --unsorted
 
-# Install the app and dev dependencies into .venv
+# Install the app and dev dependencies into .venv, and the git hooks (lefthook.yml)
 setup:
     uv sync --group dev
+    uv run lefthook install
 
 # Start the desktop app and restart it whenever a file in src/ changes
 dev:
@@ -33,22 +34,26 @@ native:
 test *args:
     uv run pytest -q {{ args }}
 
+# Run the tests with coverage; fails below the threshold in pyproject.toml ([tool.coverage.report])
+cov *args:
+    uv run pytest -q --cov --cov-report=term {{ args }}
+
 # Check lint and formatting
 lint:
-    uvx ruff check .
-    uvx ruff format --check .
+    uv run ruff check .
+    uv run ruff format --check .
 
 # Fix lint findings that are safe to fix, and format the code
 fmt:
-    uvx ruff check --fix .
-    uvx ruff format .
+    uv run ruff check --fix .
+    uv run ruff format .
 
 # Type-check the sources (pandas, plotly and reportlab ship without type stubs)
 typecheck:
-    uv run --with mypy mypy --ignore-missing-imports src
+    uv run mypy --ignore-missing-imports src
 
-# Everything CI cares about: lint, types, tests
-check: lint typecheck test
+# Everything CI cares about: lint, types, tests with coverage
+check: lint typecheck cov
 
 # Build the installer for this OS into installers/ (macOS: .dmg; Windows: Setup.exe, needs Inno Setup 6)
 [macos]
@@ -70,10 +75,10 @@ icons:
 # Remove build output and tool caches (keeps data/ and installers/)
 [unix]
 clean:
-    rm -rf build dist .pytest_cache .ruff_cache .mypy_cache
+    rm -rf build dist .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov
     find . -name __pycache__ -type d -not -path "./.venv/*" -prune -exec rm -rf {} +
 
 [windows]
 clean:
-    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue build, dist, .pytest_cache, .ruff_cache, .mypy_cache
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue build, dist, .pytest_cache, .ruff_cache, .mypy_cache, .coverage, htmlcov
     Get-ChildItem -Recurse -Directory -Filter __pycache__ | Where-Object FullName -notlike '*\.venv\*' | Remove-Item -Recurse -Force

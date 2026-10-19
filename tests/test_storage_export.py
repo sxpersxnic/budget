@@ -58,3 +58,13 @@ def test_chart_pdf_embeds_the_image():
     Image.new("RGB", (240, 120), "white").save(buf, format="PNG")
     pdf = export.chart_pdf(buf.getvalue(), "Wealth Over Time", "Amounts in CHF")
     assert pdf.startswith(b"%PDF") and b"/Image" in pdf
+
+
+def test_chart_pdf_fits_a_tall_image_on_the_page():
+    import io  # noqa: PLC0415
+
+    from PIL import Image  # noqa: PLC0415
+
+    buf = io.BytesIO()
+    Image.new("RGB", (400, 800), "white").save(buf, format="PNG")
+    assert export.chart_pdf(buf.getvalue(), "Tall").startswith(b"%PDF")  # used to overflow the page

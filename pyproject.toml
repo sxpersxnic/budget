@@ -20,7 +20,14 @@ native = ["pywebview>=5.0"]
 budget = "budget_app.main:run"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = [
+    "lefthook>=2.2.2",
+    "mypy>=2.4.0",
+    "pytest>=8",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.1",
+]
 # installer builds (see packaging/README.md)
 build = ["pyinstaller>=6.10", "pywebview>=5.3", "pillow>=10"]
 
@@ -33,7 +40,10 @@ packages = ["src/budget_app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+main_file = ""  # UI tests pass their own main file (tests/ui/ui_main.py)
 
 [tool.ruff]
 line-length = 120
@@ -49,3 +59,12 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
+
+[tool.coverage.run]
+source = ["budget_app"]
+
+[tool.coverage.report]
+fail_under = 87
+show_missing = true
+skip_covered = true
+exclude_also = ['if __name__ == "__main__":', "if TYPE_CHECKING:"]

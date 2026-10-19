@@ -8,6 +8,8 @@ from budget_app.services import accounts as acc_svc
 from budget_app.services.context import Context
 from budget_app.storage.store import Store
 
+pytest_plugins = ["nicegui.testing.user_plugin"]  # the `User` simulation for tests/ui
+
 TODAY = date(2026, 10, 18)
 
 

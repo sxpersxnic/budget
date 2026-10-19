@@ -1,0 +1,22 @@
+# Git hooks, run by lefthook (https://lefthook.dev). `just setup` installs them.
+# Skip once with `git commit --no-verify` / `git push --no-verify`, or LEFTHOOK=0.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint
+      glob: "*.py"
+      run: uv run ruff check {staged_files}
+    - name: format
+      glob: "*.py"
+      run: uv run ruff format --check {staged_files}
+    - name: translations
+      glob: "src/budget_app/resources/i18n/*.json"
+      run: uv run pytest -q --no-cov tests/test_i18n.py
+
+pre-push:
+  jobs:
+    - name: typecheck
+      run: uv run mypy --ignore-missing-imports src
+    - name: tests and coverage
+      run: uv run pytest -q --cov --cov-report=term
