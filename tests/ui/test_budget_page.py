@@ -181,7 +181,7 @@ async def test_first_recorded_month_has_no_reconciliation_yet(user: User, demo) 
     await open_budget(user, months.add_months(CM, -6))
     await user.should_see("Appears once balances are recorded for this and the previous month.")
     await user.should_see("90.00 left of 2'750.00 CHF")  # 2'660 spent
-    await user.should_not_see("Unexplained")
+    await user.should_not_see("Money that left without a record")
 
 
 async def test_reconciliation_line_shows_the_gap(user: User, demo, ctx) -> None:

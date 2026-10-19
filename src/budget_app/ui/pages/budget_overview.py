@@ -8,7 +8,14 @@ from nicegui import ui
 
 from budget_app.domain import months
 from budget_app.domain.coicop import ADV
-from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, BudgetEntry
+from budget_app.domain.models import (
+    BUDGET_EXPENDITURE,
+    BUDGET_INCOME,
+    REVAL_FX,
+    REVAL_INVEST,
+    TX_REVALUATION,
+    BudgetEntry,
+)
 from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import budget as budget_svc
@@ -17,6 +24,7 @@ from budget_app.services import reports
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.budget import BudgetInput
 from budget_app.services.context import Context, ValidationError
+from budget_app.services.transactions import TransactionInput
 from budget_app.ui.layout import (
     data_month_range,
     error,
@@ -35,6 +43,7 @@ from budget_app.ui.layout import (
 )
 from budget_app.ui.pages.add_budget import FOREVER, recurrence_options, until_options
 from budget_app.ui.widgets.selects import account_options, currency_select
+from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 EPS = 0.005
 
@@ -339,6 +348,8 @@ def page() -> None:
                 BUDGET_EXPENDITURE,
                 lambda: expenditure_rows(rep),
             )
+            if rep.complete or any(abs(line.actual) > EPS for line in rep.revaluation_lines):
+                revaluations_card(rep)
             if rep.complete:
                 accounts_card(rep)
 
@@ -353,8 +364,10 @@ def page() -> None:
                     )
                     return
                 recorded = rep.total_income.actual - rep.total_expenditure.actual
-                with ui.element("div").classes("metrics pt-2").style("--n: 3"):
+                with ui.element("div").classes("metrics pt-2").style("--n: 4"):
                     metric(t("Recorded Net"), recorded, rep.currency, t("Income minus expenditure"))
+                    revaluations = rep.total_revaluation.actual
+                    metric(t("Revaluations"), revaluations, rep.currency, t("Gains and losses in value"))
                     metric(t("Change in Balances"), rep.balance_change, rep.currency, t("All accounts, month end"))
                     with ui.element("div").classes("metric"):
                         ui.label(t("Unexplained")).classes("metric-label")
@@ -368,6 +381,34 @@ def page() -> None:
                             if rep.unexplained > EPS
                             else t("Records and balances agree")
                         ).classes("metric-sub")
+
+        # ------------------------------------------------------------ revaluations (F45)
+        def revaluations_card(rep: reports.MonthReport) -> None:
+            """Changes in value that are neither income nor spending; not part of net income (decision 3)."""
+            with ui.element("div").classes("surface"):
+                with ui.row().classes("w-full items-end gap-3 no-wrap pb-1"):
+                    with ui.column().classes("gap-0 min-w-0"):
+                        ui.label(t("Revaluations")).classes("section-title")
+                        ui.label(t("Gains and losses in value, outside net income")).classes("caption")
+                    ui.space()
+                    ui.label((fmt_signed(rep.total_revaluation.actual) or fmt(0)) + f" {rep.currency}").classes(
+                        "text-[20px] font-semibold num whitespace-nowrap"
+                    )
+                with ui.element("div").classes("ledger"):
+                    for line in rep.revaluation_lines:
+                        with ui.element("div").classes("ledger-row reval-row"):
+                            with ui.column().classes("gap-0 min-w-0"):
+                                ui.label(line.label).classes("truncate")
+                                if line.key == REVAL_FX and abs(rep.fx_translation) > EPS:
+                                    ui.label(
+                                        t(
+                                            "including {amount} from exchange-rate changes",
+                                            amount=fmt_signed(rep.fx_translation),
+                                        )
+                                    ).classes("caption")
+                            ui.label(fmt_signed(line.actual) or "–").classes(
+                                "r " + ("text-neg" if line.actual < -EPS else "")
+                            )
 
         # ------------------------------------------------------------ ledger
         def ledger_card(rep: reports.MonthReport, title: str, total: reports.Line, type_: str, rows) -> None:
@@ -478,6 +519,22 @@ def page() -> None:
                             )
 
         # ------------------------------------------------------------ accounts
+        def book_revaluation(rep: reports.MonthReport, row) -> None:
+            """F46: book an account's unexplained difference as a revaluation, prefilled."""
+            prefill = TransactionInput(
+                date=months.last_day(rep.month),
+                type=TX_REVALUATION,
+                currency=row.account.currency,
+                category=REVAL_INVEST,
+                reval_account=row.account.id,
+                reval_change=row.unexplained,
+            )
+
+            def booked() -> None:
+                content.refresh()
+
+            open_transaction_sheet(ctx, booked, prefill=prefill)
+
         def accounts_card(rep: reports.MonthReport) -> None:
             """Opening, closing and change per account in its own currency (F41), and the value shown in totals."""
             cur = rep.currency
@@ -493,6 +550,7 @@ def page() -> None:
                         ui.label(t("Opening")).classes("c-open")
                         ui.label(t("Closing")).classes("c-close")
                         ui.label(t("Change")).classes("c-change")
+                        ui.label(t("Unexplained")).classes("c-unexpl")
                         ui.label(t("In {currency}", currency=cur)).classes("c-view")
                     for r in rep.accounts:
                         acc_cur = r.account.currency
@@ -509,6 +567,18 @@ def page() -> None:
                             ui.label(
                                 (fmt_signed(change) or fmt(0)) + f" {acc_cur}" if change is not None else "–"
                             ).classes("c-change num " + ("text-neg" if (change or 0) < -EPS else "text-2"))
+                            with ui.row().classes("c-unexpl gap-0 items-center no-wrap justify-end"):
+                                gap = r.unexplained
+                                ui.label("–" if gap is None else (fmt_signed(gap) or fmt(0)) + f" {acc_cur}").classes(
+                                    "num " + ("text-neg" if (gap or 0) < -EPS else "text-2")
+                                )
+                                if gap is not None and abs(gap) > EPS:
+                                    ui.button(
+                                        icon="o_post_add",
+                                        on_click=lambda r=r: book_revaluation(rep, r),
+                                    ).props("flat dense round size=sm").classes("text-primary").tooltip(
+                                        t("Book as revaluation…")
+                                    )
                             ui.label(fmt(r.amount_view, cur)).classes("c-view num text-2")
                             if r.needs_entry or r.has_entry:
                                 ui.button(
@@ -533,6 +603,9 @@ def page() -> None:
                             if rep.balance_change is not None
                             else "–"
                         ).classes("c-change num")
+                        ui.label(
+                            (fmt_signed(rep.unexplained) or fmt(0)) + f" {cur}" if rep.unexplained is not None else "–"
+                        ).classes("c-unexpl num " + ("text-neg" if (rep.unexplained or 0) < -EPS else ""))
 
         content()
         on_data_changed(content.refresh)

@@ -87,8 +87,20 @@ ECB date of the rate used** (`fx_date`).
   - `from_account` and `to_account` are different regular accounts in the transaction currency.
 - `exchange`
   - `amount` is in the currency of `from_account`.
-  - `to_amount` is the amount received, typed in by the user, in `to_currency` (the currency of
-    `to_account`). The form shows the ECB amount and both rates for comparison.
+  - The user types the amount received, in `to_currency` (the currency of `to_account`); the
+    form shows the ECB amount and both rates for comparison.
+  - `to_amount` stores the **ECB amount** (at `fx_date`). The spread between what was received
+    and the ECB amount is a linked `revaluation` of kind `REVAL_FX` on `to_account` (F44); the
+    two rows point at each other through `linked_id`. Together they credit exactly what the bank
+    did. Saving, editing and deleting the exchange keep the spread booking in step, it can't be
+    edited or deleted on its own, and the rate check re-splits it when the exchange's rate
+    date moves.
+- `revaluation` (F43)
+  - A change in an account's value that is neither income nor spending, in the account's
+    currency. `category` is the kind: `REVAL_FX` (capital gains on currency exchange) or
+    `REVAL_INVEST` (capital gains on investment).
+  - `amount` stays positive: a gain is booked to `to_account`, a loss from `from_account`. The
+    form takes the change as a signed difference or as old and new values.
 
 **Advance payments.** An advanced expenditure is stored as **one row**:
 
@@ -162,14 +174,26 @@ holidays. Dates before the start of the file use its first rate.
   months with balance data for M−1, the Budget page shows above the tables
   - recorded net = total income − total expenditure,
   - change in balances = Wealth(M) − Wealth(M−1),
-  - **unexplained** = change in balances − recorded net. A negative value is money that left
-    the accounts without being recorded; a positive one arrived without a record. The
-    *Income and Expenditure* chart offers it as the series *Unexplained difference*.
+  - **revaluations** = booked revaluations of the month (at their own rates) + the automatic
+    exchange-rate effect on foreign balances (decision 4): per account, opening × (rate at
+    the end of M − rate at the end of M−1) + Σ each movement × (rate at the end of M − its own
+    rate), in the view currency,
+  - **unexplained** = change in balances − recorded net − revaluations. A negative value is
+    money that left the accounts without being recorded; a positive one arrived without a
+    record. With every movement recorded it is 0 in any view currency (tested). The *Income
+    and Expenditure* chart offers it as the series *Unexplained difference*.
+- **Revaluations** (F45): a section after the expenditure table lists *Capital gains on
+  currency exchange* (booked, plus the automatic exchange-rate effect, shown separately in a
+  note) and *Capital gains on investment*, with a total. They are not part of *Net income*
+  (decision 3).
 - **Total expenditure** = recorded expenditure only, on the page, in the charts and in the
   statement export.
-- **Account balances** (F41): for each account the opening balance (end of M−1, carried
-  forward), the closing balance and the change, in the account's currency; the total row
-  shows Wealth(M−1), Wealth(M) and their change in the view currency.
+- **Account balances** (F41, F46): for each account the opening balance (end of M−1, carried
+  forward), the closing balance, the change and the **unexplained** part of the change
+  (change − the month's recorded movements on the account), in the account's currency; the
+  unexplained part needs a balance recorded for M, and *Book as revaluation…* opens a
+  prefilled revaluation for it. The total row shows Wealth(M−1), Wealth(M), their change and
+  the month's unexplained difference in the view currency.
 - **Difference** = actual − budget. It is shown in red when expenditure exceeds the
   budget or income falls short of it.
 
@@ -247,10 +271,10 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
    in wealth.
 2. **An advance is a single row** with an `advance_amount` column, not two linked rows.
    Editing and deleting stay atomic, and the reports split the amount.
-3. **Exchange `to_amount` is the amount actually received** (issue 01, B06; it used to be
-   computed from ECB rates). The difference to the ECB amount, the bank's spread, still shows
-   up in the reconciliation's unexplained difference once balances are recorded, until F44 books it as a
-   revaluation.
+3. **An exchange records the amount actually received** (issue 01, B06): the ECB part on the
+   exchange, the bank's spread as a linked revaluation (F44). Exchanges saved before F44 keep
+   their full received amount on the exchange; their spread is split off when they are next
+   edited, not automatically, because older entries were valued at a different rate.
 4. **Balances carry forward.** A month with no entry for an account reuses the account's
    last recorded balance. The Budget overview flags such accounts and offers an "Add"
    button.

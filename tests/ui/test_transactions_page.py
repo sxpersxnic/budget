@@ -170,7 +170,9 @@ async def test_filters_narrow_the_list(user: User, ctx, demo, shop) -> None:
     put(user, field(user, ui.select, "Type"), None)
 
     put(user, field(user, ui.select, "Account"), demo["eur"].id)
-    assert {r["id"] for r in rows(user)} == {shop["exchange"].id, shop["advance"].id, shop["repay"].id}
+    spread = shop["exchange"].linked_id  # the exchange's spread booking (F44) is on the EUR account too
+    expected = {shop["exchange"].id, shop["advance"].id, shop["repay"].id} | ({spread} if spread else set())
+    assert {r["id"] for r in rows(user)} == expected
     put(user, field(user, ui.select, "Account"), None)
 
     put(user, field(user, ui.input, "From"), "2026-10-03")
@@ -230,11 +232,12 @@ async def test_delete_selected_after_confirmation(user: User, ctx, demo, shop) -
 
     click(user, button(user, "Delete"))
     click(user, button(user, "Delete"))  # the sheet's button is the newest
-    assert user.notify.contains("Deleted 2 transactions")
+    gone = 3 if shop["exchange"].linked_id else 2  # the exchange's spread booking goes with it (F44)
+    assert user.notify.contains(f"Deleted {gone} transactions")
     assert ctx.store.transactions.get(shop["receipt"].id) is None
     assert items_svc.items_for(ctx, shop["receipt"].id) == []  # the receipt's items go with it
-    assert len(rows(user)) == before - 2
-    await user.should_see(f"{before - 2} transactions")
+    assert len(rows(user)) == before - gone
+    await user.should_see(f"{before - gone} transactions")
 
 
 async def test_an_advance_with_repayments_cannot_be_deleted_alone(user: User, ctx, demo, shop) -> None:

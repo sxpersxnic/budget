@@ -171,7 +171,8 @@ The app opens in its own window and keeps all data in your user folder:
    - Choose how far ahead to plan (*Plan Until*) and the display currency.
 2. **Budget → Record Balance:** enter each account's balance at the end of last month.
 3. **New Transaction** (top of the sidebar, available on every page): record expenditures
-   (with a COICOP category or taxes), income, transfers and currency exchanges. Turn on
+   (with a COICOP category or taxes), income, transfers, currency exchanges and
+   revaluations (a change in an account's value, such as a gain on an investment). Turn on
    *Partly paid for others* when part of a payment was for someone else. Record their
    repayment later as income with *Repays an advance payment*. Under **Items** you can list
    what you bought (for example a grocery receipt) with quantity and price; the Transactions

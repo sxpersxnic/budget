@@ -182,19 +182,21 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 
 /* account balances (F41): name · opening · closing · change (account currency) · value in the view currency · action */
 .accounts { container-type: inline-size; }
-.acct-row { display: grid; grid-template-columns: minmax(0, 1fr) 8.5rem 8.5rem 8rem 8.5rem 6rem; column-gap: 12px;
-  grid-template-areas: "name open close change view action"; align-content: center; row-gap: 0; }
+.acct-row { display: grid; grid-template-columns: minmax(0, 1fr) 7.5rem 7.5rem 7rem 8.5rem 7.5rem 5.5rem;
+  column-gap: 10px; grid-template-areas: "name open close change unexpl view action"; align-content: center;
+  row-gap: 0; }
 .acct-row > * { white-space: nowrap; }
 .acct-row .c-name { grid-area: name; min-width: 0; white-space: normal; }
 .acct-row .c-open { grid-area: open; text-align: right; }
 .acct-row .c-close { grid-area: close; text-align: right; }
 .acct-row .c-change { grid-area: change; text-align: right; }
+.acct-row .c-unexpl { grid-area: unexpl; text-align: right; justify-content: flex-end; }
 .acct-row .c-view { grid-area: view; text-align: right; }
 .acct-row .c-action { grid-area: action; justify-self: end; }
 .acct-row.head { min-height: 30px; font-size: 12px; color: var(--label-2); font-weight: 500; }
 @container (max-width: 760px) {  /* drop the opening balance and the view-currency value */
-  .acct-row { grid-template-columns: minmax(0, 1fr) auto auto 2.25rem;
-    grid-template-areas: "name close change action"; }
+  .acct-row { grid-template-columns: minmax(0, 1fr) auto auto auto 2.25rem;
+    grid-template-areas: "name close change unexpl action"; }
   .acct-row .c-open, .acct-row .c-view { display: none; }
   .acct-row .c-action .block { display: none; }  /* icon only */
 }
@@ -202,7 +204,9 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
   .acct-row { grid-template-columns: minmax(0, 1fr) auto 2.25rem;
     grid-template-areas: "name close action" "name change action"; }
   .acct-row .c-change { font-size: 12px; }
+  .acct-row .c-unexpl { display: none; }
 }
+.reval-row { grid-template-columns: minmax(0, 1fr) 9rem; }
 .meter { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; width: 100%; }
 .meter > div { height: 100%; border-radius: 3px; background: var(--accent); }
 .meter.over > div { background: var(--negative); }

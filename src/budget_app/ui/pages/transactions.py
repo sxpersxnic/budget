@@ -5,7 +5,15 @@ from __future__ import annotations
 from nicegui import ui
 
 from budget_app.domain.coicop import get_coicop
-from budget_app.domain.models import TX_EXCHANGE, TX_EXPENDITURE, TX_INCOME, TX_TYPES, Transaction
+from budget_app.domain.models import (
+    REVALUATION_KINDS,
+    TX_EXCHANGE,
+    TX_EXPENDITURE,
+    TX_INCOME,
+    TX_REVALUATION,
+    TX_TYPES,
+    Transaction,
+)
 from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import items as items_svc
@@ -38,12 +46,19 @@ def _type_label(tx_type: str) -> str:
 
 
 def _row(
-    tx: Transaction, accs: dict[str, str], income_cats: dict[str, str], item_counts: dict, item_names: dict
+    tx: Transaction,
+    accs: dict[str, str],
+    income_cats: dict[str, str],
+    item_counts: dict,
+    item_names: dict,
+    received: float | None = None,
 ) -> dict:
     if tx.type == TX_EXPENDITURE:
         category = get_coicop().label(tx.category)
     elif tx.type == TX_INCOME:
         category = t(ADV_REPAY_NAME) if tx.is_advance else income_cats.get(tx.category, "")
+    elif tx.type == TX_REVALUATION:
+        category = t(REVALUATION_KINDS.get(tx.category, tx.category))
     else:
         category = _type_label(tx.type)
     advance = ""
@@ -52,8 +67,8 @@ def _row(
     elif tx.is_advance:
         advance = t("repaid by {debtor}", debtor=tx.debtor)
     to = accs.get(tx.to_account, "")
-    if tx.type == TX_EXCHANGE:
-        to += f" (+{tx.to_amount:.2f} {tx.to_currency})"
+    if tx.type == TX_EXCHANGE:  # what the bank credited, spread included (F44)
+        to += f" (+{received if received is not None else tx.to_amount:.2f} {tx.to_currency})"
     return {
         "id": tx.id,
         "date": tx.date.isoformat(),
@@ -80,7 +95,8 @@ def _row(
             ]
         ).lower(),
         "_accounts": [tx.from_account, tx.to_account, tx.advance_account],
-        "_type": tx.type,
+        # a gain shows like income (signed, green); the type filter uses the stored type
+        "_type": "income" if tx.type == TX_REVALUATION and tx.to_account else tx.type,
     }
 
 
@@ -149,7 +165,8 @@ def page() -> None:
                     continue
                 if typ.value and tx.type != typ.value:
                     continue
-                r = _row(tx, accs, income_cats, item_counts, item_names)
+                received = tx_svc.received_amount(ctx, tx) if tx.type == TX_EXCHANGE else None
+                r = _row(tx, accs, income_cats, item_counts, item_names, received)
                 if acc.value and acc.value not in r["_accounts"]:
                     continue
                 if q and q not in r["_search"]:
