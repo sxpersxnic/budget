@@ -30,6 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☐ Open | 0 of 4 steps |
 | 4 · Import and charts | ☐ Open | 0 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
+| After issue 01 (steps 19–25) | ◐ Partly | F24, F25, F02 and F29 done (step 19, F25 of step 20, step 23); F28 and steps 21, 22, 24, 25 open |
 | Bugs B01–B15 | ◐ Partly | 14 of 15 fixed; B04 closes with F42 (milestone 2) |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ◐ Partly | built; the first CI run is pending |
