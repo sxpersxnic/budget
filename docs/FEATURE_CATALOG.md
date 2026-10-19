@@ -125,7 +125,7 @@ Waits for the source data (decision 7).
 | 20 | ☐ Open | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
 | 21 | ☐ Open | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
 | 22 | ☐ Open | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
-| 23 | ☐ Open | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
+| 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☐ Open | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
 | 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F29 (French, Italian), F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
@@ -134,7 +134,7 @@ Waits for the source data (decision 7).
 | ID | Status | Feature | Area | Effort | Network | Depends on |
 | --- | --- | --- | --- | --- | --- | --- |
 | F01 | ☑ Done | CSV import of transactions | Data in | M | Local | – |
-| F02 | ☐ Open | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
+| F02 | ☑ Done | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
 | F03 | ☐ Open | Swiss QR-bill scanning | Data in | M | Local | – |
 | F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
 | F05 | ☐ Open | Recurring transactions | Data in | M | Local | – |
@@ -335,7 +335,7 @@ F29 is done for English and German.
 
 #### F02 · Swiss bank statement import (camt.053 / camt.054)
 
-**Status:** ☐ Open
+**Status:** ☑ Done
 
 Swiss banks deliver statements as ISO 20022 XML (camt.053 for account statements, camt.054
 for notifications); since the SIX migration this is the standard e-banking export.
@@ -344,6 +344,14 @@ for notifications); since the SIX migration this is the standard e-banking expor
   bank's own transaction ID are all structured, so duplicate detection is exact.
 - Reuses F01's preview and duplicate handling.
 - **Decide:** whether to also read the older MT940 format some banks still offer.
+
+**As built.** The import page takes `.csv` and `.xml`; a camt file skips the columns step and goes
+straight to review, through the same duplicate marking, category suggestions and one-write save as
+F01. Any version is read (namespace-agnostic); only booked entries are imported, a batch splits
+into its payments when their amounts add up, and `import_ref` is `camt:<IBAN>:<bank reference>`.
+The account is remembered per IBAN (`import_accounts.json`) and a statement in another currency
+than the account is refused. The closing balance is parsed but left for F36. Not done: MT940,
+camt.052 intraday reports, files holding several accounts (refused with a message).
 
 #### F03 · Swiss QR-bill scanning
 
