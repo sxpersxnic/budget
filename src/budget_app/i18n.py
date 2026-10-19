@@ -1,8 +1,9 @@
-"""Interface language: English (source) and German.
+"""Interface language: English (source), German, French and Italian.
 
-Texts are written in English in the code and wrapped in `t()`; `resources/i18n/de.json` maps each
-English text to German. `tn()` handles singular/plural. `N_()` only marks texts that are translated
-later (for example in constant tables), so the completeness test can find them.
+Texts are written in English in the code and wrapped in `t()`; `resources/i18n/<lang>.json` maps
+each English text to that language (`coicop_<lang>.json` does the same for COICOP names). `tn()`
+handles singular/plural. `N_()` only marks texts that are translated later (for example in
+constant tables), so the completeness test can find them.
 
 The language is process-wide: the app has one user, and changing it reloads the page.
 """
@@ -20,14 +21,16 @@ from functools import cache
 
 from budget_app.config import RESOURCES_DIR
 
-LANGUAGES = {"en": "English", "de": "Deutsch"}
+LANGUAGES = {"en": "English", "de": "Deutsch", "fr": "Français", "it": "Italiano"}
 DEFAULT = "en"
 # Quasar language packs and browser locales; Swiss variants match the app's number format
-QUASAR = {"en": "en-GB", "de": "de-CH"}
-BROWSER_LOCALE = {"en": "en-GB", "de": "de-CH"}
+QUASAR = {"en": "en-GB", "de": "de-CH", "fr": "fr", "it": "it"}
+BROWSER_LOCALE = {"en": "en-GB", "de": "de-CH", "fr": "fr-CH", "it": "it-CH"}
 MONTHS = {
     "en": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
     "de": ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."],
+    "fr": ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."],
+    "it": ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"],
 }
 MONTHS_LONG = {
     "en": [
@@ -57,6 +60,34 @@ MONTHS_LONG = {
         "Oktober",
         "November",
         "Dezember",
+    ],
+    "fr": [
+        "janvier",
+        "février",
+        "mars",
+        "avril",
+        "mai",
+        "juin",
+        "juillet",
+        "août",
+        "septembre",
+        "octobre",
+        "novembre",
+        "décembre",
+    ],
+    "it": [
+        "gennaio",
+        "febbraio",
+        "marzo",
+        "aprile",
+        "maggio",
+        "giugno",
+        "luglio",
+        "agosto",
+        "settembre",
+        "ottobre",
+        "novembre",
+        "dicembre",
     ],
 }
 
@@ -155,7 +186,7 @@ def month_label(year: int, month: int, long: bool = False) -> str:
 
 
 def date_label(d: date) -> str:
-    """9 Oct 2026 / 9. Okt. 2026"""
+    """9 Oct 2026 / 9. Okt. 2026 / 9 oct. 2026 / 9 ott 2026"""
     name = MONTHS[_current][d.month - 1]
     return f"{d.day}. {name} {d.year}" if _current == "de" else f"{d.day} {name} {d.year}"
 

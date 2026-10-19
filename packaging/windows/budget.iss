@@ -40,6 +40,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
+Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -57,6 +58,10 @@ french.UpdateHeading=Mise à jour
 french.UpdateFromTo=Budget %1 sera remplacé par la version %2.
 french.Reinstall=Budget %1 sera réinstallé.
 french.DataKept=Vos données dans %1 sont conservées.
+italian.UpdateHeading=Aggiornamento
+italian.UpdateFromTo=Budget %1 sarà sostituito dalla versione %2.
+italian.Reinstall=Budget %1 sarà reinstallato.
+italian.DataKept=I dati in %1 vengono conservati.
 
 [InstallDelete]
 ; The bundled Python libraries change between versions; clear the old ones so no stale module is loaded.

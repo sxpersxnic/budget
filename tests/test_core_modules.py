@@ -436,12 +436,12 @@ def test_system_codes_on_macos_ask_the_os(monkeypatch):
 
     def fake_run(cmd, **kwargs):
         seen.append(cmd)
-        return subprocess.CompletedProcess(cmd, 0, stdout='(\n    "fr-CH",\n    "de-CH"\n)\n')
+        return subprocess.CompletedProcess(cmd, 0, stdout='(\n    "es-ES",\n    "de-CH"\n)\n')
 
     monkeypatch.setattr(i18n.subprocess, "run", fake_run)
-    assert i18n._system_codes() == ["fr-CH", "de-CH"]
+    assert i18n._system_codes() == ["es-ES", "de-CH"]
     assert seen[0][0] == "/usr/bin/defaults"
-    assert i18n.system_language() == "de"
+    assert i18n.system_language() == "de"  # Spanish isn't offered, so the next preference wins
 
 
 def test_system_codes_survive_os_errors(monkeypatch):
