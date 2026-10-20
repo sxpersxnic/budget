@@ -13,14 +13,16 @@ from datetime import date
 
 from budget_app.domain import months
 from budget_app.domain.coicop import ADV, TAX, get_coicop
-from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME
+from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, REVAL_FX, REVAL_INVEST, REVALUATION_KINDS
 from budget_app.i18n import t
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.aggregates import (  # noqa: F401 - re-exported for callers of reports
     ADV_REPAY,
     ADV_REPAY_NAME,
+    account_flows,
     actual_expenditure,
     actual_income,
+    booked_revaluations,
     budgeted,
     expenditure_parts,
     income_key,
@@ -59,9 +61,14 @@ class MonthReport:
     total_income: Line = field(default_factory=lambda: Line("TOTAL", t("Total income")))
     wealth_start: float | None = None
     wealth_end: float | None = None
+    # revaluations (F45): booked per kind, plus exchange-rate moves on foreign balances (complete months)
+    revaluation_lines: list[Line] = field(default_factory=list)
+    total_revaluation: Line = field(default_factory=lambda: Line("TOTAL", t("Total revaluations")))
+    fx_translation: float = 0.0
     # reconciliation (F42), for complete months with balances at both ends
     balance_change: float | None = None  # wealth_end - wealth_start
-    unexplained: float | None = None  # balance_change - (income - expenditure); negative: money unaccounted for
+    # balance_change - (income - expenditure) - revaluations; negative: money left without a record
+    unexplained: float | None = None
     accounts: list[wealth_svc.AccountRow] = field(default_factory=list)
     projected_wealth: float | None = None
 
@@ -117,24 +124,49 @@ def month_report(ctx: Context, month: str, view_cur: str, today: date | None = N
     recorded_exp = sum(rep.expenditure_tree[c].actual for c in rep.top_expenditure)
     total_exp_budget = sum(rep.expenditure_tree[c].budget for c in rep.top_expenditure)
 
-    if complete and wealth_svc.has_wealth_data(ctx, months.add_months(month, -1)):
-        rep.wealth_start = wealth_svc.wealth(ctx, months.add_months(month, -1), view_cur)
+    prev = months.add_months(month, -1)
+    if complete and wealth_svc.has_wealth_data(ctx, prev):
+        rep.wealth_start = wealth_svc.wealth(ctx, prev, view_cur)
         rep.wealth_end = wealth_svc.wealth(ctx, month, view_cur)
         rep.balance_change = rep.wealth_end - rep.wealth_start
-        rep.unexplained = rep.balance_change - (total_inc_act - recorded_exp)
 
     rep.total_expenditure = Line("TOTAL", t("Total expenditure"), recorded_exp, total_exp_budget)
     rep.total_income = Line("TOTAL", t("Total income"), total_inc_act, sum(bud_inc.values()))
 
     if complete:
-        prev = months.add_months(month, -1)
+        flows = account_flows(ctx, month, view_cur)
+        start_rate, end_rate = ctx.month_rate_date(prev), ctx.month_rate_date(month)
         for r in wealth_svc.account_rows(ctx, month, view_cur):
             before = wealth_svc.balance_entry(ctx, r.account.id, prev)
             r.opening = before.amount if before else None
+            moves = flows.get(r.account.id, [])
+            r.flows = sum(a for a, _ in moves)
+            if r.has_entry and r.opening is not None:
+                r.unexplained = round(r.amount - r.opening - r.flows, 2)
+            if rep.balance_change is not None:
+                # opening balance and each movement revalued from its own rate to the month-end rate
+                cur, opening = r.account.currency, r.opening or 0.0
+                r.fx_gain = round(
+                    ctx.convert_on(opening, cur, view_cur, end_rate)
+                    - ctx.convert_on(opening, cur, view_cur, start_rate)
+                    + ctx.convert_on(r.flows, cur, view_cur, end_rate)
+                    - sum(v for _, v in moves),
+                    2,
+                )
+                rep.fx_translation += r.fx_gain
             if abs(r.amount) > 0.005 or r.has_entry or abs(r.opening or 0.0) > 0.005:
                 rep.accounts.append(r)
     else:
         rep.projected_wealth = wealth_svc.projected_wealth(ctx, month, view_cur)
+
+    booked = booked_revaluations(ctx, month, view_cur)
+    rep.revaluation_lines = [
+        Line(REVAL_FX, t(REVALUATION_KINDS[REVAL_FX]), booked.get(REVAL_FX, 0.0) + rep.fx_translation),
+        Line(REVAL_INVEST, t(REVALUATION_KINDS[REVAL_INVEST]), booked.get(REVAL_INVEST, 0.0)),
+    ]
+    rep.total_revaluation = Line("TOTAL", t("Total revaluations"), sum(line.actual for line in rep.revaluation_lines))
+    if rep.balance_change is not None:
+        rep.unexplained = rep.balance_change - (total_inc_act - recorded_exp) - rep.total_revaluation.actual
     return rep
 
 
@@ -156,15 +188,8 @@ UNEXPLAINED_KEY = "REC:UNEXPLAINED"
 
 
 def unexplained(ctx: Context, month: str, view_cur: str, today: date | None = None) -> float | None:
-    """Change in balances minus recorded net for a complete month with balances at both ends."""
-    if not months.is_complete(month, today) or not wealth_svc.has_wealth_data(ctx, months.add_months(month, -1)):
-        return None
-    mset = {month}
-    recorded = sum(actual_income(ctx, mset, view_cur).values()) - sum(
-        rollup(actual_expenditure(ctx, mset, view_cur)).get(c, 0.0) for c in top_expenditure_codes()
-    )
-    change = wealth_svc.wealth(ctx, month, view_cur) - wealth_svc.wealth(ctx, months.add_months(month, -1), view_cur)
-    return change - recorded
+    """The reconciliation's unexplained difference of a month (None without balances at both ends)."""
+    return month_report(ctx, month, view_cur, today).unexplained
 
 
 def budget_label(label: str) -> str:

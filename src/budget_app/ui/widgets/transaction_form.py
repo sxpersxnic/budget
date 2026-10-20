@@ -12,9 +12,12 @@ from budget_app import i18n
 from budget_app.domain.fx import FxError
 from budget_app.domain.models import (
     ACCOUNT_ADVANCE,
+    REVAL_INVEST,
+    REVALUATION_KINDS,
     TX_EXCHANGE,
     TX_EXPENDITURE,
     TX_INCOME,
+    TX_REVALUATION,
     TX_TRANSFER,
     TX_TYPES,
     Transaction,
@@ -46,6 +49,7 @@ class TransactionForm:
         editing: Transaction | None = None,
         on_saved: Callable[[Transaction], None] | None = None,
         on_cancel: Callable[[], None] | None = None,
+        prefill: TransactionInput | None = None,
     ):
         self.ctx = ctx
         self.editing = editing
@@ -54,9 +58,9 @@ class TransactionForm:
         self._busy = False
         self._touched = False  # explain why Save is disabled only once the user has started
         init = (
-            tx_svc.to_input(editing)
+            tx_svc.edit_input(ctx, editing)
             if editing
-            else TransactionInput(date=date.today(), currency=ctx.store.settings.display_currency)
+            else prefill or TransactionInput(date=date.today(), currency=ctx.store.settings.display_currency)
         )
         self._build(init)
         self._changed()
@@ -68,7 +72,7 @@ class TransactionForm:
         with ui.column().classes("w-full gap-4"):
             # The type decides every other field, so it comes first.
             self.type = segmented({k: t(v) for k, v in TX_TYPES.items()}, init.type, on_change=ch, full=True)
-            with ui.column().classes("w-full gap-1"):
+            with ui.column().classes("w-full gap-1") as self.amount_box:
                 with ui.row().classes("w-full gap-2 items-center no-wrap"):
                     self.amount = ui.number(
                         t("Amount"),
@@ -158,6 +162,41 @@ class TransactionForm:
                 self.to_amount.props("outlined inputmode=decimal").classes("w-full mt-2")
                 self.exchange_hint = ui.label().classes("caption px-1 whitespace-pre-line")
 
+            # --- revaluation (F43)
+            with ui.column().classes("w-full gap-3") as self.reval_box:
+                is_reval = init.type == TX_REVALUATION
+                self.reval_account = self._account_select(t("Account"), init.reval_account if is_reval else None)
+                self.reval_kind = (
+                    ui.select(
+                        {k: t(v) for k, v in REVALUATION_KINDS.items()},
+                        value=init.category if is_reval and init.category in REVALUATION_KINDS else REVAL_INVEST,
+                        label=t("Kind"),
+                        on_change=ch,
+                    )
+                    .props("dense outlined")
+                    .classes("w-full")
+                )
+                self.reval_mode = segmented(
+                    {"difference": t("Change"), "values": t("Old and New Value")},
+                    init.reval_mode if is_reval else "difference",
+                    on_change=ch,
+                    full=True,
+                )
+                self.reval_change = ui.number(
+                    t("Change in value"), value=init.reval_change if is_reval else None, format="%.2f", on_change=ch
+                )
+                self.reval_change.props("outlined inputmode=decimal").classes("w-full")
+                with ui.row().classes("w-full gap-2 no-wrap") as self.reval_values:
+                    self.reval_old = ui.number(
+                        t("Old value"), value=init.reval_old if is_reval else None, format="%.2f", on_change=ch
+                    )
+                    self.reval_old.props("dense outlined inputmode=decimal").classes("flex-1 min-w-0")
+                    self.reval_new = ui.number(
+                        t("New value"), value=init.reval_new if is_reval else None, format="%.2f", on_change=ch
+                    )
+                    self.reval_new.props("dense outlined inputmode=decimal").classes("flex-1 min-w-0")
+                self.reval_hint = ui.label().classes("caption px-1")
+
             with ui.column().classes("w-full") as self.items_box:
                 self.items = ItemList(
                     items_svc.known_names(self.ctx),
@@ -231,6 +270,11 @@ class TransactionForm:
         self.inc_box.set_visibility(kind == TX_INCOME)
         self.move_box.set_visibility(kind in (TX_TRANSFER, TX_EXCHANGE))
         self.to_amount.set_visibility(kind == TX_EXCHANGE)
+        self.amount_box.set_visibility(kind != TX_REVALUATION)  # a revaluation is a change, signed
+        self.reval_box.set_visibility(kind == TX_REVALUATION)
+        values = self.reval_mode.value == "values"
+        self.reval_change.set_visibility(not values)
+        self.reval_values.set_visibility(values)
         self.items_box.set_visibility(kind in (TX_EXPENDITURE, TX_INCOME))
         self.exp_adv_box.set_visibility(bool(self.exp_adv.value))
         self.inc_adv_box.set_visibility(bool(self.inc_adv.value))
@@ -274,6 +318,14 @@ class TransactionForm:
         else:
             set_options(self.open_items, item_opts)
 
+        if kind == TX_REVALUATION:
+            set_options(self.reval_account, account_options(self.ctx))
+            acc = self.ctx.store.accounts.get(self.reval_account.value) if self.reval_account.value else None
+            if acc and self.currency.value != acc.currency:
+                self.currency.set_value(acc.currency)
+            suffix = f'suffix="{acc.currency}"' if acc else "remove=suffix"
+            for el in (self.reval_change, self.reval_old, self.reval_new):
+                el.props(suffix)
         if kind == TX_EXCHANGE:
             set_options(self.move_from, account_options(self.ctx))
             src = self.ctx.store.accounts.get(self.move_from.value) if self.move_from.value else None
@@ -289,6 +341,15 @@ class TransactionForm:
             set_options(self.move_to, account_options(self.ctx, currency=cur))
 
     def _update_hints(self, inp: TransactionInput) -> None:
+        self.reval_hint.set_text("")
+        if inp.type == TX_REVALUATION:
+            change = tx_svc.revaluation_change(inp)
+            if change:
+                self.reval_hint.set_text(
+                    t("A gain of {amount}", amount=fmt(change, inp.currency))
+                    if change > 0
+                    else t("A loss of {amount}", amount=fmt(-change, inp.currency))
+                )
         self.base_hint.set_text("")
         self.adv_hint.set_text("")
         self.exchange_hint.set_text("")
@@ -371,6 +432,14 @@ class TransactionForm:
                 inp.settles_id = self.open_items.value or ""
             else:
                 inp.category = self.inc_category.value or ""
+        elif kind == TX_REVALUATION:
+            inp.reval_account = self.reval_account.value or ""
+            inp.category = self.reval_kind.value or ""
+            inp.reval_mode = self.reval_mode.value
+            inp.reval_change = self.reval_change.value
+            inp.reval_old, inp.reval_new = self.reval_old.value, self.reval_new.value
+            change = tx_svc.revaluation_change(inp)
+            inp.amount = abs(change) if change else None
         else:
             inp.from_account = self.move_from.value or ""
             inp.to_account = self.move_to.value or ""
@@ -411,6 +480,10 @@ class TransactionForm:
                 self.move_from,
                 self.move_to,
                 self.to_amount,
+                self.reval_account,
+                self.reval_change,
+                self.reval_old,
+                self.reval_new,
             ):
                 el.set_value(None)
             self.exp_adv.set_value(False)
@@ -427,9 +500,14 @@ class TransactionForm:
 
 
 def open_transaction_sheet(
-    ctx: Context, on_saved: Callable[[], None] | None = None, editing: Transaction | None = None
+    ctx: Context,
+    on_saved: Callable[[], None] | None = None,
+    editing: Transaction | None = None,
+    prefill: TransactionInput | None = None,
 ) -> None:
     """The transaction form as a modal sheet, so a transaction can be added from any page."""
+    if editing is not None and editing.type == TX_REVALUATION and editing.linked_id:
+        editing = ctx.store.transactions.get(editing.linked_id) or editing  # a spread is edited via its exchange
 
     def saved(_: Transaction) -> None:
         dlg.close()
@@ -437,4 +515,4 @@ def open_transaction_sheet(
             on_saved()
 
     with sheet(t("Edit Transaction") if editing else t("New Transaction"), width="34rem") as dlg:
-        TransactionForm(ctx, editing=editing, on_saved=saved, on_cancel=dlg.close)
+        TransactionForm(ctx, editing=editing, on_saved=saved, on_cancel=dlg.close, prefill=prefill)

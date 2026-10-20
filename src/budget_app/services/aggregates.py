@@ -1,4 +1,4 @@
-"""Sums of transactions and budget entries per category and month, in a view currency.
+"""Sums of transactions and budget entries per category, month and account, in a view currency.
 
 Shared by the monthly statement (reports.py) and the wealth projection (wealth.py).
 """
@@ -11,7 +11,15 @@ from datetime import date
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months
 from budget_app.domain.coicop import ADV, TAX, get_coicop
-from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, TX_EXPENDITURE, TX_INCOME, Transaction
+from budget_app.domain.models import (
+    BUDGET_EXPENDITURE,
+    BUDGET_INCOME,
+    TX_EXCHANGE,
+    TX_EXPENDITURE,
+    TX_INCOME,
+    TX_REVALUATION,
+    Transaction,
+)
 from budget_app.i18n import N_
 from budget_app.services.context import Context
 
@@ -103,3 +111,37 @@ def projected_net(ctx: Context, month: str, view_cur: str) -> float:
     inc_bud = budgeted(ctx, mset, BUDGET_INCOME, view_cur)
     income = sum(max(inc_act.get(k, 0.0), inc_bud.get(k, 0.0)) for k in set(inc_act) | set(inc_bud))
     return income - spending
+
+
+# ------------------------------------------------------------------ account flows (F45, F46)
+def account_flows(ctx: Context, month: str, view_cur: str) -> dict[str, list[tuple[float, float]]]:
+    """Every movement of a month per account: (amount in the account's currency, value in `view_cur`).
+
+    The value uses each transaction's own rate, like the statement does. Income and incoming
+    transfers, exchanges and gains are positive; spending (the full amount, including a share
+    paid for others) and outgoing transfers, exchanges and losses are negative.
+    """
+    out: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    for tx in ctx.store.transactions.all():
+        if months.month_of(tx.date) != month:
+            continue
+        value = tx_value(ctx, tx, view_cur)
+        if tx.from_account:
+            out[tx.from_account].append((-tx.amount, -value))
+        if tx.to_account:
+            if tx.type == TX_EXCHANGE:  # credited in the other currency, at the exchange's rate date
+                received = ctx.convert_on(tx.to_amount, tx.to_currency, view_cur, tx.fx_date)
+                out[tx.to_account].append((tx.to_amount, received))
+            else:
+                out[tx.to_account].append((tx.amount, value))
+    return dict(out)
+
+
+def booked_revaluations(ctx: Context, month: str, view_cur: str) -> dict[str, float]:
+    """Revaluations of a month per kind (REVAL_FX, REVAL_INVEST), signed, in `view_cur`."""
+    out: dict[str, float] = defaultdict(float)
+    for tx in ctx.store.transactions.all():
+        if tx.type == TX_REVALUATION and months.month_of(tx.date) == month:
+            value = tx_value(ctx, tx, view_cur)
+            out[tx.category] += value if tx.to_account else -value
+    return dict(out)

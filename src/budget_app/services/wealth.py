@@ -22,6 +22,9 @@ class AccountRow:
     has_entry: bool  # an entry exists for exactly this month
     needs_entry: bool  # no entry for this month but the last entry was non-zero
     opening: float | None = None  # balance at the end of the previous month (account currency), if any
+    flows: float = 0.0  # the month's recorded movements, in the account's currency
+    unexplained: float | None = None  # change minus flows (F46); only with a balance recorded for this month
+    fx_gain: float = 0.0  # value change from exchange-rate moves, in the view currency (decision 4)
 
     @property
     def change(self) -> float | None:

@@ -165,9 +165,11 @@ def test_wealth_projection_and_unaccounted(ctx, setup):
         ),
     )
     rep = reports.month_report(ctx, "2026-09", "CHF", TODAY)
-    # change in balances 499, recorded net 800 - 200 = 600 -> 101 left without a record (F42)
+    # change in balances 499, recorded net 800 - 200 = 600; the 100 EUR lost 1 CHF of value when the
+    # rate fell from 0.95 to 0.94 (a currency loss, decision 4) -> 100 left without a record (F42)
     assert rep.balance_change == pytest.approx(499.0)
-    assert rep.unexplained == pytest.approx(-101.0)
+    assert rep.fx_translation == pytest.approx(-1.0)
+    assert rep.unexplained == pytest.approx(-100.0)
     assert rep.expenditure_tree["01"].actual == pytest.approx(200.0)
     assert rep.total_expenditure.actual == pytest.approx(200.0)  # recorded spending only
     assert [(r.account.name, r.opening, r.change) for r in rep.accounts] == [
@@ -258,3 +260,53 @@ def test_projection_without_any_balances_starts_with_the_first_activity(ctx, set
     )
     assert wealth_svc.projected_wealth(ctx, "2026-10", "CHF") == 0
     assert wealth_svc.projected_wealth(ctx, "2026-12", "CHF") == pytest.approx(1000)
+
+
+def test_everything_recorded_reconciles_to_zero(ctx, setup):
+    """Change in balances = recorded net + revaluations: income, foreign spending, an exchange with a
+    spread (F44), an investment gain (F43) and exchange-rate moves (decision 4) leave nothing unexplained."""
+    chf, eur, salary = setup["chf"].id, setup["eur"].id, setup["salary"].id
+    wealth_svc.upsert_entry(ctx, chf, "2026-08", 1000)
+    wealth_svc.upsert_entry(ctx, eur, "2026-08", 100)
+
+    def save(**kw):
+        return tx_svc.save(ctx, TransactionInput(**kw))
+
+    save(date=date(2026, 9, 25), type=TX_INCOME, amount=800, currency="CHF", category=salary, to_account=chf)
+    save(date=date(2026, 9, 10), type=TX_EXPENDITURE, amount=50, currency="EUR", category="01.1", from_account=eur)
+    save(
+        date=date(2026, 9, 1), type="exchange", amount=90, currency="CHF",
+        from_account=chf, to_account=eur, to_amount=93.80,
+    )  # fmt: skip
+    save(
+        date=date(2026, 9, 30), type="revaluation", currency="EUR", category="REVAL_INVEST",
+        reval_account=eur, reval_change=20,
+    )  # fmt: skip
+    # the true month-end balances
+    wealth_svc.upsert_entry(ctx, chf, "2026-09", 1000 + 800 - 90)
+    wealth_svc.upsert_entry(ctx, eur, "2026-09", 100 - 50 + 93.80 + 20)
+
+    for view in ("CHF", "EUR"):
+        rep = reports.month_report(ctx, "2026-09", view, TODAY)
+        assert rep.unexplained == pytest.approx(0, abs=0.02), view
+        assert all(r.unexplained == pytest.approx(0, abs=0.005) for r in rep.accounts), view
+        fx, invest = rep.revaluation_lines
+        assert invest.key == "REVAL_INVEST" and fx.key == "REVAL_FX"
+    rep = reports.month_report(ctx, "2026-09", "CHF", TODAY)
+    # in CHF the EUR account gains from the rate move (0.95 -> 0.94 CHF per EUR is a loss on 100 EUR)
+    assert rep.fx_translation != 0 and rep.accounts[1].fx_gain == pytest.approx(rep.fx_translation)
+    assert rep.accounts[0].fx_gain == 0  # a CHF account has no exchange-rate effect in CHF
+    assert rep.total_revaluation.actual == pytest.approx(sum(line.actual for line in rep.revaluation_lines))
+    # net income ignores revaluations (decision 3)
+    assert rep.total_income.actual - rep.total_expenditure.actual == pytest.approx(800 - 50 * 0.95)
+
+
+def test_unexplained_per_account_is_in_its_own_currency(ctx, setup):
+    eur = setup["eur"].id
+    wealth_svc.upsert_entry(ctx, eur, "2026-08", 100)
+    wealth_svc.upsert_entry(ctx, eur, "2026-09", 70)  # 30 EUR left without a record
+    rep = reports.month_report(ctx, "2026-09", "CHF", TODAY)
+    [row] = rep.accounts
+    assert (row.opening, row.flows, row.unexplained) == (100, 0, -30)
+    assert rep.unexplained == pytest.approx(-30 * 0.94)  # valued at the September month-end rate
+    assert reports.unexplained(ctx, "2026-09", "CHF", TODAY) == rep.unexplained

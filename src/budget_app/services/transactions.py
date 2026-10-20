@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 
 from budget_app import i18n
@@ -10,9 +10,12 @@ from budget_app.domain.coicop import TAX, get_coicop
 from budget_app.domain.models import (
     ACCOUNT_ADVANCE,
     ACCOUNT_REGULAR,
+    REVAL_FX,
+    REVALUATION_KINDS,
     TX_EXCHANGE,
     TX_EXPENDITURE,
     TX_INCOME,
+    TX_REVALUATION,
     TX_TRANSFER,
     TX_TYPES,
     Transaction,
@@ -52,6 +55,12 @@ class TransactionInput:
     debtor: str = ""
     settles_id: str = ""
     to_amount: float | None = None  # exchange: amount received, in the To account's currency
+    # revaluation (F43): the account, and its change as a signed difference or as old and new values
+    reval_account: str = ""
+    reval_mode: str = "difference"  # "difference" | "values"
+    reval_change: float | None = None
+    reval_old: float | None = None
+    reval_new: float | None = None
     comment: str = ""
     import_ref: str = ""  # non-empty for imported transactions: identifies the source row
 
@@ -102,6 +111,30 @@ def advance_account_balance(ctx: Context, advance_account_id: str) -> float:
     return round(sum(o.outstanding for o in open_advances(ctx, advance_account_id)), 2)
 
 
+def revaluation_change(inp: TransactionInput) -> float | None:
+    """The signed change a revaluation books: new − old, or the difference as entered."""
+    if inp.reval_mode == "values":
+        if inp.reval_old is None or inp.reval_new is None:
+            return None
+        return round(inp.reval_new - inp.reval_old, 2)
+    return None if inp.reval_change is None else round(inp.reval_change, 2)
+
+
+def signed_revaluation(tx: Transaction) -> float:
+    """A revaluation's change in its account's currency: positive for a gain."""
+    return tx.amount if tx.to_account else -tx.amount
+
+
+def revaluation_account(tx: Transaction) -> str:
+    return tx.to_account or tx.from_account
+
+
+def received_amount(ctx: Context, tx: Transaction) -> float:
+    """What an exchange credited: its ECB amount plus the spread booked as a linked revaluation (F44)."""
+    linked = ctx.store.transactions.get(tx.linked_id) if tx.linked_id else None
+    return round(tx.to_amount + (signed_revaluation(linked) if linked else 0.0), 2)
+
+
 # ---------------------------------------------------------------- validation
 def _account(ctx: Context, account_id: str, role: str, kind: str, currency: str | None):
     acc = ctx.store.accounts.get(account_id) if account_id else None
@@ -117,6 +150,13 @@ def validate(ctx: Context, inp: TransactionInput, editing_id: str = "") -> None:
         raise ValidationError(t("Date is required"))
     if inp.type not in TX_TYPES:
         raise ValidationError(t("Select the type of transaction"))
+    if editing_id:
+        current = ctx.store.transactions.get(editing_id)
+        if current is not None and current.type == TX_REVALUATION and current.linked_id:
+            raise ValidationError(t("This revaluation belongs to a currency exchange. Edit the exchange instead."))
+    if inp.type == TX_REVALUATION:
+        _validate_revaluation(ctx, inp)
+        return
     if inp.amount is None or inp.amount <= 0:
         raise ValidationError(t("Amount must be a positive number"))
     if not inp.currency:
@@ -170,6 +210,23 @@ def validate(ctx: Context, inp: TransactionInput, editing_id: str = "") -> None:
             raise ValidationError(t("Enter the amount received in {currency}", currency=dst.currency))
 
 
+def _validate_revaluation(ctx: Context, inp: TransactionInput) -> None:
+    acc = ctx.store.accounts.get(inp.reval_account) if inp.reval_account else None
+    if acc is None or acc.kind != ACCOUNT_REGULAR:
+        raise ValidationError(t("Select an account"))
+    if inp.currency != acc.currency:
+        raise ValidationError(t("A revaluation is entered in the currency of its account"))
+    if inp.category not in REVALUATION_KINDS:
+        raise ValidationError(t("Select the kind of revaluation"))
+    change = revaluation_change(inp)
+    if change is None:
+        raise ValidationError(
+            t("Enter the old and the new value") if inp.reval_mode == "values" else t("Enter the change in value")
+        )
+    if abs(change) < EPS:
+        raise ValidationError(t("The value did not change"))
+
+
 def is_complete(ctx: Context, inp: TransactionInput) -> bool:
     try:
         validate(ctx, inp)
@@ -180,6 +237,9 @@ def is_complete(ctx: Context, inp: TransactionInput) -> bool:
 
 # ---------------------------------------------------------------- persistence
 def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Transaction:
+    if inp.type == TX_REVALUATION:  # the amount is the size of the change; its sign picks the side
+        change = revaluation_change(inp) or 0.0
+        inp = replace(inp, amount=abs(change))
     if inp.amount is None or inp.date is None:  # guaranteed by validate()
         raise ValidationError(t("Amount and date are required"))
     amount = round(float(inp.amount), 2)
@@ -224,7 +284,14 @@ def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Tra
         if dst is None:
             raise ValidationError(t(_SELECT_ACCOUNT[TO]))
         tx.from_account, tx.to_account, tx.to_currency = inp.from_account, inp.to_account, dst.currency
-        tx.to_amount = round(float(inp.to_amount or 0), 2)  # what the bank credited, not a conversion
+        tx.to_amount = round(float(inp.to_amount or 0), 2)  # what the bank credited; split up in save()
+    elif inp.type == TX_REVALUATION:
+        change = revaluation_change(inp) or 0.0
+        tx.category = inp.category
+        if change > 0:
+            tx.to_account = inp.reval_account
+        else:
+            tx.from_account = inp.reval_account
     return tx
 
 
@@ -248,8 +315,56 @@ def save(ctx: Context, inp: TransactionInput, editing_id: str = "") -> Transacti
                 raise ValidationError(
                     t("This advance already has repayments: its currency and advance payment account cannot change")
                 )
-        return ctx.store.transactions.update(tx)
-    return ctx.store.transactions.add(_build(ctx, inp, None))
+        tx.linked_id = old.linked_id
+        return _store_exchange_split(ctx, tx, old)
+    return _store_exchange_split(ctx, _build(ctx, inp, None), None)
+
+
+def _store_exchange_split(ctx: Context, tx: Transaction, old: Transaction | None) -> Transaction:
+    """Save `tx`; for an exchange, book the spread between the amount received and the ECB amount
+    as a linked revaluation of the To account (F44), and keep that booking in step with the exchange.
+
+    The exchange keeps the ECB amount, so the two together credit exactly what the bank did.
+    """
+    store = ctx.store.transactions
+    linked = store.get(tx.linked_id) if tx.linked_id else None
+    if tx.type != TX_EXCHANGE:
+        if linked is not None:  # no longer an exchange: its spread booking goes
+            store.delete([linked.id])
+        tx.linked_id = ""
+        return store.update(tx) if old is not None else store.add(tx)
+    received = tx.to_amount
+    ecb = round(ctx.fx.convert(tx.amount, tx.currency, tx.to_currency, tx.fx_date), 2)
+    spread = round(received - ecb, 2)
+    if abs(spread) < EPS:
+        if linked is not None:
+            store.delete([linked.id])
+        tx.linked_id = ""
+        return store.update(tx) if old is not None else store.add(tx)
+    tx.to_amount = ecb
+    amount_chf, fx_date = ctx.to_base_on(abs(spread), tx.to_currency, tx.date)
+    reval = Transaction(
+        date=tx.date,
+        type=TX_REVALUATION,
+        amount=abs(spread),
+        currency=tx.to_currency,
+        amount_chf=amount_chf,
+        fx_date=fx_date,
+        category=REVAL_FX,
+        to_account=tx.to_account if spread > 0 else "",
+        from_account="" if spread > 0 else tx.to_account,
+        comment=t("Spread of the exchange against the ECB rate"),
+        linked_id=tx.id,
+    )
+    if linked is not None:
+        reval.id = linked.id
+    tx.linked_id = reval.id
+    saved = store.update(tx) if old is not None else store.add(tx)
+    if linked is not None:
+        store.update(reval)
+    else:
+        store.add(reval)
+    return saved
 
 
 def save_many(ctx: Context, inputs: list[TransactionInput]) -> list[Transaction]:
@@ -267,7 +382,7 @@ def revalue_to_transaction_dates(ctx: Context) -> int:
 
     Brings old entries, valued at the then latest rate, in line, and catches up rows whose date had
     no rate yet when they were saved (entered before the ECB published, or dated in the future).
-    Exchange amounts in the target currency are kept: they record what was actually received.
+    The amount an exchange received is kept; its split into ECB amount and spread follows the rate.
     Returns the number of transactions changed; does nothing without exchange rates.
     """
     if ctx.fx.latest_date() is None:
@@ -281,6 +396,13 @@ def revalue_to_transaction_dates(ctx: Context) -> int:
         changed.append(tx)
     if changed:
         ctx.store.transactions.update_many(changed)
+    # a new rate moves an exchange's ECB amount: split the amount received again (F44)
+    for tx in changed:
+        if tx.type == TX_EXCHANGE and tx.linked_id:
+            fresh = ctx.store.transactions.get(tx.id)
+            if fresh is not None:
+                fresh.to_amount = received_amount(ctx, fresh)
+                _store_exchange_split(ctx, fresh, fresh)
     return len(changed)
 
 
@@ -304,7 +426,18 @@ def to_input(tx: Transaction) -> TransactionInput:
     if tx.type == TX_EXPENDITURE and tx.is_advance:
         inp.advance_mode, inp.advance_value = "amount", tx.advance_amount
     if tx.type == TX_EXCHANGE:
-        inp.to_amount = tx.to_amount
+        inp.to_amount = tx.to_amount  # the ECB part; edit_input() adds the linked spread
+    if tx.type == TX_REVALUATION:
+        inp.reval_account = revaluation_account(tx)
+        inp.reval_mode, inp.reval_change = "difference", signed_revaluation(tx)
+    return inp
+
+
+def edit_input(ctx: Context, tx: Transaction) -> TransactionInput:
+    """Form input for editing `tx`: an exchange shows the full amount received again."""
+    inp = to_input(tx)
+    if tx.type == TX_EXCHANGE:
+        inp.to_amount = received_amount(ctx, tx)
     return inp
 
 
@@ -315,7 +448,16 @@ def delete(ctx: Context, ids: list[str]) -> int:
         raise ValidationError(
             t("Some selected advance payments have repayments. Delete the repayments first (or select them as well).")
         )
+    by_id = {tx.id: tx for tx in ctx.store.transactions.all()}
+    for tid in list(ids_set):
+        tx = by_id.get(tid)
+        if tx is None or not tx.linked_id:
+            continue
+        if tx.type == TX_EXCHANGE:
+            ids_set.add(tx.linked_id)  # the spread booking goes with its exchange
+        elif tx.linked_id not in ids_set:
+            raise ValidationError(t("This revaluation belongs to a currency exchange. Delete the exchange instead."))
     items = [i.id for i in ctx.store.transaction_items.all() if i.transaction_id in ids_set]
-    count = ctx.store.transactions.delete(ids)
+    count = ctx.store.transactions.delete(list(ids_set))
     ctx.store.transaction_items.delete(items)  # a transaction's product list goes with it
     return count

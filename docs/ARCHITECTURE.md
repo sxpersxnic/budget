@@ -87,8 +87,20 @@ ECB date of the rate used** (`fx_date`).
   - `from_account` and `to_account` are different regular accounts in the transaction currency.
 - `exchange`
   - `amount` is in the currency of `from_account`.
-  - `to_amount` is the amount received, typed in by the user, in `to_currency` (the currency of
-    `to_account`). The form shows the ECB amount and both rates for comparison.
+  - The user types the amount received, in `to_currency` (the currency of `to_account`); the
+    form shows the ECB amount and both rates for comparison.
+  - `to_amount` stores the **ECB amount** (at `fx_date`). The spread between what was received
+    and the ECB amount is a linked `revaluation` of kind `REVAL_FX` on `to_account` (F44); the
+    two rows point at each other through `linked_id`. Together they credit exactly what the bank
+    did. Saving, editing and deleting the exchange keep the spread booking in step, it can't be
+    edited or deleted on its own, and the rate check re-splits it when the exchange's rate
+    date moves.
+- `revaluation` (F43)
+  - A change in an account's value that is neither income nor spending, in the account's
+    currency. `category` is the kind: `REVAL_FX` (capital gains on currency exchange) or
+    `REVAL_INVEST` (capital gains on investment).
+  - `amount` stays positive: a gain is booked to `to_account`, a loss from `from_account`. The
+    form takes the change as a signed difference or as old and new values.
 
 **Advance payments.** An advanced expenditure is stored as **one row**:
 
@@ -162,14 +174,26 @@ holidays. Dates before the start of the file use its first rate.
   months with balance data for M−1, the Budget page shows above the tables
   - recorded net = total income − total expenditure,
   - change in balances = Wealth(M) − Wealth(M−1),
-  - **unexplained** = change in balances − recorded net. A negative value is money that left
-    the accounts without being recorded; a positive one arrived without a record. The
-    *Income and Expenditure* chart offers it as the series *Unexplained difference*.
+  - **revaluations** = booked revaluations of the month (at their own rates) + the automatic
+    exchange-rate effect on foreign balances (decision 4): per account, opening × (rate at
+    the end of M − rate at the end of M−1) + Σ each movement × (rate at the end of M − its own
+    rate), in the view currency,
+  - **unexplained** = change in balances − recorded net − revaluations. A negative value is
+    money that left the accounts without being recorded; a positive one arrived without a
+    record. With every movement recorded it is 0 in any view currency (tested). The *Income
+    and Expenditure* chart offers it as the series *Unexplained difference*.
+- **Revaluations** (F45): a section after the expenditure table lists *Capital gains on
+  currency exchange* (booked, plus the automatic exchange-rate effect, shown separately in a
+  note) and *Capital gains on investment*, with a total. They are not part of *Net income*
+  (decision 3).
 - **Total expenditure** = recorded expenditure only, on the page, in the charts and in the
   statement export.
-- **Account balances** (F41): for each account the opening balance (end of M−1, carried
-  forward), the closing balance and the change, in the account's currency; the total row
-  shows Wealth(M−1), Wealth(M) and their change in the view currency.
+- **Account balances** (F41, F46): for each account the opening balance (end of M−1, carried
+  forward), the closing balance, the change and the **unexplained** part of the change
+  (change − the month's recorded movements on the account), in the account's currency; the
+  unexplained part needs a balance recorded for M, and *Book as revaluation…* opens a
+  prefilled revaluation for it. The total row shows Wealth(M−1), Wealth(M), their change and
+  the month's unexplained difference in the view currency.
 - **Difference** = actual − budget. It is shown in red when expenditure exceeds the
   budget or income falls short of it.
 
@@ -212,7 +236,7 @@ currency dropdowns list every currency the ECB quoted on its latest date, plus E
 | `/budget` | Budget | Month stepper (‹ month ›) and currency. A callout names accounts without a balance for a past month. Metric strip (current wealth, wealth or projected wealth at month end, net income). Income and expenditure ledgers share one column layout: budget meter, actual, budget, difference; zero values show as a dash. The expenditure tree expands by clicking a category. Budget amounts are editable (pencil on hover) in incomplete months: amount, currency, until (or forever), repeat and note per entry; changing until or repeat replans the series from that month on (`budget.reschedule`), the earlier months keep their values and end there. Balances list for past months. Statement export sits in the share menu. "Record Balance" opens the balance sheet. |
 | `/add-transaction` | New Transaction | The same form also opens as a sheet from the sidebar's "New Transaction" button on every page; the page behind refreshes after saving. Type first (segmented control), then amount, currency and date, then the type's fields. Account dropdowns are filtered by currency. Live CHF preview. Save stays disabled until the form validates, and the reason is shown once the user has started. After saving, every field except date, currency and type resets. Expenditures and income can carry a product list (item, quantity, unit price; negative prices for discounts): Enter on a price starts the next line, item names are suggested from earlier lists, and the list's total is compared with the amount ("Use Total as Amount") but never changes it on its own. |
 | `/transactions` | Transactions | Search field, filters (date range, amount range, account, type) behind "Filters". AG Grid with signed, coloured amounts, the number of items per transaction, sort on every column. The search also finds item names. Selecting rows reveals Edit and Delete; double-click edits in a sheet. "Import…" opens the CSV import. The share button exports the rows the filters show as CSV or Excel. |
-| `/import` | Import Transactions | 1 · file: encoding (UTF-8, Windows-1252), separator and header line (bank preambles are skipped) are detected. 2 · columns: account, date column and format, one signed amount or debit/credit columns, decimal style, description columns, sign inversion for card statements; the mapping can be saved per bank (`import_profiles.json`) and is recognised by the header line next time. 3 · review: rows already imported (same `import_ref`) or matching a manual entry (same account, day, type and amount) are left out; categories are suggested from earlier transactions with the same text; selected rows get a category, are included or excluded in bulk. Saving is one write; nothing is saved while a row is invalid. **camt.053 / camt.054 (XML, F02):** recognised by content, read namespace-agnostically (versions .001.02 to .001.08 and later) with the standard library after a pre-scan that refuses any DTD (so no entities), capped at 20 MB like CSV. The columns step is skipped: one row per booked `Ntry` (pending entries are left out and counted), booking date, signed amount (`CdtDbtInd`), text from counterparty name, `Ustrd` and `AddtlNtryInf`; a batch whose `TxDtls` each carry an amount adding up to the entry becomes one row per detail. `import_ref` is `camt:<IBAN>:<AcctSvcrRef | NtryRef | content hash>`, so the same or an overlapping statement shows its entries as already imported; a row matching a manual entry or one imported from the other file kind (CSV ↔ camt) on the same day, type and amount is a possible duplicate. The account is chosen in the review step, preselected from `import_accounts.json` (IBAN → account id, written after a successful import); a statement whose currency differs from the account's is refused. The statement's IBAN and period are shown; its closing balance is parsed (`Statement.closing_balance`) but not used yet (F36). |
+| `/import` | Import Transactions | 1 · file: encoding (UTF-8, Windows-1252), separator and header line (bank preambles are skipped) are detected. 2 · columns: account, date column and format, one signed amount or debit/credit columns, decimal style, description columns, sign inversion for card statements; the mapping can be saved per bank (`import_profiles.json`) and is recognised by the header line next time. 3 · review: rows already imported (same `import_ref`) or matching a manual entry (same account, day, type and amount) are left out; categories are suggested from earlier transactions with the same text; selected rows get a category, are included or excluded in bulk. Saving is one write; nothing is saved while a row is invalid. **camt.053 / camt.054 (XML, F02):** recognised by content, read namespace-agnostically (versions .001.02 to .001.08 and later) with the standard library after a pre-scan that refuses any DTD (so no entities), capped at 20 MB like CSV. The columns step is skipped: one row per booked `Ntry` (pending entries are left out and counted), booking date, signed amount (`CdtDbtInd`), text from counterparty name, `Ustrd` and `AddtlNtryInf`; a batch whose `TxDtls` each carry an amount adding up to the entry becomes one row per detail. `import_ref` is `camt:<IBAN>:<AcctSvcrRef \| NtryRef \| content hash>`, so the same or an overlapping statement shows its entries as already imported; a row matching a manual entry or one imported from the other file kind (CSV ↔ camt) on the same day, type and amount is a possible duplicate. The account is chosen in the review step, preselected from `import_accounts.json` (IBAN → account id, written after a successful import); a statement whose currency differs from the account's is refused. The statement's IBAN and period are shown; its closing balance is parsed (`Statement.closing_balance`) but not used yet (F36). |
 | `/add-budget` | New Budget Entry | Also a sheet on Budget Plan. Type, amount, currency, category, month range or "Forever", repeat interval, replace option, note. Live summary of the months that will be created. |
 | `/budget-entries` | Budget Plan | Same list pattern as Transactions, with the same export. The edit sheet can apply changes to all later months of a series, or replan it with Until and Repeat. |
 | `/settings` | Settings | Grouped lists: interface language (system, English, Deutsch, Français, Italiano), plan horizon (Apply appears when changed), display and base currency, accounts, advance-payment accounts (with outstanding balances), income categories. Add, edit and rename open small sheets. *Data*: back up now (ZIP), restore from a backup file, export everything as JSON, the data folder's path; *Automatic Backups* lists the update and before-restore copies with a Restore action. |
@@ -247,10 +271,10 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
    in wealth.
 2. **An advance is a single row** with an `advance_amount` column, not two linked rows.
    Editing and deleting stay atomic, and the reports split the amount.
-3. **Exchange `to_amount` is the amount actually received** (issue 01, B06; it used to be
-   computed from ECB rates). The difference to the ECB amount, the bank's spread, still shows
-   up in the reconciliation's unexplained difference once balances are recorded, until F44 books it as a
-   revaluation.
+3. **An exchange records the amount actually received** (issue 01, B06): the ECB part on the
+   exchange, the bank's spread as a linked revaluation (F44). Exchanges saved before F44 keep
+   their full received amount on the exchange; their spread is split off when they are next
+   edited, not automatically, because older entries were valued at a different rate.
 4. **Balances carry forward.** A month with no entry for an account reuses the account's
    last recorded balance. The Budget overview flags such accounts and offers an "Add"
    button.

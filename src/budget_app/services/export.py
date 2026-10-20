@@ -76,7 +76,7 @@ def statement_frames(rep: MonthReport) -> dict[str, pd.DataFrame]:
     expenditure = [_line_row(tot_e.label, tot_e), *_expenditure_rows(rep)]
     account, currency, amount = t("Account"), t("Currency"), t("Amount")
     amount_view = t("Amount ({currency})", currency=rep.currency)
-    opening, change = t("Opening"), t("Change")
+    opening, change, unexplained = t("Opening"), t("Change"), t("Unexplained")
 
     def rounded(v: float | None) -> float | None:
         return None if v is None else round(v, 2)
@@ -90,6 +90,7 @@ def statement_frames(rep: MonthReport) -> dict[str, pd.DataFrame]:
                 opening: rounded(r.opening),
                 amount: round(r.amount, 2),
                 change: rounded(r.change),
+                unexplained: rounded(r.unexplained),
                 amount_view: round(r.amount_view, 2),
             }
             for r in rep.accounts
@@ -101,6 +102,7 @@ def statement_frames(rep: MonthReport) -> dict[str, pd.DataFrame]:
                 opening: rounded(rep.wealth_start),
                 amount: None,
                 change: rounded(rep.balance_change),
+                unexplained: None,
                 amount_view: round(sum(r.amount_view for r in rep.accounts), 2),
             }
         )
@@ -109,6 +111,7 @@ def statement_frames(rep: MonthReport) -> dict[str, pd.DataFrame]:
             frames[t("Reconciliation")] = pd.DataFrame(
                 [
                     {item: t("Recorded Net"), value: round(tot_i.actual - tot_e.actual, 2)},
+                    {item: t("Revaluations"), value: round(rep.total_revaluation.actual, 2)},
                     {item: t("Change in Balances"), value: round(rep.balance_change, 2)},
                     {item: t("Unexplained"), value: round(rep.unexplained, 2)},
                 ]
@@ -122,6 +125,11 @@ def statement_frames(rep: MonthReport) -> dict[str, pd.DataFrame]:
                 amount_view: round(rep.projected_wealth or 0.0, 2),
             }
         ]
+    if any(abs(line.actual) > 0.005 for line in rep.revaluation_lines):
+        frames[t("Revaluations")] = pd.DataFrame(
+            [{t("Category"): line.label, amount_view: round(line.actual, 2)} for line in rep.revaluation_lines]
+            + [{t("Category"): rep.total_revaluation.label, amount_view: round(rep.total_revaluation.actual, 2)}]
+        )
     return {
         **frames,
         t("Income"): pd.DataFrame(income),

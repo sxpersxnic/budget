@@ -21,11 +21,20 @@ TX_EXPENDITURE = "expenditure"
 TX_INCOME = "income"
 TX_TRANSFER = "transfer"
 TX_EXCHANGE = "exchange"
+TX_REVALUATION = "revaluation"  # a change in value that is neither income nor spending (F43)
 TX_TYPES = {
     TX_EXPENDITURE: N_("Expenditure"),
     TX_INCOME: N_("Income"),
     TX_TRANSFER: N_("Account transfer"),
     TX_EXCHANGE: N_("Currency exchange"),
+    TX_REVALUATION: N_("Revaluation"),
+}
+# kinds of revaluation, stored in `category`
+REVAL_FX = "REVAL_FX"
+REVAL_INVEST = "REVAL_INVEST"
+REVALUATION_KINDS = {
+    REVAL_FX: N_("Capital gains on currency exchange"),
+    REVAL_INVEST: N_("Capital gains on investment"),
 }
 
 BUDGET_INCOME = "income"
@@ -55,7 +64,8 @@ class Transaction:
     currency: str
     amount_chf: float
     fx_date: dt.date  # ECB date of the rate used for amount_chf
-    category: str = ""  # COICOP code / TAX (expenditure) or income category id (income)
+    category: str = ""  # COICOP code / TAX (expenditure), income category id (income), REVAL_* (revaluation)
+    # revaluation: a gain is booked to `to_account`, a loss from `from_account` (amount stays positive)
     from_account: str = ""
     to_account: str = ""
     to_amount: float = 0.0  # currency exchange: amount credited in the to-account currency
@@ -68,6 +78,8 @@ class Transaction:
     comment: str = ""
     # set for imported rows: identifies the source row, so a second import skips it
     import_ref: str = ""
+    # an exchange and the revaluation booking its spread against the ECB rate point at each other (F44)
+    linked_id: str = ""
     id: str = field(default_factory=new_id)
 
 

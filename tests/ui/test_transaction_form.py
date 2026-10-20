@@ -298,8 +298,10 @@ async def test_currency_exchange_needs_the_amount_received(user: User, ctx, setu
     assert "Rate received: 1 EUR = 0.8800 CHF" in hint and "−2.00 CHF against the ECB rate" in hint
     click(user, save_button(user))
 
-    [tx] = ctx.store.transactions.all()
-    assert (tx.type, tx.amount, tx.currency, tx.to_amount, tx.to_currency) == ("exchange", 100, "EUR", 88, "CHF")
+    [tx] = [t for t in ctx.store.transactions.all() if t.type == "exchange"]
+    assert (tx.type, tx.amount, tx.currency, tx.to_currency) == ("exchange", 100, "EUR", "CHF")
+    # 88 CHF received: the ECB part stays on the exchange, the spread is a linked revaluation (F44)
+    assert tx_svc.received_amount(ctx, tx) == 88
     assert (tx.from_account, tx.to_account) == (setup["eur"].id, setup["chf"].id)
     assert currency.value == "EUR"  # the reset keeps the currency
 
@@ -510,7 +512,7 @@ async def test_editing_an_exchange(user: User, ctx, setup) -> None:
     assert field(user, ui.number, "Amount Received").value == 215
     put(user, field(user, ui.number, "Amount Received"), 220)
     click(user, button(user, "Save Changes"))
-    assert ctx.store.transactions.get(tx.id).to_amount == 220
+    assert tx_svc.received_amount(ctx, ctx.store.transactions.get(tx.id)) == 220
 
 
 async def test_the_sidebar_opens_a_new_transaction_sheet(user: User, ctx, setup) -> None:
