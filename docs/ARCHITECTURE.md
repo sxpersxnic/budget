@@ -40,7 +40,8 @@ storage/    typed CSV tables + settings JSON
 | `domain/everyday.py` | F08. Everyday names and search words of the common categories (`resources/everyday_categories.json`) and the category picker's options: `category_options(recent)` lists the recently used codes first, then COICOP order with Taxes last; each option has its label (`Groceries · 01.1`, or the COICOP label for the others), the official name as caption, its level and a folded `search` text (code, everyday names in all four languages, official name in the interface language and in English, search words). `matches()` / `search()`: every query word must occur in that text. |
 | `domain/payees.py` | F09. Payee names from bank texts, deterministic and offline: `clean_words` drops dates, times, card, reference, terminal and phone numbers, IBANs and postal codes, the booking words around the merchant (UBS, PostFinance, ZKB, Raiffeisen, Revolut, TWINT; German, French, Italian, English: "Einkauf", "Kauf/Dienstleistung vom", "Paiement à", "Card payment to" …) and payment services in front of it (`TWINT *`, `SumUp *`, `PAYPAL *`); `normalize` names a brand from `resources/payees.json` (longest pattern first; banks and payment services only when nothing else matches) or keeps the rest without location and legal form, title-cased when the bank wrote capitals (acronyms such as SBB stay); `alias_key` is the folded cleaned text (location kept) a bank text is remembered by; `key` folds a name for comparing (case, accents and punctuation ignored). |
 | `domain/rules.py` | F07. Which categorization rule applies: `match_key` (folded text, single spaces), `by_priority` (longest text first, then the newest), `first_match` / `best` (the first rule of the type whose text occurs in the payee or the bank text / note). |
-| `domain/models.py` | Dataclasses `Account`, `IncomeCategory`, `Transaction`, `AccountEntry`, `BudgetEntry`, `Recurring`, `Payee`, `Rule`, `Settings`. |
+| `domain/models.py` | Dataclasses `Account`, `IncomeCategory`, `Transaction`, `AccountEntry`, `BudgetEntry`, `Recurring`, `Payee`, `Rule`, `Holding`, `Trade`, `Price`, `Settings`; the asset classes (`ASSET_CLASSES`, `HOLDING_CLASSES`) and trade kinds. |
+| `domain/investments.py` | F21, pure. A holding's trades and prices as `Event`s in the order they count (`events`: by date, a day's trades in entry order before its typed or pasted price), `replay` (per event the quantity before and after, the previous and new price, the money moved and the revaluation, and the booked value round(quantity × price, 2)), `oversold`, `value_on`, `price_date`, `performance` (`Performance`: value, bought, sold, dividends, fees, average cost, realized; money put in, gain, %, unrealized; `scaled` and `+` for totals), and the price-list helpers `date_format`, `parse_day`, `parse_number`. |
 | `storage/csv_store.py` | Generic `CsvTable[T]`: in-memory records, atomic rewrite (temp file, fsync, rename) on every change. Unknown columns are kept and written back. |
 | `storage/store.py` | `Store` bundling all tables and settings. Unknown settings keys are kept. |
 | `services/items.py` | Product lists of transactions: validation (blank lines ignored, half-filled lines rejected), replace, totals, counts and names for the Transactions list. |
@@ -48,17 +49,18 @@ storage/    typed CSV tables + settings JSON
 | `storage/lock.py` | Single-instance lock on `<data>/.lock`, so two processes cannot overwrite each other's files. |
 | `storage/history.py` | Change history and undo (F28): every table write records the record before and after (as written to the CSV file); changes made together form one *action* (`history.action(label)`, nested ones join the outer). Undo reverts an action in reverse order after checking every record still looks as the action left it. Kept in `history.jsonl` (the newest 500 actions), not part of backups. |
 | `services/context.py` | `Context` (store + FX), conversion helpers, budget horizon, `ValidationError`. |
-| `services/accounts.py` | Accounts, advance-payment accounts and income categories, with their deletion rules. |
+| `services/accounts.py` | Accounts (with their asset class, F21), advance-payment accounts and income categories, with their deletion rules. |
 | `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement; `recent_categories()` (the last ten distinct expenditure categories, for the category picker). An edit is `prepare_edit` (validate and build the new record, nothing saved) then `store_edit` (save it, keeping an exchange's spread booking in step); `save` does both. |
 | `services/bulk.py` | Bulk edit (F13): `BulkChanges` (expenditure category, income category, payee, account, note mode and text; `None` leaves a field as it is), which field applies to which row (`takes_*`, `is_spread`), `plan()` (every selected row as form input with the changes applied, checked with `prepare_edit`; rows the changes leave as they are drop out, also when the built record equals the stored one) and `bulk_edit()`, all or nothing (`BulkEditError` names the failing rows by date and amount) as one recorded action. Adding a field means one attribute, one `takes_*` rule and one line in `apply()`. |
 | `services/budget.py` | Budget series expansion, overwrite, horizon change and "Forever" extension. |
 | `services/recurring.py` | Recurring transactions (F05): series, their schedule (`occurrence`, `next_after`), the due occurrences, `book` / `skip` / `book_all` through `transactions.save`, and `book_automatic` for series that book without asking. |
-| `services/wealth.py` | Account balances, wealth, projected wealth, wealth time series. |
+| `services/wealth.py` | Account balances (a securities or crypto account's from its holdings, F21), wealth, wealth by asset class (`by_class`), projected wealth, wealth time series. |
+| `services/investments.py` | F21. Holdings (add, rename, delete with everything they booked), trades (`TradeInput`, `validate_trade`, `save_trade`, `delete_trade`) and prices (`save_price`, one per holding and day; `delete_price`; `price_effect` previews one), price lists (`read_price_list` reads, `save_prices` saves), each one undoable action. `_book` books a holding's linked transactions again from all its trades and prices after every change (§4.6). `value_entry` is a securities or crypto account's month-end balance, `account_value`, `performance`, `history`, `source` (the trade or price of a booked row). |
 | `services/aggregates.py` | Sums of transactions and budget entries per category and month; `projected_net` (the higher of recorded and budget per category). Shared by reports and the wealth projection. |
 | `services/reports.py` | Monthly statement (expenditure tree, income, budget vs. actual, reconciliation, opening balances), chart series. |
 | `services/export.py` | Statement as Excel/PDF; chart data and list views as CSV/Excel; every record as one JSON document (`format: budget-app/export`, `version: 1`), not meant to be imported back. |
 | `services/archive.py` | Full backup of the data folder's records as a ZIP (with a `budget-backup.json` manifest) and restoring one: plain CSV/JSON names only, size limits, every table must load before anything changes; the current files go to `backups/<timestamp>_before-restore/` first, then the store is reloaded. |
-| `services/undo.py` | `@recorded(label)` names a service function's action; `undo()` with readable errors; labels and one-line change descriptions for the history page. |
+| `services/undo.py` | `@recorded(label)` names a service function's action; `undo()` with readable errors; labels and one-line change descriptions for the history page (holdings, trades and prices included). |
 | `services/templates.py` | Transaction templates (F06): save, list, delete, apply to a form input; exchanges and revaluations are excluded. |
 | `services/payees.py` | Payees (F09): `resolve(raw)` (an alias or name in the table first, then `normalize`; never a second spelling of a stored payee), `ensure(name)` (the stored spelling, or a new payee), `learn(pairs)` (imports: the payee plus the text's alias, taken from any other payee), `names` (recently used first, for the form), `usage` (count, spent and received per payee), and `rename`, `merge`, `delete` (unused payees only), each one undoable action that rewrites transactions, templates and series together. |
 | `services/rules.py` | Categorization rules (F07): `validate` (text of at least two characters, expenditure or income, a category of that type, an optional regular account), `save` (refuses a second rule with the same folded text and type unless asked to replace it), `delete`, `same_text`, `category_label` and `prefill` / `from_transaction` (the payee, or the name `normalize` finds in the note, with the category); each change one undoable action. |
@@ -78,9 +80,9 @@ ECB date of the rate used** (`fx_date`).
 
 | File | Columns |
 | --- | --- |
-| `accounts.csv` | `name, currency, kind (regular/advance), created, id` |
+| `accounts.csv` | `name, currency, kind (regular/advance), created, asset_class, id` – `asset_class` (F21): `cash`, `securities`, `pillar2`, `pillar3a`, `real_estate`, `crypto` or `other`; files written before it have no such column, which reads as `cash`. Advance-payment accounts are always `cash`. |
 | `income_categories.csv` | `name, id` |
-| `transactions.csv` | `date, type, amount, currency, amount_chf, fx_date, category, from_account, to_account, to_amount, to_currency, is_advance, advance_amount, advance_account, debtor, settles_id, comment, import_ref, linked_id, recurring_id, payee, id` – `recurring_id` names the recurring transaction that booked the row (F05; empty in files written before it); `payee` is the name of a payee in `payees.csv` (F09; expenditure and income only, empty in older files) |
+| `transactions.csv` | `date, type, amount, currency, amount_chf, fx_date, category, from_account, to_account, to_amount, to_currency, is_advance, advance_amount, advance_account, debtor, settles_id, comment, import_ref, linked_id, recurring_id, payee, id` – `recurring_id` names the recurring transaction that booked the row (F05; empty in files written before it); `payee` is the name of a payee in `payees.csv` (F09; expenditure and income only, empty in older files); `invest_id` is the id of the trade or price in `trades.csv` / `prices.csv` that booked the row (F21; empty otherwise) |
 | `transaction_items.csv` | `transaction_id, name, quantity, unit_price, position, id` – optional product list of a transaction (e.g. a receipt), in the transaction's currency. Deleted with its transaction. |
 | `templates.csv` | `name, type, amount, currency, category, from_account, to_account, comment, payee, id` – saved starting points for new transactions (F06); `amount` 0 means none. |
 | `payees.csv` | `name, aliases, id` – one row per payee (F09). `aliases` are lookup keys separated by `\|`: the cleaned, folded bank texts imported for the payee (`migros zuerich hb`) and its former names (`migros` after a rename). See §7, decision 15. |
@@ -88,6 +90,9 @@ ECB date of the rate used** (`fx_date`).
 | `account_entries.csv` | `account_id, month, amount, currency, amount_chf, fx_date, id` – recorded balance at month end ("budget recording") |
 | `budget_entries.csv` | `month, type, category, amount, currency, amount_chf, fx_date, series_id, recur_months, forever, comment, generated_until, id` – one row per budgeted month |
 | `recurring.csv` | `type, amount, currency, start, next_due, category, from_account, to_account, comment, recur_months, end, auto, payee, id` – one row per recurring transaction (F05): the template (expenditure, income or transfer), the first date, the rhythm in months, the optional last date (`end`, empty for none), `auto` (book without asking) and `next_due`, the first occurrence not yet booked or skipped |
+| `holdings.csv` | `account_id, name, symbol, id` – a security or coin in a securities or crypto account (F21), in the account's currency; `symbol` is an optional ISIN, ticker or symbol. |
+| `trades.csv` | `holding_id, date, kind, quantity, price, fee, amount, cash_account, comment, seq, id` – `kind` is `buy`, `sell` or `dividend`; quantity and price have up to 6 decimals (0 for a dividend), `fee` and the dividend `amount` 2; `cash_account` is the regular account paid from or to, in the holding's currency; `seq` is the order of entry (trades of one day count in it). |
+| `prices.csv` | `holding_id, date, price, id` – a price typed in or pasted (F21), one per holding and day. |
 | `settings.json` | `budget_horizon, display_currency, last_fx_download` |
 | `ecb/eurofxref-hist.csv` | Latest ECB file (replaced daily) |
 
@@ -117,6 +122,13 @@ ECB date of the rate used** (`fx_date`).
     `REVAL_INVEST` (capital gains on investment).
   - `amount` stays positive: a gain is booked to `to_account`, a loss from `from_account`. The
     form takes the change as a signed difference or as old and new values.
+
+**Rows booked by investments (F21)** carry `invest_id`: transfers, fees (expenditure), dividends
+(income) and *Capital gains on investment* revaluations made from a trade or price (§4.6). They are
+never saved, edited or deleted on their own: `transactions.validate` and `delete` refuse them, bulk
+edit leaves them out, and the transaction editor opens their trade or price instead. Securities and
+crypto accounts take no other transactions (`transactions._account` refuses them) and no recorded
+balances (`wealth.upsert_entry` refuses them).
 
 **Advance payments.** An advanced expenditure is stored as **one row**:
 
@@ -160,6 +172,13 @@ holidays. Dates before the start of the file use its first rate.
 - **Wealth(M)** is the sum over **regular** accounts of the latest account entry with
   month ≤ M, so balances carry forward. **Advance accounts are excluded.** They are
   receivables tracked as open items (decision §7.1).
+- A **securities or crypto account** (F21) has no recorded entries: its balance at the end of M is
+  computed from its holdings, Σ round(quantity × latest price on or before the month end, 2)
+  (`investments.value_entry`, used by `wealth.balance_entry`), from the month of its first trade or
+  price on (opening 0 in that month). It never needs an entry, and the first recorded month counts
+  its first trade or price; the projection still starts after the last month with a *recorded*
+  balance, so trades and price updates don't move it.
+- **By asset class** (`wealth.by_class`): Wealth(M) summed per account's asset class.
 - **Current wealth** is Wealth(previous month). It is shown on the Overview and the Budget
   overview whatever month is selected.
 - **Projected wealth(M):** let L be the last month with at least one account entry. Then
@@ -250,6 +269,44 @@ holidays. Dates before the start of the file use its first rate.
 - **Projection:** series are not part of the budget projection; a budget entry still plans them,
   which avoids counting the same rent twice.
 
+### 4.6 Investments (F21)
+
+- **Order:** a holding's trades and prices count by date; on one day its trades come first, in the
+  order they were entered (`seq`), and a price typed in or pasted for that day last (a price list
+  quotes the close). A buy's or sale's price is also a price of its day.
+- **Booked value:** after every event the investment account holds exactly round(quantity × latest
+  price, 2) for the holding. A buy books a transfer of round(quantity × price, 2) from the cash
+  account, a sale the other way; every price (a trade's included) books the rest of the change as a
+  linked *Capital gains on investment* revaluation (to the account for a gain, from it for a loss):
+
+  ```
+  revaluation = round(held after × price, 2) − round(held before × previous price, 2) − money moved in
+  ```
+
+  which is quantity × (new price − previous price) up to the cent, without rounding errors piling up
+  over many events. A fee is an expenditure from the cash account in COICOP 12.2.9.9 (*Other
+  financial services n.e.c.*); a dividend is income to the cash account in the income category
+  *Dividends* (found by name in any language, else added in the interface language; a renamed one
+  stays in use for that dividend).
+- **Rebooking:** every change to a holding's trades or prices (add, edit, delete, paste, rename,
+  back-dated or not) replays all of them in order and changes only the linked rows that differ
+  (`investments._book`): rows keep their ids, and their CHF valuation while amount, currency and date
+  stay; rows of a trade or price that no longer exists go. It runs inside the user's action, so the
+  change and its bookings are one undo step.
+- **Checks:** the cash account is a regular, non-investment account in the holding's currency
+  ("exchange the money first"); no sale may sell more than is held at that point, including after
+  an edit, a delete or a move to another holding; dates may not be in the future.
+- **Performance** (`domain.investments.performance`): money put in = bought − sold; gain = value −
+  money put in + dividends − fees; % = gain / money put in (none when nothing is put in any more).
+  Realized = sales − the average cost of what was sold; unrealized = value − the average cost of
+  what is held; realized + unrealized = value − money put in. Totals on the page convert each
+  holding at the latest rate into the display currency.
+- **Price lists:** one line per price, cells split by tab, else semicolon, else comma; date, holding
+  and price (the last cell); the date format most lines use (ISO, `dd.mm.yyyy`, `dd.mm.yy`,
+  `dd/mm/yyyy`, `yyyymmdd`); a first line that isn't a date is a header. A price may be written
+  `97.40`, `97,40`, `1'234.50`, `1.234,50` or `CHF 97.40`. The holding is found by ISIN/symbol or
+  name, folded. A repeated holding and day: the later line counts. Reading writes nothing.
+
 ## 5. Exchange-rate refresh
 
 At startup, and every 30 minutes while the app runs, `FxService.refresh_if_stale` compares
@@ -269,7 +326,7 @@ currency dropdowns list every currency the ECB quoted on its latest date, plus E
 
 | Route | Page | Notes |
 | --- | --- | --- |
-| `/` | Overview (start page) | Current wealth and the projection at the horizon in one hero card. Chart builder ("Add Chart" menu): wealth line (recorded, then dotted projection), income/expenditure bars or lines with category multi-select and optional budget, waterfall of per-account change, ECB exchange rates of chosen currencies in the display currency (daily or month end, optionally indexed to 100). Each chart's "…" menu saves a PNG, exports CSV or Excel, or removes it. |
+| `/` | Overview (start page) | Current wealth and the projection at the horizon in one hero card; below it, once any account has another asset class than cash, *By Asset Class* (F21): wealth at the end of last month as one bar split by class, with each class's amount and share. Chart builder ("Add Chart" menu): wealth line (recorded, then dotted projection), income/expenditure bars or lines with category multi-select and optional budget, waterfall of per-account change, ECB exchange rates of chosen currencies in the display currency (daily or month end, optionally indexed to 100), wealth by asset class (stacked bars per month, F21). Each chart's "…" menu saves a PNG, exports CSV or Excel, or removes it. |
 | `/budget` | Budget | Month stepper (‹ month ›) and currency. A callout names accounts without a balance for a past month. Metric strip (current wealth, wealth or projected wealth at month end, net income). Income and expenditure ledgers share one column layout: budget meter, actual, budget, difference; zero values show as a dash. The expenditure tree expands by clicking a category. Budget amounts are editable (pencil on hover) in incomplete months: amount, currency, until (or forever), repeat and note per entry; changing until or repeat replans the series from that month on (`budget.reschedule`), the earlier months keep their values and end there. Balances list for past months. Statement export sits in the share menu. "Record Balance" opens the balance sheet. |
 | `/add-transaction` | New Transaction | The same form also opens as a sheet from the sidebar's "New Transaction" button on every page; the page behind refreshes after saving. Type first (segmented control), then amount, currency and date, then the type's fields. Account dropdowns are filtered by currency. Live CHF preview. Save stays disabled until the form validates, and the reason is shown once the user has started. After saving, every field except date, currency and type resets. Expenditures and income can carry a product list (item, quantity, unit price; negative prices for discounts): Enter on a price starts the next line, item names are suggested from earlier lists, and the list's total is compared with the amount ("Use Total as Amount") but never changes it on its own. Faster entry (F06): the amount fields take sums (`12.50+8.30`, evaluated safely, shown as the result when the field is left); a templates menu beside the type saves and applies named templates (`templates.csv`); recently used accounts come first; ⌘↩ / Ctrl+Enter saves, and N opens a new transaction on every page; *Duplicate* in the edit sheet and the Transactions selection bar copies a transaction (with its items) dated today. Expenditures and income have a *Payee* field (F09) below the date: free text with the known payees as suggestions (recently used first); a new name becomes a payee when saved. Templates and duplicates carry the payee. A new expenditure or income with a payee and no category shows the suggested category under the category field (F07): "Use Groceries · 01.1" and the reason ("Used 14 times for this payee", "Rule: contains “migros”", plus the account when one would be filled in); a click fills the category and, if still empty, the account. The edit sheet offers *Always Categorize Like This…* there instead. |
 | `/transactions` | Transactions | Search field, filters (date range, amount range, account, payee, type) behind "Filters". AG Grid with the payee (F09), signed, coloured amounts, the number of items per transaction, the rhythm of the recurring transaction that booked a row (*Repeats*), sort on every column. The search also finds item names and payees. Selecting rows reveals Edit (one row: the editor; several: the bulk edit sheet, F13, see below), *Make Recurring…* (one expenditure, income or transfer without an advance: a series that continues it, with the transaction as its first booking), *Always Categorize Like This…* (one expenditure or income with a category: the rule sheet, F07) and Delete; double-click edits in a sheet. "Import…" opens the CSV import. The share button exports the rows the filters show as CSV or Excel. |
@@ -277,10 +334,11 @@ currency dropdowns list every currency the ECB quoted on its latest date, plus E
 | `/import` | Import Transactions | 1 · file: encoding (UTF-8, Windows-1252), separator and header line (bank preambles are skipped) are detected. 2 · columns: account, date column and format, one signed amount or debit/credit columns, decimal style, description columns, an optional balance column (detected from names such as *Saldo*, *Kontostand*, *Balance*, *Solde*), sign inversion for card statements; the mapping can be saved per bank (`import_profiles.json`) and is recognised by the header line next time. 3 · review: rows already imported (same `import_ref`) or matching a manual entry (same account, day, type and amount) are left out; rows without a category get the suggested one (F07), in italics with the reason in a *Suggestion* column, counted in the summary ("2 categories are suggestions (in italics)") and removed together with *Clear Suggestions*; a category applied by hand loses the mark, and changing a row's payee replaces its suggestion; the *Payee* column (F09) shows `payees.resolve` of the counterparty column (a description column named *Empfänger*, *Payee*, *Merchant*, *Bénéficiaire* …) or of the text, and can be edited (double-click); importing adds missing payees and remembers each text as an alias of the payee it was imported with; selected rows get a category, are included or excluded in bulk. Saving is one write; nothing is saved while a row is invalid. **camt.053 / camt.054 (XML, F02):** recognised by content, read namespace-agnostically (versions .001.02 to .001.08 and later) with the standard library after a pre-scan that refuses any DTD (so no entities), capped at 20 MB like CSV. The columns step is skipped: one row per booked `Ntry` (pending entries are left out and counted), booking date, signed amount (`CdtDbtInd`), text from counterparty name, `Ustrd` and `AddtlNtryInf`, the payee from the counterparty name (`RltdPties`, else the text); a batch whose `TxDtls` each carry an amount adding up to the entry becomes one row per detail. `import_ref` is `camt:<IBAN>:<AcctSvcrRef \| NtryRef \| content hash>`, so the same or an overlapping statement shows its entries as already imported; a row matching a manual entry or one imported from the other file kind (CSV ↔ camt) on the same day, type and amount is a possible duplicate. The account is chosen in the review step, preselected from `import_accounts.json` (IBAN → account id, written after a successful import); a statement whose currency differs from the account's is refused. The statement's IBAN and period are shown. **Month-end balances (F36):** below the grid, the review lists "Balance at end of *month*" with a checkbox and any recorded balance it would replace. From a CSV balance column (`ImportRow.balance`), the order of the lines is the reading (file order or reversed) in which the dates run forward and each balance equals the previous one plus the amounts in between (lines without a balance are bridged); the balance after the last booking of each month covered, months without bookings included, is offered. A month is complete, and ticked, when the file continues past it or its last booking is on the month's last day; the month the file ends inside is offered unticked with "the file ends on *date* — not a month-end balance" (decision 6). When no reading fits, or both fit with different results (one-day files), nothing is offered and the reason is shown. A camt statement offers its closing booked balance (`CLBD`, in the statement's currency), ticked when dated on a month's last day. A balance already recorded with the same amount starts unticked. After the transactions are saved, ticked balances are recorded with `wealth.upsert_entry` (month-end rate, replacing the month's entry); the button counts both ("Import 0 Transactions and 1 Balance" when every row is a duplicate). |
 | `/rules` | Categorization Rules | F07. Not in the sidebar: *Rules…* on the Payees page and in Settings lead here, and the sidebar highlights Payees. One group per type (expenditure, income) sorted by text: "Contains “migros”" with the category and the account it suggests (or that the category or account no longer exists), edit and delete per row, *Add Rule…* per group and *New Rule*. The sheet has type, *Text contains*, category, optional account; when another rule has the same text and type it says so and the button becomes *Replace Rule*. Every change is undoable from its toast. |
 | `/payees` | Payees | F09. In the sidebar after Categories. One group sorted by name: per payee its number of transactions and what was spent and received (all time, display currency); the search matches names and remembered bank texts. Rename (pencil) opens a sheet; ticking two or more reveals a selection bar with *Merge…*, whose sheet chooses the name to keep (the most used is preselected); payees no transaction, template or series names have a delete button. Each action is one undoable step with an Undo toast. |
+| `/investments` | Investments | F21. In the sidebar after Payees. Buttons *Buy*, *Sell*, *Dividend*, *Update Price* and *Paste Prices…* (once a holding exists). A metric strip (value, money put in with dividends and fees, gain and %, in the display currency) and a caption with the formula; one group per securities or crypto account (name, currency, class) with a row per holding: name, ISIN/symbol, quantity × last price on its date, value, gain and %; a total row with two or more holdings; *Add Holding…*. Without such accounts it points to Settings. A holding row opens the holding sheet: its figures (quantity, last price, value, money put in, dividends, fees, realized, unrealized, gain), *Buy*/*Sell*/*Dividend*/*Update Price* for it, the history newest first with the gain or loss each event booked and edit/delete per trade or price, *Edit Holding…* and *Delete Holding…*. The trade sheet (segmented Buy/Sell/Dividend, holding, date, quantity, price, fee or amount received, cash account in the holding's currency, preselected from the last trade, note) says what it books and why Save is disabled ("Only 10 held on …"); the price sheet previews the value and the change; the paste sheet lists each line as read, with the lines left out and why. Opening a booked row in the transaction editor opens its trade or price sheet. |
 | `/add-budget` | New Budget Entry | Also a sheet on Budget Plan. Type, amount, currency, category, month range or "Forever", repeat interval, replace option, note. Live summary of the months that will be created. |
 | `/budget-entries` | Budget Plan | Same list pattern as Transactions, with the same export. The edit sheet can apply changes to all later months of a series, or replan it with Until and Repeat. |
 | `/categories` | Categories | F37. All 602 COICOP 2018 categories (four levels) as one Quasar tree (`ui.tree`), built once: code and name in the interface language, divisions bold, the number of subcategories, and what was spent in each this calendar year (display currency, every level summed up). The search box matches code or name, ignoring case and accents: the query is folded in Python (`coicop.fold`) and set as the tree's `filter` prop, a `:filter-method` compares it with each node's pre-folded `search` text in the browser (Quasar keeps the ancestors of every match), and the ancestors are put into `expanded`, so typing changes two props instead of rebuilding rows. Clearing the search restores what was open before. `TAX` and `ADV` are not COICOP and appear only in a note below the tree. F40 adds the notes to the node built in `_node` and to its search text. |
-| `/settings` | Settings | Grouped lists: interface language (system, English, Deutsch, Français, Italiano), plan horizon (Apply appears when changed), display and base currency, accounts, advance-payment accounts (with outstanding balances), income categories. Add, edit and rename open small sheets. *Data*: back up now (ZIP), restore from a backup file, export everything as JSON, the data folder's path; *Automatic Backups* lists the update and before-restore copies with a Restore action. |
+| `/settings` | Settings | Grouped lists: interface language (system, English, Deutsch, Français, Italiano), plan horizon (Apply appears when changed), display and base currency, accounts (with the asset class in the account sheet and the caption, F21; a securities or crypto account shows its value in holdings), advance-payment accounts (with outstanding balances), income categories. Add, edit and rename open small sheets. *Data*: back up now (ZIP), restore from a backup file, export everything as JSON, the data folder's path; *Automatic Backups* lists the update and before-restore copies with a Restore action. |
 | `/history` | Change History | The newest 200 actions with time, name, number of changes and the changes in detail; Undo per action (an undone action is marked, and undoing an undo redoes it). Reached from Settings → Data. Confirmation toasts after saving or deleting transactions, budget entries, balances and accounts carry an Undo button for that action. |
 
 Pages follow the system light/dark appearance (`ui.run(dark=None)`).
@@ -408,6 +466,18 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 16. **Categorization rules suggest, they never apply** (F07, decision 8). A rule is a text, a type, a category and
     an optional account; the longest matching text wins, then the newest rule. Its account is a suggestion like
     its category, not a condition. Saving a rule changes no stored transaction.
+17. **Investments book their own transactions; their accounts are valued, not recorded** (F21,
+    decision 9). Prices are typed in or pasted, never fetched. Trades and prices are the source:
+    the transfers, fees, dividends and *Capital gains on investment* revaluations they imply are
+    booked as ordinary transactions linked by `invest_id`, rebooked from all of a holding's trades
+    and prices in date order after any change (so back-dated entries, edits and deletes stay exact),
+    and changed only through them, like an exchange's spread (F44). A securities or crypto account's
+    month-end balance is computed from the holdings rather than written as entries: nothing can fall
+    out of step, undo needs nothing extra, and its reconciliation is 0 by construction. It takes no
+    other transactions or balances; an account becomes one only while empty, so existing balances
+    and manual revaluations are never reinterpreted. Recorded balances still drive the projection's
+    start, so a price update doesn't shift it. Other classes (pillar 2, 3a, real estate, other)
+    stay valued by recorded balances; the class only groups them.
 
 ## 8. Testing
 
@@ -441,7 +511,13 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     payee with ties to the latest, the text fallback for rows without payee, accounts only where none is fixed,
     rules with deleted categories skipped, nothing written, 4'000 transactions; rules saved, replaced, deleted and
     undone; CSV and camt imports with suggestions, clearing them and keeping them on import;
-  - wealth with carry-forward, projected wealth (higher of recorded and budget) and the reconciliation.
+  - wealth with carry-forward, projected wealth (higher of recorded and budget) and the reconciliation;
+  - investments (F21): the booked value staying at quantity × price after buys, sales between two
+    prices, back-dated trades and prices, edits, moves and deletes (also 40 random events with
+    random edits and deletes), oversold sales refused, fees, dividends and their category, one undo
+    step, performance with realized and unrealized, asset classes and old files without the column,
+    refused manual bookings on investment accounts, price lists in several formats, and a month with
+    trades and price updates reconciling to 0 (CHF and EUR view, and a USD depot viewed in CHF).
 - The UI was exercised end-to-end with Playwright against a seeded data set:
   - all pages and the forms with advance and repayment;
   - the grid filters, edit and multi-delete;

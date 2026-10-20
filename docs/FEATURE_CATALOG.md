@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 23 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02) and F29; steps 24, 25 open |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 open |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -62,7 +62,7 @@ Waits for the source data (decision 7).
 | 21 | ☑ Done | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
-| 24 | ☐ Open | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
+| 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
 | 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
@@ -111,6 +111,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
    broker list), no online prices; every price update books a linked *Capital gains on
    investment* revaluation, so an account's booked value is always quantity × price; buys,
    sells, dividends and fees are modelled, so performance compares value with money put in.
+   Built (architecture §7, decision 17).
 
 ## All features
 
@@ -136,7 +137,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F18 | ☐ Open | Trends and unusual spending | Insight | M | Local | – |
 | F19 | ☐ Open | Year in review | Insight | M | Local | – |
 | F20 | ☐ Open | Swiss tax summary | Insight | M | Local | F10 |
-| F21 | ☐ Open | Investments and asset classes | Wealth | L | Optional | – |
+| F21 | ☑ Done | Investments and asset classes | Wealth | L | Local | – |
 | F22 | ☐ Open | Loans and mortgages | Wealth | M | Local | – |
 | F23 | ☐ Open | Who owes what (shared expenses) | Wealth | M | Local | – |
 | F24 | ☑ Done | Export to CSV and JSON | Data out | S–M | Local | – |
@@ -654,7 +655,45 @@ Cantonal rules differ, so the app lists amounts and leaves the judgment to the u
 
 #### F21 · Investments and asset classes
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-21)
+
+**As built** (decision 9; architecture §7, decision 17):
+
+- **Asset classes:** every account has one (`accounts.csv` → `asset_class`): cash (the default,
+  also for files written before and for advance-payment accounts), securities, pillar 2, pillar 3a,
+  real estate, crypto, other. It is set in the account sheet in Settings. Securities and crypto
+  accounts are valued from their holdings; an account becomes one only while it has no transactions
+  or balances, and stays one while it has holdings. The Overview shows wealth at the end of last
+  month by class (a split bar with amounts and shares) once any account is not cash, and the chart
+  *Wealth by Asset Class* stacks it month by month. Pillar 2/3a, real estate and other keep their
+  recorded month-end balances.
+- **Holdings, trades, prices:** `holdings.csv` (account, name, ISIN or symbol), `trades.csv` (buy,
+  sell, dividend with date, quantity, price, fee, amount, cash account, note) and `prices.csv` (one
+  price per holding and day). Every change rebooks the holding's linked transactions in date order
+  (`invest_id` points at the trade or price): a buy or sale is a transfer of quantity × price
+  between the cash account (same currency, else refused) and the investment account, a fee an
+  expenditure in 12.2.9.9 *Other financial services n.e.c.*, a dividend income in *Dividends*
+  (added when missing), and each price — a trade's price counts as one — a *Capital gains on
+  investment* revaluation of quantity × the price change, rounded so the booked value is exactly
+  round(quantity × latest price, 2). A sale of more than is held, or an edit or delete that would
+  leave one, is refused; dates in the future are refused.
+- **Month-end balance:** computed from the holdings (Σ quantity × latest price on or before the
+  month end), not typed in and not stored; the reconciliation comes out at 0 (tested, also for a
+  foreign-currency depot in another view currency).
+- **Performance:** per holding and in total: value, money put in (buys − sales), dividends, fees,
+  gain = value − money put in + dividends − fees and its percentage of the money put in; the
+  holding sheet splits it into realized and unrealized (average cost).
+- **Investments page** (`/investments`, sidebar after Payees): holdings by account with quantity,
+  last price and date, value, gain and %, totals; *Buy*, *Sell*, *Dividend*, *Update Price* and
+  *Paste Prices…* (tab, semicolon or comma separated, header line skipped, Swiss and other number
+  formats) sheets; a holding sheet with its figures and history (edit and delete per trade or
+  price, rename, delete with everything it booked). The booked rows appear in Transactions; opening
+  one opens its trade or price, deleting or bulk-editing it there is refused. Every save is one
+  undoable step.
+- Not built: online prices (decision 9), withholding tax on dividends as its own field (enter the
+  amount received), transaction-level lots (the average cost method is used).
+
+The proposal:
 
 Today wealth comes from recorded account balances. Add:
 
