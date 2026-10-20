@@ -164,11 +164,11 @@ offline-HTML scripts. NiceGUI renders charts with its own plotly.js.
   - The ECB download over HTTPS works.
   - All pages and exports work in the frozen app.
   - Closing the window shuts the app down.
-- **Windows:** built by CI on `windows-latest`; the installed app has not been tried on a
-  Windows PC yet. Check the first build: start the installed app, open every page, and try one
+- **Windows:** built by CI on `windows-latest` (first successful run 2026-10-19, 51 MB); the
+  installed app has not been tried on a Windows PC yet. Check the first build: start the installed app, open every page, and try one
   export.
 - **Linux:** built and tested in Ubuntu 24.04 containers (arm64): the package installs and
   uninstalls with `install.sh`, the browser mode serves every page, and the Qt WebEngine window
   opens on a virtual display and shows the app, also on a system without the extra libraries
-  bundled from the build machine. The x86_64 package from CI is guarded by the library check
-  in `build.py`; try it once on a desktop.
+  bundled from the build machine. The x86_64 package from CI (first successful run 2026-10-19,
+  273 MB) passed the library check in `build.py`; try it once on a desktop.

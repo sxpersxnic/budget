@@ -28,29 +28,21 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | Follow-up fixes (B10–B15) | ☑ Done | 3 of 3 steps |
 | 2 · Accounts and reconciliation | ☑ Done | 3 of 3 steps |
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
-| 4 · Import and charts | ◐ Partly | 1 of 3 steps (F36) |
+| 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
 | After issue 01 (steps 19–25) | ◐ Partly | F24, F25, F02 and F29 done (step 19, F25 of step 20, step 23); F28 and steps 21, 22, 24, 25 open |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
-| Engineering: CI and installers for macOS, Windows, Linux | ◐ Partly | built; the first CI run is pending |
+| Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
 
 ## Open now
 
-State on 2026-10-19: milestones 1–3 and the follow-up fixes are done (see [Done](#done));
-milestone 4 is under way: its first step (F36) is done since decision 6 was made on 2026-10-20. Steps run in the order given; *Needs* lists what has to be
-done first, and decisions are numbered as in
-[Decisions for the product owner](#decisions-for-the-product-owner).
+State on 2026-10-20: milestones 1–4 and the follow-up fixes are done (see [Done](#done));
+milestone 5 waits for decision 7 (the COICOP source data), so the work after issue 01 comes
+next. Steps run in the order given; *Needs* lists what has to be done first, and decisions
+are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
-
-#### Milestone 4 · Import and charts
-
-| Step | Status | Task | Needs | Effort |
-| --- | --- | --- | --- | --- |
-| 14 | ☑ Done | **F36 · Closing balance from bank files.** | decision 6 (decided) | M |
-| 15 | ☐ Open | **F38 · Exchange-rate chart.** | – | S |
-| 16 | ☑ Done | **F37 · COICOP information page** with codes, names and search. | – | S |
 
 #### Milestone 5 · COICOP data
 
@@ -155,7 +147,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
 | F36 | ☑ Done | Closing balance from bank files | Data in | M | Local | F01 |
 | F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 adds notes) |
-| F38 | ☐ Open | Exchange-rate chart | Insight | S | Local | – |
+| F38 | ☑ Done | Exchange-rate chart | Insight | S | Local | – |
 | F39 | ☐ Open | COICOP level 5 | Organizing | M | Local | source data |
 | F40 | ☐ Open | COICOP notes in search and on hover | Organizing | M | Local | source data |
 | F41 | ☑ Done | Opening balance and change per account | Wealth | S | Local | – |
@@ -170,7 +162,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 
 ### F36 · Closing balance from bank files
 
-**Status:** ☑ Done
+**Status:** ☑ Done (2026-10-20, `a30559a`)
 
 Bank exports usually carry a running balance (*Saldo*, *Kontostand*, *Balance*). Today the
 import ignores it.
@@ -203,7 +195,7 @@ editor and the "transfer to own account" row type.
 
 ### F37 · COICOP information page
 
-**Status:** ☑ Done (2026-10-20, `06698d9`)
+**Status:** ☑ Done (2026-10-20, `009f0a5`)
 
 A page listing all COICOP categories as a tree with code and name, in the interface
 language, with a search box. Linked from the sidebar or Settings. With F40, each category
@@ -220,7 +212,11 @@ each node and to its search text.
 
 ### F38 · Exchange-rate chart
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20, `3a4e7d3`)
+
+**As built:** chart type *Exchange Rates* on the Overview; currencies default to those of the
+user's accounts; daily or month end; index view; CSV/Excel/PNG/PDF export like the other
+charts. `FxRates.history()` provides the prices.
 
 A fourth chart type on the Overview: the ECB rates of chosen currencies against the display
 currency over a period, daily or at month end (the rates balances are valued with). Optional
@@ -826,6 +822,14 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | 12 | ☑ Done | **F45 · Revaluations section** in the budget overview; the reconciliation line from F42 then counts them. | F42 (done), F43, decision 4 (decided) | S |
 | 13 | ☑ Done | **F46 · Unexplained difference per account**, with a *Book as revaluation* action. | F41 (done), F43 | S–M |
 
+### Milestone 4 · Import and charts
+
+| Step | Status | Task | Needs | Effort |
+| --- | --- | --- | --- | --- |
+| 14 | ☑ Done | **F36 · Closing balance from bank files.** | decision 6 (decided) | M |
+| 15 | ☑ Done | **F38 · Exchange-rate chart.** | – | S |
+| 16 | ☑ Done | **F37 · COICOP information page** with codes, names and search. | – | S |
+
 ### Built features
 
 | Item | Status | Notes |
@@ -834,7 +838,7 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | F29 · Multi-language support | ☑ Done | English, German, French and Italian, including the COICOP names. |
 | Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. Covers part of F11 and gives F04 a place for receipt lines. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
-| CI and installers for macOS, Windows and Linux | ◐ Partly | GitHub Actions run the checks on every push and build the three installers; a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. Done once the first CI run has built all three; the Windows installer has never been run on a real PC. See [packaging/README.md](../packaging/README.md). |
+| CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
 
 #### F01 · CSV import of transactions
 
