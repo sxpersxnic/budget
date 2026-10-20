@@ -80,7 +80,8 @@ def row_icon(user: User, icon: str) -> ui.button:
 
 
 def due_amounts(user: User) -> list[ui.number]:
-    return [n for n in user.find(kind=ui.number).elements if "suffix" in n.props and not n.props.get("label")]
+    found = [n for n in user.find(kind=ui.number).elements if "suffix" in n.props and not n.props.get("label")]
+    return sorted(found, key=lambda n: n.id)  # in page order; find() returns a set
 
 
 async def settle() -> None:
