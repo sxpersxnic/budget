@@ -182,6 +182,8 @@ The app opens in its own window and keeps all data in your user folder:
    category and import. The column settings can be saved per bank; transactions already
    imported are recognised and skipped. A camt.053 or camt.054 statement (XML, the Swiss
    e-banking standard) needs no column step at all, and the app remembers its account by IBAN.
+   When the file shows the account balance, the review step also offers each month's closing
+   balance to record (the month the file ends inside stays unticked).
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
 6. **Categories** (sidebar): look up a COICOP category by code or name; the ones you used
