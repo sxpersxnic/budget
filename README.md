@@ -180,7 +180,11 @@ The app opens in its own window and keeps all data in your user folder:
    *Partly paid for others* when part of a payment was for someone else. Record their
    repayment later as income with *Repays an advance payment*. Under **Items** you can list
    what you bought (for example a grocery receipt) with quantity and price; the Transactions
-   search then also finds a purchase by item name.
+   search then also finds a purchase by item name. Shortcuts: type a sum such as `12.50+8.30`
+   into an amount, press **N** for a new transaction and **⌘↩** (Ctrl+Enter) to save, save the
+   usual ones as **templates** (bookmark button), or **Duplicate** an existing transaction.
+   The category field shows everyday names ("Groceries · 01.1") and your recently used
+   categories first, and its search also knows shops and brands: type "Migros", "SBB" or "Netflix".
 4. **Transactions → Import…** (optional): bring in a CSV export from your e-banking
    instead of typing. Choose the account, check the detected columns, give the new rows a
    category and import. The column settings can be saved per bank; transactions already
@@ -190,9 +194,13 @@ The app opens in its own window and keeps all data in your user folder:
    balance to record (the month the file ends inside stays unticked).
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
-6. **Categories** (sidebar): look up a COICOP category by code or name; the ones you used
+6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is
+   due it is listed for one-click booking (change the amount first if it varies, or skip it);
+   turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
+   series from a transaction you already entered.
+7. **Categories** (sidebar): look up a COICOP category by code or name; the ones you used
    show what you spent in them this year.
-7. **Overview / Budget:** compare actual against budget, check the projected wealth, build
+8. **Overview / Budget:** compare actual against budget, check the projected wealth, build
    charts, and export statements as Excel or PDF (share button on the Budget page).
 
 ## Building the installers

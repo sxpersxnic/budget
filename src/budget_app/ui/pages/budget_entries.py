@@ -21,7 +21,13 @@ from budget_app.ui.layout import (
     sheet_buttons,
     undoable,
 )
-from budget_app.ui.pages.add_budget import FOREVER, RECURRENCE, open_budget_sheet, recurrence_options, until_options
+from budget_app.ui.pages.add_budget import (
+    FOREVER,
+    open_budget_sheet,
+    recurrence_label,
+    recurrence_options,
+    until_options,
+)
 from budget_app.ui.widgets.grid import confirm, export_menu, make_grid, money_col, month_col, num_col
 from budget_app.ui.widgets.selects import currency_select, expenditure_category_select, income_category_select
 
@@ -54,7 +60,7 @@ def edit_dialog(ctx: Context, entry: BudgetEntry, on_saved) -> None:
     until_opts = until_options(entry.month, ctx.horizon(), extra=sched.end_month)
     with sheet(t("Budget for {month}", month=months.label(entry.month)), width="30rem") as dlg:
         if entry.type == BUDGET_EXPENDITURE:
-            cat = expenditure_category_select(entry.category)
+            cat = expenditure_category_select(entry.category, ctx=ctx)
         else:
             cat = income_category_select(ctx, entry.category)
         with ui.row().classes("w-full gap-2 no-wrap items-center"):
@@ -202,11 +208,7 @@ def page() -> None:
                 label = category_label(ctx, b)
                 if q and q not in f"{label} {b.comment}".lower():
                     continue
-                rec = (
-                    t(RECURRENCE[b.recur_months])
-                    if b.recur_months in RECURRENCE
-                    else t("Every {n} months", n=b.recur_months)
-                )
+                rec = recurrence_label(b.recur_months)
                 rows.append(
                     {
                         "id": b.id,

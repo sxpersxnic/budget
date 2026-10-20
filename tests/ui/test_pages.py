@@ -5,6 +5,7 @@ PAGES = {
     "/": "Overview",
     "/budget": "Budget",
     "/transactions": "Transactions",
+    "/recurring": "Recurring",
     "/add-transaction": "New Transaction",
     "/import": "Import",
     "/budget-entries": "Budget Plan",

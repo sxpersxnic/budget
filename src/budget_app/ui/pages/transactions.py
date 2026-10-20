@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from nicegui import ui
 
 from budget_app.domain.coicop import get_coicop
@@ -17,10 +19,13 @@ from budget_app.domain.models import (
 from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import items as items_svc
+from budget_app.services import recurring as rec_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import ValidationError
 from budget_app.services.reports import ADV_REPAY_NAME
 from budget_app.ui.layout import date_input, error, frame, on_data_changed, parse_date, undoable
+from budget_app.ui.pages.add_budget import recurrence_label
+from budget_app.ui.pages.recurring import open_recurring_sheet
 from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
@@ -37,6 +42,7 @@ def _columns() -> list[dict]:
         num_col("amount_chf", t("In CHF"), width=120, cellClass="muted"),
         {"field": "advance", "headerName": t("Advance"), "width": 150},
         {"field": "comment", "headerName": t("Note"), "width": 200},
+        {"field": "recurring", "headerName": t("Repeats"), "width": 140, "cellClass": "muted"},
         date_col("fx_date", t("Rate Date"), width=120, cellClass="muted"),
     ]
 
@@ -52,6 +58,7 @@ def _row(
     item_counts: dict,
     item_names: dict,
     received: float | None = None,
+    repeats: dict[str, str] | None = None,
 ) -> dict:
     if tx.type == TX_EXPENDITURE:
         category = get_coicop().label(tx.category)
@@ -83,6 +90,7 @@ def _row(
         "comment": tx.comment,
         "fx_date": tx.fx_date.isoformat(),
         "items": item_counts.get(tx.id) or None,
+        "recurring": (repeats or {}).get(tx.recurring_id, "") if tx.recurring_id else "",
         "_search": " ".join(
             [
                 category,
@@ -141,6 +149,14 @@ def page() -> None:
             ui.button(t("Edit"), icon="o_edit", on_click=lambda: edit_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
                 "text-primary"
             )
+            ui.button(
+                t("Duplicate"),
+                icon="o_content_copy",
+                on_click=lambda: duplicate_selected(),  # noqa: PLW0108 - defined below
+            ).props("flat dense").classes("text-primary")
+            ui.button(t("Make Recurring…"), icon="o_event_repeat", on_click=lambda: make_recurring()).props(  # noqa: PLW0108 - defined below
+                "flat dense"
+            ).classes("text-primary")
             ui.button(t("Delete"), icon="o_delete", on_click=lambda: delete_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
                 "text-negative"
             )
@@ -155,6 +171,7 @@ def page() -> None:
             accs = {a.id: acc_svc.account_label(a) for a in ctx.store.accounts.all()}
             income_cats = {c.id: c.name for c in ctx.store.income_categories.all()}
             item_counts, item_names = items_svc.counts(ctx), items_svc.names_by_transaction(ctx)
+            repeats = {r.id: recurrence_label(r.recur_months) for r in ctx.store.recurring.all()}
             rows = []
             for tx in ctx.store.transactions.all():
                 if (start and tx.date < start) or (end and tx.date > end):
@@ -166,7 +183,7 @@ def page() -> None:
                 if typ.value and tx.type != typ.value:
                     continue
                 received = tx_svc.received_amount(ctx, tx) if tx.type == TX_EXCHANGE else None
-                r = _row(tx, accs, income_cats, item_counts, item_names, received)
+                r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats)
                 if acc.value and acc.value not in r["_accounts"]:
                     continue
                 if q and q not in r["_search"]:
@@ -205,6 +222,31 @@ def page() -> None:
                 error(t("Select exactly one transaction to edit"))
                 return
             open_editor(rows[0]["id"])
+
+        async def duplicate_selected() -> None:
+            rows = await grid.get_selected_rows()
+            if len(rows) != 1:
+                error(t("Select exactly one transaction to duplicate"))
+                return
+            tx = ctx.store.transactions.get(rows[0]["id"])
+            if tx is not None:
+                prefill = tx_svc.duplicate_input(ctx, tx, date.today())
+                open_transaction_sheet(ctx, apply_filters, prefill=prefill, items_from=tx.id)
+
+        async def make_recurring() -> None:
+            """A series that continues the selected transaction, which becomes its first booking (F05)."""
+            rows = await grid.get_selected_rows()
+            tx = ctx.store.transactions.get(rows[0]["id"]) if len(rows) == 1 else None
+            if tx is None:
+                error(t("Select exactly one transaction to make recurring"))
+                return
+            if not rec_svc.can_continue(tx):
+                error(t("Only expenditure, income and account transfers without an advance payment can repeat"))
+                return
+            if tx.recurring_id and ctx.store.recurring.get(tx.recurring_id):
+                error(t("This transaction already belongs to a recurring transaction"))
+                return
+            open_recurring_sheet(ctx, apply_filters, prefill=rec_svc.from_transaction(tx), first_booked=tx.id)
 
         async def delete_selected() -> None:
             rows = await grid.get_selected_rows()

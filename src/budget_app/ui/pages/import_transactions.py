@@ -9,15 +9,16 @@ from __future__ import annotations
 from nicegui import events, ui
 
 from budget_app.domain import months
-from budget_app.domain.coicop import get_coicop
+from budget_app.domain.everyday import category_options
 from budget_app.domain.models import TX_INCOME
 from budget_app.i18n import N_, date_label, t, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import camt, import_balances, importer
+from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import error, fmt, frame, segmented, success
 from budget_app.ui.widgets.grid import date_col, make_grid, num_col
-from budget_app.ui.widgets.selects import account_options
+from budget_app.ui.widgets.selects import CategorySelect, account_options
 
 DELIMITER_NAMES = {";": N_("Semicolon ;"), ",": N_("Comma ,"), "\t": N_("Tab"), "|": N_("Pipe |")}
 STATUS = {
@@ -52,10 +53,9 @@ def _columns(currency: str) -> list[dict]:
     ]
 
 
-def _category_options(ctx: Context) -> dict[str, str]:
-    """Expenditure categories (COICOP and taxes) followed by income categories."""
-    opts = {code: label.strip() for code, label in get_coicop().selectable().items()}
-    return opts | {c.id: t("Income · {name}", name=c.name) for c in acc_svc.income_categories(ctx)}
+def _income_options(ctx: Context) -> dict[str, str]:
+    """Income categories, listed after the expenditure categories in the category picker."""
+    return {c.id: t("Income · {name}", name=c.name) for c in acc_svc.income_categories(ctx)}
 
 
 def page() -> None:
@@ -76,7 +76,10 @@ def page() -> None:
             "balances": [],
             "balance_problem": "",
         }
-        category_labels = _category_options(ctx)
+        # the same labels and search as the other category pickers (F08), then the income categories
+        expenditure = category_options(tx_svc.recent_categories(ctx))
+        income = _income_options(ctx)
+        category_labels = {o.code: o.label for o in expenditure} | income
 
         # ---------------------------------------------------------- 1 · file
         with ui.element("div").classes("surface flex flex-col gap-3"):
@@ -166,7 +169,7 @@ def page() -> None:
                 selected_label = ui.label().classes("font-medium")
                 ui.space()
                 bulk_cat = (
-                    ui.select(category_labels, label=t("Category"), with_input=True)
+                    CategorySelect(expenditure, income, label=t("Category"))
                     .props("dense outlined options-dense")
                     .classes("w-72 bg-transparent")
                 )

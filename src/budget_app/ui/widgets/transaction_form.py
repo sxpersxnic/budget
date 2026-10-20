@@ -7,6 +7,7 @@ from collections.abc import Callable
 from datetime import date
 
 from nicegui import ui
+from nicegui.events import KeyEventArguments
 
 from budget_app import i18n
 from budget_app.domain.fx import FxError
@@ -20,14 +21,28 @@ from budget_app.domain.models import (
     TX_REVALUATION,
     TX_TRANSFER,
     TX_TYPES,
+    Template,
     Transaction,
 )
 from budget_app.i18n import N_, t, tc
 from budget_app.services import items as items_svc
+from budget_app.services import templates as templates_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
-from budget_app.ui.layout import date_input, error, fmt, fmt_signed, parse_date, segmented, sheet, undoable
+from budget_app.ui.layout import (
+    date_input,
+    error,
+    fmt,
+    fmt_signed,
+    parse_date,
+    segmented,
+    sheet,
+    sheet_buttons,
+    success,
+    undoable,
+)
+from budget_app.ui.widgets.amount import AmountInput
 from budget_app.ui.widgets.item_list import ItemList
 from budget_app.ui.widgets.selects import (
     account_options,
@@ -50,11 +65,16 @@ class TransactionForm:
         on_saved: Callable[[Transaction], None] | None = None,
         on_cancel: Callable[[], None] | None = None,
         prefill: TransactionInput | None = None,
+        items_from: str = "",
+        on_duplicate: Callable[[Transaction], None] | None = None,
     ):
         self.ctx = ctx
         self.editing = editing
         self.on_saved = on_saved
         self.on_cancel = on_cancel
+        self.on_duplicate = on_duplicate
+        self._items_from = items_from  # a duplicate starts with the original's product list
+        self._recent = {acc: i for i, acc in enumerate(tx_svc.recent_accounts(ctx))}
         self._busy = False
         self._touched = False  # explain why Save is disabled only once the user has started
         init = (
@@ -71,10 +91,14 @@ class TransactionForm:
         ch = self._changed
         with ui.column().classes("w-full gap-4"):
             # The type decides every other field, so it comes first.
-            self.type = segmented({k: t(v) for k, v in TX_TYPES.items()}, init.type, on_change=ch, full=True)
+            with ui.row().classes("w-full items-center gap-2 no-wrap"):
+                self.type = segmented({k: t(v) for k, v in TX_TYPES.items()}, init.type, on_change=ch, full=True)
+                self.type.classes("flex-1 min-w-0")
+                if not self.editing:
+                    self._templates_menu()
             with ui.column().classes("w-full gap-1") as self.amount_box:
                 with ui.row().classes("w-full gap-2 items-center no-wrap"):
-                    self.amount = ui.number(
+                    self.amount = AmountInput(
                         t("Amount"),
                         value=init.amount,
                         min=0,
@@ -92,7 +116,7 @@ class TransactionForm:
             # --- expenditure
             with ui.column().classes("w-full gap-3") as self.exp_box:
                 self.exp_category = expenditure_category_select(
-                    init.category if init.type == TX_EXPENDITURE else None, on_change=ch
+                    init.category if init.type == TX_EXPENDITURE else None, on_change=ch, ctx=self.ctx
                 )
                 self.exp_from = self._account_select(
                     t("From Account"), init.from_account if init.type == TX_EXPENDITURE else None
@@ -151,7 +175,7 @@ class TransactionForm:
                     )
                     ui.icon("arrow_forward", size="18px").classes("text-3 max-sm:hidden")
                     self.move_to = self._account_select(tc("account", "To"), init.to_account if init_move else None)
-                self.to_amount = ui.number(
+                self.to_amount = AmountInput(
                     t("Amount Received"),
                     value=init.to_amount if init.type == TX_EXCHANGE else None,
                     min=0,
@@ -200,7 +224,9 @@ class TransactionForm:
             with ui.column().classes("w-full") as self.items_box:
                 self.items = ItemList(
                     items_svc.known_names(self.ctx),
-                    items_svc.items_for(self.ctx, self.editing.id) if self.editing else [],
+                    items_svc.items_for(self.ctx, self.editing.id if self.editing else self._items_from)
+                    if self.editing or self._items_from
+                    else [],
                     amount=lambda: self.amount.value,
                     currency=lambda: self.currency.value or "",
                     use_total=self._use_items_total,
@@ -214,11 +240,95 @@ class TransactionForm:
             with ui.row().classes("w-full items-center gap-2 no-wrap pt-1"):
                 self.status = ui.label().classes("caption")
                 ui.space()
+                if self.editing and self.on_duplicate:
+                    editing = self.editing
+                    ui.button(t("Duplicate"), icon="o_content_copy", on_click=lambda: self.on_duplicate(editing)).props(
+                        "flat"
+                    ).classes("text-primary")
                 if self.on_cancel:
                     ui.button(t("Cancel"), on_click=self.on_cancel).props("flat").classes("text-primary")
                 self.save_btn = ui.button(
                     t("Save Changes") if self.editing else t("Add Transaction"), on_click=self._save
                 ).props("unelevated")
+            ui.keyboard(on_key=self._shortcut, ignore=[])
+
+    def _recent_first(self, options: dict[str, str]) -> dict[str, str]:
+        """Recently used accounts at the top of a dropdown (F06), the others in their usual order."""
+        order = sorted(options, key=lambda k: (self._recent.get(k, len(self._recent)), list(options).index(k)))
+        return {k: options[k] for k in order}
+
+    def _shortcut(self, e: KeyEventArguments) -> None:
+        """⌘↩ / Ctrl+Enter saves, from any field."""
+        if e.action.keydown and e.key.enter and (e.modifiers.meta or e.modifiers.ctrl) and self.save_btn.enabled:
+            self._save()
+
+    def _templates_menu(self) -> None:
+        """Start from a saved template, or save the current fields as one (F06)."""
+        button = ui.button(icon="o_bookmarks").props("flat round dense").classes("text-primary")
+        with button.tooltip(t("Templates")), ui.menu().props("auto-close") as menu:
+            self._template_menu = menu
+            self._fill_templates_menu()
+
+    def _fill_templates_menu(self) -> None:
+        self._template_menu.clear()
+        with self._template_menu:
+            templates = templates_svc.all_templates(self.ctx)
+            for tp in templates:
+                with (
+                    ui.menu_item(on_click=lambda tp=tp: self._apply_template(tp)),
+                    ui.row().classes("items-center gap-2 no-wrap w-full"),
+                ):
+                    ui.label(tp.name).classes("flex-1")
+                    # .stop: deleting must not also apply the template underneath
+                    ui.button(icon="close").props("flat round dense size=xs").classes("text-2").tooltip(t("Delete")).on(
+                        "click.stop", lambda tp=tp: self._delete_template(tp)
+                    )
+            if templates:
+                ui.separator()
+            ui.menu_item(t("Save as Template…"), on_click=self._save_template)
+
+    def _apply_template(self, tp: Template) -> None:
+        inp = templates_svc.as_input(tp, self.read())
+        self._busy = True
+        try:
+            self.type.set_value(inp.type)
+            self.amount.set_value(inp.amount)
+            self.currency.set_value(inp.currency)
+            self._refresh_options()
+            if inp.type == TX_EXPENDITURE:
+                self.exp_category.set_value(inp.category or None)
+                self.exp_from.set_value(inp.from_account or None)
+            elif inp.type == TX_INCOME:
+                self.inc_category.set_value(inp.category or None)
+                self.inc_to.set_value(inp.to_account or None)
+            else:
+                self.move_from.set_value(inp.from_account or None)
+                self.move_to.set_value(inp.to_account or None)
+            self.comment.set_value(inp.comment)
+        finally:
+            self._busy = False
+        self._changed()
+
+    def _delete_template(self, tp: Template) -> None:
+        templates_svc.delete(self.ctx, tp.id)
+        self._fill_templates_menu()
+
+    def _save_template(self) -> None:
+        with sheet(t("Save as Template"), width="24rem") as dlg:
+            name = ui.input(t("Name"), placeholder=t("e.g. Coffee")).props("dense outlined autofocus").classes("w-full")
+
+            def save() -> None:
+                try:
+                    templates_svc.save(self.ctx, name.value, self.read())
+                except ValidationError as exc:
+                    error(str(exc))
+                    return
+                dlg.close()
+                success(t("Saved “{name}”", name=name.value.strip()))
+                self._fill_templates_menu()
+
+            name.on("keydown.enter", save)
+            sheet_buttons(dlg, t("Save"), save)
 
     def _account_select(self, label: str, value: str | None) -> ui.select:
         value = value or None
@@ -281,8 +391,8 @@ class TransactionForm:
         self.inc_category.set_visibility(not self.inc_adv.value)
         set_options(self.inc_category, income_category_options(self.ctx))
 
-        set_options(self.exp_from, account_options(self.ctx, currency=cur))
-        set_options(self.inc_to, account_options(self.ctx, currency=cur))
+        set_options(self.exp_from, self._recent_first(account_options(self.ctx, currency=cur)))
+        set_options(self.inc_to, self._recent_first(account_options(self.ctx, currency=cur)))
 
         adv_opts = {AUTO_ADVANCE: t("Advance payments (default)")} | dict(
             account_options(self.ctx, ACCOUNT_ADVANCE, cur).items()
@@ -319,7 +429,7 @@ class TransactionForm:
             set_options(self.open_items, item_opts)
 
         if kind == TX_REVALUATION:
-            set_options(self.reval_account, account_options(self.ctx))
+            set_options(self.reval_account, self._recent_first(account_options(self.ctx)))
             acc = self.ctx.store.accounts.get(self.reval_account.value) if self.reval_account.value else None
             if acc and self.currency.value != acc.currency:
                 self.currency.set_value(acc.currency)
@@ -327,18 +437,21 @@ class TransactionForm:
             for el in (self.reval_change, self.reval_old, self.reval_new):
                 el.props(suffix)
         if kind == TX_EXCHANGE:
-            set_options(self.move_from, account_options(self.ctx))
+            set_options(self.move_from, self._recent_first(account_options(self.ctx)))
             src = self.ctx.store.accounts.get(self.move_from.value) if self.move_from.value else None
             if src and self.currency.value != src.currency:
                 self.currency.set_value(src.currency)
-            set_options(self.move_to, account_options(self.ctx, exclude_currency=src.currency if src else None))
+            set_options(
+                self.move_to,
+                self._recent_first(account_options(self.ctx, exclude_currency=src.currency if src else None)),
+            )
             self.currency.disable()
             dst = self.ctx.store.accounts.get(self.move_to.value) if self.move_to.value else None
             self.to_amount.props(f'suffix="{dst.currency}"' if dst else "remove=suffix")
         else:
             self.currency.enable()
-            set_options(self.move_from, account_options(self.ctx, currency=cur))
-            set_options(self.move_to, account_options(self.ctx, currency=cur))
+            set_options(self.move_from, self._recent_first(account_options(self.ctx, currency=cur)))
+            set_options(self.move_to, self._recent_first(account_options(self.ctx, currency=cur)))
 
     def _update_hints(self, inp: TransactionInput) -> None:
         self.reval_hint.set_text("")
@@ -505,6 +618,7 @@ def open_transaction_sheet(
     on_saved: Callable[[], None] | None = None,
     editing: Transaction | None = None,
     prefill: TransactionInput | None = None,
+    items_from: str = "",
 ) -> None:
     """The transaction form as a modal sheet, so a transaction can be added from any page."""
     if editing is not None and editing.type == TX_REVALUATION and editing.linked_id:
@@ -515,5 +629,17 @@ def open_transaction_sheet(
         if on_saved:
             on_saved()
 
+    def duplicate(tx: Transaction) -> None:
+        dlg.close()
+        open_transaction_sheet(ctx, on_saved, prefill=tx_svc.duplicate_input(ctx, tx, date.today()), items_from=tx.id)
+
     with sheet(t("Edit Transaction") if editing else t("New Transaction"), width="34rem") as dlg:
-        TransactionForm(ctx, editing=editing, on_saved=saved, on_cancel=dlg.close, prefill=prefill)
+        TransactionForm(
+            ctx,
+            editing=editing,
+            on_saved=saved,
+            on_cancel=dlg.close,
+            prefill=prefill,
+            items_from=items_from,
+            on_duplicate=duplicate,
+        )

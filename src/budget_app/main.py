@@ -18,7 +18,7 @@ from budget_app import config, i18n
 from budget_app.services.context import init_context
 from budget_app.storage import lock as instance_lock
 from budget_app.ui import theme
-from budget_app.ui.layout import refresh_rates
+from budget_app.ui.layout import book_recurring, refresh_rates
 from budget_app.ui.pages import (
     add_budget,
     add_transaction,
@@ -28,6 +28,7 @@ from budget_app.ui.pages import (
     history,
     import_transactions,
     overview,
+    recurring,
     settings,
     transactions,
 )
@@ -37,6 +38,7 @@ PAGES = {
     "/budget": budget_overview.page,
     "/add-transaction": add_transaction.page,
     "/transactions": transactions.page,
+    "/recurring": recurring.page,
     "/import": import_transactions.page,
     "/add-budget": add_budget.page,
     "/budget-entries": budget_entries.page,
@@ -55,9 +57,10 @@ def setup(data_dir: Path) -> None:
 
     async def refresh() -> None:
         await refresh_rates(ctx)
+        book_recurring(ctx)  # at the rates of the day
 
     app.on_startup(refresh)
-    app.timer(30 * 60, refresh, immediate=False)  # keeps rates current when the app stays open overnight
+    app.timer(30 * 60, refresh, immediate=False)  # keeps rates current, and books what falls due overnight
 
 
 def _redirect_missing_streams(data_dir: Path) -> None:

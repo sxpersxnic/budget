@@ -64,6 +64,7 @@ class TransactionInput:
     reval_new: float | None = None
     comment: str = ""
     import_ref: str = ""  # non-empty for imported transactions: identifies the source row
+    recurring_id: str = ""  # booked from a recurring transaction (F05)
 
 
 @dataclass
@@ -260,6 +261,7 @@ def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Tra
         fx_date=fx_date,
         comment=inp.comment.strip(),
         import_ref=inp.import_ref,
+        recurring_id=inp.recurring_id,
     )
     if base is not None:
         tx.id = base.id
@@ -318,6 +320,7 @@ def save(ctx: Context, inp: TransactionInput, editing_id: str = "") -> Transacti
                     t("This advance already has repayments: its currency and advance payment account cannot change")
                 )
         tx.linked_id = old.linked_id
+        tx.recurring_id = tx.recurring_id or old.recurring_id  # the form doesn't carry the series
         return _store_exchange_split(ctx, tx, old)
     return _store_exchange_split(ctx, _build(ctx, inp, None), None)
 
@@ -410,6 +413,19 @@ def revalue_to_transaction_dates(ctx: Context) -> int:
     return len(changed)
 
 
+def recent_categories(ctx: Context, limit: int = 10) -> list[str]:
+    """The last `limit` distinct expenditure categories, by transaction date (same day: the latest entered first)."""
+    spent = [tx for tx in ctx.store.transactions.all() if tx.type == TX_EXPENDITURE and tx.category]
+    latest_first = sorted(enumerate(spent), key=lambda pair: (pair[1].date, pair[0]), reverse=True)
+    codes: list[str] = []
+    for _, tx in latest_first:
+        if tx.category not in codes:
+            codes.append(tx.category)
+            if len(codes) == limit:
+                break
+    return codes
+
+
 def to_input(tx: Transaction) -> TransactionInput:
     """Turn a stored transaction back into form input (for editing)."""
     inp = TransactionInput(
@@ -426,6 +442,7 @@ def to_input(tx: Transaction) -> TransactionInput:
         settles_id=tx.settles_id,
         comment=tx.comment,
         import_ref=tx.import_ref,
+        recurring_id=tx.recurring_id,
     )
     if tx.type == TX_EXPENDITURE and tx.is_advance:
         inp.advance_mode, inp.advance_value = "amount", tx.advance_amount
@@ -466,3 +483,22 @@ def delete(ctx: Context, ids: list[str]) -> int:
     count = ctx.store.transactions.delete(list(ids_set))
     ctx.store.transaction_items.delete(items)  # a transaction's product list goes with it
     return count
+
+
+def recent_accounts(ctx: Context, limit: int = 30) -> list[str]:
+    """Account ids by how recently they were used (newest transactions first), for F06's dropdown order."""
+    seen: list[str] = []
+    for tx in sorted(ctx.store.transactions.all(), key=lambda x: x.date, reverse=True)[:limit]:
+        for acc in (tx.from_account, tx.to_account):
+            if acc and acc not in seen:
+                seen.append(acc)
+    return seen
+
+
+def duplicate_input(ctx: Context, tx: Transaction, on: date) -> TransactionInput:
+    """Form input for a copy of `tx` dated `on` (F06): no import link, a spread booking copies its exchange."""
+    if tx.type == TX_REVALUATION and tx.linked_id:
+        tx = ctx.store.transactions.get(tx.linked_id) or tx
+    inp = edit_input(ctx, tx)
+    inp.date, inp.import_ref = on, ""
+    return inp

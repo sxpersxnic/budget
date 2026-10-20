@@ -38,6 +38,10 @@ def recurrence_options() -> dict[int, str]:
     return {k: t(v) for k, v in RECURRENCE.items()}
 
 
+def recurrence_label(recur_months: int) -> str:
+    return t(RECURRENCE[recur_months]) if recur_months in RECURRENCE else t("Every {n} months", n=recur_months)
+
+
 def budget_form(ctx: Context, on_saved: Callable[[], None] | None = None, on_cancel=None) -> None:
     horizon = ctx.horizon()
     start_range, _ = data_month_range(ctx)
@@ -53,7 +57,7 @@ def budget_form(ctx: Context, on_saved: Callable[[], None] | None = None, on_can
                 .classes("hero-amount flex-1 min-w-0")
             )
             cur = currency_select(ctx, ctx.store.settings.display_currency)
-        exp_cat = expenditure_category_select()
+        exp_cat = expenditure_category_select(ctx=ctx)
         inc_cat = income_category_select(ctx)
         with ui.column().classes("w-full gap-1"):
             with ui.row().classes("w-full gap-2 no-wrap"):

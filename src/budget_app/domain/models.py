@@ -80,6 +80,22 @@ class Transaction:
     import_ref: str = ""
     # an exchange and the revaluation booking its spread against the ECB rate point at each other (F44)
     linked_id: str = ""
+    recurring_id: str = ""  # set when booked from a recurring transaction (F05): the series' id
+    id: str = field(default_factory=new_id)
+
+
+@dataclass
+class Template:
+    """A saved starting point for a new transaction, such as "Coffee · 01.1.1 · Cash · 4.50" (F06)."""
+
+    name: str
+    type: str = TX_EXPENDITURE
+    amount: float = 0.0  # 0: no amount, the user types it
+    currency: str = ""
+    category: str = ""
+    from_account: str = ""
+    to_account: str = ""
+    comment: str = ""
     id: str = field(default_factory=new_id)
 
 
@@ -129,6 +145,34 @@ class BudgetEntry:
     comment: str = ""
     generated_until: str = ""  # 'Forever' series: horizon up to which rows were generated
     id: str = field(default_factory=new_id)
+
+
+@dataclass
+class Recurring:
+    """A transaction that repeats (F05): its template and its schedule.
+
+    Occurrences fall on the start's day of the month, every `recur_months` months (the last day of
+    a shorter month for days past its end). `next_due` is the first occurrence not yet booked or
+    skipped; everything before it has been handled.
+    """
+
+    type: str  # TX_EXPENDITURE, TX_INCOME or TX_TRANSFER
+    amount: float
+    currency: str
+    start: dt.date  # first occurrence; its day of the month is the day of every occurrence
+    next_due: dt.date
+    category: str = ""
+    from_account: str = ""
+    to_account: str = ""
+    comment: str = ""
+    recur_months: int = 1
+    end: str = ""  # last day an occurrence may fall on ('YYYY-MM-DD'); empty: no end
+    auto: bool = False  # book due occurrences without asking
+    id: str = field(default_factory=new_id)
+
+    @property
+    def end_date(self) -> dt.date | None:
+        return dt.date.fromisoformat(self.end) if self.end else None
 
 
 @dataclass

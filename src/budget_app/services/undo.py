@@ -77,6 +77,7 @@ TABLE_NAMES = {
     "budget_entries": N_("Budget entry"),
     "accounts": N_("Account"),
     "income_categories": N_("Income category"),
+    "recurring": N_("Recurring transaction"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 
@@ -89,6 +90,8 @@ def describe_change(ctx: Context, change) -> str:
         what = f"{raw.get('date', '')} · {raw.get('amount', '')} {raw.get('currency', '')}"
     elif change.table == "account_entries":
         what = f"{raw.get('month', '')} · {accounts.get(raw.get('account_id', ''), '')} · {raw.get('amount', '')}"
+    elif change.table == "recurring":
+        what = f"{raw.get('next_due', '')} · {raw.get('amount', '')} {raw.get('currency', '')}"
     elif change.table == "budget_entries":
         what = f"{raw.get('month', '')} · {raw.get('category', '')} · {raw.get('amount', '')} {raw.get('currency', '')}"
     else:

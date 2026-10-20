@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19, 20 and 23 done (F24, F25, F28, F02) and F29; steps 21, 22, 24, 25 open |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19, 20, 21 and 23 done (F24, F25, F28, F08, F06, F05, F02) and F29; steps 22, 24, 25 open |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -59,7 +59,7 @@ Waits for the source data (decision 7).
 | --- | --- | --- | --- |
 | 19 | ☑ Done | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from milestone 1. |
 | 20 | ☑ Done | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
-| 21 | ☐ Open | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
+| 21 | ☑ Done | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
 | 22 | ☐ Open | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☐ Open | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
@@ -114,10 +114,10 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F02 | ☑ Done | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
 | F03 | ☐ Open | Swiss QR-bill scanning | Data in | M | Local | – |
 | F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
-| F05 | ☐ Open | Recurring transactions | Data in | M | Local | – |
-| F06 | ☐ Open | Faster manual entry | Data in | S–M | Local | – |
+| F05 | ☑ Done | Recurring transactions | Data in | M | Local | – |
+| F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
 | F07 | ☐ Open | Automatic categorization | Organizing | M–L | Optional | F09 |
-| F08 | ☐ Open | Simpler category picker | Organizing | S | Local | – |
+| F08 | ☑ Done | Simpler category picker | Organizing | S | Local | – |
 | F09 | ☐ Open | Payees | Organizing | M | Local | – |
 | F10 | ☐ Open | Tags | Organizing | M | Local | – |
 | F11 | ☐ Open | Split transactions | Organizing | M | Local | – |
@@ -392,7 +392,25 @@ lines.
 
 #### F05 · Recurring transactions
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20)
+
+**As built:** *Recurring* in the sidebar (after Transactions, route `/recurring`, with the number
+of due occurrences as a badge). A series is an expenditure, income or account transfer with amount,
+currency, category, accounts, first date, rhythm (the Budget Plan's: every month to every year),
+an optional end date and a note; it is stored in `recurring.csv`. Occurrences fall on the first
+date's day (the 31st becomes the last day of shorter months). The page lists the **Due**
+occurrences (date ≤ today, one row per missed date) with the amount and date editable, *Book*,
+*Skip* and *Book All*; booking goes through the normal transaction save (validation, ECB rate of
+the date), and the transaction keeps a reference to its series (`recurring_id`), shown in the
+Transactions list's *Repeats* column. A series set to *Book automatically* is booked without
+asking at startup and at each 30-minute refresh (and right away when it is saved). *Make
+Recurring…* on a selected transaction starts a series with it as the first booking. Booking,
+skipping, editing and deleting are undoable. Decided by the product owner: occurrences become
+transactions only through the Due list or *Book automatically*; editing a series changes its
+future occurrences only (it continues after the last occurrence booked or skipped), booked
+transactions stay, and deleting a series keeps them. Not built: the budget projection does not
+use series directly (it would count a series and a budget entry for the same category twice; a
+budget entry still plans it), and there is no pause switch (an end date or deleting does that).
 
 Rent, insurance premiums and subscriptions repeat every month or year.
 
@@ -404,7 +422,13 @@ Rent, insurance premiums and subscriptions repeat every month or year.
 
 #### F06 · Faster manual entry
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20)
+
+**As built:** sums in the amount fields (evaluated safely: numbers, + − × ÷ and brackets, Swiss
+apostrophes and decimal commas); named templates from a bookmark menu in the form; recently used
+accounts first in the account dropdowns (recent *categories* come with F08); ⌘↩ / Ctrl+Enter
+saves, N opens a new transaction; *Duplicate* from the edit sheet and the Transactions list,
+with the items.
 
 Small changes for the most frequent task:
 
@@ -436,7 +460,17 @@ automatically.
 
 #### F08 · Simpler category picker
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20, `6786f2a`)
+
+**As built:** 81 common COICOP codes (and Taxes) have an everyday name in English, German, French
+and Italian plus about 1'700 search words (shops, brands and Swiss terms such as Migros, SBB, ZVV,
+Krankenkasse, Serafe, Kita, Nebenkosten) in `resources/everyday_categories.json`; every other
+category keeps its translated COICOP name. The picker shows "Groceries · 01.1" with the official
+name as a second line and lists the last ten distinct expenditure categories first (marked with a
+history icon). The search matches everyday name, search words, official name and code, ignoring
+case and accents, in the browser. Transaction form, budget forms, the Budget Plan sheet and the
+import page use it; the stored value stays the COICOP code. Not built: favourites, and everyday
+names outside the picker (lists and reports keep the COICOP labels).
 
 COICOP names are statistical ("Individual consumption expenditure of non-profit institutions
 serving households"). Keep COICOP as the storage format, but:

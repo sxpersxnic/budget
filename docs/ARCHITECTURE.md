@@ -32,12 +32,13 @@ storage/    typed CSV tables + settings JSON
 
 | Module | Responsibility |
 | --- | --- |
-| `main.py` | CLI entry (`uv run budget`). Registers pages, refreshes ECB rates at startup and every 30 min. |
+| `main.py` | CLI entry (`uv run budget`). Registers pages, refreshes ECB rates at startup and every 30 min, then books what automatic recurring transactions have due. |
 | `config.py` | Base currency `CHF`, ECB URL, data/resource paths (`BUDGET_DATA_DIR` env override). |
 | `domain/months.py` | `YYYY-MM` month arithmetic and the "month complete" rule. |
 | `domain/fx.py` | `FxRates` (parse ECB CSV, rate lookup with date fallback, cross-rate conversion, `history()` for the rate chart) and `FxService` (daily download, atomic file replacement). |
 | `domain/coicop.py` | COICOP tree (ancestors, children, labels) plus pseudo-categories `TAX` and `ADV`; `fold()` makes text case- and accent-insensitive for searching. |
-| `domain/models.py` | Dataclasses `Account`, `IncomeCategory`, `Transaction`, `AccountEntry`, `BudgetEntry`, `Settings`. |
+| `domain/everyday.py` | F08. Everyday names and search words of the common categories (`resources/everyday_categories.json`) and the category picker's options: `category_options(recent)` lists the recently used codes first, then COICOP order with Taxes last; each option has its label (`Groceries · 01.1`, or the COICOP label for the others), the official name as caption, its level and a folded `search` text (code, everyday names in all four languages, official name in the interface language and in English, search words). `matches()` / `search()`: every query word must occur in that text. |
+| `domain/models.py` | Dataclasses `Account`, `IncomeCategory`, `Transaction`, `AccountEntry`, `BudgetEntry`, `Recurring`, `Settings`. |
 | `storage/csv_store.py` | Generic `CsvTable[T]`: in-memory records, atomic rewrite (temp file, fsync, rename) on every change. Unknown columns are kept and written back. |
 | `storage/store.py` | `Store` bundling all tables and settings. Unknown settings keys are kept. |
 | `services/items.py` | Product lists of transactions: validation (blank lines ignored, half-filled lines rejected), replace, totals, counts and names for the Transactions list. |
@@ -46,20 +47,22 @@ storage/    typed CSV tables + settings JSON
 | `storage/history.py` | Change history and undo (F28): every table write records the record before and after (as written to the CSV file); changes made together form one *action* (`history.action(label)`, nested ones join the outer). Undo reverts an action in reverse order after checking every record still looks as the action left it. Kept in `history.jsonl` (the newest 500 actions), not part of backups. |
 | `services/context.py` | `Context` (store + FX), conversion helpers, budget horizon, `ValidationError`. |
 | `services/accounts.py` | Accounts, advance-payment accounts and income categories, with their deletion rules. |
-| `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement. |
+| `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement; `recent_categories()` (the last ten distinct expenditure categories, for the category picker). |
 | `services/budget.py` | Budget series expansion, overwrite, horizon change and "Forever" extension. |
+| `services/recurring.py` | Recurring transactions (F05): series, their schedule (`occurrence`, `next_after`), the due occurrences, `book` / `skip` / `book_all` through `transactions.save`, and `book_automatic` for series that book without asking. |
 | `services/wealth.py` | Account balances, wealth, projected wealth, wealth time series. |
 | `services/aggregates.py` | Sums of transactions and budget entries per category and month; `projected_net` (the higher of recorded and budget per category). Shared by reports and the wealth projection. |
 | `services/reports.py` | Monthly statement (expenditure tree, income, budget vs. actual, reconciliation, opening balances), chart series. |
 | `services/export.py` | Statement as Excel/PDF; chart data and list views as CSV/Excel; every record as one JSON document (`format: budget-app/export`, `version: 1`), not meant to be imported back. |
 | `services/archive.py` | Full backup of the data folder's records as a ZIP (with a `budget-backup.json` manifest) and restoring one: plain CSV/JSON names only, size limits, every table must load before anything changes; the current files go to `backups/<timestamp>_before-restore/` first, then the store is reloaded. |
 | `services/undo.py` | `@recorded(label)` names a service function's action; `undo()` with readable errors; labels and one-line change descriptions for the history page. |
+| `services/templates.py` | Transaction templates (F06): save, list, delete, apply to a form input; exchanges and revaluations are excluded. |
 | `services/importer.py` | CSV import: encoding, separator and header detection, column mapping and bank profiles, duplicate marking, category suggestions, saving in one write. |
 | `services/camt.py` | camt.053 / camt.054 statements (any version) read into the importer's rows; the account remembered per IBAN. |
 | `services/import_balances.py` | Month-end balances from a bank file (F36): the order of a CSV balance column (newest or oldest first) and the balance after each month's last booking, or a camt closing balance; compared with recorded balances and saved with `wealth.upsert_entry`. |
 | `ui/theme.py` | Design tokens (light and dark), Quasar and AG Grid overrides, chart styling. See `docs/DESIGN_REVIEW.md`. |
 | `ui/layout.py` | Sidebar frame, sheets (dialogs), segmented control, month stepper, metrics, formatting (`1'234.50 CHF`), date picker. |
-| `ui/widgets/` | Searchable selects, transaction form (page, add sheet and edit sheet), AG Grid helpers. |
+| `ui/widgets/` | Searchable selects, transaction form (page, add sheet and edit sheet), AG Grid helpers. `selects.CategorySelect` is the category picker (F08): a `ui.select` subclass whose component `resources/category_select.js` (NiceGUI's `select.js` with another filter and option template) filters on each option's pre-folded `search` text in the browser, so typing is instant and needs no round trip; options show the official name as a second line and a history icon when recently used. Used by the transaction form, both budget forms, the Budget Plan edit sheet and the import page (with the income categories as extra options). The value stays the COICOP code (or `TAX`). |
 | `ui/pages/` | One module per page (see §6). |
 
 ## 3. Data model (`data/`)
@@ -71,10 +74,12 @@ ECB date of the rate used** (`fx_date`).
 | --- | --- |
 | `accounts.csv` | `name, currency, kind (regular/advance), created, id` |
 | `income_categories.csv` | `name, id` |
-| `transactions.csv` | `date, type, amount, currency, amount_chf, fx_date, category, from_account, to_account, to_amount, to_currency, is_advance, advance_amount, advance_account, debtor, settles_id, comment, import_ref, id` |
+| `transactions.csv` | `date, type, amount, currency, amount_chf, fx_date, category, from_account, to_account, to_amount, to_currency, is_advance, advance_amount, advance_account, debtor, settles_id, comment, import_ref, linked_id, recurring_id, id` – `recurring_id` names the recurring transaction that booked the row (F05; empty in files written before it) |
 | `transaction_items.csv` | `transaction_id, name, quantity, unit_price, position, id` – optional product list of a transaction (e.g. a receipt), in the transaction's currency. Deleted with its transaction. |
+| `templates.csv` | `name, type, amount, currency, category, from_account, to_account, comment, id` – saved starting points for new transactions (F06); `amount` 0 means none. |
 | `account_entries.csv` | `account_id, month, amount, currency, amount_chf, fx_date, id` – recorded balance at month end ("budget recording") |
 | `budget_entries.csv` | `month, type, category, amount, currency, amount_chf, fx_date, series_id, recur_months, forever, comment, generated_until, id` – one row per budgeted month |
+| `recurring.csv` | `type, amount, currency, start, next_due, category, from_account, to_account, comment, recur_months, end, auto, id` – one row per recurring transaction (F05): the template (expenditure, income or transfer), the first date, the rhythm in months, the optional last date (`end`, empty for none), `auto` (book without asking) and `next_due`, the first occurrence not yet booked or skipped |
 | `settings.json` | `budget_horizon, display_currency, last_fx_download` |
 | `ecb/eurofxref-hist.csv` | Latest ECB file (replaced daily) |
 
@@ -216,6 +221,27 @@ holidays. Dates before the start of the file use its first rate.
 - **Shrinking the horizon** never deletes anything. Rows beyond the new horizon stay, and
   the series resume after them when the horizon is extended again.
 
+### 4.5 Recurring transactions (F05)
+
+- **Occurrences** fall on the day of the series' `start`, every `recur_months` months; a day past
+  the end of a shorter month becomes its last day (31 Jan → 28 Feb → 31 Mar). An occurrence
+  after `end` does not exist.
+- **Due** are the occurrences from `next_due` up to today, one per date, so missed months show
+  individually. They are handled in order: *Book* and *Skip* act on the earliest one of a series
+  and move `next_due` to the next occurrence.
+- **Booking** builds a `TransactionInput` from the series (amount and date can be changed) and
+  saves it with `transactions.save`, so it is validated and valued like a transaction typed in,
+  and sets `recurring_id`. A series that can't be booked (an account was changed by hand, no
+  rate) is left due with its later occurrences.
+- **Automatic** series are booked by `book_automatic` after each rate check (startup, then every
+  30 minutes) and when they are saved; booking advances `next_due`, so it never books twice.
+- **Editing** a series changes its future occurrences only: transactions it booked keep their
+  values. The edited series continues after the last occurrence it booked or skipped, on the new
+  schedule (from the new first date if it has handled none). Deleting a series keeps its
+  transactions.
+- **Projection:** series are not part of the budget projection; a budget entry still plans them,
+  which avoids counting the same rent twice.
+
 ## 5. Exchange-rate refresh
 
 At startup, and every 30 minutes while the app runs, `FxService.refresh_if_stale` compares
@@ -237,8 +263,9 @@ currency dropdowns list every currency the ECB quoted on its latest date, plus E
 | --- | --- | --- |
 | `/` | Overview (start page) | Current wealth and the projection at the horizon in one hero card. Chart builder ("Add Chart" menu): wealth line (recorded, then dotted projection), income/expenditure bars or lines with category multi-select and optional budget, waterfall of per-account change, ECB exchange rates of chosen currencies in the display currency (daily or month end, optionally indexed to 100). Each chart's "…" menu saves a PNG, exports CSV or Excel, or removes it. |
 | `/budget` | Budget | Month stepper (‹ month ›) and currency. A callout names accounts without a balance for a past month. Metric strip (current wealth, wealth or projected wealth at month end, net income). Income and expenditure ledgers share one column layout: budget meter, actual, budget, difference; zero values show as a dash. The expenditure tree expands by clicking a category. Budget amounts are editable (pencil on hover) in incomplete months: amount, currency, until (or forever), repeat and note per entry; changing until or repeat replans the series from that month on (`budget.reschedule`), the earlier months keep their values and end there. Balances list for past months. Statement export sits in the share menu. "Record Balance" opens the balance sheet. |
-| `/add-transaction` | New Transaction | The same form also opens as a sheet from the sidebar's "New Transaction" button on every page; the page behind refreshes after saving. Type first (segmented control), then amount, currency and date, then the type's fields. Account dropdowns are filtered by currency. Live CHF preview. Save stays disabled until the form validates, and the reason is shown once the user has started. After saving, every field except date, currency and type resets. Expenditures and income can carry a product list (item, quantity, unit price; negative prices for discounts): Enter on a price starts the next line, item names are suggested from earlier lists, and the list's total is compared with the amount ("Use Total as Amount") but never changes it on its own. |
-| `/transactions` | Transactions | Search field, filters (date range, amount range, account, type) behind "Filters". AG Grid with signed, coloured amounts, the number of items per transaction, sort on every column. The search also finds item names. Selecting rows reveals Edit and Delete; double-click edits in a sheet. "Import…" opens the CSV import. The share button exports the rows the filters show as CSV or Excel. |
+| `/add-transaction` | New Transaction | The same form also opens as a sheet from the sidebar's "New Transaction" button on every page; the page behind refreshes after saving. Type first (segmented control), then amount, currency and date, then the type's fields. Account dropdowns are filtered by currency. Live CHF preview. Save stays disabled until the form validates, and the reason is shown once the user has started. After saving, every field except date, currency and type resets. Expenditures and income can carry a product list (item, quantity, unit price; negative prices for discounts): Enter on a price starts the next line, item names are suggested from earlier lists, and the list's total is compared with the amount ("Use Total as Amount") but never changes it on its own. Faster entry (F06): the amount fields take sums (`12.50+8.30`, evaluated safely, shown as the result when the field is left); a templates menu beside the type saves and applies named templates (`templates.csv`); recently used accounts come first; ⌘↩ / Ctrl+Enter saves, and N opens a new transaction on every page; *Duplicate* in the edit sheet and the Transactions selection bar copies a transaction (with its items) dated today. |
+| `/transactions` | Transactions | Search field, filters (date range, amount range, account, type) behind "Filters". AG Grid with signed, coloured amounts, the number of items per transaction, the rhythm of the recurring transaction that booked a row (*Repeats*), sort on every column. The search also finds item names. Selecting rows reveals Edit, *Make Recurring…* (one expenditure, income or transfer without an advance: a series that continues it, with the transaction as its first booking) and Delete; double-click edits in a sheet. "Import…" opens the CSV import. The share button exports the rows the filters show as CSV or Excel. |
+| `/recurring` | Recurring | F05. In the sidebar after Transactions; the sidebar shows the number of due occurrences as a badge. *Due*: one row per due occurrence, oldest first, with title, date and type, the amount and date editable, *Book* and *Skip* (later occurrences of the same series wait for the first); *Book All* books every due row with the amounts and dates as edited. *Series*: title, amount, rhythm, next date or *ended*, end date, *books automatically*, last booking, note; edit and delete per row. The sheet (new, edit, *Make Recurring…*) has type (expenditure, income, account transfer), amount and currency, category, accounts (filtered by currency), first date, repeat, until, *Book automatically* and note, and says when the next occurrence falls; saving an automatic series books what it has due in the same undoable step. |
 | `/import` | Import Transactions | 1 · file: encoding (UTF-8, Windows-1252), separator and header line (bank preambles are skipped) are detected. 2 · columns: account, date column and format, one signed amount or debit/credit columns, decimal style, description columns, an optional balance column (detected from names such as *Saldo*, *Kontostand*, *Balance*, *Solde*), sign inversion for card statements; the mapping can be saved per bank (`import_profiles.json`) and is recognised by the header line next time. 3 · review: rows already imported (same `import_ref`) or matching a manual entry (same account, day, type and amount) are left out; categories are suggested from earlier transactions with the same text; selected rows get a category, are included or excluded in bulk. Saving is one write; nothing is saved while a row is invalid. **camt.053 / camt.054 (XML, F02):** recognised by content, read namespace-agnostically (versions .001.02 to .001.08 and later) with the standard library after a pre-scan that refuses any DTD (so no entities), capped at 20 MB like CSV. The columns step is skipped: one row per booked `Ntry` (pending entries are left out and counted), booking date, signed amount (`CdtDbtInd`), text from counterparty name, `Ustrd` and `AddtlNtryInf`; a batch whose `TxDtls` each carry an amount adding up to the entry becomes one row per detail. `import_ref` is `camt:<IBAN>:<AcctSvcrRef \| NtryRef \| content hash>`, so the same or an overlapping statement shows its entries as already imported; a row matching a manual entry or one imported from the other file kind (CSV ↔ camt) on the same day, type and amount is a possible duplicate. The account is chosen in the review step, preselected from `import_accounts.json` (IBAN → account id, written after a successful import); a statement whose currency differs from the account's is refused. The statement's IBAN and period are shown. **Month-end balances (F36):** below the grid, the review lists "Balance at end of *month*" with a checkbox and any recorded balance it would replace. From a CSV balance column (`ImportRow.balance`), the order of the lines is the reading (file order or reversed) in which the dates run forward and each balance equals the previous one plus the amounts in between (lines without a balance are bridged); the balance after the last booking of each month covered, months without bookings included, is offered. A month is complete, and ticked, when the file continues past it or its last booking is on the month's last day; the month the file ends inside is offered unticked with "the file ends on *date* — not a month-end balance" (decision 6). When no reading fits, or both fit with different results (one-day files), nothing is offered and the reason is shown. A camt statement offers its closing booked balance (`CLBD`, in the statement's currency), ticked when dated on a month's last day. A balance already recorded with the same amount starts unticked. After the transactions are saved, ticked balances are recorded with `wealth.upsert_entry` (month-end rate, replacing the month's entry); the button counts both ("Import 0 Transactions and 1 Balance" when every row is a duplicate). |
 | `/add-budget` | New Budget Entry | Also a sheet on Budget Plan. Type, amount, currency, category, month range or "Forever", repeat interval, replace option, note. Live summary of the months that will be created. |
 | `/budget-entries` | Budget Plan | Same list pattern as Transactions, with the same export. The edit sheet can apply changes to all later months of a series, or replan it with Until and Repeat. |
@@ -260,6 +287,10 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
   `resources/i18n/coicop_<lang>.json`, keyed by the English name. They are the app's own
   translations (German in Swiss spelling, no "ß"; French and Italian follow the Eurostat/ISTAT
   wording where known), not certified official texts.
+- Everyday category names (F08) live in `resources/everyday_categories.json`: code → `en`, `de`,
+  `fr`, `it` and `keywords` (one list for all languages: shops, brands, everyday words). Sorted by
+  code and written like the translation files; `tests/test_everyday.py` checks that every entry has
+  all four names and that every code exists.
 - The language is a setting (`settings.json` → `language`; empty means follow the system:
   `LANG`, macOS `AppleLanguages`, or the Windows locale). Changing it reloads the page. Quasar
   (date picker) uses `de-CH` / `fr` / `it` / `en-GB`, AG Grid gets `localeText` per language, and
@@ -309,6 +340,10 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     - `get()` returns a copy, so a failed update never leaves memory and disk out of sync.
     - An unparsable value aborts startup with the file and line number, instead of
       silently dropping data.
+14. **Recurring transactions are booked, not generated** (F05, decided by the product owner):
+    an occurrence becomes a transaction only when it is booked from the Due list, or by a
+    series set to *Book automatically*. Editing a series changes its future occurrences only;
+    the transactions it booked stay as they are.
 
 ## 8. Testing
 
@@ -316,6 +351,9 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
   - FX parsing, cross-rates and date fallback;
   - COICOP level counts and roll-up;
   - every transaction type, the advance split, settlement and deletion rules;
+  - recurring transactions: month-end days, missed months, end dates, booking in order,
+    skipping, automatic booking only once, edits that change future occurrences only, and
+    undoing a booking;
   - budget expansion, overwrite, horizon extension and shrinking, and no resurrection of
     deleted or overwritten months;
   - CSV round-trip, corrupt-file reporting and formula-safe exports;

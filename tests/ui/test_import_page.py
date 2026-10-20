@@ -120,7 +120,7 @@ async def test_import_a_file_in_three_steps(user: User, ctx, setup) -> None:
     await categorise(user, "01.1", 0, 1)
     assert status(user) == "1 row needs a category: select rows, choose a category and click Apply."
     await categorise(user, setup["salary"].id, 2)
-    assert [r["category"] for r in rows(user)][:3] == ["01.1 Food", "01.1 Food", "Income · Salary"]
+    assert [r["category"] for r in rows(user)][:3] == ["Groceries · 01.1", "Groceries · 01.1", "Income · Salary"]
     assert status(user) == "" and import_button(user).enabled
 
     click(user, import_button(user))
@@ -150,7 +150,7 @@ async def test_reimporting_the_same_file_skips_every_line(user: User, ctx, setup
     assert [r["include"] for r in rows(user)] == [False] * 4
     assert import_button(user).text == "Import 0 Transactions" and not import_button(user).enabled
     # categories are suggested from what was imported before
-    assert rows(user)[0]["category"] == "01.1 Food (suggested)"
+    assert rows(user)[0]["category"] == "Groceries · 01.1 (suggested)"
 
 
 async def test_a_manual_entry_marks_a_possible_duplicate(user: User, ctx, setup) -> None:
@@ -181,11 +181,11 @@ async def test_categories_only_fit_the_matching_direction(user: User, ctx, setup
     click(user, button(user, "Apply"))
     await settle()
     assert notified(user, "1 row skipped: that category is for spending only")
-    assert [r["category"] for r in rows(user)][:3] == ["01.1 Food", "", ""]
+    assert [r["category"] for r in rows(user)][:3] == ["Groceries · 01.1", "", ""]
 
     await categorise(user, setup["salary"].id, 0, 1, 2)
     assert notified(user, "2 rows skipped: that category is for money coming in only")
-    assert [r["category"] for r in rows(user)][:3] == ["01.1 Food", "", "Income · Salary"]
+    assert [r["category"] for r in rows(user)][:3] == ["Groceries · 01.1", "", "Income · Salary"]
 
 
 async def test_rows_can_be_excluded_and_included(user: User, ctx, setup) -> None:

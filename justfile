@@ -30,6 +30,11 @@ run port="8080":
 native:
     uv run --extra native budget --native --data-dir {{ data }}
 
+# Start the app in a native window on a year of example data, for manual testing (demo-data/ is rebuilt each run)
+demo:
+    uv run python scripts/demo_data.py demo-data
+    uv run --extra native budget --native --data-dir demo-data
+
 # Run the tests (extra arguments go to pytest, e.g. `just test -k fx`)
 test *args:
     uv run pytest -q {{ args }}
