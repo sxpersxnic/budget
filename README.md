@@ -192,9 +192,13 @@ The app opens in its own window and keeps all data in your user folder:
    balance to record (the month the file ends inside stays unticked).
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
-6. **Categories** (sidebar): look up a COICOP category by code or name; the ones you used
+6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is
+   due it is listed for one-click booking (change the amount first if it varies, or skip it);
+   turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
+   series from a transaction you already entered.
+7. **Categories** (sidebar): look up a COICOP category by code or name; the ones you used
    show what you spent in them this year.
-7. **Overview / Budget:** compare actual against budget, check the projected wealth, build
+8. **Overview / Budget:** compare actual against budget, check the projected wealth, build
    charts, and export statements as Excel or PDF (share button on the Budget page).
 
 ## Building the installers

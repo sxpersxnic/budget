@@ -114,7 +114,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F02 | ☑ Done | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
 | F03 | ☐ Open | Swiss QR-bill scanning | Data in | M | Local | – |
 | F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
-| F05 | ☐ Open | Recurring transactions | Data in | M | Local | – |
+| F05 | ☑ Done | Recurring transactions | Data in | M | Local | – |
 | F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
 | F07 | ☐ Open | Automatic categorization | Organizing | M–L | Optional | F09 |
 | F08 | ☐ Open | Simpler category picker | Organizing | S | Local | – |
@@ -392,7 +392,25 @@ lines.
 
 #### F05 · Recurring transactions
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20)
+
+**As built:** *Recurring* in the sidebar (after Transactions, route `/recurring`, with the number
+of due occurrences as a badge). A series is an expenditure, income or account transfer with amount,
+currency, category, accounts, first date, rhythm (the Budget Plan's: every month to every year),
+an optional end date and a note; it is stored in `recurring.csv`. Occurrences fall on the first
+date's day (the 31st becomes the last day of shorter months). The page lists the **Due**
+occurrences (date ≤ today, one row per missed date) with the amount and date editable, *Book*,
+*Skip* and *Book All*; booking goes through the normal transaction save (validation, ECB rate of
+the date), and the transaction keeps a reference to its series (`recurring_id`), shown in the
+Transactions list's *Repeats* column. A series set to *Book automatically* is booked without
+asking at startup and at each 30-minute refresh (and right away when it is saved). *Make
+Recurring…* on a selected transaction starts a series with it as the first booking. Booking,
+skipping, editing and deleting are undoable. Decided by the product owner: occurrences become
+transactions only through the Due list or *Book automatically*; editing a series changes its
+future occurrences only (it continues after the last occurrence booked or skipped), booked
+transactions stay, and deleting a series keeps them. Not built: the budget projection does not
+use series directly (it would count a series and a budget entry for the same category twice; a
+budget entry still plans it), and there is no pause switch (an end date or deleting does that).
 
 Rent, insurance premiums and subscriptions repeat every month or year.
 
