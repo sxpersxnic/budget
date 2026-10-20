@@ -1,4 +1,4 @@
-"""The bulk edit sheet (F13): change the category, account or note of several transactions at once."""
+"""The bulk edit sheet (F13): change the category, payee, account or note of several transactions at once."""
 
 from __future__ import annotations
 
@@ -14,7 +14,12 @@ from budget_app.services import bulk as bulk_svc
 from budget_app.services.bulk import BulkChanges, BulkEditError
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import error, segmented, sheet, undoable
-from budget_app.ui.widgets.selects import account_options, expenditure_category_select, income_category_select
+from budget_app.ui.widgets.selects import (
+    account_options,
+    expenditure_category_select,
+    income_category_select,
+    payee_input,
+)
 
 NOTE_TEXT = (bulk_svc.NOTE_REPLACE, bulk_svc.NOTE_APPEND)  # the note modes that take a text
 
@@ -39,6 +44,7 @@ class BulkEditSheet:
             ui.column().classes("w-full gap-4"),
         ):
             self._category_fields()
+            self._payee_field()
             self._account_field()
             self._note_field()
             self.problems = ui.label().classes("caption text-negative whitespace-pre-line px-1")
@@ -48,7 +54,7 @@ class BulkEditSheet:
                 ui.button(t("Cancel"), on_click=self.dlg.close).props("flat").classes("text-primary")
                 self.save_btn = ui.button(t("Save"), on_click=self._save).props("unelevated")
             ui.keyboard(on_key=self._shortcut, ignore=[])
-        for el in (self.exp_cat, self.inc_cat, self.account, self.note_mode, self.note):
+        for el in (self.exp_cat, self.inc_cat, self.payee, self.account, self.note_mode, self.note):
             if el is not None:
                 el.on_value_change(self._changed)
         self._changed()
@@ -96,6 +102,23 @@ class BulkEditSheet:
                         total=self.n,
                     )
                 )
+
+    def _payee_field(self) -> None:
+        """The payee of expenditure and income (F09); a name typed new becomes a payee when saved."""
+        rows = self.sel.taking(bulk_svc.takes_payee)
+        self.payee = None
+        if not rows:
+            return
+        self.payee = payee_input(self.ctx).props(self._unchanged)
+        if k := self._left_out(rows):
+            _hint(
+                tn(
+                    "{n} of {total} rows is a transfer, exchange or revaluation and has no payee",
+                    "{n} of {total} rows are transfers, exchanges or revaluations and have no payee",
+                    k,
+                    total=self.n,
+                )
+            )
 
     def _account_field(self) -> None:
         """The From account of expenditure and the To account of income, from the accounts in their currency."""
@@ -170,6 +193,7 @@ class BulkEditSheet:
         return BulkChanges(
             expenditure_category=(self.exp_cat.value or None) if self.exp_cat else None,
             income_category=(self.inc_cat.value or None) if self.inc_cat else None,
+            payee=((self.payee.value or "").strip() or None) if self.payee else None,
             account=(account.value or None) if account and account.enabled else None,
             note_mode=mode,
             note=(self.note.value or "") if mode in NOTE_TEXT else "",

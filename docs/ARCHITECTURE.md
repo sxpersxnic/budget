@@ -49,7 +49,7 @@ storage/    typed CSV tables + settings JSON
 | `services/context.py` | `Context` (store + FX), conversion helpers, budget horizon, `ValidationError`. |
 | `services/accounts.py` | Accounts, advance-payment accounts and income categories, with their deletion rules. |
 | `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement; `recent_categories()` (the last ten distinct expenditure categories, for the category picker). An edit is `prepare_edit` (validate and build the new record, nothing saved) then `store_edit` (save it, keeping an exchange's spread booking in step); `save` does both. |
-| `services/bulk.py` | Bulk edit (F13): `BulkChanges` (expenditure category, income category, account, note mode and text; `None` leaves a field as it is), which field applies to which row (`takes_*`, `is_spread`), `plan()` (every selected row as form input with the changes applied, checked with `prepare_edit`; rows the changes leave as they are drop out) and `bulk_edit()`, all or nothing (`BulkEditError` names the failing rows by date and amount) as one recorded action. Adding a field means one attribute, one `takes_*` rule and one line in `apply()`. |
+| `services/bulk.py` | Bulk edit (F13): `BulkChanges` (expenditure category, income category, payee, account, note mode and text; `None` leaves a field as it is), which field applies to which row (`takes_*`, `is_spread`), `plan()` (every selected row as form input with the changes applied, checked with `prepare_edit`; rows the changes leave as they are drop out, also when the built record equals the stored one) and `bulk_edit()`, all or nothing (`BulkEditError` names the failing rows by date and amount) as one recorded action. Adding a field means one attribute, one `takes_*` rule and one line in `apply()`. |
 | `services/budget.py` | Budget series expansion, overwrite, horizon change and "Forever" extension. |
 | `services/recurring.py` | Recurring transactions (F05): series, their schedule (`occurrence`, `next_after`), the due occurrences, `book` / `skip` / `book_all` through `transactions.save`, and `book_automatic` for series that book without asking. |
 | `services/wealth.py` | Account balances, wealth, projected wealth, wealth time series. |
@@ -308,7 +308,8 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 
 - *Edit {n} Transactions* has a field per change, each empty ("Leave unchanged") at first and
   shown only when some selected row takes it: the expenditure category for expenditure, the income
-  category for income other than repayments (both appear for a mixed selection), the account (the
+  category for income other than repayments (both appear for a mixed selection), the payee of
+  expenditure and income (F09; a new name becomes a payee only when saved), the account (the
   From account of expenditure, the To account of income; only accounts in the rows' currency, and
   disabled with the currencies named when the rows mix them), and the note (*Unchanged*, *Replace*,
   *Append* with a space, *Clear*). A hint under each field counts the rows it leaves as they are.

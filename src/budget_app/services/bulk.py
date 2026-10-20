@@ -1,4 +1,4 @@
-"""Bulk edit (F13): change the category, account or note of several transactions in one step.
+"""Bulk edit (F13): change the category, payee, account or note of several transactions in one step.
 
 Every changed row goes through the same checks as an edit in the transaction form
 (`transactions.prepare_edit`), so accounts stay in the transaction's currency, advance payments and
@@ -6,9 +6,10 @@ repayments stay valid, and an exchange keeps its spread booking in step. The edi
 every row is checked first, and if one fails nothing is saved and the failures name the rows.
 
 A field leaves the rows it does not apply to as they are: an expenditure category applies to
-expenditure, an income category to income other than repayments, an account to the From account of
-expenditure and the To account of income. A spread booking (a revaluation linked to its exchange,
-F44) follows its exchange and is never changed on its own. Booked rows keep their recurring series.
+expenditure, an income category to income other than repayments, a payee to expenditure and income
+(F09), an account to the From account of expenditure and the To account of income. A spread booking
+(a revaluation linked to its exchange, F44) follows its exchange and is never changed on its own.
+Booked rows keep their recurring series.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from budget_app import i18n
 from budget_app.domain.fx import FxError
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, TX_REVALUATION, Transaction
 from budget_app.i18n import N_, tn
+from budget_app.services import payees as payee_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
@@ -33,6 +35,7 @@ class BulkChanges:
 
     expenditure_category: str | None = None  # a COICOP code or TAX
     income_category: str | None = None  # an income category id
+    payee: str | None = None  # a payee name; a new one becomes a payee when saved
     account: str | None = None  # expenditure: the From account; income: the To account
     note_mode: str = NOTE_KEEP
     note: str = ""  # the text for NOTE_REPLACE and NOTE_APPEND
@@ -50,6 +53,10 @@ def takes_expenditure_category(tx: Transaction) -> bool:
 
 def takes_income_category(tx: Transaction) -> bool:
     return tx.type == TX_INCOME and not tx.is_advance  # a repayment has no category
+
+
+def takes_payee(tx: Transaction) -> bool:
+    return tx.type in payee_svc.PAYEE_TYPES
 
 
 def takes_account(tx: Transaction) -> bool:
@@ -99,6 +106,8 @@ def apply(tx: Transaction, inp: TransactionInput, changes: BulkChanges) -> Trans
         out.category = changes.expenditure_category
     if changes.income_category is not None and takes_income_category(tx):
         out.category = changes.income_category
+    if changes.payee is not None and takes_payee(tx):
+        out.payee = changes.payee
     if changes.account is not None and takes_account(tx):
         if tx.type == TX_EXPENDITURE:
             out.from_account = changes.account
@@ -134,9 +143,12 @@ def plan(ctx: Context, ids: list[str], changes: BulkChanges) -> Plan:
         if edited == current:
             continue
         try:
-            out.edits.append(tx_svc.prepare_edit(ctx, edited, tx.id))
+            new, old = tx_svc.prepare_edit(ctx, edited, tx.id)
         except (ValidationError, FxError) as exc:
             out.failures.append((tx, str(exc)))
+            continue
+        if new != old:  # "migros" for the payee Migros changes nothing
+            out.edits.append((new, old))
     return out
 
 

@@ -7,10 +7,12 @@ import pytest
 from budget_app.services import accounts as acc_svc
 from budget_app.services import bulk as bulk_svc
 from budget_app.services import items as items_svc
+from budget_app.services import payees as payee_svc
 from budget_app.services import recurring as rec_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
 from budget_app.services.bulk import BulkChanges, BulkEditError
+from budget_app.services.context import ValidationError
 from budget_app.services.items import ItemInput
 from budget_app.services.recurring import RecurringInput
 from budget_app.services.transactions import TransactionInput
@@ -258,3 +260,40 @@ def test_advances_and_repayments_move_with_their_rules(ctx, setup):
 def test_row_label_uses_the_swiss_amount_format(ctx, setup):
     tx = spend(ctx, setup["chf"], 12345.6)
     assert bulk_svc.row_label(tx) == "3 Oct 2026 · 12'345.60 CHF"
+
+
+# ------------------------------------------------------------------ payees (F09)
+def test_a_payee_goes_to_expenditure_and_income_and_is_added_when_saved(ctx, mixed):
+    rows = ids(mixed["food"], mixed["salary"], mixed["transfer"])
+    planned = bulk_svc.plan(ctx, rows, BulkChanges(payee="Migros"))
+    assert len(planned.edits) == 2 and payee_svc.find(ctx, "Migros") is None  # checking adds no payee
+    changed = bulk_svc.bulk_edit(ctx, rows, BulkChanges(payee="Migros"))
+    assert {tx.id for tx in changed} == {mixed["food"].id, mixed["salary"].id}
+    assert get(ctx, mixed["food"]).payee == get(ctx, mixed["salary"]).payee == "Migros"
+    assert get(ctx, mixed["transfer"]).payee == ""  # transfers have no payee
+    assert [p.name for p in payee_svc.all_payees(ctx)] == ["Migros"]
+    assert bulk_svc.plan(ctx, rows, BulkChanges(payee="MIGROS")).edits == []  # the same payee: nothing changes
+    undo_svc.undo(ctx, undo_svc.latest(ctx).id)
+    assert get(ctx, mixed["food"]).payee == "" and payee_svc.all_payees(ctx) == []  # one step, the payee too
+
+
+def test_a_failing_edit_adds_no_payee(ctx, setup):
+    advance = spend(ctx, setup["chf"], 100, is_advance=True, advance_value=50, debtor="Anna")
+    tx_svc.save(
+        ctx,
+        TransactionInput(
+            date=date(2026, 10, 9),
+            type="income",
+            amount=50,
+            currency="CHF",
+            to_account=setup["chf"].id,
+            is_advance=True,
+            advance_account=advance.advance_account,
+            settles_id=advance.id,
+        ),
+    )
+    edited = tx_svc.edit_input(ctx, get(ctx, advance))
+    edited.payee, edited.is_advance = "Brand New Shop", False  # already repaid: can't stop being an advance
+    with pytest.raises(ValidationError, match="already been repaid"):
+        tx_svc.save(ctx, edited, editing_id=advance.id)
+    assert payee_svc.find(ctx, "Brand New Shop") is None

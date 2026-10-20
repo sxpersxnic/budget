@@ -60,7 +60,7 @@ Waits for the source data (decision 7).
 | 19 | ☑ Done | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from milestone 1. |
 | 20 | ☑ Done | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
 | 21 | ☑ Done | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
-| 22 | ◐ Partly | **F09** Payees (done) → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
+| 22 | ◐ Partly | **F09** Payees (done) → **F07** Automatic categorization → **F13** Bulk edit (done) | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☐ Open | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
 | 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
@@ -547,7 +547,8 @@ Keep receipts, invoices and contracts with the transaction.
 **As built:** *Edit* in the Transactions selection bar opens *Edit {n} Transactions* when several
 rows are selected (one row still opens the editor). Every field starts as *Leave unchanged*: the
 expenditure category (the F08 picker) for expenditure rows, the income category for income rows
-other than repayments, the account (the From account of expenditure, the To account of income,
+other than repayments, the payee (expenditure and income), the account (the From account of
+expenditure, the To account of income,
 offered from the accounts in the rows' currency and disabled when they mix currencies), and the
 note (*Replace*, *Append* or *Clear*). Hints say how many rows a field leaves alone ("1 of 3 rows
 is not expenditure and keeps its category"); transfers, exchanges and revaluations keep their
@@ -556,7 +557,7 @@ how many rows change, and ⌘↩ / Ctrl+Enter saves. Each changed row goes throu
 a single edit (advance payments and repayments included); if one fails, nothing is saved and the
 failing rows are listed by date and amount. The whole edit is one undo step (*Edit several
 transactions*); booked rows keep their recurring series, valuation, items and import reference.
-Not built: tags (F10) and payees (F09 adds a field to the same sheet).
+Not built: tags (F10).
 
 Select many transactions → change category, account, tag or note in one step. The selection
 bar on the Transactions page already exists; this adds an *Edit* sheet for several rows.

@@ -266,7 +266,7 @@ def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Tra
         recurring_id=inp.recurring_id,
     )
     if inp.type in payee_svc.PAYEE_TYPES:
-        tx.payee = payee_svc.ensure(ctx, inp.payee)
+        tx.payee = payee_svc.spelling(ctx, inp.payee)  # added to the payees only when stored
     if base is not None:
         tx.id = base.id
     if inp.type == TX_EXPENDITURE:
@@ -350,6 +350,8 @@ def _store_exchange_split(ctx: Context, tx: Transaction, old: Transaction | None
     The exchange keeps the ECB amount, so the two together credit exactly what the bank did.
     """
     store = ctx.store.transactions
+    if tx.payee:
+        tx.payee = payee_svc.ensure(ctx, tx.payee)
     linked = store.get(tx.linked_id) if tx.linked_id else None
     if tx.type != TX_EXCHANGE:
         if linked is not None:  # no longer an exchange: its spread booking goes
@@ -398,7 +400,11 @@ def save_many(ctx: Context, inputs: list[TransactionInput]) -> list[Transaction]
             validate(ctx, inp)
         except ValidationError as exc:
             raise ValidationError(t("Row {n}: {error}", n=i + 1, error=exc)) from exc
-    return ctx.store.transactions.add_many([_build(ctx, inp, None) for inp in inputs])
+    built = [_build(ctx, inp, None) for inp in inputs]
+    for tx in built:  # in order, so "MIGROS" and "Migros" in one file become one payee
+        if tx.payee:
+            tx.payee = payee_svc.ensure(ctx, tx.payee)
+    return ctx.store.transactions.add_many(built)
 
 
 @recorded(N_("Apply exchange rates"))

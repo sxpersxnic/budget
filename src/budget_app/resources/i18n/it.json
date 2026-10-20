@@ -664,6 +664,10 @@
   "{n} nuova",
   "{n} nuove"
  ],
+ "{n} of {total} rows is a transfer, exchange or revaluation and has no payee": [
+  "{n} di {total} transazioni è un trasferimento, un cambio valuta o una rivalutazione e non ha un beneficiario",
+  "{n} di {total} transazioni sono trasferimenti, cambi valuta o rivalutazioni e non hanno un beneficiario"
+ ],
  "{n} of {total} rows is a transfer, exchange or revaluation and keeps its accounts.": [
   "{n} di {total} transazioni è un trasferimento, un cambio valuta o una rivalutazione e mantiene i suoi conti.",
   "{n} di {total} transazioni sono trasferimenti, cambi valuta o rivalutazioni e mantengono i loro conti."

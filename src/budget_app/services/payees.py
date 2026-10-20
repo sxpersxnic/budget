@@ -78,6 +78,18 @@ def _drop_alias(ctx: Context, alias: str, keep: Payee) -> None:
                 ctx.store.payees.update(other)
 
 
+def spelling(ctx: Context, name: str) -> str:
+    """The stored spelling of the payee `name`, or the name itself when it is new ("" for no payee).
+
+    Saves nothing, so checking a transaction never adds a payee; `ensure` does when it is stored.
+    """
+    name = clean_name(name)
+    if not key(name):
+        return ""
+    existing = find(ctx, name)
+    return existing.name if existing is not None else name
+
+
 @recorded(N_("Save a payee"))
 def ensure(ctx: Context, name: str) -> str:
     """The stored spelling of the payee `name`, which is added when it is new ("" for no payee)."""

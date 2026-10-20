@@ -664,6 +664,10 @@
   "{n} neu",
   "{n} neu"
  ],
+ "{n} of {total} rows is a transfer, exchange or revaluation and has no payee": [
+  "{n} von {total} Buchungen ist ein Kontoübertrag, Währungswechsel oder eine Neubewertung und hat keinen Zahlungsempfänger",
+  "{n} von {total} Buchungen sind Kontoüberträge, Währungswechsel oder Neubewertungen und haben keinen Zahlungsempfänger"
+ ],
  "{n} of {total} rows is a transfer, exchange or revaluation and keeps its accounts.": [
   "{n} von {total} Buchungen ist ein Kontoübertrag, Währungswechsel oder eine Neubewertung und behält ihre Konten.",
   "{n} von {total} Buchungen sind Kontoüberträge, Währungswechsel oder Neubewertungen und behalten ihre Konten."

@@ -197,7 +197,7 @@ The app opens in its own window and keeps all data in your user folder:
    When the file shows the account balance, the review step also offers each month's closing
    balance to record (the month the file ends inside stays unticked).
    To tidy up several transactions at once, select them in the list and choose **Edit**: change
-   their category, account or note (replace, append or clear) in one step, which one **Undo**
+   their category, payee, account or note (replace, append or clear) in one step, which one **Undo**
    reverts. Rows a change doesn't fit (a transfer has no category) keep what they have.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.

@@ -188,6 +188,8 @@ def save(ctx: Context, inp: RecurringInput, editing_id: str = "", first_booked: 
     linked to the series, and the occurrences up to its date count as handled.
     """
     validate(ctx, inp)
+    if editing_id and ctx.store.recurring.get(editing_id) is None:
+        raise ValidationError(t("Recurring transaction not found"))
     tpl = _template(inp)
     start = inp.start or date.today()  # validated above
     series = Recurring(
@@ -206,8 +208,6 @@ def save(ctx: Context, inp: RecurringInput, editing_id: str = "", first_booked: 
         payee=payee_svc.ensure(ctx, tpl.payee),
     )
     if editing_id:
-        if ctx.store.recurring.get(editing_id) is None:
-            raise ValidationError(t("Recurring transaction not found"))
         series.id = editing_id
         return ctx.store.recurring.update(series)
     if first_booked:

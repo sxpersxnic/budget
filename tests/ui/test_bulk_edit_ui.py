@@ -270,3 +270,26 @@ async def test_other_errors_while_saving_are_shown(user: User, ctx, rows, monkey
     with user:
         sheet._save()
     assert notified(user, "Disk full")
+
+
+async def test_the_payee_field_sets_the_payee_of_expenditure_and_income(user: User, ctx, rows) -> None:
+    await user.open("/transactions")
+    await select(user, rows["food"].id, rows["salary"].id, rows["transfer"].id)
+    click(user, button(user, "Edit"))
+    await user.should_see("1 of 3 rows is a transfer, exchange or revaluation and has no payee")
+    payee = newest(user, ui.input, "Payee")
+    put(user, payee, " Coop ")
+    await user.should_see("Changes 2 transactions")
+    click(user, button(user, "Save"))
+    assert notified(user, "Changed 2 transactions")
+    assert ctx.store.transactions.get(rows["food"].id).payee == "Coop"
+    assert ctx.store.transactions.get(rows["transfer"].id).payee == ""
+
+
+async def test_no_payee_field_without_expenditure_or_income(user: User, ctx, rows) -> None:
+    await user.open("/transactions")
+    await select(user, rows["transfer"].id, rows["exchange"].id)
+    click(user, button(user, "Edit"))
+    await user.should_see("Edit 2 Transactions")
+    await user.should_not_see("has no payee")
+    assert not [e for e in user.find(kind=ui.input).elements if e.props.get("label") == "Payee" and e.visible]
