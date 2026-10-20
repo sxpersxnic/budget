@@ -1,17 +1,21 @@
 """Import transactions from a bank or card CSV export (file → columns → review → import) or from a
-camt.053 / camt.054 statement (file → review → import: the XML needs no column mapping)."""
+camt.053 / camt.054 statement (file → review → import: the XML needs no column mapping).
+
+The review step also offers the month-end balances the file shows (F36): from a CSV balance column, or
+the camt closing balance. Ticked ones are recorded after the transactions are saved."""
 
 from __future__ import annotations
 
 from nicegui import events, ui
 
+from budget_app.domain import months
 from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import TX_INCOME
 from budget_app.i18n import N_, date_label, t, tn
 from budget_app.services import accounts as acc_svc
-from budget_app.services import camt, importer
+from budget_app.services import camt, import_balances, importer
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, frame, segmented, success
+from budget_app.ui.layout import error, fmt, frame, segmented, success
 from budget_app.ui.widgets.grid import date_col, make_grid, num_col
 from budget_app.ui.widgets.selects import account_options
 
@@ -63,7 +67,15 @@ def page() -> None:
     ) as (ctx, _):
         profiles = importer.load_profiles(ctx.store.data_dir)
         # parsed: the CSV file; statement: the camt file (one of them is set); problem: why it can't be imported
-        state: dict = {"parsed": None, "statement": None, "rows": [], "problem": ""}
+        # balances: month-end balances the file offers; balance_problem: why its balances are not offered
+        state: dict = {
+            "parsed": None,
+            "statement": None,
+            "rows": [],
+            "problem": "",
+            "balances": [],
+            "balance_problem": "",
+        }
         category_labels = _category_options(ctx)
 
         # ---------------------------------------------------------- 1 · file
@@ -127,6 +139,9 @@ def page() -> None:
                 credit_sel = (
                     ui.select({}, label=t("Credit (money in)")).props("dense outlined options-dense").classes("w-56")
                 )
+                balance_sel = (
+                    ui.select({}, label=t("Balance column")).props("dense outlined options-dense").classes("w-56")
+                )
             text_sel = (
                 ui.select({}, label=t("Description"), multiple=True)
                 .props("dense outlined options-dense use-chips")
@@ -160,6 +175,10 @@ def page() -> None:
                 ui.button(t("Exclude"), on_click=lambda: set_include(False)).props("flat dense").classes("text-primary")
             bar.set_visibility(False)
             grid = make_grid(_columns("CHF"), height="55vh")
+            with ui.element("div").classes("flex flex-col gap-1") as balances_box:
+                ui.label(t("Month-end balances")).classes("font-medium")
+                balances_list = ui.element("div").classes("flex flex-col gap-0")
+            balances_box.set_visibility(False)
             with ui.row().classes("w-full items-center gap-2"):
                 status = ui.label().classes("caption")
                 ui.space()
@@ -184,6 +203,7 @@ def page() -> None:
                     (amount_sel, profile.amount_col),
                     (debit_sel, profile.debit_col),
                     (credit_sel, profile.credit_col),
+                    (balance_sel, profile.balance_col),
                 ):
                     sel.set_options(opts, value=value if value in opts else NONE)
                 text_sel.set_options(
@@ -216,6 +236,7 @@ def page() -> None:
                 decimal=decimal.value or ".",
                 text_cols=list(text_sel.value or []),
                 invert=bool(invert.value),
+                balance_col=balance_sel.value or "",
                 account_id=account.value or "",
                 signature=state["parsed"].signature,
             )
@@ -321,6 +342,7 @@ def page() -> None:
             if account.value:
                 rows = importer.analyse(ctx, rows, account.value)
             state["rows"] = rows
+            offer_balances(import_balances.from_rows(rows))
             render()
 
         def refresh_statement() -> None:
@@ -332,7 +354,12 @@ def page() -> None:
             elif problem:
                 error(problem)
             state["rows"], state["problem"] = rows, problem
+            offer_balances(import_balances.BalanceOffer() if problem else import_balances.from_statement(statement))
             render()
+
+        def offer_balances(offer: import_balances.BalanceOffer) -> None:
+            state["balances"] = import_balances.compare(ctx, offer.candidates, account.value or "")
+            state["balance_problem"] = offer.problem
 
         def render() -> None:
             acc = ctx.store.accounts.get(account.value) if account.value else None
@@ -358,6 +385,40 @@ def page() -> None:
             grid.style(f"height: {visible_rows * 40 + 100}px; min-height: 180px")  # fit short files
             grid.update()
             bar.set_visibility(False)
+            render_balances(currency)
+            update_status()
+
+        def render_balances(currency: str) -> None:
+            candidates, problem = state["balances"], state["balance_problem"]
+            balances_box.set_visibility(bool(candidates or problem))
+            balances_list.clear()
+            with balances_list:
+                if problem:
+                    ui.label(problem).classes("caption")
+                for c in candidates:
+                    with ui.row().classes("items-center gap-x-2 gap-y-0"):
+                        text = t(
+                            "Balance at end of {month}: {amount}",
+                            month=months.label(c.month),
+                            amount=fmt(c.amount, currency),
+                        )
+                        ui.checkbox(text, value=c.include, on_change=lambda e, c=c: tick_balance(c, e.value)).props(
+                            "dense"
+                        )
+                        notes = []
+                        if not c.complete:
+                            notes.append(
+                                t("the file ends on {date} — not a month-end balance", date=date_label(c.date))
+                            )
+                        if c.replaces:
+                            notes.append(t("replaces {amount}", amount=fmt(c.recorded, currency)))
+                        elif c.unchanged:
+                            notes.append(t("already recorded"))
+                        if notes:
+                            ui.label(" · ".join(notes)).classes("caption")
+
+        def tick_balance(candidate: import_balances.BalanceCandidate, value: bool) -> None:
+            candidate.include = bool(value)
             update_status()
 
         def update_status() -> None:
@@ -380,7 +441,17 @@ def page() -> None:
             )
             chosen = [r for r in rows if r.include]
             missing = [r for r in chosen if not importer.valid_category(ctx, r.type, r.category)]
-            import_btn.set_text(tn("Import {n} Transaction", "Import {n} Transactions", len(chosen)))
+            balances = [c for c in state["balances"] if c.include]
+            if balances:
+                import_btn.set_text(
+                    t(
+                        "Import {transactions} and {balances}",
+                        transactions=tn("{n} Transaction", "{n} Transactions", len(chosen)),
+                        balances=tn("{n} Balance", "{n} Balances", len(balances)),
+                    )
+                )
+            else:
+                import_btn.set_text(tn("Import {n} Transaction", "Import {n} Transactions", len(chosen)))
             if not account.value:
                 status.set_text(t("Choose the account this file belongs to."))
             elif state["problem"]:
@@ -395,7 +466,9 @@ def page() -> None:
                 )
             else:
                 status.set_text("")
-            import_btn.set_enabled(bool(account.value and chosen and not missing and not state["problem"]))
+            import_btn.set_enabled(
+                bool(account.value and (chosen or balances) and not missing and not state["problem"])
+            )
 
         async def selected_rows() -> list[importer.ImportRow]:
             ids = {int(r["id"]) for r in await grid.get_selected_rows()}
@@ -472,13 +545,28 @@ def page() -> None:
                     saved = camt.commit(ctx, state["statement"], state["rows"], account.value)
                 else:
                     saved = importer.commit(ctx, state["rows"], account.value)
+                entries = import_balances.save(ctx, account.value, state["balances"])
             except ValidationError as exc:
                 error(str(exc))
                 return
-            success(tn("Imported {n} transaction", "Imported {n} transactions", len(saved)))
+            message = tn("Imported {n} transaction", "Imported {n} transactions", len(saved))
+            if entries:
+                message += " · " + tn("{n} month-end balance recorded", "{n} month-end balances recorded", len(entries))
+            success(message)
             ui.navigate.to("/transactions")
 
-        for el in (date_sel, date_fmt, amount_mode, decimal, amount_sel, debit_sel, credit_sel, text_sel, invert):
+        for el in (
+            date_sel,
+            date_fmt,
+            amount_mode,
+            decimal,
+            amount_sel,
+            debit_sel,
+            credit_sel,
+            balance_sel,
+            text_sel,
+            invert,
+        ):
             el.on_value_change(refresh_rows)
         account.on_value_change(refresh_rows)
         delimiter.on_value_change(reread)

@@ -46,7 +46,7 @@ async def test_a_statement_goes_straight_to_review(user: User, ctx, setup) -> No
     await user.should_see("6 new.")
     await categorise(user, "04.1", 0, 2, 3, 4, 5)
     await categorise(user, setup["salary"].id, 1)
-    assert status(user) == "" and import_button(user).text == "Import 6 Transactions"
+    assert status(user) == "" and import_button(user).text == "Import 6 Transactions and 1 Balance"
 
     click(user, import_button(user))
     await user.should_see("Transactions")
@@ -76,7 +76,7 @@ async def test_the_next_statement_finds_its_account_and_skips_what_is_imported(u
 
     await upload_xml(user, "september.xml", CAMT053)
     await user.should_see("0 new · 6 already imported.")
-    assert not import_button(user).enabled
+    assert import_button(user).text == "Import 0 Transactions and 1 Balance"  # the closing balance is new (F36)
 
 
 async def test_a_statement_in_another_currency_is_refused(user: User, ctx, setup) -> None:

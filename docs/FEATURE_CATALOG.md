@@ -28,29 +28,21 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | Follow-up fixes (B10–B15) | ☑ Done | 3 of 3 steps |
 | 2 · Accounts and reconciliation | ☑ Done | 3 of 3 steps |
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
-| 4 · Import and charts | ☐ Open | 0 of 3 steps |
+| 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
 | After issue 01 (steps 19–25) | ◐ Partly | F24, F25, F02 and F29 done (step 19, F25 of step 20, step 23); F28 and steps 21, 22, 24, 25 open |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
-| Engineering: CI and installers for macOS, Windows, Linux | ◐ Partly | built; the first CI run is pending |
+| Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
 
 ## Open now
 
-State on 2026-10-19: milestones 1–3 and the follow-up fixes are done (see [Done](#done));
-milestone 4 is next, and its first step (F36) waits for decision 6. Steps run in the order given; *Needs* lists what has to be
-done first, and decisions are numbered as in
-[Decisions for the product owner](#decisions-for-the-product-owner).
+State on 2026-10-20: milestones 1–4 and the follow-up fixes are done (see [Done](#done));
+milestone 5 waits for decision 7 (the COICOP source data), so the work after issue 01 comes
+next. Steps run in the order given; *Needs* lists what has to be done first, and decisions
+are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
-
-#### Milestone 4 · Import and charts
-
-| Step | Status | Task | Needs | Effort |
-| --- | --- | --- | --- | --- |
-| 14 | ☐ Open | **F36 · Closing balance from bank files.** | decision 6 | M |
-| 15 | ☐ Open | **F38 · Exchange-rate chart.** | – | S |
-| 16 | ☐ Open | **F37 · COICOP information page** with codes, names and search. | – | S |
 
 #### Milestone 5 · COICOP data
 
@@ -99,7 +91,7 @@ the Linux build.
 
 ### Decisions for the product owner
 
-Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each as recommended.
+Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each as recommended, decision 6 on 2026-10-20.
 
 1. **B08:** side by side on wide windows and stacked on narrow ones — is that the intent? Built for now: stacked at every width, which meets the issue as written.
 2. ☑ **F42 / B04:** decided — replace *Unaccounted* by the reconciliation line, with the gap
@@ -110,7 +102,8 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
    shown automatically as *Capital gains on currency exchange*, without a booking.
 5. ☑ **F47:** decided — finished months without balances use the same rule (the higher of
    recorded and budget per category). Built.
-6. **F36:** what to do with a bank file that ends mid-month?
+6. ☑ **F36:** decided — a month the file ends inside is offered **unticked**, with the note
+   "the file ends on *date* — not a month-end balance"; complete months are ticked. Built.
 7. **F39, F40:** which source for level 5 and for the German notes?
 
 ## All features
@@ -152,9 +145,9 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F33 | ☐ Open | In-app update check | Experience | S | Optional | – |
 | F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
 | F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
-| F36 | ☐ Open | Closing balance from bank files | Data in | M | Local | F01 |
-| F37 | ☐ Open | COICOP information page | Organizing | S | Local | – (F40 adds notes) |
-| F38 | ☐ Open | Exchange-rate chart | Insight | S | Local | – |
+| F36 | ☑ Done | Closing balance from bank files | Data in | M | Local | F01 |
+| F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 adds notes) |
+| F38 | ☑ Done | Exchange-rate chart | Insight | S | Local | – |
 | F39 | ☐ Open | COICOP level 5 | Organizing | M | Local | source data |
 | F40 | ☐ Open | COICOP notes in search and on hover | Organizing | M | Local | source data |
 | F41 | ☑ Done | Opening balance and change per account | Wealth | S | Local | – |
@@ -169,7 +162,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 
 ### F36 · Closing balance from bank files
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20, `a30559a`)
 
 Bank exports usually carry a running balance (*Saldo*, *Kontostand*, *Balance*). Today the
 import ignores it.
@@ -182,19 +175,48 @@ import ignores it.
 - Small extras that make categorizing imports quicker: a category editor in each row, and
   "transfer to own account" as a row type.
 - **Decide:** what to do with a file that ends mid-month (skip its last balance, or offer it
-  with a warning).
+  with a warning). Decided (decision 6): offer it unticked, with a note.
+
+**As built.** Bank profiles have an optional `balance_col`, detected from names such as *Saldo*,
+*Kontostand*, *Balance*, *Solde* or *Saldo contabile* and chosen in the columns step (older saved
+profiles load unchanged). `services/import_balances.py` finds the order of the lines as the reading
+(file order or reversed) in which the dates run forward and every balance equals the previous one
+plus the amounts in between, lines without a balance bridged by their amounts; the balance after the
+last booking of each month covered becomes a candidate. A month is complete, and ticked, when the file
+continues past it or its last booking is on the month's last day; the month the file ends inside is
+offered unticked with "the file ends on *date* — not a month-end balance". Balances that fit neither
+order, or both with different results, are not offered; a short reason is shown instead. A camt
+statement offers its closing booked balance, ticked when it is dated on a month's last day. The review
+step lists "Balance at end of *month*" with a checkbox, "replaces *amount*" for a different recorded
+balance, and leaves an identical recorded one unticked ("already recorded"). Ticked balances are saved
+with `wealth.upsert_entry` after the transactions, also when every row is a duplicate ("Import 0
+Transactions and 1 Balance"). Not done: the manual *Closing balance* field, the per-row category
+editor and the "transfer to own account" row type.
 
 ### F37 · COICOP information page
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20, `009f0a5`)
 
 A page listing all COICOP categories as a tree with code and name, in the interface
 language, with a search box. Linked from the sidebar or Settings. With F40, each category
 also shows what it includes.
 
+**As built.** *Categories* in the sidebar (after Budget Plan, route `/categories`): all 602
+categories of the four levels as one tree, code and name in the interface language, divisions
+bold, the number of subcategories, and what was spent in each this calendar year in the display
+currency. The search matches code or name, ignoring case and accents (*getranke* finds
+*Getränke*); the ancestors of each match stay visible and open, and clearing the search
+restores what was open before. *Taxes* and *Advance payments* are the app's own categories, not
+COICOP, so a note below the tree explains them instead of listing them. F40 adds the notes to
+each node and to its search text.
+
 ### F38 · Exchange-rate chart
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20, `3a4e7d3`)
+
+**As built:** chart type *Exchange Rates* on the Overview; currencies default to those of the
+user's accounts; daily or month end; index view; CSV/Excel/PNG/PDF export like the other
+charts. `FxRates.history()` provides the prices.
 
 A fourth chart type on the Overview: the ECB rates of chosen currencies against the display
 currency over a period, daily or at month end (the rates balances are valued with). Optional
@@ -334,7 +356,7 @@ straight to review, through the same duplicate marking, category suggestions and
 F01. Any version is read (namespace-agnostic); only booked entries are imported, a batch splits
 into its payments when their amounts add up, and `import_ref` is `camt:<IBAN>:<bank reference>`.
 The account is remembered per IBAN (`import_accounts.json`) and a statement in another currency
-than the account is refused. The closing balance is parsed but left for F36. Not done: MT940,
+than the account is refused. The closing balance is offered as a month-end balance (F36). Not done: MT940,
 camt.052 intraday reports, files holding several accounts (refused with a message).
 
 #### F03 · Swiss QR-bill scanning
@@ -800,6 +822,14 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | 12 | ☑ Done | **F45 · Revaluations section** in the budget overview; the reconciliation line from F42 then counts them. | F42 (done), F43, decision 4 (decided) | S |
 | 13 | ☑ Done | **F46 · Unexplained difference per account**, with a *Book as revaluation* action. | F41 (done), F43 | S–M |
 
+### Milestone 4 · Import and charts
+
+| Step | Status | Task | Needs | Effort |
+| --- | --- | --- | --- | --- |
+| 14 | ☑ Done | **F36 · Closing balance from bank files.** | decision 6 (decided) | M |
+| 15 | ☑ Done | **F38 · Exchange-rate chart.** | – | S |
+| 16 | ☑ Done | **F37 · COICOP information page** with codes, names and search. | – | S |
+
 ### Built features
 
 | Item | Status | Notes |
@@ -808,7 +838,7 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | F29 · Multi-language support | ☑ Done | English, German, French and Italian, including the COICOP names. |
 | Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. Covers part of F11 and gives F04 a place for receipt lines. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
-| CI and installers for macOS, Windows and Linux | ◐ Partly | GitHub Actions run the checks on every push and build the three installers; a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. Done once the first CI run has built all three; the Windows installer has never been run on a real PC. See [packaging/README.md](../packaging/README.md). |
+| CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
 
 #### F01 · CSV import of transactions
 
@@ -825,7 +855,7 @@ Today every transaction is typed by hand. Import a bank or card export instead.
   already imported are shown and skipped by default.
 - **Fits:** imported rows become normal transactions, with the CHF amount at the ECB rate of
   the booking date. Since issue 01 (B03) manual entries use the rate of their date too.
-- **Open since issue 01:** the closing balance in the file is not used yet (F36); categories
+- **Open since issue 01:** the closing balance in the file is offered since F36; categories
   are set for selected rows only, not per cell; transfers between own accounts can't be
   marked as such and must be given a category.
 - **Decide:** which banks to support first; whether imports may create accounts; how to treat

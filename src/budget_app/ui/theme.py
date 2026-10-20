@@ -206,6 +206,19 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
   .acct-row .c-change { font-size: 12px; }
   .acct-row .c-unexpl { display: none; }
 }
+/* COICOP tree (F37): code · name · subcategories · spent this year */
+.cat-tree .q-tree__node-header { padding: 3px 6px; border-radius: 6px; margin-top: 0; }
+.cat-tree .q-tree__node-header:hover { background: var(--fill-2); }
+.cat-tree .q-tree__node-header-content { min-width: 0; }
+.cat-node { display: flex; align-items: baseline; gap: 8px; width: 100%; min-width: 0; font-size: 14px;
+  color: var(--label); }
+.cat-node .code { color: var(--label-3); font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
+.cat-node .name { min-width: 0; overflow-wrap: anywhere; }  /* an information page: names wrap, never cut */
+.cat-node.lvl-1 .name { font-weight: 600; }
+.cat-node .caption { white-space: nowrap; }
+.cat-node .spent { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;
+  color: var(--label-2); }
+@media (max-width: 640px) { .cat-node .caption { display: none; } }
 .reval-row { grid-template-columns: minmax(0, 1fr) 9rem; }
 .meter { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; width: 100%; }
 .meter > div { height: 100%; border-radius: 3px; background: var(--accent); }

@@ -58,12 +58,15 @@
  "Back Up": "Sauvegarder",
  "Back Up Now…": "Sauvegarder maintenant…",
  "Balance": "Solde",
+ "Balance at end of {month}: {amount}": "Solde fin {month} : {amount}",
+ "Balance column": "Colonne du solde",
  "Balance recorded": "Solde saisi",
  "Balances · End of {month}": "Soldes · fin {month}",
  "Bars": "Barres",
  "Base Currency": "Monnaie de base",
  "Before a restore": "Avant une restauration",
  "Before an update": "Avant une mise à jour",
+ "Besides COICOP, expenditure can be booked as {taxes}. The part of a payment made for someone else counts as {advances} until it is paid back.": "En dehors de la COICOP, une dépense peut être saisie comme {taxes}. La part d’un paiement faite pour quelqu’un d’autre compte comme {advances} jusqu’à son remboursement.",
  "Book as revaluation…": "Comptabiliser comme réévaluation…",
  "Bring in a CSV export or a camt statement from your bank or credit card": "Reprendre un export CSV ou un relevé camt de la banque ou de la carte de crédit",
  "Budget": "Budget",
@@ -74,6 +77,7 @@
  "Budget updated": "Budget mis à jour",
  "Budgeted {amount}": "Budgété : {amount}",
  "Budgets can run until {month}. Change this in Settings.": "Les budgets peuvent courir jusqu’à {month}. Modifiable dans les Réglages.",
+ "COICOP 2018, the UN classification of spending by purpose": "COICOP 2018, la classification de l’ONU des dépenses par fonction",
  "Cancel": "Annuler",
  "Cannot compute the overview: {error}": "Impossible de calculer l’aperçu : {error}",
  "Cannot compute wealth: {error}": "Impossible de calculer la fortune : {error}",
@@ -100,10 +104,12 @@
  "Could not read exchange rates: {error}": "Impossible de lire les taux de change : {error}",
  "Could not save {name}: {error}": "Impossible d’enregistrer «{name}» : {error}",
  "Credit (money in)": "Crédit (entrée d’argent)",
+ "Currencies": "Monnaies",
  "Currency": "Monnaie",
  "Currency exchange": "Opération de change",
  "Currency is required": "Choisir une monnaie",
  "Current Wealth": "Fortune actuelle",
+ "Daily": "Quotidien",
  "Data": "Données",
  "Data Folder": "Dossier des données",
  "Date": "Date",
@@ -139,6 +145,7 @@
  "ECB archive does not contain a CSV file": "L’archive de la BCE ne contient pas de fichier CSV",
  "ECB download is unexpectedly large; aborted": "Le téléchargement de la BCE est anormalement volumineux ; interrompu",
  "ECB rate of {date}: {rate} → {amount}": "Taux BCE du {date} : {rate} → {amount}",
+ "ECB rates against the display currency": "Taux BCE par rapport à la monnaie d’affichage",
  "ECB rates of {date}": "Taux BCE du {date}",
  "Edit": "Modifier",
  "Edit Account": "Modifier le compte",
@@ -162,6 +169,7 @@
  "Every transaction on this account will be in this currency.": "Toutes les transactions de ce compte seront dans cette monnaie.",
  "Every year": "Chaque année",
  "Every {n} months": "Tous les {n} mois",
+ "Exchange Rates": "Taux de change",
  "Exchange rate download failed ({error}). Using the last stored rates.": "Le téléchargement des taux de change a échoué ({error}). Les derniers taux enregistrés sont utilisés.",
  "Exclude": "Exclure",
  "Expenditure": "Dépense",
@@ -194,6 +202,7 @@
   "Importer {n} transaction",
   "Importer {n} transactions"
  ],
+ "Import {transactions} and {balances}": "Importer {transactions} et {balances}",
  "Imported {n} transaction": [
   "{n} transaction importée",
   "{n} transactions importées"
@@ -213,6 +222,7 @@
  "Income minus expenditure": "Revenus moins dépenses",
  "Income · {name}": "Revenu · {name}",
  "Income: {name}": "Revenu : {name}",
+ "Index (start = 100)": "Indice (départ = 100)",
  "Item": "Article",
  "Item {n}: enter a name": "Article {n} : saisir un nom",
  "Item {n}: enter a price": "Article {n} : saisir un prix",
@@ -227,6 +237,8 @@
  "Money that arrived without a record": "Argent arrivé sans écriture",
  "Money that left without a record": "Argent sorti sans écriture",
  "Month": "Mois",
+ "Month End": "Fin de mois",
+ "Month-end balances": "Soldes de fin de mois",
  "Monthly totals or chosen categories": "Totaux mensuels ou catégories choisies",
  "Must be positive": "Doit être positif",
  "Name": "Nom",
@@ -246,6 +258,7 @@
  "No balance recorded for {names} at the end of {month}.": "Aucun solde saisi pour {names} à fin {month}.",
  "No balances recorded yet.": "Aucun solde saisi pour l’instant.",
  "No budget set": "Aucun budget défini",
+ "No category matches.": "Aucune catégorie ne correspond.",
  "No exchange rates yet": "Pas encore de taux de change",
  "No income this month.": "Aucun revenu ce mois-ci.",
  "No valid amount": "Montant non valable",
@@ -316,6 +329,7 @@
  "Saved settings": "Paramètres enregistrés",
  "Saved “{name}”": "Enregistré : «{name}»",
  "Search": "Rechercher",
+ "Search code or name": "Rechercher un code ou un nom",
  "Select a month": "Choisir un mois",
  "Select an account": "Choisir un compte",
  "Select an expenditure category": "Choisir une catégorie de dépenses",
@@ -337,6 +351,7 @@
  "Show all subcategories": "Afficher toutes les sous-catégories",
  "Showing amounts in {currency}": "Montants affichés en {currency}",
  "Some selected advance payments have repayments. Delete the repayments first (or select them as well).": "Certaines avances sélectionnées ont des remboursements. Supprimer d’abord les remboursements (ou les sélectionner aussi).",
+ "Spent in {year}, {currency}": "Dépenses {year}, {currency}",
  "Spread of the exchange against the ECB rate": "Écart de change par rapport au taux BCE",
  "Statement {month}": "Relevé {month}",
  "Status": "Statut",
@@ -357,6 +372,7 @@
  "The backup contains an unexpected file: {name}": "La sauvegarde contient un fichier inattendu : {name}",
  "The backup contains no records.": "La sauvegarde ne contient aucune donnée.",
  "The backup is too large.": "La sauvegarde est trop volumineuse.",
+ "The balances in the file do not follow from its amounts, so no month-end balances are offered. Check the balance column.": "Les soldes du fichier ne découlent pas de ses montants, aucun solde de fin de mois n’est donc proposé. Vérifier la colonne du solde.",
  "The currency cannot be changed while transactions or entries use this account": "La monnaie ne peut pas être modifiée tant que des transactions ou d’autres entrées utilisent ce compte",
  "The currency can’t change while transactions or recorded balances use this account.": "La monnaie ne peut pas être modifiée tant que des transactions ou des soldes saisis utilisent ce compte.",
  "The current records are copied to the backups folder first, so this can be undone.": "Les données actuelles sont d’abord copiées dans le dossier des sauvegardes ; l’opération peut donc être annulée.",
@@ -369,6 +385,7 @@
  "The final month must not be before the first month": "Le dernier mois ne peut pas précéder le premier",
  "The interface language. Amounts keep the Swiss format.": "La langue de l’interface. Les montants conservent le format suisse.",
  "The next file with the same columns is recognised automatically.": "Le prochain fichier avec les mêmes colonnes sera reconnu automatiquement.",
+ "The order of the lines can’t be told from the file (newest or oldest first), so no month-end balances are offered.": "L’ordre des lignes (les plus récentes ou les plus anciennes d’abord) ne ressort pas du fichier, aucun solde de fin de mois n’est donc proposé.",
  "The plan ends in {month}, before the first month. Extend it in Settings.": "La planification se termine en {month}, avant le premier mois. La prolonger dans les Réglages.",
  "The recurrence must be at least every month": "La périodicité doit être au moins mensuelle",
  "The repayment exceeds the outstanding amount ({amount})": "Le remboursement dépasse le montant ouvert ({amount})",
@@ -404,14 +421,17 @@
  "What did the account hold at the end of the month?": "Quel était le solde du compte à la fin du mois ?",
  "account|From": "Du compte",
  "account|To": "Au compte",
+ "already recorded": "déjà saisi",
  "e.g. Milk": "p. ex. lait",
  "heading|Expenditure": "Dépenses",
  "heading|Income": "Revenus",
  "including {amount} from exchange-rate changes": "dont {amount} dus aux variations de change",
  "incomplete": "incomplète",
  "repaid by {debtor}": "remboursé par {debtor}",
+ "replaces {amount}": "remplace {amount}",
  "the backup of {date}": "la sauvegarde du {date}",
  "the backup “{name}”": "la sauvegarde «{name}»",
+ "the file ends on {date} — not a month-end balance": "le fichier se termine le {date} — pas un solde de fin de mois",
  "{amount} above the {budget} budget": "{amount} de plus que le budget de {budget}",
  "{amount} at the end of {month}": "{amount} à fin {month}",
  "{amount} by the end of the plan": "{amount} à la fin de la planification",
@@ -439,6 +459,14 @@
   "{name} · {n} ligne · reconnu comme «{profile}»",
   "{name} · {n} lignes · reconnu comme «{profile}»"
  ],
+ "{n} Balance": [
+  "{n} solde",
+  "{n} soldes"
+ ],
+ "{n} Transaction": [
+  "{n} transaction",
+  "{n} transactions"
+ ],
  "{n} already imported": [
   "{n} déjà importée",
   "{n} déjà importées"
@@ -447,9 +475,17 @@
   "{n} poste budgétaire",
   "{n} postes budgétaires"
  ],
+ "{n} category": [
+  "{n} catégorie",
+  "{n} catégories"
+ ],
  "{n} item": [
   "{n} article",
   "{n} articles"
+ ],
+ "{n} match": [
+  "{n} résultat",
+  "{n} résultats"
  ],
  "{n} month, {span}": [
   "{n} mois, {span}",
@@ -458,6 +494,10 @@
  "{n} month, {span}, continued as the plan grows": [
   "{n} mois, {span}, prolongé avec la planification",
   "{n} mois, {span}, prolongés avec la planification"
+ ],
+ "{n} month-end balance recorded": [
+  "{n} solde de fin de mois saisi",
+  "{n} soldes de fin de mois saisis"
  ],
  "{n} new": [
   "{n} nouvelle",
@@ -486,6 +526,10 @@
  "{n} selected": [
   "Sélection : {n}",
   "Sélection : {n}"
+ ],
+ "{n} subcategory": [
+  "{n} sous-catégorie",
+  "{n} sous-catégories"
  ],
  "{n} transaction": [
   "{n} transaction",

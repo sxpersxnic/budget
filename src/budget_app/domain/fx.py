@@ -13,8 +13,8 @@ import os
 import tempfile
 import threading
 import zipfile
-from bisect import bisect_right
-from datetime import date
+from bisect import bisect_left, bisect_right
+from datetime import date, timedelta
 from pathlib import Path
 
 import httpx
@@ -92,6 +92,32 @@ class FxRates:
         if from_cur == to_cur:
             return float(amount)
         return float(amount) / self.rate(from_cur, on) * self.rate(to_cur, on)
+
+    def history(
+        self, currency: str, quote: str, start: date, end: date, month_end: bool = False
+    ) -> list[tuple[date, float]]:
+        """Price of one `currency` in `quote` from `start` to `end` (F38).
+
+        Daily: every ECB date in the range. `month_end`: the last ECB date of each month, the rate
+        account balances are valued with. Empty if either currency has no quotes.
+        """
+        if any(c != "EUR" and c not in self._series for c in (currency, quote)):
+            return []
+        days: list[date]
+        if month_end:
+            days = []
+            y, m = start.year, start.month
+            while date(y, m, 1) <= end:
+                last = date(y + m // 12, m % 12 + 1, 1) - timedelta(days=1)
+                d = self.rate_date_on_or_before(min(last, end))
+                # only a date inside the month counts (a month before the file falls back to its first date)
+                if d is not None and date(y, m, 1) <= d <= last and (not days or d != days[-1]):
+                    days.append(d)
+                y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+        else:
+            lo, hi = bisect_left(self._dates, start), bisect_right(self._dates, end)
+            days = self._dates[lo:hi]
+        return [(d, self.convert(1.0, currency, quote, d)) for d in days]
 
 
 # ---------------------------------------------------------------------- download

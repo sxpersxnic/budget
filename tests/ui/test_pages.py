@@ -9,6 +9,7 @@ PAGES = {
     "/import": "Import",
     "/budget-entries": "Budget Plan",
     "/add-budget": "New Budget Entry",
+    "/categories": "Categories",
     "/settings": "Settings",
 }
 

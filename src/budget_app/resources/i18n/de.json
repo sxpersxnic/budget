@@ -58,12 +58,15 @@
  "Back Up": "Sichern",
  "Back Up Now…": "Jetzt sichern …",
  "Balance": "Saldo",
+ "Balance at end of {month}: {amount}": "Saldo Ende {month}: {amount}",
+ "Balance column": "Saldospalte",
  "Balance recorded": "Saldo erfasst",
  "Balances · End of {month}": "Salden · Ende {month}",
  "Bars": "Balken",
  "Base Currency": "Basiswährung",
  "Before a restore": "Vor einer Wiederherstellung",
  "Before an update": "Vor einem Update",
+ "Besides COICOP, expenditure can be booked as {taxes}. The part of a payment made for someone else counts as {advances} until it is paid back.": "Neben COICOP lassen sich Ausgaben als {taxes} erfassen. Der Teil einer Zahlung, der für jemand anderen bezahlt wurde, zählt als {advances}, bis er zurückbezahlt ist.",
  "Book as revaluation…": "Als Neubewertung buchen …",
  "Bring in a CSV export or a camt statement from your bank or credit card": "CSV-Export oder camt-Auszug der Bank oder Kreditkarte übernehmen",
  "Budget": "Budget",
@@ -74,6 +77,7 @@
  "Budget updated": "Budget aktualisiert",
  "Budgeted {amount}": "Budgetiert {amount}",
  "Budgets can run until {month}. Change this in Settings.": "Budgets können bis {month} laufen. Dies lässt sich in den Einstellungen ändern.",
+ "COICOP 2018, the UN classification of spending by purpose": "COICOP 2018, die UNO-Klassifikation der Ausgaben nach Verwendungszweck",
  "Cancel": "Abbrechen",
  "Cannot compute the overview: {error}": "Die Übersicht kann nicht berechnet werden: {error}",
  "Cannot compute wealth: {error}": "Das Vermögen kann nicht berechnet werden: {error}",
@@ -100,10 +104,12 @@
  "Could not read exchange rates: {error}": "Die Wechselkurse konnten nicht gelesen werden: {error}",
  "Could not save {name}: {error}": "«{name}» konnte nicht gesichert werden: {error}",
  "Credit (money in)": "Gutschrift (Geld rein)",
+ "Currencies": "Währungen",
  "Currency": "Währung",
  "Currency exchange": "Währungswechsel",
  "Currency is required": "Bitte eine Währung wählen",
  "Current Wealth": "Aktuelles Vermögen",
+ "Daily": "Täglich",
  "Data": "Daten",
  "Data Folder": "Datenordner",
  "Date": "Datum",
@@ -139,6 +145,7 @@
  "ECB archive does not contain a CSV file": "Das EZB-Archiv enthält keine CSV-Datei",
  "ECB download is unexpectedly large; aborted": "Der EZB-Download ist unerwartet gross; abgebrochen",
  "ECB rate of {date}: {rate} → {amount}": "EZB-Kurs vom {date}: {rate} → {amount}",
+ "ECB rates against the display currency": "EZB-Kurse gegenüber der Anzeigewährung",
  "ECB rates of {date}": "EZB-Kurse vom {date}",
  "Edit": "Bearbeiten",
  "Edit Account": "Konto bearbeiten",
@@ -162,6 +169,7 @@
  "Every transaction on this account will be in this currency.": "Alle Buchungen auf diesem Konto sind in dieser Währung.",
  "Every year": "Jedes Jahr",
  "Every {n} months": "Alle {n} Monate",
+ "Exchange Rates": "Wechselkurse",
  "Exchange rate download failed ({error}). Using the last stored rates.": "Die Wechselkurse konnten nicht geladen werden ({error}). Es gelten die zuletzt gespeicherten Kurse.",
  "Exclude": "Auslassen",
  "Expenditure": "Ausgabe",
@@ -194,6 +202,7 @@
   "{n} Buchung importieren",
   "{n} Buchungen importieren"
  ],
+ "Import {transactions} and {balances}": "{transactions} und {balances} importieren",
  "Imported {n} transaction": [
   "{n} Buchung importiert",
   "{n} Buchungen importiert"
@@ -213,6 +222,7 @@
  "Income minus expenditure": "Einnahmen minus Ausgaben",
  "Income · {name}": "Einnahme · {name}",
  "Income: {name}": "Einnahme: {name}",
+ "Index (start = 100)": "Index (Start = 100)",
  "Item": "Artikel",
  "Item {n}: enter a name": "Artikel {n}: Bitte einen Namen eingeben",
  "Item {n}: enter a price": "Artikel {n}: Bitte einen Preis eingeben",
@@ -227,6 +237,8 @@
  "Money that arrived without a record": "Geld, das ohne Buchung eingegangen ist",
  "Money that left without a record": "Geld, das ohne Buchung abgeflossen ist",
  "Month": "Monat",
+ "Month End": "Monatsende",
+ "Month-end balances": "Salden am Monatsende",
  "Monthly totals or chosen categories": "Monatstotale oder ausgewählte Kategorien",
  "Must be positive": "Muss positiv sein",
  "Name": "Name",
@@ -246,6 +258,7 @@
  "No balance recorded for {names} at the end of {month}.": "Für {names} ist Ende {month} kein Saldo erfasst.",
  "No balances recorded yet.": "Noch keine Salden erfasst.",
  "No budget set": "Kein Budget festgelegt",
+ "No category matches.": "Keine Kategorie passt.",
  "No exchange rates yet": "Noch keine Wechselkurse",
  "No income this month.": "Keine Einnahmen in diesem Monat.",
  "No valid amount": "Kein gültiger Betrag",
@@ -316,6 +329,7 @@
  "Saved settings": "Gesicherte Einstellungen",
  "Saved “{name}”": "«{name}» gesichert",
  "Search": "Suchen",
+ "Search code or name": "Code oder Name suchen",
  "Select a month": "Bitte einen Monat wählen",
  "Select an account": "Bitte ein Konto wählen",
  "Select an expenditure category": "Bitte eine Ausgabenkategorie wählen",
@@ -337,6 +351,7 @@
  "Show all subcategories": "Alle Unterkategorien zeigen",
  "Showing amounts in {currency}": "Beträge werden in {currency} angezeigt",
  "Some selected advance payments have repayments. Delete the repayments first (or select them as well).": "Zu einigen ausgewählten Auslagen gibt es Rückzahlungen. Bitte zuerst die Rückzahlungen löschen (oder sie ebenfalls auswählen).",
+ "Spent in {year}, {currency}": "Ausgaben {year}, {currency}",
  "Spread of the exchange against the ECB rate": "Kursdifferenz des Wechsels zum EZB-Kurs",
  "Statement {month}": "Auszug {month}",
  "Status": "Status",
@@ -357,6 +372,7 @@
  "The backup contains an unexpected file: {name}": "Die Sicherung enthält eine unerwartete Datei: {name}",
  "The backup contains no records.": "Die Sicherung enthält keine Daten.",
  "The backup is too large.": "Die Sicherung ist zu gross.",
+ "The balances in the file do not follow from its amounts, so no month-end balances are offered. Check the balance column.": "Die Salden in der Datei passen nicht zu ihren Beträgen, deshalb werden keine Salden am Monatsende angeboten. Bitte die Saldospalte prüfen.",
  "The currency cannot be changed while transactions or entries use this account": "Die Währung kann nicht geändert werden, solange Buchungen oder Einträge dieses Konto verwenden",
  "The currency can’t change while transactions or recorded balances use this account.": "Die Währung kann nicht geändert werden, solange Buchungen oder erfasste Salden dieses Konto verwenden.",
  "The current records are copied to the backups folder first, so this can be undone.": "Die aktuellen Daten werden zuerst in den Sicherungsordner kopiert; das lässt sich also rückgängig machen.",
@@ -369,6 +385,7 @@
  "The final month must not be before the first month": "Der letzte Monat darf nicht vor dem ersten liegen",
  "The interface language. Amounts keep the Swiss format.": "Die Sprache der Oberfläche. Beträge behalten das Schweizer Format.",
  "The next file with the same columns is recognised automatically.": "Die nächste Datei mit denselben Spalten wird automatisch erkannt.",
+ "The order of the lines can’t be told from the file (newest or oldest first), so no month-end balances are offered.": "Die Reihenfolge der Zeilen (neueste oder älteste zuerst) lässt sich aus der Datei nicht erkennen, deshalb werden keine Salden am Monatsende angeboten.",
  "The plan ends in {month}, before the first month. Extend it in Settings.": "Die Planung endet {month}, vor dem ersten Monat. In den Einstellungen verlängern.",
  "The recurrence must be at least every month": "Die Wiederholung muss mindestens monatlich sein",
  "The repayment exceeds the outstanding amount ({amount})": "Die Rückzahlung ist höher als der offene Betrag ({amount})",
@@ -404,14 +421,17 @@
  "What did the account hold at the end of the month?": "Welchen Saldo hatte das Konto am Monatsende?",
  "account|From": "Von Konto",
  "account|To": "Auf Konto",
+ "already recorded": "bereits erfasst",
  "e.g. Milk": "z. B. Milch",
  "heading|Expenditure": "Ausgaben",
  "heading|Income": "Einnahmen",
  "including {amount} from exchange-rate changes": "davon {amount} aus Wechselkursänderungen",
  "incomplete": "unvollständig",
  "repaid by {debtor}": "zurückbezahlt von {debtor}",
+ "replaces {amount}": "ersetzt {amount}",
  "the backup of {date}": "die Sicherung vom {date}",
  "the backup “{name}”": "die Sicherung «{name}»",
+ "the file ends on {date} — not a month-end balance": "die Datei endet am {date} – kein Saldo am Monatsende",
  "{amount} above the {budget} budget": "{amount} über dem Budget von {budget}",
  "{amount} at the end of {month}": "{amount} Ende {month}",
  "{amount} by the end of the plan": "{amount} bis zum Ende der Planung",
@@ -439,6 +459,14 @@
   "{name} · {n} Zeile · erkannt als «{profile}»",
   "{name} · {n} Zeilen · erkannt als «{profile}»"
  ],
+ "{n} Balance": [
+  "{n} Saldo",
+  "{n} Salden"
+ ],
+ "{n} Transaction": [
+  "{n} Buchung",
+  "{n} Buchungen"
+ ],
  "{n} already imported": [
   "{n} bereits importiert",
   "{n} bereits importiert"
@@ -447,9 +475,17 @@
   "{n} Budgeteintrag",
   "{n} Budgeteinträge"
  ],
+ "{n} category": [
+  "{n} Kategorie",
+  "{n} Kategorien"
+ ],
  "{n} item": [
   "{n} Artikel",
   "{n} Artikel"
+ ],
+ "{n} match": [
+  "{n} Treffer",
+  "{n} Treffer"
  ],
  "{n} month, {span}": [
   "{n} Monat, {span}",
@@ -458,6 +494,10 @@
  "{n} month, {span}, continued as the plan grows": [
   "{n} Monat, {span}, wird mit der Planung verlängert",
   "{n} Monate, {span}, werden mit der Planung verlängert"
+ ],
+ "{n} month-end balance recorded": [
+  "{n} Saldo am Monatsende erfasst",
+  "{n} Salden am Monatsende erfasst"
  ],
  "{n} new": [
   "{n} neu",
@@ -486,6 +526,10 @@
  "{n} selected": [
   "{n} ausgewählt",
   "{n} ausgewählt"
+ ],
+ "{n} subcategory": [
+  "{n} Unterkategorie",
+  "{n} Unterkategorien"
  ],
  "{n} transaction": [
   "{n} Buchung",

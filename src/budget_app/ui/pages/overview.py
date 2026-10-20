@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from datetime import date
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -33,11 +34,13 @@ CHART_TYPES = {
     "wealth": N_("Wealth Over Time"),
     "flows": N_("Income and Expenditure"),
     "waterfall": N_("Change per Account"),
+    "fx": N_("Exchange Rates"),
 }
 CHART_HINTS = {
     "wealth": N_("Recorded balances, then the budget projection"),
     "flows": N_("Monthly totals or chosen categories"),
     "waterfall": N_("How each account moved between two month ends"),
+    "fx": N_("ECB rates against the display currency"),
 }
 
 
@@ -108,6 +111,32 @@ class ChartCard:
                         .classes("w-36")
                     )
                     controls = [self.start, self.end]
+                elif kind == "fx":
+                    self.start = (
+                        ui.select(
+                            opts,
+                            value=months.add_months(cm, -12) if months.add_months(cm, -12) in opts else first,
+                            label=t("From"),
+                        )
+                        .props("dense outlined options-dense")
+                        .classes("w-32")
+                    )
+                    self.end = (
+                        ui.select(opts, value=cm if cm in opts else last, label=t("To"))
+                        .props("dense outlined options-dense")
+                        .classes("w-32")
+                    )
+                    self.step = segmented({"day": t("Daily"), "month": t("Month End")}, "day")
+                    self.index = ui.switch(t("Index (start = 100)")).props("dense")
+                    self.fx_currencies = ui.select(
+                        ctx.fx.currencies(),
+                        value=self._default_fx_currencies(),
+                        label=t("Currencies"),
+                        multiple=True,
+                        with_input=True,
+                    )
+                    self.fx_currencies.props("dense outlined use-chips options-dense").classes("w-full")
+                    controls = [self.start, self.end, self.step, self.index, self.fx_currencies]
                 else:
                     controls = []
             self.plot = ui.plotly(figure_dict(go.Figure())).classes("w-full").style("height: 320px")
@@ -197,6 +226,40 @@ class ChartCard:
             ticktext=[months.label(m) for m in self.data["month"]] if not self.data.empty else None,
         )
         return chart_layout(fig, cur)
+
+    def _default_fx_currencies(self) -> list[str]:
+        """The currencies of the user's accounts, apart from the display currency (else EUR or USD)."""
+        view = self.currency["value"]
+        own = sorted({a.currency for a in self.ctx.store.accounts.all()} - {view})
+        return own or (["EUR"] if view != "EUR" else ["USD"])
+
+    def _fig_fx(self, cur: str) -> go.Figure:
+        """One line per currency: the price of one unit in the display currency (F38)."""
+        start, end = sorted([self.start.value, self.end.value])
+        first, last = date.fromisoformat(f"{start}-01"), months.last_day(end)
+        indexed = bool(self.index.value)
+        fig = go.Figure()
+        table: dict[str, dict] = {}
+        for i, code in enumerate(c for c in (self.fx_currencies.value or []) if c != cur):
+            points = self.ctx.fx.history(code, cur, first, last, month_end=self.step.value == "month")
+            if not points:
+                continue
+            base = points[0][1]
+            ys = [round(v / base * 100, 2) if indexed else round(v, 4) for _, v in points]
+            for (d, _), y in zip(points, ys, strict=True):
+                table.setdefault(d.isoformat(), {"date": d.isoformat()})[code] = y
+            fig.add_scatter(
+                x=[d.isoformat() for d, _ in points],
+                y=ys,
+                name=code,
+                mode="lines",
+                line=dict(color=SERIES[i % len(SERIES)], width=2),
+                hovertemplate=f"{code}: %{{y}}" + ("" if indexed else f" {cur}") + "<extra></extra>",
+            )
+        self.data = pd.DataFrame(sorted(table.values(), key=lambda r: r["date"]))
+        fig = chart_layout(fig, "" if indexed else cur)
+        fig.update_yaxes(tickformat=",~r" if not indexed else ",~f")  # rates need their decimals
+        return fig
 
     def _fig_waterfall(self, cur: str) -> go.Figure:
         start, end = sorted([self.start.value, self.end.value])
