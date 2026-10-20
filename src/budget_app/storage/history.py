@@ -77,10 +77,15 @@ class History:
         self.keep = keep
         self._lock = threading.RLock()
         self._actions: list[Action] = []  # oldest first
+        # each action as written, so a save serializes only new or changed actions; one large import
+        # would otherwise make every later save slow
+        self._lines: dict[str, str] = {}
         if path.exists():
             for line in path.read_text(encoding="utf-8").splitlines():
                 if line.strip():
-                    self._actions.append(_action_from(json.loads(line)))
+                    act = _action_from(json.loads(line))
+                    self._actions.append(act)
+                    self._lines[act.id] = line
 
     # ------------------------------------------------------------------ recording
     @contextlib.contextmanager
@@ -114,6 +119,8 @@ class History:
     def _append(self, act: Action) -> None:
         with self._lock:
             self._actions.append(act)
+            for dropped in self._actions[: -self.keep]:
+                self._lines.pop(dropped.id, None)
             del self._actions[: -self.keep]
             self._save()
 
@@ -121,7 +128,9 @@ class History:
         tmp = self.path.with_suffix(".jsonl.tmp")
         with tmp.open("w", encoding="utf-8") as f:
             for act in self._actions:
-                f.write(json.dumps(asdict(act), ensure_ascii=False) + "\n")
+                if act.id not in self._lines:
+                    self._lines[act.id] = json.dumps(asdict(act), ensure_ascii=False)
+                f.write(self._lines[act.id] + "\n")
             f.flush()
             os.fsync(f.fileno())
         tmp.replace(self.path)
@@ -164,6 +173,7 @@ class History:
             undoing.undo_of = act.id
         with self._lock:
             act.undone = True
+            self._lines.pop(act.id, None)  # written again with its new state
             self._save()
         return undoing
 
