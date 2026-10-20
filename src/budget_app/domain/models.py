@@ -84,6 +84,21 @@ class Transaction:
 
 
 @dataclass
+class Template:
+    """A saved starting point for a new transaction, such as "Coffee · 01.1.1 · Cash · 4.50" (F06)."""
+
+    name: str
+    type: str = TX_EXPENDITURE
+    amount: float = 0.0  # 0: no amount, the user types it
+    currency: str = ""
+    category: str = ""
+    from_account: str = ""
+    to_account: str = ""
+    comment: str = ""
+    id: str = field(default_factory=new_id)
+
+
+@dataclass
 class TransactionItem:
     """One line of a transaction's product list (e.g. a receipt), in the transaction's currency."""
 

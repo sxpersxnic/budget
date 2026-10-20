@@ -115,7 +115,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F03 | ☐ Open | Swiss QR-bill scanning | Data in | M | Local | – |
 | F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
 | F05 | ☐ Open | Recurring transactions | Data in | M | Local | – |
-| F06 | ☐ Open | Faster manual entry | Data in | S–M | Local | – |
+| F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
 | F07 | ☐ Open | Automatic categorization | Organizing | M–L | Optional | F09 |
 | F08 | ☐ Open | Simpler category picker | Organizing | S | Local | – |
 | F09 | ☐ Open | Payees | Organizing | M | Local | – |
@@ -404,7 +404,13 @@ Rent, insurance premiums and subscriptions repeat every month or year.
 
 #### F06 · Faster manual entry
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20)
+
+**As built:** sums in the amount fields (evaluated safely: numbers, + − × ÷ and brackets, Swiss
+apostrophes and decimal commas); named templates from a bookmark menu in the form; recently used
+accounts first in the account dropdowns (recent *categories* come with F08); ⌘↩ / Ctrl+Enter
+saves, N opens a new transaction; *Duplicate* from the edit sheet and the Transactions list,
+with the items.
 
 Small changes for the most frequent task:
 

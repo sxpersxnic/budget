@@ -466,3 +466,22 @@ def delete(ctx: Context, ids: list[str]) -> int:
     count = ctx.store.transactions.delete(list(ids_set))
     ctx.store.transaction_items.delete(items)  # a transaction's product list goes with it
     return count
+
+
+def recent_accounts(ctx: Context, limit: int = 30) -> list[str]:
+    """Account ids by how recently they were used (newest transactions first), for F06's dropdown order."""
+    seen: list[str] = []
+    for tx in sorted(ctx.store.transactions.all(), key=lambda x: x.date, reverse=True)[:limit]:
+        for acc in (tx.from_account, tx.to_account):
+            if acc and acc not in seen:
+                seen.append(acc)
+    return seen
+
+
+def duplicate_input(ctx: Context, tx: Transaction, on: date) -> TransactionInput:
+    """Form input for a copy of `tx` dated `on` (F06): no import link, a spread booking copies its exchange."""
+    if tx.type == TX_REVALUATION and tx.linked_id:
+        tx = ctx.store.transactions.get(tx.linked_id) or tx
+    inp = edit_input(ctx, tx)
+    inp.date, inp.import_ref = on, ""
+    return inp

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from nicegui import ui
 
 from budget_app.domain.coicop import get_coicop
@@ -141,6 +143,11 @@ def page() -> None:
             ui.button(t("Edit"), icon="o_edit", on_click=lambda: edit_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
                 "text-primary"
             )
+            ui.button(
+                t("Duplicate"),
+                icon="o_content_copy",
+                on_click=lambda: duplicate_selected(),  # noqa: PLW0108 - defined below
+            ).props("flat dense").classes("text-primary")
             ui.button(t("Delete"), icon="o_delete", on_click=lambda: delete_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
                 "text-negative"
             )
@@ -205,6 +212,16 @@ def page() -> None:
                 error(t("Select exactly one transaction to edit"))
                 return
             open_editor(rows[0]["id"])
+
+        async def duplicate_selected() -> None:
+            rows = await grid.get_selected_rows()
+            if len(rows) != 1:
+                error(t("Select exactly one transaction to duplicate"))
+                return
+            tx = ctx.store.transactions.get(rows[0]["id"])
+            if tx is not None:
+                prefill = tx_svc.duplicate_input(ctx, tx, date.today())
+                open_transaction_sheet(ctx, apply_filters, prefill=prefill, items_from=tx.id)
 
         async def delete_selected() -> None:
             rows = await grid.get_selected_rows()

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from nicegui import app, run, ui
 from nicegui.client import Client
+from nicegui.events import KeyEventArguments
 
 from budget_app import config, i18n
 from budget_app.domain import months
@@ -106,6 +107,14 @@ def _new_transaction() -> None:
     open_transaction_sheet(get_ctx(), on_saved=data_changed)
 
 
+def _page_shortcut(e: KeyEventArguments) -> None:
+    """N opens a new transaction on every page (F06)."""
+    mods = e.modifiers
+    plain = not (mods.ctrl or mods.meta or mods.alt)
+    if e.action.keydown and not e.action.repeat and e.key.name in ("n", "N") and plain:
+        _new_transaction()
+
+
 @contextmanager
 def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = False):
     """Page skeleton. Yields (ctx, actions): `actions` is the row beside the title for page-level buttons.
@@ -115,6 +124,7 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
     ctx = get_ctx()
     theme.apply_colors()
     ui.page_title(f"{title} – Budget")
+    ui.keyboard(on_key=_page_shortcut)  # ignores keys typed into fields
     current = NAV_PARENT.get(path, path)
     with (
         ui.left_drawer().props("width=232 :breakpoint=1023").classes("sidebar") as drawer,
