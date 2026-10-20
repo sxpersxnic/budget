@@ -47,6 +47,8 @@ def _columns(currency: str) -> list[dict]:
         },
         date_col("date", t("Date"), width=120),
         {"field": "text", "headerName": t("Description"), "flex": 1, "minWidth": 200},
+        # the payee found for the row (F09); double-click to change it, the bank text is remembered for it
+        {"field": "payee", "headerName": t("Payee"), "width": 180, "editable": True},
         amount,
         {"field": "category", "headerName": t("Category"), "width": 260},
         {"field": "status", "headerName": t("Status"), "width": 170, "cellClass": "muted"},
@@ -374,6 +376,7 @@ def page() -> None:
                     "include": r.include,
                     "date": r.date.isoformat() if r.date else "",
                     "text": r.text,
+                    "payee": r.payee,
                     "amount": r.amount,
                     "category": (
                         t("{category} (suggested)", category=category_labels.get(r.category, ""))
@@ -522,6 +525,8 @@ def page() -> None:
             if row is not None and e.args.get("colId") == "include":
                 row.include = bool(e.args.get("newValue")) and row.status != importer.ERROR
                 update_status()
+            elif row is not None and e.args.get("colId") == "payee":
+                row.payee = " ".join(str(e.args.get("newValue") or "").split())
 
         def save_settings() -> None:
             if state["parsed"] is None:

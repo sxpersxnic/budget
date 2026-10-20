@@ -25,6 +25,7 @@ from pathlib import Path
 from budget_app.domain.coicop import TAX, get_coicop
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, Transaction
 from budget_app.i18n import N_, t
+from budget_app.services import payees as payee_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
@@ -67,6 +68,24 @@ _TEXT_NAMES = (
     "beschreibung1",
     "beschreibung2",
     "beschreibung3",
+)
+
+
+# description columns that name the counterparty alone: the payee is read from them (F09)
+_PARTY_NAMES = (
+    "empfänger",
+    "zahlungsempfänger",
+    "begünstigter",
+    "auftraggeber",
+    "gegenpartei",
+    "händler",
+    "payee",
+    "merchant",
+    "counterparty",
+    "beneficiary",
+    "bénéficiaire",
+    "commerçant",
+    "beneficiario",
 )
 
 
@@ -133,6 +152,13 @@ class ImportRow:
     suggested: bool = False  # category taken from an earlier transaction with the same text
     import_ref: str = ""
     balance: float | None = None  # the account's balance after this booking, when the file shows it
+    counterparty: str = ""  # who was paid or who paid, when the file names them apart from the text
+    payee: str = ""  # F09: found from the counterparty (else the text) by `analyse`, editable in the preview
+
+    @property
+    def payee_source(self) -> str:
+        """The bank text the payee is read from, and remembered by."""
+        return self.counterparty or self.text
 
     @property
     def type(self) -> str:
@@ -304,10 +330,11 @@ def parse_rows(parsed: ParsedFile, profile: ImportProfile) -> list[ImportRow]:
         i = idx.get(name)
         return row[i].strip() if i is not None and i < len(row) else ""
 
+    party_col = next((c for c in profile.text_cols if c.strip().lower() in _PARTY_NAMES), "")
     out = []
     for n, raw in enumerate(parsed.data):
         text = " · ".join(v for v in (cell(raw, c) for c in profile.text_cols) if v)
-        row = ImportRow(index=n, date=None, amount=None, text=text)
+        row = ImportRow(index=n, date=None, amount=None, text=text, counterparty=cell(raw, party_col))
         try:
             row.date = _parse_date(cell(raw, profile.date_col), profile.date_format)
             if row.date is None:
@@ -348,7 +375,7 @@ def _norm(text: str, keep_digits: bool = True) -> str:
 
 
 def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[ImportRow]:
-    """Set import references, mark duplicates and suggest categories from earlier transactions.
+    """Set import references, mark duplicates, suggest categories from earlier transactions and find payees.
 
     Rows from a camt statement arrive with the bank's reference (`camt:…`) and keep it; CSV rows get a
     fingerprint. A row matching a transaction entered by hand, or imported from the other kind of file,
@@ -378,6 +405,8 @@ def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Import
             row.status, row.include = POSSIBLE_DUPLICATE, False
         else:
             row.status, row.include = NEW, True
+        if not row.payee:
+            row.payee = payee_svc.resolve(ctx, row.payee_source)
         if not row.category:
             suggestion = history.get((row.type, _norm(row.text, keep_digits=False)))
             if suggestion:
@@ -427,13 +456,17 @@ def commit(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Transac
             category=row.category,
             comment=row.text,
             import_ref=row.import_ref,
+            payee=row.payee,
         )
         if row.type == TX_EXPENDITURE:
             inp.from_account = account_id
         else:
             inp.to_account = account_id
         inputs.append(inp)
-    return tx_svc.save_many(ctx, inputs)
+    saved = tx_svc.save_many(ctx, inputs)
+    # the bank texts are remembered for their payees, so a later rename or merge holds for the next import
+    payee_svc.learn(ctx, [(r.payee_source, r.payee) for r in rows if r.include and r.payee.strip()])
+    return saved
 
 
 # ------------------------------------------------------------------ profiles

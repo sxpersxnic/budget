@@ -81,7 +81,32 @@ class Transaction:
     # an exchange and the revaluation booking its spread against the ECB rate point at each other (F44)
     linked_id: str = ""
     recurring_id: str = ""  # set when booked from a recurring transaction (F05): the series' id
+    payee: str = ""  # who was paid or who paid (F09): the name of a `Payee`; empty for transfers and older rows
     id: str = field(default_factory=new_id)
+
+
+ALIAS_SEP = "|"
+
+
+@dataclass
+class Payee:
+    """A merchant or counterparty (F09), such as "Migros".
+
+    `aliases` are lookup keys (`domain.payees.key`, folded) that lead to this payee, separated by "|": the
+    cleaned bank texts imported for it and its former names. Renaming and merging keep them, so the next
+    import of the same text lands on the payee the user chose.
+    """
+
+    name: str
+    aliases: str = ""
+    id: str = field(default_factory=new_id)
+
+    @property
+    def alias_list(self) -> list[str]:
+        return [a for a in self.aliases.split(ALIAS_SEP) if a]
+
+    def set_aliases(self, aliases: list[str]) -> None:
+        self.aliases = ALIAS_SEP.join(sorted(dict.fromkeys(a for a in aliases if a)))
 
 
 @dataclass
@@ -96,6 +121,7 @@ class Template:
     from_account: str = ""
     to_account: str = ""
     comment: str = ""
+    payee: str = ""  # F09
     id: str = field(default_factory=new_id)
 
 
@@ -168,6 +194,7 @@ class Recurring:
     recur_months: int = 1
     end: str = ""  # last day an occurrence may fall on ('YYYY-MM-DD'); empty: no end
     auto: bool = False  # book due occurrences without asking
+    payee: str = ""  # F09
     id: str = field(default_factory=new_id)
 
     @property

@@ -78,6 +78,7 @@ TABLE_NAMES = {
     "accounts": N_("Account"),
     "income_categories": N_("Income category"),
     "recurring": N_("Recurring transaction"),
+    "payees": N_("Payee"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 

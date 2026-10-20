@@ -22,6 +22,7 @@ from budget_app.domain.models import (
 )
 from budget_app.i18n import N_, t
 from budget_app.services import accounts as acc_svc
+from budget_app.services import payees as payee_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
 
@@ -65,6 +66,7 @@ class TransactionInput:
     comment: str = ""
     import_ref: str = ""  # non-empty for imported transactions: identifies the source row
     recurring_id: str = ""  # booked from a recurring transaction (F05)
+    payee: str = ""  # expenditure and income (F09); a new name adds a payee
 
 
 @dataclass
@@ -263,6 +265,8 @@ def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Tra
         import_ref=inp.import_ref,
         recurring_id=inp.recurring_id,
     )
+    if inp.type in payee_svc.PAYEE_TYPES:
+        tx.payee = payee_svc.ensure(ctx, inp.payee)
     if base is not None:
         tx.id = base.id
     if inp.type == TX_EXPENDITURE:
@@ -457,6 +461,7 @@ def to_input(tx: Transaction) -> TransactionInput:
         comment=tx.comment,
         import_ref=tx.import_ref,
         recurring_id=tx.recurring_id,
+        payee=tx.payee,
     )
     if tx.type == TX_EXPENDITURE and tx.is_advance:
         inp.advance_mode, inp.advance_value = "amount", tx.advance_amount

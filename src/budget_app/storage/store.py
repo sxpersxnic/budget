@@ -13,6 +13,7 @@ from budget_app.domain.models import (
     AccountEntry,
     BudgetEntry,
     IncomeCategory,
+    Payee,
     Recurring,
     Settings,
     Template,
@@ -59,6 +60,7 @@ class Store:
         self.budget = CsvTable(data_dir / "budget_entries.csv", BudgetEntry, h)
         self.templates = CsvTable(data_dir / "templates.csv", Template, h)
         self.recurring = CsvTable(data_dir / "recurring.csv", Recurring, h)
+        self.payees = CsvTable(data_dir / "payees.csv", Payee, h)
         self._settings = SettingsStore(data_dir / "settings.json")
 
     def tables(self) -> dict[str, CsvTable]:
@@ -72,6 +74,7 @@ class Store:
             self.budget,
             self.templates,
             self.recurring,
+            self.payees,
         ]
         return {t.name: t for t in tables}
 

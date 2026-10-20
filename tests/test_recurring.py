@@ -347,7 +347,7 @@ def test_series_are_stored_in_recurring_csv(tmp_path, ctx, setup):
     assert again.recurring.get(open_ended.id).end_date is None
     header = (ctx.store.data_dir / "recurring.csv").read_text().splitlines()[0]
     assert header == (
-        "type,amount,currency,start,next_due,category,from_account,to_account,comment,recur_months,end,auto,id"
+        "type,amount,currency,start,next_due,category,from_account,to_account,comment,recur_months,end,auto,payee,id"
     )
     doc = json.loads(export_svc.everything_json(ctx))
     assert {r["id"] for r in doc["recurring"]} == {series.id, open_ended.id}

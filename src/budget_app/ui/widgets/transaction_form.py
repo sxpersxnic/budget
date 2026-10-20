@@ -26,6 +26,7 @@ from budget_app.domain.models import (
 )
 from budget_app.i18n import N_, t, tc
 from budget_app.services import items as items_svc
+from budget_app.services import payees as payee_svc
 from budget_app.services import templates as templates_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
@@ -50,6 +51,7 @@ from budget_app.ui.widgets.selects import (
     expenditure_category_select,
     income_category_options,
     income_category_select,
+    payee_input,
     set_options,
 )
 
@@ -112,6 +114,8 @@ class TransactionForm:
             self.date = date_input(t("Date"), init.date.isoformat() if init.date else "", on_change=ch).classes(
                 "w-full"
             )
+            # who was paid or who paid (F09); transfers, exchanges and revaluations stay between own accounts
+            self.payee = payee_input(self.ctx, init.payee if init.type in payee_svc.PAYEE_TYPES else "")
 
             # --- expenditure
             with ui.column().classes("w-full gap-3") as self.exp_box:
@@ -305,6 +309,7 @@ class TransactionForm:
                 self.move_from.set_value(inp.from_account or None)
                 self.move_to.set_value(inp.to_account or None)
             self.comment.set_value(inp.comment)
+            self.payee.set_value(inp.payee)
         finally:
             self._busy = False
         self._changed()
@@ -386,6 +391,7 @@ class TransactionForm:
         self.reval_change.set_visibility(not values)
         self.reval_values.set_visibility(values)
         self.items_box.set_visibility(kind in (TX_EXPENDITURE, TX_INCOME))
+        self.payee.set_visibility(kind in payee_svc.PAYEE_TYPES)
         self.exp_adv_box.set_visibility(bool(self.exp_adv.value))
         self.inc_adv_box.set_visibility(bool(self.inc_adv.value))
         self.inc_category.set_visibility(not self.inc_adv.value)
@@ -526,6 +532,7 @@ class TransactionForm:
             amount=self.amount.value,
             currency=self.currency.value or "",
             comment=self.comment.value or "",
+            payee=(self.payee.value or "") if kind in payee_svc.PAYEE_TYPES else "",
         )
         if kind == TX_EXPENDITURE:
             inp.category = self.exp_category.value or ""
@@ -604,6 +611,8 @@ class TransactionForm:
             self.inc_adv.set_value(False)
             self.debtor.set_value("")
             self.comment.set_value("")
+            self.payee.set_value("")
+            self.payee.set_autocomplete(payee_svc.names(self.ctx))  # with the payee just saved
             self.exp_adv_account.set_value(None)
             self.items.clear()
         finally:

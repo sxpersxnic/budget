@@ -19,6 +19,7 @@ from budget_app.domain.models import (
 from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import items as items_svc
+from budget_app.services import payees as payee_svc
 from budget_app.services import recurring as rec_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import ValidationError
@@ -28,12 +29,14 @@ from budget_app.ui.pages.add_budget import recurrence_label
 from budget_app.ui.pages.recurring import open_recurring_sheet
 from budget_app.ui.widgets.bulk_edit import open_bulk_edit_sheet
 from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
+from budget_app.ui.widgets.selects import set_options
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 
 def _columns() -> list[dict]:
     return [
         date_col("date", t("Date"), sort="desc", width=120),
+        {"field": "payee", "headerName": t("Payee"), "width": 180},
         {"field": "category", "headerName": t("Category"), "width": 250},
         money_col("amount", t("Amount"), width=150),
         {"field": "items", "headerName": t("Items"), "width": 90, "type": "rightAligned", "cellClass": "muted"},
@@ -85,6 +88,7 @@ def _row(
         "currency": tx.currency,
         "amount_chf": round(tx.amount_chf, 2),
         "category": category,
+        "payee": tx.payee,
         "from": accs.get(tx.from_account, ""),
         "to": to,
         "advance": advance,
@@ -94,6 +98,7 @@ def _row(
         "recurring": (repeats or {}).get(tx.recurring_id, "") if tx.recurring_id else "",
         "_search": " ".join(
             [
+                tx.payee,
                 category,
                 accs.get(tx.from_account, ""),
                 to,
@@ -137,6 +142,10 @@ def page() -> None:
                 clearable=True,
             )
             acc.props("dense outlined").classes("w-56")
+            payee = ui.select(
+                [p.name for p in payee_svc.all_payees(ctx)], label=t("Payee"), with_input=True, clearable=True
+            )
+            payee.props("dense outlined").classes("w-56")
             typ = (
                 ui.select({k: t(v) for k, v in TX_TYPES.items()}, label=t("Type"), clearable=True)
                 .props("dense outlined")
@@ -167,6 +176,7 @@ def page() -> None:
         shown: list[dict] = []  # the rows the filters let through, for the export
 
         def apply_filters() -> None:
+            set_options(payee, [p.name for p in payee_svc.all_payees(ctx)])  # with payees added since
             start, end = parse_date(d_from.value), parse_date(d_to.value)
             q = (text.value or "").lower().strip()
             accs = {a.id: acc_svc.account_label(a) for a in ctx.store.accounts.all()}
@@ -182,6 +192,8 @@ def page() -> None:
                 ):
                     continue
                 if typ.value and tx.type != typ.value:
+                    continue
+                if payee.value and tx.payee != payee.value:
                     continue
                 received = tx_svc.received_amount(ctx, tx) if tx.type == TX_EXCHANGE else None
                 r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats)
@@ -202,7 +214,7 @@ def page() -> None:
             )
             bar.set_visibility(False)
 
-        for el in (d_from, d_to, a_min, a_max, acc, typ, text):
+        for el in (d_from, d_to, a_min, a_max, acc, payee, typ, text):
             el.on_value_change(apply_filters)
         apply_filters()
         on_data_changed(apply_filters)

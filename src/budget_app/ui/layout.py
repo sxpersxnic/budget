@@ -33,6 +33,7 @@ NAV = [
     ("/recurring", N_("Recurring"), "o_event_repeat"),
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
     ("/categories", N_("Categories"), "o_account_tree"),
+    ("/payees", N_("Payees"), "o_storefront"),
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")
 # Routes that are not in the sidebar highlight their parent.

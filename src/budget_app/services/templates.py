@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from budget_app.domain.models import TX_EXCHANGE, TX_REVALUATION, Template
 from budget_app.i18n import N_, t
+from budget_app.services import payees as payee_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
 from budget_app.services.undo import recorded
@@ -18,7 +19,7 @@ def all_templates(ctx: Context) -> list[Template]:
 
 @recorded(N_("Save a template"))
 def save(ctx: Context, name: str, inp: TransactionInput) -> Template:
-    """Save `inp`'s type, amount, currency, category, accounts and note as `name`.
+    """Save `inp`'s type, amount, currency, category, accounts, payee and note as `name`.
 
     A template with the same name is replaced.
     """
@@ -36,6 +37,7 @@ def save(ctx: Context, name: str, inp: TransactionInput) -> Template:
         from_account=inp.from_account,
         to_account=inp.to_account,
         comment=inp.comment.strip(),
+        payee=payee_svc.ensure(ctx, inp.payee),
     )
     same = next((tp for tp in ctx.store.templates.all() if tp.name.lower() == name.lower()), None)
     if same is not None:
@@ -58,4 +60,5 @@ def as_input(template: Template, base: TransactionInput) -> TransactionInput:
     base.from_account = template.from_account
     base.to_account = template.to_account
     base.comment = template.comment
+    base.payee = template.payee
     return base
