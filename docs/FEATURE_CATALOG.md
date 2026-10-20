@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19, 20, 21 and 23 done (F24, F25, F28, F08, F06, F05, F02) and F29; step 22 partly (F09 done); steps 24, 25 open |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 23 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02) and F29; steps 24, 25 open |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -60,7 +60,7 @@ Waits for the source data (decision 7).
 | 19 | ☑ Done | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from milestone 1. |
 | 20 | ☑ Done | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
 | 21 | ☑ Done | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
-| 22 | ◐ Partly | **F09** Payees (done) → **F07** Automatic categorization → **F13** Bulk edit (done) | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
+| 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☐ Open | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
 | 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
@@ -106,7 +106,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
    "the file ends on *date* — not a month-end balance"; complete months are ticked. Built.
 7. **F39, F40:** which source for level 5 and for the German notes?
 8. ☑ **F07:** decided on 2026-10-20 — rules and learning from history, no AI. Confirming a
-   suggestion does not create a rule; *Always categorize like this* does, on request.
+   suggestion does not create a rule; *Always categorize like this* does, on request. Built.
 
 ## All features
 
@@ -118,7 +118,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
 | F05 | ☑ Done | Recurring transactions | Data in | M | Local | – |
 | F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
-| F07 | ☐ Open | Automatic categorization | Organizing | M–L | Optional | F09 |
+| F07 | ☑ Done | Automatic categorization | Organizing | M–L | Local | F09 |
 | F08 | ☑ Done | Simpler category picker | Organizing | S | Local | – |
 | F09 | ☑ Done | Payees | Organizing | M | Local | – |
 | F10 | ☐ Open | Tags | Organizing | M | Local | – |
@@ -444,7 +444,25 @@ Small changes for the most frequent task:
 
 #### F07 · Automatic categorization
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20)
+
+**As built:** levels 1 and 2, no AI (decision 8). **Rules** live in `rules.csv` (text, type, category, optional
+account) and are made only on request: *Always Categorize Like This…* in the Transactions selection bar (one
+expenditure or income with a category) and in the edit sheet opens a sheet with the payee as the text (without a
+payee, the name found in the note), the category and the type; a rule with the same text and type is named there,
+and saving replaces it. A rule matches when its text occurs in the payee or in the bank text or note, ignoring case
+and accents; the longest text wins, between equally long ones the newest. **History:** without a matching rule, the
+category the payee had most often among transactions of the same type (ties: the most recent), "Used 14 times for
+this payee"; rows stored before payees (F09) fall back to the same bank text without its digits. Where no account
+is fixed, an account is suggested too: the rule's, else the one the payee had most often. The **form** shows
+"Use Groceries · 01.1" with the reason under the category of a new expenditure or income once it has a payee; a
+click fills the category (and the account, if still empty). The **import preview** (CSV and camt) fills in
+suggestions in italics, with a *Suggestion* column for the reason, counts them in the summary and offers *Clear
+Suggestions*; a category chosen by hand loses the mark, a changed payee brings a new suggestion, and importing keeps
+what the preview shows. Confirming a suggestion never makes a rule. **Categorization Rules** (`/rules`, under
+Payees; *Rules…* on the Payees page and in Settings) lists the rules per type, with add, edit and delete; every
+change is undoable. Not built: the AI level, conditions on amount or account, and applying a new rule to stored
+transactions (bulk edit, F13, does that).
 
 Suggest the category (and account) for new or imported transactions.
 
@@ -498,8 +516,8 @@ there, which teaches the alias. The form's payee field suggests known payees (re
 new name as typed. Transactions has a Payee column, search and filter. The **Payees** page lists every payee
 with its number of transactions and what was spent and received, and renames, merges (several → one name; their
 transactions, templates, series and aliases move) and deletes unused payees, each as one undo step. Not built:
-QR-bill creditors (with F03), category suggestions per payee (F07), a "top merchants" report, and payees on
-transfers.
+QR-bill creditors (with F03), a "top merchants" report, and payees on transfers. Category suggestions per payee
+came with F07.
 
 A payee or merchant field, normalized ("MIGROS ZUERICH HB 1234" → "Migros").
 
