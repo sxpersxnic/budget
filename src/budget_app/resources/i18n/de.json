@@ -59,6 +59,7 @@
  "Amounts in {currency} · month not yet complete (budget view)": "Beträge in {currency} · Monat noch nicht abgeschlossen (Budgetansicht)",
  "An account '{name}' in {currency} already exists": "Ein Konto «{name}» in {currency} gibt es bereits",
  "Appears once balances are recorded for this and the previous month.": "Erscheint, sobald Salden für diesen und den Vormonat erfasst sind.",
+ "Append": "Anfügen",
  "Apply": "Anwenden",
  "Apply exchange rates": "Wechselkurse anwenden",
  "Automatic Backups": "Automatische Sicherungen",
@@ -115,8 +116,16 @@
  "Change per Account": "Veränderung pro Konto",
  "Change the budget": "Budget ändern",
  "Change the planning horizon": "Planungshorizont ändern",
+ "Changed {n} transaction": [
+  "{n} Buchung geändert",
+  "{n} Buchungen geändert"
+ ],
  "Changes apply from the next occurrence on. Transactions already booked stay as they are.": "Änderungen gelten ab dem nächsten Termin. Bereits gebuchte Buchungen bleiben, wie sie sind.",
  "Changes saved": "Änderungen gesichert",
+ "Changes {n} transaction": [
+  "Ändert {n} Buchung",
+  "Ändert {n} Buchungen"
+ ],
  "Changing Until or Repeat replans this budget from {month} on.": "Eine Änderung von «Bis» oder «Wiederholen» plant dieses Budget ab {month} neu.",
  "Chart error: {error}": "Diagrammfehler: {error}",
  "Choose Backup…": "Sicherung wählen …",
@@ -124,6 +133,7 @@
  "Choose a category first": "Bitte zuerst eine Kategorie wählen",
  "Choose the account the file belongs to": "Bitte das Konto wählen, zu dem die Datei gehört",
  "Choose the account this file belongs to.": "Bitte das Konto wählen, zu dem diese Datei gehört.",
+ "Clear": "Leeren",
  "Closing": "Schluss",
  "Comma ,": "Komma ,",
  "Could not create the image: {error}": "Das Bild konnte nicht erstellt werden: {error}",
@@ -191,6 +201,11 @@
  "Edit Recurring Transaction": "Wiederkehrende Buchung bearbeiten",
  "Edit Transaction": "Buchung bearbeiten",
  "Edit budget": "Budget bearbeiten",
+ "Edit several transactions": "Mehrere Buchungen bearbeiten",
+ "Edit {n} Transaction": [
+  "{n} Buchung bearbeiten",
+  "{n} Buchungen bearbeiten"
+ ],
  "End of {month}": "Ende {month}",
  "Enter a name for these settings": "Bitte einen Namen für diese Einstellungen eingeben",
  "Enter the amount": "Bitte den Betrag eingeben",
@@ -213,6 +228,7 @@
  "Exchanges and revaluations can’t be saved as templates": "Wechsel und Neubewertungen lassen sich nicht als Vorlage speichern",
  "Exclude": "Auslassen",
  "Expenditure": "Ausgabe",
+ "Expenditure category": "Ausgabenkategorie",
  "Export Data as CSV…": "Daten als CSV exportieren …",
  "Export Data as Excel…": "Daten als Excel exportieren …",
  "Export Everything": "Alles exportieren",
@@ -228,6 +244,7 @@
  "Filters": "Filter",
  "First Date": "Erstes Datum",
  "For a currency exchange the accounts need different currencies": "Für einen Währungswechsel brauchen die Konten verschiedene Währungen",
+ "For expenditure the From account, for income the To account.": "Bei Ausgaben das Belastungskonto, bei Einnahmen das Gutschriftskonto.",
  "Forever": "Unbefristet",
  "From": "Von",
  "From Account": "Belastungskonto",
@@ -274,6 +291,7 @@
  "Kind": "Art",
  "Language": "Sprache",
  "Leave Until empty to repeat without an end.": "«Bis» leer lassen, um ohne Ende zu wiederholen.",
+ "Leave unchanged": "Unverändert lassen",
  "Lines": "Linien",
  "Make Recurring…": "Wiederkehrend machen …",
  "Max amount": "Höchstbetrag",
@@ -313,6 +331,7 @@
  "No valid date": "Kein gültiges Datum",
  "Not recorded, last balance carried over": "Nicht erfasst, letzter Saldo übernommen",
  "Note": "Notiz",
+ "Nothing changes: the rows already look like this.": "Nichts ändert sich: Die Buchungen sind bereits so.",
  "Nothing is due.": "Nichts ist fällig.",
  "Nothing matches these filters.": "Keine Einträge passen zu diesen Filtern.",
  "Old and New Value": "Alter und neuer Wert",
@@ -371,6 +390,7 @@
  "Repays an advance payment": "Rückzahlung einer Auslage",
  "Repeat": "Wiederholen",
  "Repeats": "Wiederholung",
+ "Replace": "Ersetzen",
  "Replace all records with {source}?": "Alle Daten durch {source} ersetzen?",
  "Replace existing budget for this category in these months": "Bestehendes Budget dieser Kategorie in diesen Monaten ersetzen",
  "Replaces all records with those of a backup file.": "Ersetzt alle Daten durch die einer Sicherungsdatei.",
@@ -403,7 +423,6 @@
  "Select an income category": "Bitte eine Einnahmenkategorie wählen",
  "Select exactly one budget entry to edit": "Bitte genau einen Budgeteintrag zum Bearbeiten auswählen",
  "Select exactly one transaction to duplicate": "Genau eine Buchung zum Duplizieren wählen",
- "Select exactly one transaction to edit": "Bitte genau eine Buchung zum Bearbeiten auswählen",
  "Select exactly one transaction to make recurring": "Bitte genau eine Buchung auswählen, die wiederkehrend werden soll",
  "Select expenditure, income or account transfer": "Bitte Ausgabe, Einnahme oder Kontoübertrag wählen",
  "Select income or expenditure": "Bitte Einnahme oder Ausgabe wählen",
@@ -468,6 +487,7 @@
  "The plan ends in {month}, before the first month. Extend it in Settings.": "Die Planung endet {month}, vor dem ersten Monat. In den Einstellungen verlängern.",
  "The recurrence must be at least every month": "Die Wiederholung muss mindestens monatlich sein",
  "The repayment exceeds the outstanding amount ({amount})": "Die Rückzahlung ist höher als der offene Betrag ({amount})",
+ "The rows are in different currencies ({currencies}), so their account can’t be changed together.": "Die Buchungen sind in verschiedenen Währungen ({currencies}), deshalb lässt sich ihr Konto nicht gemeinsam ändern.",
  "The statement has no booked entries": "Der Auszug enthält keine gebuchten Posten",
  "The statement is in {currency}, but “{account}” is in {account_currency}. Choose an account in {currency}.": "Der Auszug ist in {currency}, aber «{account}» in {account_currency}. Bitte ein Konto in {currency} wählen.",
  "The value did not change": "Der Wert hat sich nicht verändert",
@@ -497,7 +517,9 @@
  "Transaction not found": "Buchung nicht gefunden",
  "Transactions": "Buchungen",
  "Transactions it has already booked stay.": "Bereits gebuchte Buchungen bleiben bestehen.",
+ "Transfers, exchanges and revaluations keep their accounts.": "Kontoüberträge, Währungswechsel und Neubewertungen behalten ihre Konten.",
  "Type": "Art",
+ "Unchanged": "Unverändert",
  "Undo": "Rückgängig",
  "Undo: {action}": "Rückgängig: {action}",
  "Undone: {action}": "Rückgängig gemacht: {action}",
@@ -613,6 +635,22 @@
   "{n} neu",
   "{n} neu"
  ],
+ "{n} of {total} rows is a transfer, exchange or revaluation and keeps its accounts.": [
+  "{n} von {total} Buchungen ist ein Kontoübertrag, Währungswechsel oder eine Neubewertung und behält ihre Konten.",
+  "{n} von {total} Buchungen sind Kontoüberträge, Währungswechsel oder Neubewertungen und behalten ihre Konten."
+ ],
+ "{n} of {total} rows is not expenditure and keeps its category": [
+  "{n} von {total} Buchungen ist keine Ausgabe und behält ihre Kategorie",
+  "{n} von {total} Buchungen sind keine Ausgaben und behalten ihre Kategorie"
+ ],
+ "{n} of {total} rows is not income and keeps its category": [
+  "{n} von {total} Buchungen ist keine Einnahme und behält ihre Kategorie",
+  "{n} von {total} Buchungen sind keine Einnahmen und behalten ihre Kategorie"
+ ],
+ "{n} of {total} rows is not income, or repays an advance, and keeps its category": [
+  "{n} von {total} Buchungen ist keine Einnahme oder zahlt eine Auslage zurück und behält ihre Kategorie",
+  "{n} von {total} Buchungen sind keine Einnahmen oder zahlen Auslagen zurück und behalten ihre Kategorie"
+ ],
  "{n} pending entry left out": [
   "{n} vorgemerkte Buchung weggelassen",
   "{n} vorgemerkte Buchungen weggelassen"
@@ -637,6 +675,10 @@
   "{n} ausgewählt",
   "{n} ausgewählt"
  ],
+ "{n} spread booking of a currency exchange keeps its note; it changes with its exchange.": [
+  "{n} Kursdifferenz eines Währungswechsels behält ihre Notiz; sie ändert sich mit ihrem Wechsel.",
+  "{n} Kursdifferenzen von Währungswechseln behalten ihre Notiz; sie ändern sich mit ihrem Wechsel."
+ ],
  "{n} subcategory": [
   "{n} Unterkategorie",
   "{n} Unterkategorien"
@@ -648,6 +690,10 @@
  "{n} transaction booked": [
   "{n} Buchung gebucht",
   "{n} Buchungen gebucht"
+ ],
+ "{n} transaction can’t be changed, so nothing is saved:": [
+  "{n} Buchung kann nicht geändert werden, deshalb wird nichts gesichert:",
+  "{n} Buchungen können nicht geändert werden, deshalb wird nichts gesichert:"
  ],
  "{n} unreadable": [
   "{n} unlesbar",

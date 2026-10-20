@@ -26,6 +26,7 @@ from budget_app.services.reports import ADV_REPAY_NAME
 from budget_app.ui.layout import date_input, error, frame, on_data_changed, parse_date, undoable
 from budget_app.ui.pages.add_budget import recurrence_label
 from budget_app.ui.pages.recurring import open_recurring_sheet
+from budget_app.ui.widgets.bulk_edit import open_bulk_edit_sheet
 from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
@@ -217,11 +218,12 @@ def page() -> None:
             selected_label.set_text(tn("{n} selected", "{n} selected", len(rows)))
 
         async def edit_selected() -> None:
+            """One row opens the editor, several the bulk edit sheet (F13)."""
             rows = await grid.get_selected_rows()
-            if len(rows) != 1:
-                error(t("Select exactly one transaction to edit"))
-                return
-            open_editor(rows[0]["id"])
+            if len(rows) == 1:
+                open_editor(rows[0]["id"])
+            elif rows:
+                open_bulk_edit_sheet(ctx, [r["id"] for r in rows], apply_filters)
 
         async def duplicate_selected() -> None:
             rows = await grid.get_selected_rows()
