@@ -38,6 +38,10 @@ def recurrence_options() -> dict[int, str]:
     return {k: t(v) for k, v in RECURRENCE.items()}
 
 
+def recurrence_label(recur_months: int) -> str:
+    return t(RECURRENCE[recur_months]) if recur_months in RECURRENCE else t("Every {n} months", n=recur_months)
+
+
 def budget_form(ctx: Context, on_saved: Callable[[], None] | None = None, on_cancel=None) -> None:
     horizon = ctx.horizon()
     start_range, _ = data_month_range(ctx)

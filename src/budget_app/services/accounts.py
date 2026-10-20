@@ -27,6 +27,8 @@ def account_in_use(ctx: Context, account_id: str) -> bool:
     for tx in ctx.store.transactions.all():
         if account_id in (tx.from_account, tx.to_account, tx.advance_account):
             return True
+    if any(account_id in (r.from_account, r.to_account) for r in ctx.store.recurring.all()):
+        return True
     return any(e.account_id == account_id for e in ctx.store.account_entries.all())
 
 
@@ -64,6 +66,8 @@ def edit_account(ctx: Context, account_id: str, name: str, currency: str) -> Acc
 def delete_account(ctx: Context, account_id: str) -> None:
     if any(account_id in (tx.from_account, tx.to_account, tx.advance_account) for tx in ctx.store.transactions.all()):
         raise ValidationError(t("Accounts with transactions cannot be deleted"))
+    if any(account_id in (r.from_account, r.to_account) for r in ctx.store.recurring.all()):
+        raise ValidationError(t("Accounts used by recurring transactions cannot be deleted"))
     ctx.store.account_entries.delete([e.id for e in ctx.store.account_entries.where(account_id=account_id)])
     ctx.store.accounts.delete([account_id])
 
@@ -82,8 +86,10 @@ def income_categories(ctx: Context) -> list[IncomeCategory]:
 
 
 def income_category_in_use(ctx: Context, cat_id: str) -> bool:
-    return any(tx.type == "income" and tx.category == cat_id for tx in ctx.store.transactions.all()) or any(
-        b.type == "income" and b.category == cat_id for b in ctx.store.budget.all()
+    return (
+        any(tx.type == "income" and tx.category == cat_id for tx in ctx.store.transactions.all())
+        or any(b.type == "income" and b.category == cat_id for b in ctx.store.budget.all())
+        or any(r.type == "income" and r.category == cat_id for r in ctx.store.recurring.all())
     )
 
 

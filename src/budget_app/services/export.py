@@ -285,5 +285,6 @@ def everything_json(ctx: Context) -> bytes:
         "transaction_items": table(store.transaction_items.all()),
         "account_entries": table(sorted(store.account_entries.all(), key=lambda e: (e.month, e.account_id))),
         "budget_entries": table(sorted(store.budget.all(), key=lambda b: (b.month, b.type, b.category))),
+        "recurring": table(sorted(store.recurring.all(), key=lambda r: (r.start, r.id))),
     }
     return json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8")

@@ -92,6 +92,7 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 .nav-item:hover { background: var(--fill-2); }
 .nav-item.active { background: var(--fill); font-weight: 600; }
 .nav-item .q-icon { color: var(--accent); font-size: 19px; }
+.nav-badge { font-size: 11px; font-weight: 600; min-height: 17px; padding: 0 6px; }
 .nav-footer { font-size: 11px; color: var(--label-3); line-height: 1.4; }
 .mobile-bar { background: color-mix(in srgb, var(--bg) 82%, transparent) !important; color: var(--label) !important;
   backdrop-filter: saturate(180%) blur(20px); border-bottom: 0.5px solid var(--separator); }

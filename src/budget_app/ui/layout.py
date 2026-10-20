@@ -17,6 +17,7 @@ from nicegui.events import KeyEventArguments
 from budget_app import config, i18n
 from budget_app.domain import months
 from budget_app.i18n import N_, t
+from budget_app.services import recurring as recurring_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
 from budget_app.services.context import Context, ValidationError, get_ctx
@@ -29,6 +30,7 @@ NAV = [
     ("/", N_("Overview"), "o_space_dashboard"),
     ("/budget", N_("Budget"), "o_donut_large"),
     ("/transactions", N_("Transactions"), "o_receipt_long"),
+    ("/recurring", N_("Recurring"), "o_event_repeat"),
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
     ("/categories", N_("Categories"), "o_account_tree"),
 ]
@@ -42,6 +44,7 @@ NAV_PARENT = {
 }
 
 _data_listeners: weakref.WeakKeyDictionary[Client, Callable[[], object]] = weakref.WeakKeyDictionary()
+_due_badges: weakref.WeakKeyDictionary[Client, ui.badge] = weakref.WeakKeyDictionary()
 
 
 def fmt(value: float | None, currency: str = "") -> str:
@@ -78,6 +81,14 @@ async def refresh_rates(ctx: Context) -> None:
         log.info("Valued %d transactions at the rate of their date", changed)
 
 
+def book_recurring(ctx: Context) -> int:
+    """Book what recurring transactions that book automatically have due (F05), after the rate check."""
+    booking = recurring_svc.book_automatic(ctx, date.today())
+    if booking.booked:
+        log.info("Booked %d recurring transactions", len(booking.booked))
+    return len(booking.booked)
+
+
 # ------------------------------------------------------------------ data change notification
 def on_data_changed(callback: Callable[[], object]) -> None:
     """Let the current page refresh itself when a sheet opened from the sidebar saves something."""
@@ -88,6 +99,17 @@ def data_changed() -> None:
     callback = _data_listeners.get(ui.context.client)
     if callback:
         callback()
+    refresh_due_badge()
+
+
+def refresh_due_badge() -> None:
+    """Show the number of due recurring transactions beside "Recurring" in the sidebar."""
+    badge = _due_badges.get(ui.context.client)
+    if badge is None:
+        return
+    n = recurring_svc.due_count(get_ctx(), date.today())
+    badge.set_text(str(n))
+    badge.set_visibility(n > 0)
 
 
 # ------------------------------------------------------------------ frame
@@ -99,6 +121,12 @@ def _nav_item(target: str, label: str, icon: str, active: bool) -> None:
     ):
         ui.icon(icon)
         ui.label(t(label))
+        if target == "/recurring":
+            ui.space()
+            badge = ui.badge().props("rounded").classes("nav-badge")
+            badge.tooltip(t("Due recurring transactions"))
+            _due_badges[ui.context.client] = badge
+            refresh_due_badge()
 
 
 def _new_transaction() -> None:

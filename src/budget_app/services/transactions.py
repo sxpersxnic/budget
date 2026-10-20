@@ -64,6 +64,7 @@ class TransactionInput:
     reval_new: float | None = None
     comment: str = ""
     import_ref: str = ""  # non-empty for imported transactions: identifies the source row
+    recurring_id: str = ""  # booked from a recurring transaction (F05)
 
 
 @dataclass
@@ -260,6 +261,7 @@ def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Tra
         fx_date=fx_date,
         comment=inp.comment.strip(),
         import_ref=inp.import_ref,
+        recurring_id=inp.recurring_id,
     )
     if base is not None:
         tx.id = base.id
@@ -318,6 +320,7 @@ def save(ctx: Context, inp: TransactionInput, editing_id: str = "") -> Transacti
                     t("This advance already has repayments: its currency and advance payment account cannot change")
                 )
         tx.linked_id = old.linked_id
+        tx.recurring_id = tx.recurring_id or old.recurring_id  # the form doesn't carry the series
         return _store_exchange_split(ctx, tx, old)
     return _store_exchange_split(ctx, _build(ctx, inp, None), None)
 
@@ -426,6 +429,7 @@ def to_input(tx: Transaction) -> TransactionInput:
         settles_id=tx.settles_id,
         comment=tx.comment,
         import_ref=tx.import_ref,
+        recurring_id=tx.recurring_id,
     )
     if tx.type == TX_EXPENDITURE and tx.is_advance:
         inp.advance_mode, inp.advance_value = "amount", tx.advance_amount
