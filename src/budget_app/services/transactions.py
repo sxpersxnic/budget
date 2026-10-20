@@ -413,6 +413,19 @@ def revalue_to_transaction_dates(ctx: Context) -> int:
     return len(changed)
 
 
+def recent_categories(ctx: Context, limit: int = 10) -> list[str]:
+    """The last `limit` distinct expenditure categories, by transaction date (same day: the latest entered first)."""
+    spent = [tx for tx in ctx.store.transactions.all() if tx.type == TX_EXPENDITURE and tx.category]
+    latest_first = sorted(enumerate(spent), key=lambda pair: (pair[1].date, pair[0]), reverse=True)
+    codes: list[str] = []
+    for _, tx in latest_first:
+        if tx.category not in codes:
+            codes.append(tx.category)
+            if len(codes) == limit:
+                break
+    return codes
+
+
 def to_input(tx: Transaction) -> TransactionInput:
     """Turn a stored transaction back into form input (for editing)."""
     inp = TransactionInput(

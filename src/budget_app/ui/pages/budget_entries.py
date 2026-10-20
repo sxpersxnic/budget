@@ -60,7 +60,7 @@ def edit_dialog(ctx: Context, entry: BudgetEntry, on_saved) -> None:
     until_opts = until_options(entry.month, ctx.horizon(), extra=sched.end_month)
     with sheet(t("Budget for {month}", month=months.label(entry.month)), width="30rem") as dlg:
         if entry.type == BUDGET_EXPENDITURE:
-            cat = expenditure_category_select(entry.category)
+            cat = expenditure_category_select(entry.category, ctx=ctx)
         else:
             cat = income_category_select(ctx, entry.category)
         with ui.row().classes("w-full gap-2 no-wrap items-center"):

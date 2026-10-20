@@ -347,6 +347,7 @@
  "Qty": "Menge",
  "Rate Date": "Kursdatum",
  "Rate received: {rate} · {difference} against the ECB rate": "Erhaltener Kurs: {rate} · {difference} gegenüber dem EZB-Kurs",
+ "Recently used": "Kürzlich verwendet",
  "Reconciliation": "Abgleich",
  "Record": "Erfassen",
  "Record Balance": "Saldo erfassen",

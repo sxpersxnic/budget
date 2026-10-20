@@ -116,7 +116,7 @@ class TransactionForm:
             # --- expenditure
             with ui.column().classes("w-full gap-3") as self.exp_box:
                 self.exp_category = expenditure_category_select(
-                    init.category if init.type == TX_EXPENDITURE else None, on_change=ch
+                    init.category if init.type == TX_EXPENDITURE else None, on_change=ch, ctx=self.ctx
                 )
                 self.exp_from = self._account_select(
                     t("From Account"), init.from_account if init.type == TX_EXPENDITURE else None
