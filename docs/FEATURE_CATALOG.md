@@ -105,6 +105,8 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 6. ☑ **F36:** decided — a month the file ends inside is offered **unticked**, with the note
    "the file ends on *date* — not a month-end balance"; complete months are ticked. Built.
 7. **F39, F40:** which source for level 5 and for the German notes?
+8. ☑ **F07:** decided on 2026-10-20 — rules and learning from history, no AI. Confirming a
+   suggestion does not create a rule; *Always categorize like this* does, on request.
 
 ## All features
 
@@ -455,8 +457,8 @@ Suggest the category (and account) for new or imported transactions.
 
 Suggestions are always shown and confirmable, never applied silently. Works best with
 payees (F09) and pays off most together with imports (F01, F02).
-**Decide:** which levels to build; whether confirmed suggestions should create rules
-automatically.
+**Decided** (decision 8): levels 1 and 2, no AI; rules are created only with *Always
+categorize like this*, never from a confirmed suggestion.
 
 #### F08 · Simpler category picker
 
