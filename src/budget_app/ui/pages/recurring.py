@@ -223,8 +223,9 @@ def page() -> None:
         def _due_row(ctx: Context, occ: Occurrence, waits_for: date | None) -> None:
             series = occ.series
             with ui.element("div").classes("group-row flex-wrap"):
-                with ui.column().classes("gap-0 flex-1 min-w-[10rem]"):
-                    ui.label(rec_svc.title(ctx, series)).classes("truncate")
+                # the name gets the full width: next to the inputs a long COICOP label was cut off
+                with ui.column().classes("gap-0 flex-1 " + ("min-w-[10rem]" if waits_for else "w-full")):
+                    ui.label(rec_svc.title(ctx, series))
                     caption = f"{i18n.date_label(occ.date)} · {t(TX_TYPES[series.type])}"
                     if waits_for:
                         caption += " · " + t("after the one on {date}", date=i18n.date_label(waits_for))
@@ -232,18 +233,19 @@ def page() -> None:
                 if waits_for:
                     ui.label(fmt(series.amount, series.currency)).classes("text-2")
                     return
-                amount = (
-                    ui.number(value=series.amount, min=0, format="%.2f")
-                    .props(f'dense outlined inputmode=decimal suffix="{series.currency}"')
-                    .classes("w-36")
-                )
-                when = date_input(t("Date"), occ.date.isoformat()).classes("w-40")
-                inputs[(series.id, occ.date)] = (amount, when)
-                with ui.row().classes("gap-0 no-wrap"):
-                    ui.button(t("Book"), on_click=lambda: book(occ, amount.value, parse_date(when.value))).props(
-                        "flat dense no-caps"
-                    ).classes("text-primary")
-                    ui.button(t("Skip"), on_click=lambda: skip(occ)).props("flat dense no-caps").classes("text-2")
+                with ui.row().classes("w-full items-center gap-2"):
+                    amount = (
+                        ui.number(value=series.amount, min=0, format="%.2f")
+                        .props(f'dense outlined inputmode=decimal suffix="{series.currency}"')
+                        .classes("w-36")
+                    )
+                    when = date_input(t("Date"), occ.date.isoformat()).classes("w-40")
+                    inputs[(series.id, occ.date)] = (amount, when)
+                    with ui.row().classes("gap-0 no-wrap"):
+                        ui.button(t("Book"), on_click=lambda: book(occ, amount.value, parse_date(when.value))).props(
+                            "flat dense no-caps"
+                        ).classes("text-primary")
+                        ui.button(t("Skip"), on_click=lambda: skip(occ)).props("flat dense no-caps").classes("text-2")
 
         @ui.refreshable
         def series_list() -> None:
