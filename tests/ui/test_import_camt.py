@@ -5,6 +5,7 @@ from datetime import date
 from nicegui import ui
 from nicegui.elements.upload_files import SmallFileUpload
 from nicegui.testing import User
+from notifications import notified
 from test_camt import CAMT053, CAMT054, IBAN
 from test_import_page import button, categorise, click, field, import_button, put, rows, settle, status
 from test_importer import DE
@@ -50,7 +51,7 @@ async def test_a_statement_goes_straight_to_review(user: User, ctx, setup) -> No
 
     click(user, import_button(user))
     await user.should_see("Transactions")
-    assert user.notify.contains("Imported 6 transactions")
+    assert notified(user, "Imported 6 transactions")
     stored = sorted(ctx.store.transactions.all(), key=lambda tx: (tx.date, tx.amount))
     assert [(tx.date, tx.amount, tx.currency) for tx in stored][:2] == [
         (date(2026, 9, 2), 45.8, "CHF"),
@@ -84,7 +85,7 @@ async def test_a_statement_in_another_currency_is_refused(user: User, ctx, setup
     await upload_xml(user, "september.xml", CAMT053)
     put(user, field(user, ui.select, "Account"), setup["eur"].id)
     message = "The statement is in CHF, but “Euro account” is in EUR. Choose an account in CHF."
-    assert user.notify.contains(message)
+    assert notified(user, message)
     assert status(user) == message
     assert not import_button(user).enabled
     assert all(r["amount"] for r in rows(user))  # still shown, so the user sees what the file holds
@@ -104,14 +105,14 @@ async def test_a_csv_file_after_a_statement_brings_the_columns_back(user: User, 
     assert len(accounts(user)) == 1  # the one account field is back in the columns step
     assert field(user, ui.select, "Date column").value == "Buchungsdatum"
     click(user, button(user, "Save Settings"))  # the CSV steps work as before
-    assert user.notify.contains("Enter a name for these settings")
+    assert notified(user, "Enter a name for these settings")
 
 
 async def test_bad_xml_files_are_refused(user: User) -> None:
     await user.open("/import")
     await upload_xml(user, "broken.xml", b"<Document><BkToCstmrStmt>")
-    assert user.notify.contains("The file is not valid XML (line 1)")
+    assert notified(user, "The file is not valid XML (line 1)")
     await upload_xml(user, "payment.xml", b"<Document><CstmrCdtTrfInitn/></Document>")
-    assert user.notify.contains("The XML file is not a camt.053 or camt.054 bank statement")
+    assert notified(user, "The XML file is not a camt.053 or camt.054 bank statement")
     await user.should_not_see("2 · Review")
     await user.should_not_see("3 · Review")

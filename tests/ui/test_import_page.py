@@ -8,6 +8,7 @@ from nicegui import ElementFilter, ui
 from nicegui.elements.upload_files import SmallFileUpload
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
+from notifications import notified
 from test_importer import DE, UBS
 
 from budget_app.services import importer
@@ -124,7 +125,7 @@ async def test_import_a_file_in_three_steps(user: User, ctx, setup) -> None:
 
     click(user, import_button(user))
     await user.should_see("Transactions")
-    assert user.notify.contains("Imported 3 transactions")
+    assert notified(user, "Imported 3 transactions")
     stored = sorted(ctx.store.transactions.all(), key=lambda tx: (tx.date, tx.amount))
     assert [(tx.date, tx.type, tx.amount, tx.currency, tx.category, tx.comment) for tx in stored] == [
         (date(2026, 9, 15), "expenditure", 12.3, "EUR", "01.1", "Coop Pronto 1234"),
@@ -174,16 +175,16 @@ async def test_categories_only_fit_the_matching_direction(user: User, ctx, setup
     await select(user, 0, 2)
     click(user, button(user, "Apply"))
     await settle()
-    assert user.notify.contains("Choose a category first")
+    assert notified(user, "Choose a category first")
 
     put(user, field(user, ui.select, "Category"), "01.1")
     click(user, button(user, "Apply"))
     await settle()
-    assert user.notify.contains("1 row skipped: that category is for spending only")
+    assert notified(user, "1 row skipped: that category is for spending only")
     assert [r["category"] for r in rows(user)][:3] == ["01.1 Food", "", ""]
 
     await categorise(user, setup["salary"].id, 0, 1, 2)
-    assert user.notify.contains("2 rows skipped: that category is for money coming in only")
+    assert notified(user, "2 rows skipped: that category is for money coming in only")
     assert [r["category"] for r in rows(user)][:3] == ["01.1 Food", "", "Income · Salary"]
 
 
@@ -213,7 +214,7 @@ async def test_rows_can_be_excluded_and_included(user: User, ctx, setup) -> None
     assert import_button(user).text == "Import 1 Transaction"
 
     click(user, import_button(user))
-    assert user.notify.contains("Imported 1 transaction")
+    assert notified(user, "Imported 1 transaction")
     [tx] = ctx.store.transactions.all()
     assert tx.amount == 12.3 and tx.date == date(2026, 9, 15)
 
@@ -224,7 +225,7 @@ async def test_import_reports_a_failure_and_saves_nothing(user: User, ctx, setup
     await categorise(user, setup["salary"].id, 2)
     ctx.store.accounts.delete([setup["eur"].id])  # removed in another window meanwhile
     click(user, import_button(user))
-    assert user.notify.contains("Choose the account the file belongs to")
+    assert notified(user, "Choose the account the file belongs to")
     assert ctx.store.transactions.all() == []
 
 
@@ -273,13 +274,13 @@ async def test_saved_settings_recognise_the_next_file(user: User, ctx, setup) ->
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
     put(user, field(user, ui.select, "Date format"), "%d.%m.%Y")
     click(user, button(user, "Save Settings"))
-    assert user.notify.contains("Enter a name for these settings")
+    assert notified(user, "Enter a name for these settings")
     assert importer.load_profiles(ctx.store.data_dir) == []
 
     name = next(e for e in user.find(kind=ui.input).elements if e.props.get("placeholder") == "Name, e.g. UBS Private")
     put(user, name, "  UBS Private ")
     click(user, button(user, "Save Settings"))
-    assert user.notify.contains("Saved “UBS Private”")
+    assert notified(user, "Saved “UBS Private”")
     [profile] = importer.load_profiles(ctx.store.data_dir)
     assert (profile.name, profile.account_id, profile.debit_col, profile.header_row) == (
         "UBS Private",
@@ -332,7 +333,7 @@ async def test_save_settings_without_a_file_does_nothing(user: User, ctx) -> Non
 async def test_an_empty_file_is_refused(user: User) -> None:
     await user.open("/import")
     await upload(user, "empty.csv", b"\n\n")
-    assert user.notify.contains("The file is empty")
+    assert notified(user, "The file is empty")
     await user.should_not_see("2 · Columns")
 
 

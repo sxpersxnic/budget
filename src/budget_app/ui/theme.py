@@ -220,6 +220,11 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
   color: var(--label-2); }
 @media (max-width: 640px) { .cat-node .caption { display: none; } }
 .reval-row { grid-template-columns: minmax(0, 1fr) 9rem; }
+/* change history (F28): the details toggle reads like a caption, not a list item */
+.history-details .q-item { min-height: 22px; padding: 2px 0; font-size: 12px; color: var(--label-2);
+  background: transparent !important; }
+.history-details .q-item__section--side { padding-left: 4px; }
+.history-details .q-expansion-item__content { padding: 2px 0 4px; }
 .meter { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; width: 100%; }
 .meter > div { height: 100%; border-radius: 3px; background: var(--accent); }
 .meter.over > div { background: var(--negative); }

@@ -25,6 +25,7 @@ from budget_app.ui.pages import (
     budget_entries,
     budget_overview,
     categories,
+    history,
     import_transactions,
     overview,
     settings,
@@ -41,6 +42,7 @@ PAGES = {
     "/budget-entries": budget_entries.page,
     "/categories": categories.page,
     "/settings": settings.page,
+    "/history": history.page,
 }
 
 

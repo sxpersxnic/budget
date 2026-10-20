@@ -18,7 +18,7 @@ from budget_app.services import export as export_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, fmt, frame, month_options, save_file, sheet, sheet_buttons, success
+from budget_app.ui.layout import error, fmt, frame, month_options, save_file, sheet, sheet_buttons, success, undoable
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select
 
@@ -97,7 +97,7 @@ def _accounts_group(ctx: Context, kind: str, title: str) -> None:
                             def do():
                                 try:
                                     acc_svc.delete_account(ctx, a.id)
-                                    success(t("Deleted {name}", name=a.name))
+                                    undoable(t("Deleted {name}", name=a.name))
                                 except ValidationError as exc:
                                     error(str(exc))
                                 body.refresh()
@@ -164,7 +164,7 @@ def _income_group(ctx: Context) -> None:
                                 except ValidationError as exc:
                                     error(str(exc))
                                 else:
-                                    success(t("Deleted {name}", name=c.name))
+                                    undoable(t("Deleted {name}", name=c.name))
                                 body.refresh()
 
                             confirm(
@@ -262,6 +262,13 @@ def _data_group(ctx: Context) -> None:
                         "caption"
                     )
                 ui.button(t("Export as JSON…"), on_click=export_json).props("flat dense no-caps").classes(
+                    "text-primary"
+                )
+            with ui.element("div").classes("group-row"):
+                with ui.column().classes("gap-0 flex-1 min-w-0"):
+                    ui.label(t("Change History"))
+                    ui.label(t("The last changes to your records, with Undo.")).classes("caption")
+                ui.button(t("Show…"), on_click=lambda: ui.navigate.to("/history")).props("flat dense no-caps").classes(
                     "text-primary"
                 )
             with ui.element("div").classes("group-row"), ui.column().classes("gap-0 flex-1 min-w-0"):

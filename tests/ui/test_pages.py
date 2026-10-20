@@ -11,6 +11,7 @@ PAGES = {
     "/add-budget": "New Budget Entry",
     "/categories": "Categories",
     "/settings": "Settings",
+    "/history": "Change History",
 }
 
 

@@ -31,10 +31,11 @@ from typing import NoReturn
 from xml.parsers import expat
 
 from budget_app.domain.models import Transaction
-from budget_app.i18n import t
+from budget_app.i18n import N_, t
 from budget_app.services import importer
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.importer import ERROR, MAX_BYTES, ImportFileError, ImportRow
+from budget_app.services.undo import recorded
 
 ACCOUNTS_FILE = "import_accounts.json"  # statement IBAN -> account id
 _MESSAGE = re.compile(r"camt\.\d{3}(?:\.\d{3}\.\d{2})?")
@@ -309,6 +310,7 @@ def currency_problem(ctx: Context, statement: Statement, account_id: str) -> str
     )
 
 
+@recorded(N_("Import transactions"))
 def commit(ctx: Context, statement: Statement, rows: list[ImportRow], account_id: str) -> list[Transaction]:
     """Save the chosen rows to the account and remember the account for the statement's IBAN."""
     problem = currency_problem(ctx, statement, account_id)

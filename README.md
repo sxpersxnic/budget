@@ -142,6 +142,10 @@ The app opens in its own window and keeps all data in your user folder:
   file. The app also keeps its own copies under **Automatic Backups**: one before each update and
   one before each restore, the ten most recent. Each can be restored with **Restore…**. A restore
   first copies the current records to the backups folder, so it can be undone the same way.
+- **Undo:** after saving or deleting, the confirmation at the bottom offers **Undo** for a few
+  seconds. **Settings → Data → Change History** lists the last changes, each with **Undo**. An
+  undo is refused when the records were changed again afterwards, so it never overwrites later
+  work.
 - **Export:** the Transactions and Budget Plan lists export what they show (with their filters)
   as CSV or Excel (share button). **Settings → Data → Export as JSON…** writes every record into
   one JSON file for other programs; it can't be restored.

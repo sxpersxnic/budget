@@ -8,10 +8,11 @@ from datetime import date
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months
 from budget_app.domain.models import ACCOUNT_REGULAR, Account, AccountEntry
-from budget_app.i18n import t
+from budget_app.i18n import N_, t
 from budget_app.services import accounts as acc_svc
 from budget_app.services.aggregates import projected_net
 from budget_app.services.context import Context, ValidationError
+from budget_app.services.undo import recorded
 
 
 @dataclass
@@ -48,6 +49,7 @@ def balance_entry(ctx: Context, account_id: str, month: str) -> AccountEntry | N
     return best
 
 
+@recorded(N_("Record a balance"))
 def upsert_entry(ctx: Context, account_id: str, month: str, amount: float | None) -> AccountEntry:
     acc = ctx.store.accounts.get(account_id)
     if acc is None:

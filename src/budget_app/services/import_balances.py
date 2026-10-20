@@ -21,11 +21,12 @@ from itertools import pairwise
 
 from budget_app.domain import months
 from budget_app.domain.models import AccountEntry
-from budget_app.i18n import t
+from budget_app.i18n import N_, t
 from budget_app.services import wealth
 from budget_app.services.camt import Statement
 from budget_app.services.context import Context
 from budget_app.services.importer import ImportRow
+from budget_app.services.undo import recorded
 
 
 @dataclass
@@ -152,6 +153,7 @@ def compare(ctx: Context, candidates: list[BalanceCandidate], account_id: str) -
     return candidates
 
 
+@recorded(N_("Record balances"))
 def save(ctx: Context, account_id: str, candidates: list[BalanceCandidate]) -> list[AccountEntry]:
     """Record every ticked balance as the account's balance at the end of its month."""
     return [wealth.upsert_entry(ctx, account_id, c.month, c.amount) for c in candidates if c.include]

@@ -6,6 +6,7 @@ import dataclasses
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 from budget_app.domain.models import (
     Account,
@@ -17,6 +18,7 @@ from budget_app.domain.models import (
     TransactionItem,
 )
 from budget_app.storage.csv_store import CsvTable
+from budget_app.storage.history import History
 
 
 class SettingsStore:
@@ -45,13 +47,27 @@ class Store:
     def __init__(self, data_dir: Path):
         self.data_dir = data_dir
         data_dir.mkdir(parents=True, exist_ok=True)
-        self.accounts = CsvTable(data_dir / "accounts.csv", Account)
-        self.income_categories = CsvTable(data_dir / "income_categories.csv", IncomeCategory)
-        self.transactions = CsvTable(data_dir / "transactions.csv", Transaction)
-        self.transaction_items = CsvTable(data_dir / "transaction_items.csv", TransactionItem)
-        self.account_entries = CsvTable(data_dir / "account_entries.csv", AccountEntry)
-        self.budget = CsvTable(data_dir / "budget_entries.csv", BudgetEntry)
+        self.history = History(data_dir / "history.jsonl")
+        h = self.history
+        self.accounts = CsvTable(data_dir / "accounts.csv", Account, h)
+        self.income_categories = CsvTable(data_dir / "income_categories.csv", IncomeCategory, h)
+        self.transactions = CsvTable(data_dir / "transactions.csv", Transaction, h)
+        self.transaction_items = CsvTable(data_dir / "transaction_items.csv", TransactionItem, h)
+        self.account_entries = CsvTable(data_dir / "account_entries.csv", AccountEntry, h)
+        self.budget = CsvTable(data_dir / "budget_entries.csv", BudgetEntry, h)
         self._settings = SettingsStore(data_dir / "settings.json")
+
+    def tables(self) -> dict[str, CsvTable]:
+        """The tables by name, as the history refers to them."""
+        tables: list[CsvTable[Any]] = [
+            self.accounts,
+            self.income_categories,
+            self.transactions,
+            self.transaction_items,
+            self.account_entries,
+            self.budget,
+        ]
+        return {t.name: t for t in tables}
 
     @property
     def settings(self) -> Settings:

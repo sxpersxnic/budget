@@ -10,8 +10,9 @@ from collections import Counter
 from dataclasses import dataclass
 
 from budget_app.domain.models import TransactionItem
-from budget_app.i18n import t
+from budget_app.i18n import N_, t
 from budget_app.services.context import Context, ValidationError
+from budget_app.services.undo import recorded
 
 
 @dataclass
@@ -69,6 +70,7 @@ def validate(inputs: list[ItemInput]) -> list[ItemInput]:
     return rows
 
 
+@recorded(N_("Save items"))
 def replace(ctx: Context, transaction_id: str, inputs: list[ItemInput]) -> list[TransactionItem]:
     """Make `inputs` the product list of the transaction (an empty list removes it)."""
     rows = validate(inputs)
