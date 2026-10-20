@@ -117,7 +117,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F05 | ☑ Done | Recurring transactions | Data in | M | Local | – |
 | F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
 | F07 | ☐ Open | Automatic categorization | Organizing | M–L | Optional | F09 |
-| F08 | ☐ Open | Simpler category picker | Organizing | S | Local | – |
+| F08 | ☑ Done | Simpler category picker | Organizing | S | Local | – |
 | F09 | ☐ Open | Payees | Organizing | M | Local | – |
 | F10 | ☐ Open | Tags | Organizing | M | Local | – |
 | F11 | ☐ Open | Split transactions | Organizing | M | Local | – |
@@ -460,7 +460,17 @@ automatically.
 
 #### F08 · Simpler category picker
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20, `6786f2a`)
+
+**As built:** 81 common COICOP codes (and Taxes) have an everyday name in English, German, French
+and Italian plus about 1'700 search words (shops, brands and Swiss terms such as Migros, SBB, ZVV,
+Krankenkasse, Serafe, Kita, Nebenkosten) in `resources/everyday_categories.json`; every other
+category keeps its translated COICOP name. The picker shows "Groceries · 01.1" with the official
+name as a second line and lists the last ten distinct expenditure categories first (marked with a
+history icon). The search matches everyday name, search words, official name and code, ignoring
+case and accents, in the browser. Transaction form, budget forms, the Budget Plan sheet and the
+import page use it; the stored value stays the COICOP code. Not built: favourites, and everyday
+names outside the picker (lists and reports keep the COICOP labels).
 
 COICOP names are statistical ("Individual consumption expenditure of non-profit institutions
 serving households"). Keep COICOP as the storage format, but:

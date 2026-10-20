@@ -37,6 +37,7 @@ storage/    typed CSV tables + settings JSON
 | `domain/months.py` | `YYYY-MM` month arithmetic and the "month complete" rule. |
 | `domain/fx.py` | `FxRates` (parse ECB CSV, rate lookup with date fallback, cross-rate conversion, `history()` for the rate chart) and `FxService` (daily download, atomic file replacement). |
 | `domain/coicop.py` | COICOP tree (ancestors, children, labels) plus pseudo-categories `TAX` and `ADV`; `fold()` makes text case- and accent-insensitive for searching. |
+| `domain/everyday.py` | F08. Everyday names and search words of the common categories (`resources/everyday_categories.json`) and the category picker's options: `category_options(recent)` lists the recently used codes first, then COICOP order with Taxes last; each option has its label (`Groceries · 01.1`, or the COICOP label for the others), the official name as caption, its level and a folded `search` text (code, everyday names in all four languages, official name in the interface language and in English, search words). `matches()` / `search()`: every query word must occur in that text. |
 | `domain/models.py` | Dataclasses `Account`, `IncomeCategory`, `Transaction`, `AccountEntry`, `BudgetEntry`, `Recurring`, `Settings`. |
 | `storage/csv_store.py` | Generic `CsvTable[T]`: in-memory records, atomic rewrite (temp file, fsync, rename) on every change. Unknown columns are kept and written back. |
 | `storage/store.py` | `Store` bundling all tables and settings. Unknown settings keys are kept. |
@@ -46,7 +47,7 @@ storage/    typed CSV tables + settings JSON
 | `storage/history.py` | Change history and undo (F28): every table write records the record before and after (as written to the CSV file); changes made together form one *action* (`history.action(label)`, nested ones join the outer). Undo reverts an action in reverse order after checking every record still looks as the action left it. Kept in `history.jsonl` (the newest 500 actions), not part of backups. |
 | `services/context.py` | `Context` (store + FX), conversion helpers, budget horizon, `ValidationError`. |
 | `services/accounts.py` | Accounts, advance-payment accounts and income categories, with their deletion rules. |
-| `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement. |
+| `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement; `recent_categories()` (the last ten distinct expenditure categories, for the category picker). |
 | `services/budget.py` | Budget series expansion, overwrite, horizon change and "Forever" extension. |
 | `services/recurring.py` | Recurring transactions (F05): series, their schedule (`occurrence`, `next_after`), the due occurrences, `book` / `skip` / `book_all` through `transactions.save`, and `book_automatic` for series that book without asking. |
 | `services/wealth.py` | Account balances, wealth, projected wealth, wealth time series. |
@@ -61,7 +62,7 @@ storage/    typed CSV tables + settings JSON
 | `services/import_balances.py` | Month-end balances from a bank file (F36): the order of a CSV balance column (newest or oldest first) and the balance after each month's last booking, or a camt closing balance; compared with recorded balances and saved with `wealth.upsert_entry`. |
 | `ui/theme.py` | Design tokens (light and dark), Quasar and AG Grid overrides, chart styling. See `docs/DESIGN_REVIEW.md`. |
 | `ui/layout.py` | Sidebar frame, sheets (dialogs), segmented control, month stepper, metrics, formatting (`1'234.50 CHF`), date picker. |
-| `ui/widgets/` | Searchable selects, transaction form (page, add sheet and edit sheet), AG Grid helpers. |
+| `ui/widgets/` | Searchable selects, transaction form (page, add sheet and edit sheet), AG Grid helpers. `selects.CategorySelect` is the category picker (F08): a `ui.select` subclass whose component `resources/category_select.js` (NiceGUI's `select.js` with another filter and option template) filters on each option's pre-folded `search` text in the browser, so typing is instant and needs no round trip; options show the official name as a second line and a history icon when recently used. Used by the transaction form, both budget forms, the Budget Plan edit sheet and the import page (with the income categories as extra options). The value stays the COICOP code (or `TAX`). |
 | `ui/pages/` | One module per page (see §6). |
 
 ## 3. Data model (`data/`)
@@ -286,6 +287,10 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
   `resources/i18n/coicop_<lang>.json`, keyed by the English name. They are the app's own
   translations (German in Swiss spelling, no "ß"; French and Italian follow the Eurostat/ISTAT
   wording where known), not certified official texts.
+- Everyday category names (F08) live in `resources/everyday_categories.json`: code → `en`, `de`,
+  `fr`, `it` and `keywords` (one list for all languages: shops, brands, everyday words). Sorted by
+  code and written like the translation files; `tests/test_everyday.py` checks that every entry has
+  all four names and that every code exists.
 - The language is a setting (`settings.json` → `language`; empty means follow the system:
   `LANG`, macOS `AppleLanguages`, or the Windows locale). Changing it reloads the page. Quasar
   (date picker) uses `de-CH` / `fr` / `it` / `en-GB`, AG Grid gets `localeText` per language, and

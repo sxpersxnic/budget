@@ -183,6 +183,8 @@ The app opens in its own window and keeps all data in your user folder:
    search then also finds a purchase by item name. Shortcuts: type a sum such as `12.50+8.30`
    into an amount, press **N** for a new transaction and **⌘↩** (Ctrl+Enter) to save, save the
    usual ones as **templates** (bookmark button), or **Duplicate** an existing transaction.
+   The category field shows everyday names ("Groceries · 01.1") and your recently used
+   categories first, and its search also knows shops and brands: type "Migros", "SBB" or "Netflix".
 4. **Transactions → Import…** (optional): bring in a CSV export from your e-banking
    instead of typing. Choose the account, check the detected columns, give the new rows a
    category and import. The column settings can be saved per bank; transactions already
