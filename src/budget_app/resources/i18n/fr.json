@@ -58,6 +58,8 @@
  "Back Up": "Sauvegarder",
  "Back Up Now…": "Sauvegarder maintenant…",
  "Balance": "Solde",
+ "Balance at end of {month}: {amount}": "Solde fin {month} : {amount}",
+ "Balance column": "Colonne du solde",
  "Balance recorded": "Solde saisi",
  "Balances · End of {month}": "Soldes · fin {month}",
  "Bars": "Barres",
@@ -200,6 +202,7 @@
   "Importer {n} transaction",
   "Importer {n} transactions"
  ],
+ "Import {transactions} and {balances}": "Importer {transactions} et {balances}",
  "Imported {n} transaction": [
   "{n} transaction importée",
   "{n} transactions importées"
@@ -235,6 +238,7 @@
  "Money that left without a record": "Argent sorti sans écriture",
  "Month": "Mois",
  "Month End": "Fin de mois",
+ "Month-end balances": "Soldes de fin de mois",
  "Monthly totals or chosen categories": "Totaux mensuels ou catégories choisies",
  "Must be positive": "Doit être positif",
  "Name": "Nom",
@@ -368,6 +372,7 @@
  "The backup contains an unexpected file: {name}": "La sauvegarde contient un fichier inattendu : {name}",
  "The backup contains no records.": "La sauvegarde ne contient aucune donnée.",
  "The backup is too large.": "La sauvegarde est trop volumineuse.",
+ "The balances in the file do not follow from its amounts, so no month-end balances are offered. Check the balance column.": "Les soldes du fichier ne découlent pas de ses montants, aucun solde de fin de mois n’est donc proposé. Vérifier la colonne du solde.",
  "The currency cannot be changed while transactions or entries use this account": "La monnaie ne peut pas être modifiée tant que des transactions ou d’autres entrées utilisent ce compte",
  "The currency can’t change while transactions or recorded balances use this account.": "La monnaie ne peut pas être modifiée tant que des transactions ou des soldes saisis utilisent ce compte.",
  "The current records are copied to the backups folder first, so this can be undone.": "Les données actuelles sont d’abord copiées dans le dossier des sauvegardes ; l’opération peut donc être annulée.",
@@ -380,6 +385,7 @@
  "The final month must not be before the first month": "Le dernier mois ne peut pas précéder le premier",
  "The interface language. Amounts keep the Swiss format.": "La langue de l’interface. Les montants conservent le format suisse.",
  "The next file with the same columns is recognised automatically.": "Le prochain fichier avec les mêmes colonnes sera reconnu automatiquement.",
+ "The order of the lines can’t be told from the file (newest or oldest first), so no month-end balances are offered.": "L’ordre des lignes (les plus récentes ou les plus anciennes d’abord) ne ressort pas du fichier, aucun solde de fin de mois n’est donc proposé.",
  "The plan ends in {month}, before the first month. Extend it in Settings.": "La planification se termine en {month}, avant le premier mois. La prolonger dans les Réglages.",
  "The recurrence must be at least every month": "La périodicité doit être au moins mensuelle",
  "The repayment exceeds the outstanding amount ({amount})": "Le remboursement dépasse le montant ouvert ({amount})",
@@ -415,14 +421,17 @@
  "What did the account hold at the end of the month?": "Quel était le solde du compte à la fin du mois ?",
  "account|From": "Du compte",
  "account|To": "Au compte",
+ "already recorded": "déjà saisi",
  "e.g. Milk": "p. ex. lait",
  "heading|Expenditure": "Dépenses",
  "heading|Income": "Revenus",
  "including {amount} from exchange-rate changes": "dont {amount} dus aux variations de change",
  "incomplete": "incomplète",
  "repaid by {debtor}": "remboursé par {debtor}",
+ "replaces {amount}": "remplace {amount}",
  "the backup of {date}": "la sauvegarde du {date}",
  "the backup “{name}”": "la sauvegarde «{name}»",
+ "the file ends on {date} — not a month-end balance": "le fichier se termine le {date} — pas un solde de fin de mois",
  "{amount} above the {budget} budget": "{amount} de plus que le budget de {budget}",
  "{amount} at the end of {month}": "{amount} à fin {month}",
  "{amount} by the end of the plan": "{amount} à la fin de la planification",
@@ -449,6 +458,14 @@
  "{name} · {n} line · recognised as “{profile}”": [
   "{name} · {n} ligne · reconnu comme «{profile}»",
   "{name} · {n} lignes · reconnu comme «{profile}»"
+ ],
+ "{n} Balance": [
+  "{n} solde",
+  "{n} soldes"
+ ],
+ "{n} Transaction": [
+  "{n} transaction",
+  "{n} transactions"
  ],
  "{n} already imported": [
   "{n} déjà importée",
@@ -477,6 +494,10 @@
  "{n} month, {span}, continued as the plan grows": [
   "{n} mois, {span}, prolongé avec la planification",
   "{n} mois, {span}, prolongés avec la planification"
+ ],
+ "{n} month-end balance recorded": [
+  "{n} solde de fin de mois saisi",
+  "{n} soldes de fin de mois saisis"
  ],
  "{n} new": [
   "{n} nouvelle",

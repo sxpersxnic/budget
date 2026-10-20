@@ -2,7 +2,8 @@
 
 Flow: `read_file` detects encoding, delimiter and header line; `guess_profile` maps the columns;
 `parse_rows` turns lines into signed amounts; `analyse` marks duplicates and suggests categories;
-`commit` saves the chosen rows. Column settings can be saved per bank as a profile.
+`commit` saves the chosen rows. Column settings can be saved per bank as a profile. A running-balance
+column, when the profile names one, is read into each row; `import_balances` turns it into month-end balances.
 camt.053 / camt.054 statements (`camt.py`) produce the same rows and go through `analyse` and `commit` too.
 
 Like every transaction, imported rows are valued at the ECB rate of their booking date.
@@ -48,6 +49,7 @@ _VALUE_DATE_NAMES = ("valuta", "valutadatum", "value date", "date valeur")
 _AMOUNT_NAMES = ("betrag", "amount", "montant", "einzelbetrag", "transaktionsbetrag")
 _DEBIT_NAMES = ("belastung", "debit", "lastschrift", "soll", "ausgang", "débit", "withdrawal")
 _CREDIT_NAMES = ("gutschrift", "credit", "haben", "eingang", "crédit", "deposit")
+_BALANCE_NAMES = ("saldo", "balance", "solde", "kontostand", "saldo contabile")
 _TEXT_NAMES = (
     "buchungstext",
     "beschreibung",
@@ -87,6 +89,7 @@ class ImportProfile:
     decimal: str = "."
     text_cols: list[str] = field(default_factory=list)
     invert: bool = False  # card statements: positive amounts are spending
+    balance_col: str = ""  # the running balance after each booking (optional, F36)
     account_id: str = ""
     signature: str = ""  # the header line, to recognise the bank's files again
 
@@ -128,6 +131,7 @@ class ImportRow:
     category: str = ""
     suggested: bool = False  # category taken from an earlier transaction with the same text
     import_ref: str = ""
+    balance: float | None = None  # the account's balance after this booking, when the file shows it
 
     @property
     def type(self) -> str:
@@ -227,6 +231,7 @@ def guess_profile(parsed: ParsedFile, saved: list[ImportProfile] | None = None) 
         amount_col=find(_AMOUNT_NAMES),
         debit_col=find(_DEBIT_NAMES),
         credit_col=find(_CREDIT_NAMES),
+        balance_col=find(_BALANCE_NAMES),
     )
     if profile.debit_col and profile.credit_col:
         profile.amount_col = ""
@@ -315,11 +320,23 @@ def parse_rows(parsed: ParsedFile, profile: ImportProfile) -> list[ImportRow]:
             if amount is None or abs(amount) < 0.005:
                 raise ValueError("amount")
             row.amount = round(-amount if profile.invert else amount, 2)
+            row.balance = _balance(cell(raw, profile.balance_col), profile) if profile.balance_col else None
         except ValueError as exc:
             row.error = t("No valid date") if str(exc) == "date" else t("No valid amount")
             row.status, row.include = ERROR, False
         out.append(row)
     return out
+
+
+def _balance(text: str, profile: ImportProfile) -> float | None:
+    """The balance cell as a signed amount (None when empty or unreadable: the balance is optional)."""
+    try:
+        value = parse_amount(text, profile.decimal)
+    except ValueError:
+        return None
+    if value is None:
+        return None
+    return round(-value if profile.invert else value, 2)
 
 
 def _norm(text: str, keep_digits: bool = True) -> str:
