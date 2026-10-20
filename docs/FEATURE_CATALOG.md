@@ -107,6 +107,10 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 7. **F39, F40:** which source for level 5 and for the German notes?
 8. ☑ **F07:** decided on 2026-10-20 — rules and learning from history, no AI. Confirming a
    suggestion does not create a rule; *Always categorize like this* does, on request. Built.
+9. ☑ **F21:** decided on 2026-10-21 — prices are entered by hand (or pasted from a bank or
+   broker list), no online prices; every price update books a linked *Capital gains on
+   investment* revaluation, so an account's booked value is always quantity × price; buys,
+   sells, dividends and fees are modelled, so performance compares value with money put in.
 
 ## All features
 
