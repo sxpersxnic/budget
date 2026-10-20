@@ -7,9 +7,10 @@ from datetime import date
 
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months
-from budget_app.domain.models import ACCOUNT_REGULAR, Account, AccountEntry
+from budget_app.domain.models import ACCOUNT_REGULAR, ASSET_CASH, ASSET_CLASSES, ASSET_OTHER, Account, AccountEntry
 from budget_app.i18n import N_, t
 from budget_app.services import accounts as acc_svc
+from budget_app.services import investments as inv_svc
 from budget_app.services.aggregates import projected_net
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
@@ -41,7 +42,13 @@ def entry_for(ctx: Context, account_id: str, month: str) -> AccountEntry | None:
 
 
 def balance_entry(ctx: Context, account_id: str, month: str) -> AccountEntry | None:
-    """Latest entry for the account in or before `month` (balances carry forward)."""
+    """Latest entry for the account in or before `month` (balances carry forward).
+
+    A securities or crypto account has no recorded entries: its balance is computed from its holdings (F21).
+    """
+    acc = ctx.store.accounts.get(account_id)
+    if acc is not None and acc.holds_securities:
+        return inv_svc.value_entry(ctx, acc, month)
     best = None
     for e in ctx.store.account_entries.all():
         if e.account_id == account_id and e.month <= month and (best is None or e.month > best.month):
@@ -58,6 +65,8 @@ def upsert_entry(ctx: Context, account_id: str, month: str, amount: float | None
         raise ValidationError(t("Select a month"))
     if amount is None:
         raise ValidationError(t("Enter the amount"))
+    if acc.holds_securities:
+        raise ValidationError(t("A securities or crypto account is valued from its holdings, not from balances"))
     rate_date = ctx.month_rate_date(month)
     amount = round(float(amount), 2)
     amount_chf = round(ctx.convert_on(amount, acc.currency, BASE_CURRENCY, rate_date), 6)
@@ -78,12 +87,15 @@ def upsert_entry(ctx: Context, account_id: str, month: str, amount: float | None
 
 
 def first_recorded_month(ctx: Context) -> str | None:
+    """First month with a balance: a recorded one, or a securities or crypto account's first trade or price."""
     ms = [e.month for e in ctx.store.account_entries.all()]
+    if held := inv_svc.first_month(ctx):
+        ms.append(held)
     return min(ms) if ms else None
 
 
 def last_recorded_month(ctx: Context) -> str | None:
-    """Last month with at least one account entry."""
+    """Last month with at least one recorded account entry (holdings don't move the projection's start)."""
     ms = [e.month for e in ctx.store.account_entries.all()]
     return max(ms) if ms else None
 
@@ -102,7 +114,7 @@ def account_rows(ctx: Context, month: str, view_cur: str) -> list[AccountRow]:
                 entry.amount,
                 ctx.convert_on(entry.amount, acc.currency, view_cur, rate_date),
                 has,
-                needs_entry=not has and abs(entry.amount) > 0.005,
+                needs_entry=not has and abs(entry.amount) > 0.005 and not acc.holds_securities,
             )
         )
     return rows
@@ -110,6 +122,19 @@ def account_rows(ctx: Context, month: str, view_cur: str) -> list[AccountRow]:
 
 def wealth(ctx: Context, month: str, view_cur: str) -> float:
     return sum(r.amount_view for r in account_rows(ctx, month, view_cur))
+
+
+def by_class(ctx: Context, month: str, view_cur: str) -> dict[str, float]:
+    """Wealth at the end of `month` per asset class (F21), in the order of `ASSET_CLASSES`; empty classes left out."""
+    sums = dict.fromkeys(ASSET_CLASSES, 0.0)
+    for r in account_rows(ctx, month, view_cur):
+        sums[r.account.asset_class if r.account.asset_class in sums else ASSET_OTHER] += r.amount_view
+    return {k: v for k, v in sums.items() if abs(v) > 0.005}
+
+
+def uses_classes(ctx: Context) -> bool:
+    """Whether any regular account has an asset class other than cash."""
+    return any(a.asset_class != ASSET_CASH for a in acc_svc.accounts(ctx, ACCOUNT_REGULAR))
 
 
 def has_wealth_data(ctx: Context, month: str) -> bool:

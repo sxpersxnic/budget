@@ -561,6 +561,8 @@ def page() -> None:
                                 ui.label(r.account.name).classes("truncate w-full")
                                 if r.needs_entry:
                                     ui.label(t("Not recorded, last balance carried over")).classes("caption")
+                                elif r.account.holds_securities:
+                                    ui.label(t("Valued from holdings")).classes("caption")
                             ui.label(fmt(r.opening, acc_cur) if r.opening is not None else "–").classes(
                                 "c-open num text-2"
                             )
@@ -574,7 +576,7 @@ def page() -> None:
                                 ui.label("–" if gap is None else (fmt_signed(gap) or fmt(0)) + f" {acc_cur}").classes(
                                     "num " + ("text-neg" if (gap or 0) < -EPS else "text-2")
                                 )
-                                if gap is not None and abs(gap) > EPS:
+                                if gap is not None and abs(gap) > EPS and not r.account.holds_securities:
                                     ui.button(
                                         icon="o_post_add",
                                         on_click=lambda r=r: book_revaluation(rep, r),
@@ -582,7 +584,7 @@ def page() -> None:
                                         t("Book as revaluation…")
                                     )
                             ui.label(fmt(r.amount_view, cur)).classes("c-view num text-2")
-                            if r.needs_entry or r.has_entry:
+                            if (r.needs_entry or r.has_entry) and not r.account.holds_securities:
                                 ui.button(
                                     t("Record") if r.needs_entry else t("Edit"),
                                     icon="add" if r.needs_entry else "o_edit",

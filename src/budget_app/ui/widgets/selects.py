@@ -102,12 +102,17 @@ def currency_select(
 
 
 def account_options(
-    ctx: Context, kind: str = ACCOUNT_REGULAR, currency: str | None = None, exclude_currency: str | None = None
+    ctx: Context,
+    kind: str = ACCOUNT_REGULAR,
+    currency: str | None = None,
+    exclude_currency: str | None = None,
+    holdings: bool = False,
 ) -> dict[str, str]:
+    """Accounts for a dropdown; securities and crypto accounts (valued from holdings, F21) only with `holdings`."""
     return {
         a.id: acc_svc.account_label(a)
         for a in acc_svc.accounts(ctx, kind, currency)
-        if exclude_currency is None or a.currency != exclude_currency
+        if (exclude_currency is None or a.currency != exclude_currency) and (holdings or not a.holds_securities)
     }
 
 

@@ -178,6 +178,16 @@ class BulkEditSheet:
                 full=True,
             )
             self.note = ui.textarea(t("Note")).props("dense outlined autogrow rows=1").classes("w-full")
+        if invested := self.sel.taking(bulk_svc.is_invested):
+            _hint(
+                tn(
+                    "{n} transaction booked on the Investments page stays as it is; "
+                    "it changes with its trade or price.",
+                    "{n} transactions booked on the Investments page stay as they are; "
+                    "they change with their trade or price.",
+                    len(invested),
+                )
+            )
         if spreads := self.sel.taking(bulk_svc.is_spread):
             _hint(
                 tn(

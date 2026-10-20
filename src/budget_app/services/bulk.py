@@ -47,24 +47,29 @@ def is_spread(tx: Transaction) -> bool:
     return tx.type == TX_REVALUATION and bool(tx.linked_id)
 
 
+def is_invested(tx: Transaction) -> bool:
+    """Booked by a trade or price on the Investments page (F21): it changes only with its trade or price."""
+    return bool(tx.invest_id)
+
+
 def takes_expenditure_category(tx: Transaction) -> bool:
-    return tx.type == TX_EXPENDITURE
+    return tx.type == TX_EXPENDITURE and not is_invested(tx)
 
 
 def takes_income_category(tx: Transaction) -> bool:
-    return tx.type == TX_INCOME and not tx.is_advance  # a repayment has no category
+    return tx.type == TX_INCOME and not tx.is_advance and not is_invested(tx)  # a repayment has no category
 
 
 def takes_payee(tx: Transaction) -> bool:
-    return tx.type in payee_svc.PAYEE_TYPES
+    return tx.type in payee_svc.PAYEE_TYPES and not is_invested(tx)
 
 
 def takes_account(tx: Transaction) -> bool:
-    return tx.type in (TX_EXPENDITURE, TX_INCOME)
+    return tx.type in (TX_EXPENDITURE, TX_INCOME) and not is_invested(tx)
 
 
 def takes_note(tx: Transaction) -> bool:
-    return not is_spread(tx)
+    return not is_spread(tx) and not is_invested(tx)
 
 
 @dataclass
@@ -136,7 +141,7 @@ def plan(ctx: Context, ids: list[str], changes: BulkChanges) -> Plan:
     """Check every row against the changes without saving anything; rows the changes leave as they are drop out."""
     out = Plan()
     for tx in selection(ctx, ids).rows:
-        if is_spread(tx):
+        if is_spread(tx) or is_invested(tx):
             continue
         current = tx_svc.edit_input(ctx, tx)
         edited = apply(tx, current, changes)

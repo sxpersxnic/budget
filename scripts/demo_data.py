@@ -19,7 +19,13 @@ from budget_app import config
 from budget_app.domain import months
 from budget_app.domain.fx import FxService, download_ecb_csv
 from budget_app.domain.models import (
+    ASSET_CRYPTO,
+    ASSET_PILLAR3A,
+    ASSET_SECURITIES,
     REVAL_INVEST,
+    TRADE_BUY,
+    TRADE_DIVIDEND,
+    TRADE_SELL,
     TX_EXCHANGE,
     TX_EXPENDITURE,
     TX_INCOME,
@@ -28,12 +34,14 @@ from budget_app.domain.models import (
 )
 from budget_app.services import accounts as acc_svc
 from budget_app.services import budget as budget_svc
+from budget_app.services import investments as inv_svc
 from budget_app.services import items as items_svc
 from budget_app.services import templates as tpl_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.budget import BudgetInput
 from budget_app.services.context import Context
+from budget_app.services.investments import TradeInput
 from budget_app.services.items import ItemInput
 from budget_app.services.transactions import TransactionInput
 from budget_app.storage import backup
@@ -82,7 +90,17 @@ def seed(ctx: Context) -> None:
     side_job = acc_svc.add_income_category(ctx, "Side job")
 
     # Month-end balances follow the bookings, so most months reconcile exactly
-    balance = {bank.id: 5000.0, savings.id: 20000.0, euro.id: 300.0}
+    # F21: a securities account and a crypto wallet valued from their holdings, and a pillar 3a account
+    depot = acc_svc.add_account(ctx, "Depot", "CHF", asset_class=ASSET_SECURITIES)
+    wallet = acc_svc.add_account(ctx, "Crypto wallet", "CHF", asset_class=ASSET_CRYPTO)
+    pillar = acc_svc.add_account(ctx, "Pillar 3a", "CHF", asset_class=ASSET_PILLAR3A)
+    etf = inv_svc.add_holding(ctx, depot.id, "SPI ETF", "CH0237935652")
+    nestle = inv_svc.add_holding(ctx, depot.id, "Nestlé", "CH0038863350")
+    btc = inv_svc.add_holding(ctx, wallet.id, "Bitcoin", "BTC")
+    quote = {etf.id: 150.0, nestle.id: 98.0, btc.id: 52000.0}
+    moves = {etf.id: (-0.03, 0.04), nestle.id: (-0.04, 0.03), btc.id: (-0.12, 0.15)}
+
+    balance = {bank.id: 5000.0, savings.id: 20000.0, euro.id: 300.0, pillar.id: 18000.0}
     flows: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
 
     def book(inp: TransactionInput, items: list[ItemInput] | None = None) -> None:
@@ -229,6 +247,46 @@ def seed(ctx: Context) -> None:
                     comment="Fund value at year end",
                 )
             )
+
+        book(
+            TransactionInput(
+                date=day(27),
+                type=TX_TRANSFER,
+                amount=588,
+                currency="CHF",
+                from_account=bank.id,
+                to_account=pillar.id,
+                comment="Pillar 3a",
+            )
+        )
+
+        def trade(
+            kind: str, holding: str, d: date, quantity: float = 0.0, fee: float = 0.0, amount: float = 0.0
+        ) -> None:
+            if d > today:
+                return
+            inv_svc.save_trade(
+                ctx,
+                TradeInput(kind, holding, d, quantity, quote[holding], fee, amount, cash_account=bank.id),
+            )
+            month = d.strftime("%Y-%m")
+            money = round(quantity * quote[holding], 2)
+            flows[month][bank.id] += {TRADE_BUY: -money, TRADE_SELL: money}.get(kind, amount) - fee
+
+        trade(TRADE_BUY, etf.id, day(5), round(500 / quote[etf.id], 6), fee=1.5)  # a monthly savings plan
+        if k == 10:
+            trade(TRADE_BUY, nestle.id, day(12), 20, fee=9.9)
+        if k == 8:
+            trade(TRADE_BUY, btc.id, day(9), 0.02, fee=2)
+        if k == 4:
+            trade(TRADE_SELL, nestle.id, day(14), 8, fee=9.9)
+        if mo == 4 and k < 10:
+            held = inv_svc.performance(ctx, nestle.id).quantity
+            trade(TRADE_DIVIDEND, nestle.id, day(28), amount=round(held * 3.05 * 0.65, 2))  # after withholding tax
+        for holding, (low, high) in moves.items():
+            quote[holding] = round(quote[holding] * (1 + rng.uniform(low, high)), 2)
+            if months.last_day(m) <= today and inv_svc.steps(ctx, holding):
+                inv_svc.save_price(ctx, holding, months.last_day(m), quote[holding])
 
         for acc_id, change in flows[m].items():
             balance[acc_id] += change

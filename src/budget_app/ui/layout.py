@@ -34,6 +34,7 @@ NAV = [
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
     ("/categories", N_("Categories"), "o_account_tree"),
     ("/payees", N_("Payees"), "o_storefront"),
+    ("/investments", N_("Investments"), "o_show_chart"),
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")
 # Routes that are not in the sidebar highlight their parent.
@@ -53,6 +54,7 @@ def fmt(value: float | None, currency: str = "") -> str:
     """Swiss-style number formatting: 1'234.50 CHF."""
     if value is None:
         return "–"
+    value = round(value, 2) + 0.0  # −0.004 shows as 0.00, not −0.00
     text = f"{value:,.2f}".replace(",", "'").replace("-", "−")
     return f"{text} {currency}".strip()
 
