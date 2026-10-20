@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | F24, F25, F02 and F29 done (step 19, F25 of step 20, step 23); F28 and steps 21, 22, 24, 25 open |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19, 20 and 23 done (F24, F25, F28, F02) and F29; steps 21, 22, 24, 25 open |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -58,7 +58,7 @@ Waits for the source data (decision 7).
 | Step | Status | Task | Why here |
 | --- | --- | --- | --- |
 | 19 | ☑ Done | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from milestone 1. |
-| 20 | ◐ Partly | **F25** Full backup and restore (done), **F28** Undo and change history | Safety before more import features. |
+| 20 | ☑ Done | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
 | 21 | ☐ Open | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
 | 22 | ☐ Open | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
@@ -137,7 +137,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F25 | ☑ Done | Full backup and restore | Data out | S | Local | – |
 | F26 | ☐ Open | Sync through a cloud folder | Data out | L | Optional | F28 |
 | F27 | ☐ Open | Encryption and app lock | Security | L | Local | – |
-| F28 | ☐ Open | Undo and change history | Security | M | Local | – |
+| F28 | ☑ Done | Undo and change history | Security | M | Local | – |
 | F29 | ☑ Done | Multi-language support | Experience | L | Local | – |
 | F30 | ☐ Open | Onboarding and demo data | Experience | M | Local | – |
 | F31 | ☐ Open | Reminders and alerts | Experience | M | Local | – |
@@ -653,7 +653,14 @@ The CSV files are readable by anyone with access to the computer.
 
 #### F28 · Undo and change history
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20, `a41bc40`)
+
+**As built:** every change to the records is recorded with the record before and after; one user
+step (a save with its items, an import with its balances, an exchange with its spread) is one
+action. Confirmation toasts offer *Undo*; *Settings → Data → Change History* lists the newest
+actions with their changes and *Undo*. An undo is refused if a record changed afterwards. The
+history keeps the newest 500 actions in `history.jsonl` and is not part of backups. Not built:
+"who" (the app has one user) and per-record history views.
 
 - *Undo* for the last action (delete, edit, import), offered in the confirmation toast.
 - A change log (who, when, before and after) for transactions, balances and budget entries.
