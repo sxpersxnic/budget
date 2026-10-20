@@ -2,7 +2,10 @@
 camt.053 / camt.054 statement (file → review → import: the XML needs no column mapping).
 
 The review step also offers the month-end balances the file shows (F36): from a CSV balance column, or
-the camt closing balance. Ticked ones are recorded after the transactions are saved."""
+the camt closing balance. Ticked ones are recorded after the transactions are saved.
+
+Rows without a category get the suggested one (F07: a rule, else the payee's history), shown in italics with the
+reason beside it until the user changes it; importing keeps what the preview shows."""
 
 from __future__ import annotations
 
@@ -13,7 +16,7 @@ from budget_app.domain.everyday import category_options
 from budget_app.domain.models import TX_INCOME
 from budget_app.i18n import N_, date_label, t, tn
 from budget_app.services import accounts as acc_svc
-from budget_app.services import camt, import_balances, importer
+from budget_app.services import camt, categorize, import_balances, importer
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import error, fmt, frame, segmented, success
@@ -50,7 +53,14 @@ def _columns(currency: str) -> list[dict]:
         # the payee found for the row (F09); double-click to change it, the bank text is remembered for it
         {"field": "payee", "headerName": t("Payee"), "width": 180, "editable": True},
         amount,
-        {"field": "category", "headerName": t("Category"), "width": 260},
+        # a suggested category is set in italics until the user changes it; the next column says why (F07)
+        {
+            "field": "category",
+            "headerName": t("Category"),
+            "width": 260,
+            "cellClassRules": {"suggested": "data.suggested"},
+        },
+        {"field": "reason", "headerName": t("Suggestion"), "width": 220, "cellClass": "muted"},
         {"field": "status", "headerName": t("Status"), "width": 170, "cellClass": "muted"},
     ]
 
@@ -162,7 +172,13 @@ def page() -> None:
         # ---------------------------------------------------------- 3 · review
         with ui.element("div").classes("surface flex flex-col gap-3") as review_card:
             review_title = ui.label(t("3 · Review")).classes("section-title")
-            summary = ui.label().classes("caption -mt-2")
+            with ui.row().classes("w-full items-center gap-x-2 gap-y-1 -mt-2"):
+                summary = ui.label().classes("caption flex-1 min-w-[16rem]")
+                clear_btn = (
+                    ui.button(t("Clear Suggestions"), icon="o_clear_all", on_click=lambda: clear_suggestions())  # noqa: PLW0108 - defined below
+                    .props("flat dense no-caps")
+                    .classes("text-primary")
+                )
             # a camt statement skips the columns step: the account is chosen here (moved from step 2)
             with ui.row().classes("w-full gap-3 items-center flex-wrap") as statement_row:
                 account_hint = ui.label().classes("caption")
@@ -378,11 +394,9 @@ def page() -> None:
                     "text": r.text,
                     "payee": r.payee,
                     "amount": r.amount,
-                    "category": (
-                        t("{category} (suggested)", category=category_labels.get(r.category, ""))
-                        if r.suggested and r.category
-                        else category_labels.get(r.category, "")
-                    ),
+                    "category": category_labels.get(r.category, ""),
+                    "suggested": r.suggested,
+                    "reason": r.reason if r.suggested else "",
                     "status": r.error or (t(STATUS[r.status]) if r.status in STATUS else ""),
                 }
                 for r in state["rows"]
@@ -439,13 +453,20 @@ def page() -> None:
                 parts.append(tn("{n} possible duplicate", "{n} possible duplicates", n))
             if errors:
                 parts.append(tn("{n} unreadable", "{n} unreadable", errors))
-            summary.set_text(
-                t(
-                    "{counts}. Duplicates and unreadable lines are left out; tick them to import anyway.",
-                    counts=" · ".join(parts),
-                )
+            text = t(
+                "{counts}. Duplicates and unreadable lines are left out; tick them to import anyway.",
+                counts=" · ".join(parts),
             )
             chosen = [r for r in rows if r.include]
+            suggested = sum(1 for r in chosen if r.suggested)
+            if suggested:
+                text += " " + tn(
+                    "{n} category is a suggestion (in italics): check it before importing.",
+                    "{n} categories are suggestions (in italics): check them before importing.",
+                    suggested,
+                )
+            summary.set_text(text)
+            clear_btn.set_visibility(any(r.suggested for r in rows))
             missing = [r for r in chosen if not importer.valid_category(ctx, r.type, r.category)]
             balances = [c for c in state["balances"] if c.include]
             if balances:
@@ -491,8 +512,8 @@ def page() -> None:
                 return
             rows = await selected_rows()
             fitting = [r for r in rows if importer.valid_category(ctx, r.type, bulk_cat.value)]
-            for r in fitting:
-                r.category, r.suggested = bulk_cat.value, False
+            for r in fitting:  # chosen by hand: no longer a suggestion
+                r.category, r.suggested, r.reason = bulk_cat.value, False, ""
             skipped = len(rows) - len(fitting)
             if skipped:
                 if importer.valid_category(ctx, TX_INCOME, bulk_cat.value):
@@ -527,6 +548,15 @@ def page() -> None:
                 update_status()
             elif row is not None and e.args.get("colId") == "payee":
                 row.payee = " ".join(str(e.args.get("newValue") or "").split())
+                if row.suggested or not row.category:  # a suggestion follows the new payee; a choice stays
+                    importer.clear_suggestions([row])
+                    if account.value and row.status != importer.ERROR:
+                        importer.suggest(categorize.Suggester(ctx), row, account.value)
+                    render()
+
+        def clear_suggestions() -> None:
+            importer.clear_suggestions(state["rows"])
+            render()
 
         def save_settings() -> None:
             if state["parsed"] is None:

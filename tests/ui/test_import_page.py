@@ -149,8 +149,10 @@ async def test_reimporting_the_same_file_skips_every_line(user: User, ctx, setup
     assert [r["status"] for r in rows(user)] == ["Already imported"] * 3 + ["No valid date"]
     assert [r["include"] for r in rows(user)] == [False] * 4
     assert import_button(user).text == "Import 0 Transactions" and not import_button(user).enabled
-    # categories are suggested from what was imported before
-    assert rows(user)[0]["category"] == "Groceries · 01.1 (suggested)"
+    # categories are suggested from what was imported before, marked as suggestions with the reason (F07)
+    first = rows(user)[0]
+    assert (first["category"], first["suggested"]) == ("Groceries · 01.1", True)
+    assert first["reason"] == "Used 2 times for this payee"
 
 
 async def test_a_manual_entry_marks_a_possible_duplicate(user: User, ctx, setup) -> None:

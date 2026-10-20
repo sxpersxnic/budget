@@ -89,6 +89,10 @@ def page() -> None:
             )
             with search.add_slot("prepend"):
                 ui.icon("search", size="18px").classes("text-3")
+            # categorization rules (F07) mostly name payees, so they live next door
+            ui.button(t("Rules…"), icon="o_rule", on_click=lambda: ui.navigate.to("/rules")).props("flat").classes(
+                "text-primary"
+            )
         ui.label(
             t(
                 "Who you pay and who pays you. Imports fill in the payee from the bank text; after a rename or "

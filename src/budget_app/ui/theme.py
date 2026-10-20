@@ -316,6 +316,8 @@ body.body--dark .nicegui-aggrid { border: 0.5px solid var(--separator); }
 .nicegui-aggrid .ag-cell { font-variant-numeric: tabular-nums; }
 .nicegui-aggrid .amt-in { color: var(--positive); }
 .nicegui-aggrid .muted { color: var(--label-2); }
+/* a category the import suggested (F07): not the user's choice until they keep it */
+.nicegui-aggrid .suggested { color: var(--label-2); font-style: italic; }
 /* ---------------------------------------------------------------- utilities (last, so they win) */
 .caption:empty { display: none; }
 .text-pos { color: var(--positive) !important; }
@@ -324,8 +326,9 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
   -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; }
 
-.selection-bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px; border-radius: 10px;
-  background: var(--accent-fill); width: 100%; font-size: 14px; }
+.selection-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px 6px 14px;
+  border-radius: 10px; background: var(--accent-fill); width: 100%; font-size: 14px; }
+.selection-bar .q-btn { white-space: nowrap; }  /* narrow windows: whole buttons wrap, not their words */
 """
 
 

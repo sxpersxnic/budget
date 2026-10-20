@@ -1,4 +1,7 @@
-"""The transaction form, used by the 'Add transaction' page and the edit dialog."""
+"""The transaction form, used by the 'Add transaction' page and the edit dialog.
+
+A new expenditure or income with a payee and no category shows the suggested category (F07) under the category
+field, filled in only when clicked; editing one offers "Always Categorize Like This…", which creates a rule."""
 
 from __future__ import annotations
 
@@ -25,8 +28,11 @@ from budget_app.domain.models import (
     Transaction,
 )
 from budget_app.i18n import N_, t, tc
+from budget_app.services import accounts as acc_svc
+from budget_app.services import categorize
 from budget_app.services import items as items_svc
 from budget_app.services import payees as payee_svc
+from budget_app.services import rules as rules_svc
 from budget_app.services import templates as templates_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
@@ -45,6 +51,7 @@ from budget_app.ui.layout import (
 )
 from budget_app.ui.widgets.amount import AmountInput
 from budget_app.ui.widgets.item_list import ItemList
+from budget_app.ui.widgets.rule_sheet import always_like_this
 from budget_app.ui.widgets.selects import (
     account_options,
     currency_select,
@@ -79,6 +86,11 @@ class TransactionForm:
         self._recent = {acc: i for i, acc in enumerate(tx_svc.recent_accounts(ctx))}
         self._busy = False
         self._touched = False  # explain why Save is disabled only once the user has started
+        # F07: suggestions for new transactions; the rules and the history are read once, again after each save
+        self._suggester = None if editing else categorize.Suggester(ctx)
+        self._suggestion: categorize.Suggestion | None = None
+        self._aids: dict[str, tuple[ui.row, ui.button, ui.label]] = {}  # per type: the suggestion line
+        self._rule_buttons: dict[str, ui.button] = {}  # per type, when editing: "Always Categorize Like This…"
         init = (
             tx_svc.edit_input(ctx, editing)
             if editing
@@ -115,13 +127,14 @@ class TransactionForm:
                 "w-full"
             )
             # who was paid or who paid (F09); transfers, exchanges and revaluations stay between own accounts
-            self.payee = payee_input(self.ctx, init.payee if init.type in payee_svc.PAYEE_TYPES else "")
+            self.payee = payee_input(self.ctx, init.payee if init.type in payee_svc.PAYEE_TYPES else "", on_change=ch)
 
             # --- expenditure
             with ui.column().classes("w-full gap-3") as self.exp_box:
                 self.exp_category = expenditure_category_select(
                     init.category if init.type == TX_EXPENDITURE else None, on_change=ch, ctx=self.ctx
                 )
+                self._category_aids(TX_EXPENDITURE)
                 self.exp_from = self._account_select(
                     t("From Account"), init.from_account if init.type == TX_EXPENDITURE else None
                 )
@@ -157,6 +170,7 @@ class TransactionForm:
                     init.category if init.type == TX_INCOME and not init.is_advance else None,
                     on_change=ch,
                 )
+                self._category_aids(TX_INCOME)
                 self.inc_to = self._account_select(t("To Account"), init.to_account if init.type == TX_INCOME else None)
                 self.inc_adv = ui.switch(
                     t("Repays an advance payment"), value=init.is_advance and init.type == TX_INCOME, on_change=ch
@@ -237,7 +251,7 @@ class TransactionForm:
                 )
 
             self.comment = (
-                ui.textarea(t("Note"), value=init.comment, placeholder=t("Optional"))
+                ui.textarea(t("Note"), value=init.comment, placeholder=t("Optional"), on_change=ch)  # rules read it
                 .props("dense outlined autogrow rows=1")
                 .classes("w-full")
             )
@@ -255,6 +269,24 @@ class TransactionForm:
                     t("Save Changes") if self.editing else t("Add Transaction"), on_click=self._save
                 ).props("unelevated")
             ui.keyboard(on_key=self._shortcut, ignore=[])
+
+    def _category_aids(self, kind: str) -> None:
+        """Under the category field: the suggestion of a new transaction, or "Always Categorize Like This…"."""
+        if self.editing:
+            self._rule_buttons[kind] = (
+                ui.button(t("Always Categorize Like This…"), icon="o_rule", on_click=self._make_rule)
+                .props("flat dense no-caps size=13px")
+                .classes("link-btn self-start -mt-2")
+            )
+            return
+        with ui.row().classes("w-full items-center gap-x-2 gap-y-0 -mt-2 px-1") as row:
+            use = (
+                ui.button(icon="o_auto_awesome", on_click=self._use_suggestion)
+                .props("flat dense no-caps size=13px")
+                .classes("link-btn")
+            )
+            reason = ui.label().classes("caption")
+        self._aids[kind] = (row, use, reason)
 
     def _recent_first(self, options: dict[str, str]) -> dict[str, str]:
         """Recently used accounts at the top of a dropdown (F06), the others in their usual order."""
@@ -376,6 +408,7 @@ class TransactionForm:
             self.save_btn.disable()
             self.status.set_text(str(exc) if self._touched or self.editing else "")
         self._update_hints(inp)
+        self._update_suggestion(inp)
         self.items.refresh()
 
     # ------------------------------------------------------------- dependents
@@ -458,6 +491,54 @@ class TransactionForm:
             self.currency.enable()
             set_options(self.move_from, self._recent_first(account_options(self.ctx, currency=cur)))
             set_options(self.move_to, self._recent_first(account_options(self.ctx, currency=cur)))
+
+    def _account_field(self, kind: str) -> ui.select:
+        return self.exp_from if kind == TX_EXPENDITURE else self.inc_to
+
+    def _update_suggestion(self, inp: TransactionInput) -> None:
+        """Show the suggested category (F07) when a new expenditure or income has a payee but no category yet."""
+        kind = inp.type
+        has_category = bool(inp.category) or inp.is_advance  # a repayment has no category of its own
+        for k, button in self._rule_buttons.items():
+            button.set_visibility(k == kind and has_category)
+        self._suggestion = None
+        if self._suggester is not None and kind in self._aids and inp.payee.strip() and not has_category:
+            account = self._account_field(kind).value or None  # an account already chosen stays
+            self._suggestion = self._suggester.suggest(kind, inp.payee, inp.comment, account=account)
+        for k, (row, use, reason) in self._aids.items():
+            hit = self._suggestion if k == kind else None
+            row.set_visibility(hit is not None)
+            if hit is None:
+                continue
+            use.set_text(t("Use {category}", category=rules_svc.category_label(self.ctx, kind, hit.category)))
+            fills = self._fills_account(hit)
+            reason.set_text(
+                f"{hit.reason} · {acc_svc.account_label(self.ctx.store.accounts.get(fills))}" if fills else hit.reason
+            )
+
+    def _fills_account(self, hit: categorize.Suggestion) -> str:
+        """The suggested account if it fits the currency and no account is chosen yet, else ""."""
+        field = self._account_field(self.type.value)
+        return hit.account if hit.account and hit.account in field.options and not field.value else ""
+
+    def _use_suggestion(self) -> None:
+        """Fill in the suggested category, and the suggested account if the account field is still empty."""
+        hit, kind = self._suggestion, self.type.value
+        if hit is None:
+            return
+        self._busy = True
+        try:
+            (self.exp_category if kind == TX_EXPENDITURE else self.inc_category).set_value(hit.category)
+            if account := self._fills_account(hit):
+                self._account_field(kind).set_value(account)
+        finally:
+            self._busy = False
+        self._changed()
+
+    def _make_rule(self) -> None:
+        """A rule that categorizes transactions like this one from now on (F07)."""
+        inp = self.read()
+        always_like_this(self.ctx, inp.type, inp.category, inp.payee, inp.comment)
 
     def _update_hints(self, inp: TransactionInput) -> None:
         self.reval_hint.set_text("")
@@ -613,6 +694,7 @@ class TransactionForm:
             self.comment.set_value("")
             self.payee.set_value("")
             self.payee.set_autocomplete(payee_svc.names(self.ctx))  # with the payee just saved
+            self._suggester = categorize.Suggester(self.ctx)  # and with what it was categorized as
             self.exp_adv_account.set_value(None)
             self.items.clear()
         finally:

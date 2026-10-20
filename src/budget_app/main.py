@@ -30,6 +30,7 @@ from budget_app.ui.pages import (
     overview,
     payees,
     recurring,
+    rules,
     settings,
     transactions,
 )
@@ -45,6 +46,7 @@ PAGES = {
     "/budget-entries": budget_entries.page,
     "/categories": categories.page,
     "/payees": payees.page,
+    "/rules": rules.page,
     "/settings": settings.page,
     "/history": history.page,
 }

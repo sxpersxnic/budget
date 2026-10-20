@@ -42,6 +42,7 @@ NAV_PARENT = {
     "/import": "/transactions",
     "/add-budget": "/budget-entries",
     "/history": "/settings",
+    "/rules": "/payees",
 }
 
 _data_listeners: weakref.WeakKeyDictionary[Client, Callable[[], object]] = weakref.WeakKeyDictionary()

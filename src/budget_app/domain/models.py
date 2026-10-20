@@ -110,6 +110,23 @@ class Payee:
 
 
 @dataclass
+class Rule:
+    """A categorization rule (F07, "Always categorize like this"): a text that, found in the payee or the bank
+    text, suggests a category.
+
+    `match` is compared folded (case and accents ignored). `category` is a COICOP code or `TAX` for expenditure,
+    an income category id for income. `account` is suggested along with it when the transaction has none yet:
+    the From account of expenditure, the To account of income.
+    """
+
+    match: str
+    type: str = TX_EXPENDITURE  # TX_EXPENDITURE or TX_INCOME
+    category: str = ""
+    account: str = ""  # optional
+    id: str = field(default_factory=new_id)
+
+
+@dataclass
 class Template:
     """A saved starting point for a new transaction, such as "Coffee · 01.1.1 · Cash · 4.50" (F06)."""
 

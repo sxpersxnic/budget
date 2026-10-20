@@ -1,7 +1,8 @@
 """Importing transactions from bank and card CSV exports.
 
 Flow: `read_file` detects encoding, delimiter and header line; `guess_profile` maps the columns;
-`parse_rows` turns lines into signed amounts; `analyse` marks duplicates and suggests categories;
+`parse_rows` turns lines into signed amounts; `analyse` marks duplicates, finds payees and suggests categories
+(`categorize.py`: rules, then the payee's history);
 `commit` saves the chosen rows. Column settings can be saved per bank as a profile. A running-balance
 column, when the profile names one, is read into each row; `import_balances` turns it into month-end balances.
 camt.053 / camt.054 statements (`camt.py`) produce the same rows and go through `analyse` and `commit` too.
@@ -25,6 +26,7 @@ from pathlib import Path
 from budget_app.domain.coicop import TAX, get_coicop
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, Transaction
 from budget_app.i18n import N_, t
+from budget_app.services import categorize
 from budget_app.services import payees as payee_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
@@ -149,7 +151,8 @@ class ImportRow:
     status: str = NEW
     include: bool = True
     category: str = ""
-    suggested: bool = False  # category taken from an earlier transaction with the same text
+    suggested: bool = False  # the category is a suggestion (F07), shown as one until the user changes it
+    reason: str = ""  # why it was suggested: "Rule: contains “migros”", "Used 3 times for this payee"
     import_ref: str = ""
     balance: float | None = None  # the account's balance after this booking, when the file shows it
     counterparty: str = ""  # who was paid or who paid, when the file names them apart from the text
@@ -367,15 +370,13 @@ def _balance(text: str, profile: ImportProfile) -> float | None:
     return round(-value if profile.invert else value, 2)
 
 
-def _norm(text: str, keep_digits: bool = True) -> str:
+def _norm(text: str) -> str:
     s = text.lower()
-    if not keep_digits:
-        s = re.sub(r"\d", " ", s)
     return " ".join(re.sub(r"[^\w]+", " ", s).split())
 
 
 def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[ImportRow]:
-    """Set import references, mark duplicates, suggest categories from earlier transactions and find payees.
+    """Set import references, mark duplicates, find payees and suggest categories (rules, then history).
 
     Rows from a camt statement arrive with the bank's reference (`camt:…`) and keep it; CSV rows get a
     fingerprint. A row matching a transaction entered by hand, or imported from the other kind of file,
@@ -386,7 +387,7 @@ def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Import
     by_day: dict[str, Counter[tuple]] = defaultdict(Counter)  # source ("" = typed by hand) -> (day, type, amount)
     for tx in existing:
         by_day[_source(tx.import_ref)][(tx.date, tx.type, round(tx.amount, 2))] += 1
-    history = _category_history(ctx)
+    suggester = categorize.Suggester(ctx)  # rules and history read once for the whole file
     seen: Counter[str] = Counter()
     for row in rows:
         if row.status == ERROR or row.date is None or row.amount is None:
@@ -408,24 +409,28 @@ def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Import
         if not row.payee:
             row.payee = payee_svc.resolve(ctx, row.payee_source)
         if not row.category:
-            suggestion = history.get((row.type, _norm(row.text, keep_digits=False)))
-            if suggestion:
-                row.category, row.suggested = suggestion, True
+            suggest(suggester, row, account_id)
     return rows
+
+
+def suggest(suggester: categorize.Suggester, row: ImportRow, account_id: str) -> None:
+    """Fill in the suggested category of a row without one, marked as a suggestion; the account is the file's."""
+    hit = suggester.suggest(row.type, row.payee, row.text, account=account_id)
+    if hit is not None:
+        row.category, row.suggested, row.reason = hit.category, True, hit.reason
+
+
+def clear_suggestions(rows: list[ImportRow]) -> int:
+    """Empty every suggested category; the number of rows cleared."""
+    cleared = [r for r in rows if r.suggested]
+    for r in cleared:
+        r.category, r.suggested, r.reason = "", False, ""
+    return len(cleared)
 
 
 def _source(import_ref: str) -> str:
     """'csv', 'camt', or '' for a transaction typed by hand."""
     return import_ref.split(":", 1)[0] if import_ref else ""
-
-
-def _category_history(ctx: Context) -> dict[tuple[str, str], str]:
-    """Most frequent category per (type, text without digits) among existing transactions."""
-    counts: dict[tuple[str, str], Counter[str]] = defaultdict(Counter)
-    for tx in ctx.store.transactions.all():
-        if tx.type in (TX_EXPENDITURE, TX_INCOME) and tx.category and tx.comment:
-            counts[(tx.type, _norm(tx.comment, keep_digits=False))][tx.category] += 1
-    return {k: c.most_common(1)[0][0] for k, c in counts.items() if k[1]}
 
 
 def valid_category(ctx: Context, type_: str, category: str) -> bool:
