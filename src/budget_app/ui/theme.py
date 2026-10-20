@@ -260,6 +260,10 @@ body.body--dark .q-field--outlined .q-field__control { background: var(--fill-2)
   box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 0 0 0.5px rgba(0,0,0,.04) !important; }
 body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !important; }
 .segmented.full { width: 100%; }
+/* too narrow for all options (the transaction types on a phone): scroll inside, never spill over */
+.segmented { overflow-x: auto; scrollbar-width: none; }
+.segmented::-webkit-scrollbar { display: none; }
+@media (max-width: 599px) { .segmented .q-btn { flex-shrink: 0; } }
 
 .q-menu { border-radius: 10px !important; box-shadow: 0 8px 30px rgba(0,0,0,.16) !important;
   background: var(--surface-raised); }
