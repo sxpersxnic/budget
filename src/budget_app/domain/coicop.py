@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import unicodedata
 from dataclasses import dataclass, field
 from functools import cache, lru_cache
 
@@ -78,6 +79,12 @@ class Coicop:
         opts = {c.code: (" " * (c.level - 1)) + c.label for c in self.categories.values() if c.code not in PSEUDO_NAMES}
         opts[TAX] = t(PSEUDO_NAMES[TAX])
         return opts
+
+
+def fold(text: str) -> str:
+    """`text` for searching: case and accents ignored ("Café" and "cafe" match)."""
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
 @cache

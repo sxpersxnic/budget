@@ -64,6 +64,7 @@
  "Base Currency": "Monnaie de base",
  "Before a restore": "Avant une restauration",
  "Before an update": "Avant une mise à jour",
+ "Besides COICOP, expenditure can be booked as {taxes}. The part of a payment made for someone else counts as {advances} until it is paid back.": "En dehors de la COICOP, une dépense peut être saisie comme {taxes}. La part d’un paiement faite pour quelqu’un d’autre compte comme {advances} jusqu’à son remboursement.",
  "Book as revaluation…": "Comptabiliser comme réévaluation…",
  "Bring in a CSV export or a camt statement from your bank or credit card": "Reprendre un export CSV ou un relevé camt de la banque ou de la carte de crédit",
  "Budget": "Budget",
@@ -74,6 +75,7 @@
  "Budget updated": "Budget mis à jour",
  "Budgeted {amount}": "Budgété : {amount}",
  "Budgets can run until {month}. Change this in Settings.": "Les budgets peuvent courir jusqu’à {month}. Modifiable dans les Réglages.",
+ "COICOP 2018, the UN classification of spending by purpose": "COICOP 2018, la classification de l’ONU des dépenses par fonction",
  "Cancel": "Annuler",
  "Cannot compute the overview: {error}": "Impossible de calculer l’aperçu : {error}",
  "Cannot compute wealth: {error}": "Impossible de calculer la fortune : {error}",
@@ -252,6 +254,7 @@
  "No balance recorded for {names} at the end of {month}.": "Aucun solde saisi pour {names} à fin {month}.",
  "No balances recorded yet.": "Aucun solde saisi pour l’instant.",
  "No budget set": "Aucun budget défini",
+ "No category matches.": "Aucune catégorie ne correspond.",
  "No exchange rates yet": "Pas encore de taux de change",
  "No income this month.": "Aucun revenu ce mois-ci.",
  "No valid amount": "Montant non valable",
@@ -322,6 +325,7 @@
  "Saved settings": "Paramètres enregistrés",
  "Saved “{name}”": "Enregistré : «{name}»",
  "Search": "Rechercher",
+ "Search code or name": "Rechercher un code ou un nom",
  "Select a month": "Choisir un mois",
  "Select an account": "Choisir un compte",
  "Select an expenditure category": "Choisir une catégorie de dépenses",
@@ -343,6 +347,7 @@
  "Show all subcategories": "Afficher toutes les sous-catégories",
  "Showing amounts in {currency}": "Montants affichés en {currency}",
  "Some selected advance payments have repayments. Delete the repayments first (or select them as well).": "Certaines avances sélectionnées ont des remboursements. Supprimer d’abord les remboursements (ou les sélectionner aussi).",
+ "Spent in {year}, {currency}": "Dépenses {year}, {currency}",
  "Spread of the exchange against the ECB rate": "Écart de change par rapport au taux BCE",
  "Statement {month}": "Relevé {month}",
  "Status": "Statut",
@@ -453,9 +458,17 @@
   "{n} poste budgétaire",
   "{n} postes budgétaires"
  ],
+ "{n} category": [
+  "{n} catégorie",
+  "{n} catégories"
+ ],
  "{n} item": [
   "{n} article",
   "{n} articles"
+ ],
+ "{n} match": [
+  "{n} résultat",
+  "{n} résultats"
  ],
  "{n} month, {span}": [
   "{n} mois, {span}",
@@ -492,6 +505,10 @@
  "{n} selected": [
   "Sélection : {n}",
   "Sélection : {n}"
+ ],
+ "{n} subcategory": [
+  "{n} sous-catégorie",
+  "{n} sous-catégories"
  ],
  "{n} transaction": [
   "{n} transaction",

@@ -28,6 +28,7 @@ NAV = [
     ("/budget", N_("Budget"), "o_donut_large"),
     ("/transactions", N_("Transactions"), "o_receipt_long"),
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
+    ("/categories", N_("Categories"), "o_account_tree"),
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")
 # Routes that are not in the sidebar highlight their parent.
