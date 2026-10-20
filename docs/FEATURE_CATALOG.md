@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19, 20, 21 and 23 done (F24, F25, F28, F08, F06, F05, F02) and F29; steps 22, 24, 25 open |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19, 20, 21 and 23 done (F24, F25, F28, F08, F06, F05, F02) and F29; step 22 partly (F09 done); steps 24, 25 open |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -60,7 +60,7 @@ Waits for the source data (decision 7).
 | 19 | ☑ Done | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from milestone 1. |
 | 20 | ☑ Done | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
 | 21 | ☑ Done | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
-| 22 | ☐ Open | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
+| 22 | ◐ Partly | **F09** Payees (done) → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☐ Open | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
 | 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
@@ -120,7 +120,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
 | F07 | ☐ Open | Automatic categorization | Organizing | M–L | Optional | F09 |
 | F08 | ☑ Done | Simpler category picker | Organizing | S | Local | – |
-| F09 | ☐ Open | Payees | Organizing | M | Local | – |
+| F09 | ☑ Done | Payees | Organizing | M | Local | – |
 | F10 | ☐ Open | Tags | Organizing | M | Local | – |
 | F11 | ☐ Open | Split transactions | Organizing | M | Local | – |
 | F12 | ☐ Open | Attachments | Organizing | M | Local | – |
@@ -483,7 +483,23 @@ serving households"). Keep COICOP as the storage format, but:
 
 #### F09 · Payees
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20, `2cc5766`)
+
+**As built:** expenditures and income have a payee (transfers, exchanges and revaluations don't); templates,
+*Duplicate* and recurring series carry it. `payees.csv` holds each payee once, compared without case, accents
+and punctuation, with its *aliases*: the cleaned bank texts imported for it and its former names. Imports look a
+text up there first and only then normalize it (`domain/payees.py`: dates, times, card, reference, terminal and
+phone numbers, IBANs and postal codes go, so do the booking words of UBS, PostFinance, ZKB, Raiffeisen, Revolut
+and TWINT in German, French, Italian and English, payment services such as `TWINT *` and `SumUp *`, and the
+location and legal form at the end; about 170 brands, shops and banks in `resources/payees.json` get one
+name, "MIGROS ZUERICH HB 1234" → "Migros"). The CSV import reads the payee from a counterparty column (*Empfänger*, *Payee*,
+*Merchant* …) or the description, camt from the counterparty's name; the preview shows it and it can be edited
+there, which teaches the alias. The form's payee field suggests known payees (recently used first) and takes a
+new name as typed. Transactions has a Payee column, search and filter. The **Payees** page lists every payee
+with its number of transactions and what was spent and received, and renames, merges (several → one name; their
+transactions, templates, series and aliases move) and deletes unused payees, each as one undo step. Not built:
+QR-bill creditors (with F03), category suggestions per payee (F07), a "top merchants" report, and payees on
+transfers.
 
 A payee or merchant field, normalized ("MIGROS ZUERICH HB 1234" → "Migros").
 
