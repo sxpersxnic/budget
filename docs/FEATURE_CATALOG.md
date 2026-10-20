@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19, 20 and 23 done (F24, F25, F28, F02) and F29; steps 21, 22, 24, 25 open |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19, 20, 21 and 23 done (F24, F25, F28, F08, F06, F05, F02) and F29; steps 22, 24, 25 open |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -59,7 +59,7 @@ Waits for the source data (decision 7).
 | --- | --- | --- | --- |
 | 19 | ☑ Done | **F24** Export to CSV and JSON | Was next before the issue; reuses the save helper from milestone 1. |
 | 20 | ☑ Done | **F25** Full backup and restore, **F28** Undo and change history | Safety before more import features. |
-| 21 | ☐ Open | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
+| 21 | ☑ Done | **F08** Simpler category picker, **F06** Faster manual entry, **F05** Recurring transactions | F08 builds on the COICOP select from F40; F05 shares the schedule code from B09. |
 | 22 | ☐ Open | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☐ Open | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
