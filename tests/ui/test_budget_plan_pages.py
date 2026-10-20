@@ -6,6 +6,7 @@ import re
 from nicegui import ui
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
+from notifications import notified
 
 from budget_app.domain import months
 from budget_app.services import budget as budget_svc
@@ -526,7 +527,7 @@ async def test_form_reports_a_problem_found_when_saving(user: User, ctx, setup) 
     ctx.store.income_categories.delete([setup["salary"].id])  # removed elsewhere after the form checked it
     button(user, root, "Add to Budget").click()
     await user.should_see("Select an income category")
-    assert user.notify.contains("Select an income category")
+    assert notified(user, "Select an income category")
     assert ctx.store.budget.all() == []
 
 

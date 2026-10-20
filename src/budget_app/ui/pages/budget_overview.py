@@ -16,7 +16,7 @@ from budget_app.domain.models import (
     TX_REVALUATION,
     BudgetEntry,
 )
-from budget_app.i18n import t, tc, tn
+from budget_app.i18n import N_, t, tc, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
@@ -39,7 +39,7 @@ from budget_app.ui.layout import (
     save_file,
     sheet,
     sheet_buttons,
-    success,
+    undoable,
 )
 from budget_app.ui.pages.add_budget import FOREVER, recurrence_options, until_options
 from budget_app.ui.widgets.selects import account_options, currency_select
@@ -86,7 +86,7 @@ def account_entry_dialog(ctx: Context, on_saved, month: str | None = None, accou
                 error(str(exc))
                 return
             dlg.close()
-            success(t("Balance recorded"))
+            undoable(t("Balance recorded"))
             on_saved()
 
         save_btn = sheet_buttons(dlg, t("Save"), save)
@@ -208,23 +208,25 @@ def budget_edit_dialog(ctx: Context, month: str, type_: str, category: str, labe
             except ValidationError as exc:
                 error(str(exc))
                 return
-            budget_svc.delete(ctx, [f[0].id for f in fields if f[5].value])
-            for e, _, _, num, cur, remove, _, _, note, following, later in fields:
-                if remove.value:
-                    continue
-                if e.id in replans:
-                    budget_svc.reschedule(ctx, e.id, replans[e.id])
-                    continue
-                for target in [e] + (later if following is not None and following.value else []):
-                    if (num.value, cur.value, (note.value or "").strip()) != (
-                        target.amount,
-                        target.currency,
-                        target.comment,
-                    ):
-                        budget_svc.update_entry(ctx, target.id, num.value, cur.value, note.value or "")
-            if new_entry is not None:
-                budget_svc.create(ctx, new_entry)
+            with ctx.store.history.action(N_("Change the budget")):  # one step to undo
+                budget_svc.delete(ctx, [f[0].id for f in fields if f[5].value])
+                for e, _, _, num, cur, remove, _, _, note, following, later in fields:
+                    if remove.value:
+                        continue
+                    if e.id in replans:
+                        budget_svc.reschedule(ctx, e.id, replans[e.id])
+                        continue
+                    for target in [e] + (later if following is not None and following.value else []):
+                        if (num.value, cur.value, (note.value or "").strip()) != (
+                            target.amount,
+                            target.currency,
+                            target.comment,
+                        ):
+                            budget_svc.update_entry(ctx, target.id, num.value, cur.value, note.value or "")
+                if new_entry is not None:
+                    budget_svc.create(ctx, new_entry)
             dlg.close()
+            undoable(t("Budget updated"))
             on_saved()
 
         sheet_buttons(dlg, t("Save"), save)

@@ -7,6 +7,7 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
+from notifications import notified
 
 from budget_app import i18n
 from budget_app.domain import months
@@ -279,7 +280,7 @@ async def test_delete_unused_income_category(user: User, ctx, setup) -> None:
     assert "Categories that are in use can’t be deleted." in dialog_texts(user)
     dialog_button(user, "Delete").click()
     assert ctx.store.income_categories.all() == []
-    assert user.notify.contains("Deleted Salary")  # like deleting an account (B12)
+    assert notified(user, "Deleted Salary")  # like deleting an account (B12)
     await no_label(user, "Salary")
 
 
@@ -339,7 +340,7 @@ async def test_shrinking_the_horizon_adds_nothing(user: User, ctx, demo) -> None
     set_value(user, _page_select(user, horizon), target)
     user.find("Apply").click()
     await user.should_see(f"Planning until {months.label(target)}")
-    assert not user.notify.contains("added")
+    assert not notified(user, "added")
     assert len(ctx.store.budget.all()) == before  # entries past the new horizon stay
     assert ctx.horizon() == target
 

@@ -8,6 +8,7 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
+from notifications import notified
 
 from budget_app import i18n
 from budget_app.services import items as items_svc
@@ -233,7 +234,7 @@ async def test_delete_selected_after_confirmation(user: User, ctx, demo, shop) -
     click(user, button(user, "Delete"))
     click(user, button(user, "Delete"))  # the sheet's button is the newest
     gone = 3 if shop["exchange"].linked_id else 2  # the exchange's spread booking goes with it (F44)
-    assert user.notify.contains(f"Deleted {gone} transactions")
+    assert notified(user, f"Deleted {gone} transactions")
     assert ctx.store.transactions.get(shop["receipt"].id) is None
     assert items_svc.items_for(ctx, shop["receipt"].id) == []  # the receipt's items go with it
     assert len(rows(user)) == before - gone
@@ -246,7 +247,7 @@ async def test_an_advance_with_repayments_cannot_be_deleted_alone(user: User, ct
     click(user, button(user, "Delete"))
     await user.should_see("Delete 1 transaction?")
     click(user, button(user, "Delete"))
-    assert user.notify.contains("Some selected advance payments have repayments")
+    assert notified(user, "Some selected advance payments have repayments")
     assert ctx.store.transactions.get(shop["advance"].id) is not None
 
 
@@ -266,7 +267,7 @@ async def test_edit_needs_exactly_one_selected_row(user: User, ctx, demo, shop) 
     click(user, button(user, "Edit"))
     await settle()
     await user.should_not_see("Edit Transaction")
-    assert user.notify.contains("Select exactly one transaction to edit")
+    assert notified(user, "Select exactly one transaction to edit")
 
     await select(user, shop["receipt"].id)
     click(user, button(user, "Edit"))

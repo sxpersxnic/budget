@@ -6,6 +6,7 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
+from notifications import notified
 
 from budget_app.domain.fx import FxError
 from budget_app.domain.models import ACCOUNT_ADVANCE
@@ -109,7 +110,7 @@ async def test_expenditure_is_saved_and_the_form_resets(user: User, ctx, setup) 
     assert save_button(user).enabled and status(user) == ""
     click(user, save_button(user))
 
-    assert user.notify.contains("Transaction added")
+    assert notified(user, "Transaction added")
     [tx] = ctx.store.transactions.all()
     assert (tx.type, tx.amount, tx.currency, tx.category, tx.from_account) == (
         "expenditure",
@@ -169,7 +170,7 @@ async def test_a_missing_exchange_rate_hides_the_hint_and_blocks_saving(user: Us
     fill_expenditure(user, setup["eur"].id, amount=100)
     assert not any("(ECB rate of" in text for text in caption_texts(user))
     click(user, save_button(user))
-    assert user.notify.contains("No ECB rate for currency EUR")
+    assert notified(user, "No ECB rate for currency EUR")
     assert ctx.store.transactions.all() == []
 
 
@@ -355,7 +356,7 @@ async def test_a_half_filled_item_blocks_saving(user: User, ctx, setup) -> None:
     click(user, button(user, "Add Item"))
     put(user, item_rows(user)[0][0], "Cheese")
     click(user, save_button(user))
-    assert user.notify.contains("Item 1: enter a price")
+    assert notified(user, "Item 1: enter a price")
     assert ctx.store.transactions.all() == []
 
     # a blank line is ignored, a removed line is gone
@@ -414,7 +415,7 @@ async def test_editing_an_expenditure_in_the_sheet_keeps_its_items(user: User, c
     put(user, field(user, ui.textarea, "Note"), "Farmers market")
     click(user, button(user, "Save Changes"))
 
-    assert user.notify.contains("Changes saved") and saved == [True]
+    assert notified(user, "Changes saved") and saved == [True]
     [stored] = ctx.store.transactions.all()
     assert (stored.id, stored.amount, stored.comment) == (tx.id, 25, "Farmers market")
     assert [i.name for i in items_svc.items_for(ctx, tx.id)] == ["Apples", "Honey"]
@@ -481,7 +482,7 @@ async def test_a_failed_save_in_the_sheet_keeps_it_open(user: User, ctx, setup, 
     await user.should_see("Edit Transaction")
     put(user, next(e for e in user.find(kind=ui.switch).elements if "advance payment" in e.text), False)
     click(user, button(user, "Save Changes"))
-    assert user.notify.contains("of this advance has already been repaid")
+    assert notified(user, "of this advance has already been repaid")
     assert ctx.store.transactions.get(advance.id).is_advance
 
     click(user, button(user, "Cancel"))

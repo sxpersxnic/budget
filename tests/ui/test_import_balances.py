@@ -2,6 +2,7 @@
 
 from nicegui import ElementFilter, ui
 from nicegui.testing import User
+from notifications import notified
 from test_camt import entry, statement
 from test_closing_balances import OLDEST_FIRST, closing
 from test_import_camt import upload_xml
@@ -52,7 +53,7 @@ async def test_the_balances_of_each_month_are_offered_and_recorded(user: User, c
     assert status(user) == "" and import_button(user).enabled
     click(user, import_button(user))
     await user.should_see("Transactions")
-    assert user.notify.contains("Imported 6 transactions · 1 month-end balance recorded")
+    assert notified(user, "Imported 6 transactions · 1 month-end balance recorded")
     assert len(ctx.store.transactions.all()) == 6
     assert wealth.entry_for(ctx, chf, "2026-08").amount == 1900.0  # unticked: kept
     assert wealth.entry_for(ctx, chf, "2026-09") is None
@@ -79,7 +80,7 @@ async def test_balances_are_saved_when_every_line_is_imported_already(user: User
 
     click(user, import_button(user))
     await user.should_see("Transactions")
-    assert user.notify.contains("Imported 0 transactions · 1 month-end balance recorded")
+    assert notified(user, "Imported 0 transactions · 1 month-end balance recorded")
     assert len(ctx.store.transactions.all()) == 6
     assert wealth.entry_for(ctx, chf, "2026-08").amount == 1950.5
 

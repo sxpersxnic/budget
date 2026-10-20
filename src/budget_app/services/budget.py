@@ -7,8 +7,9 @@ from dataclasses import dataclass, replace
 from budget_app.domain import months
 from budget_app.domain.coicop import ADV, TAX, get_coicop
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, BudgetEntry, new_id
-from budget_app.i18n import t
+from budget_app.i18n import N_, t
 from budget_app.services.context import Context, ValidationError
+from budget_app.services.undo import recorded
 
 
 @dataclass
@@ -67,6 +68,7 @@ def validate(ctx: Context, inp: BudgetInput) -> list[str]:
     return plan_months(ctx, inp)
 
 
+@recorded(N_("Add a budget entry"))
 def create(ctx: Context, inp: BudgetInput) -> list[BudgetEntry]:
     month_list = validate(ctx, inp)
     if inp.overwrite:
@@ -101,6 +103,7 @@ def create(ctx: Context, inp: BudgetInput) -> list[BudgetEntry]:
     return ctx.store.budget.add_many(rows)
 
 
+@recorded(N_("Change a budget entry"))
 def update_entry(
     ctx: Context,
     entry_id: str,
@@ -125,10 +128,12 @@ def update_entry(
     return ctx.store.budget.update(entry)
 
 
+@recorded(N_("Delete budget entries"))
 def delete(ctx: Context, ids: list[str]) -> int:
     return ctx.store.budget.delete(ids)
 
 
+@recorded(N_("Change the planning horizon"))
 def set_horizon(ctx: Context, new_horizon: str) -> int:
     """Change the budget horizon and continue every 'Forever' series up to it.
 
@@ -194,6 +199,7 @@ def later_in_series(ctx: Context, entry: BudgetEntry) -> list[BudgetEntry]:
     ]
 
 
+@recorded(N_("Replan a budget"))
 def reschedule(ctx: Context, entry_id: str, inp: BudgetInput) -> list[BudgetEntry]:
     """Replan an entry's series from the entry's month on, with `inp`'s schedule, amount and note
     (and category, if `inp` names one).

@@ -19,7 +19,7 @@ from budget_app.ui.layout import (
     on_data_changed,
     sheet,
     sheet_buttons,
-    success,
+    undoable,
 )
 from budget_app.ui.pages.add_budget import FOREVER, RECURRENCE, open_budget_sheet, recurrence_options, until_options
 from budget_app.ui.widgets.grid import confirm, export_menu, make_grid, money_col, month_col, num_col
@@ -105,29 +105,33 @@ def edit_dialog(ctx: Context, entry: BudgetEntry, on_saved) -> None:
 
         def save() -> None:
             try:
-                if replanned():
-                    budget_svc.reschedule(
-                        ctx,
-                        entry.id,
-                        BudgetInput(
-                            end_month="" if until.value == FOREVER else until.value or "",
-                            forever=until.value == FOREVER,
-                            recur_months=int(recur.value or 1),
-                            currency=cur.value or "",
-                            amount=amount.value,
-                            category=cat.value or "",
-                            comment=comment.value or "",
-                        ),
-                    )
-                else:
-                    for target in [entry] + (later if following and following.value else []):
-                        budget_svc.update_entry(ctx, target.id, amount.value, cur.value, comment.value, cat.value)
+                with ctx.store.history.action(N_("Change a budget entry")):
+                    _apply()
             except ValidationError as exc:
                 error(str(exc))
                 return
             dlg.close()
-            success(t("Budget updated"))
+            undoable(t("Budget updated"))
             on_saved()
+
+        def _apply() -> None:
+            if replanned():
+                budget_svc.reschedule(
+                    ctx,
+                    entry.id,
+                    BudgetInput(
+                        end_month="" if until.value == FOREVER else until.value or "",
+                        forever=until.value == FOREVER,
+                        recur_months=int(recur.value or 1),
+                        currency=cur.value or "",
+                        amount=amount.value,
+                        category=cat.value or "",
+                        comment=comment.value or "",
+                    ),
+                )
+            else:
+                for target in [entry] + (later if following and following.value else []):
+                    budget_svc.update_entry(ctx, target.id, amount.value, cur.value, comment.value, cat.value)
 
         sheet_buttons(dlg, t("Save"), save)
 
@@ -253,7 +257,7 @@ def page() -> None:
 
             def do() -> None:
                 n = budget_svc.delete(ctx, [r["id"] for r in rows])
-                success(tn("Deleted {n} budget entry", "Deleted {n} budget entries", n))
+                undoable(tn("Deleted {n} budget entry", "Deleted {n} budget entries", n))
                 apply_filters()
 
             confirm(

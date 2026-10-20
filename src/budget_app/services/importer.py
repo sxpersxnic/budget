@@ -24,10 +24,11 @@ from pathlib import Path
 
 from budget_app.domain.coicop import TAX, get_coicop
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, Transaction
-from budget_app.i18n import t
+from budget_app.i18n import N_, t
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
+from budget_app.services.undo import recorded
 
 PROFILES_FILE = "import_profiles.json"
 ENCODINGS = ("utf-8-sig", "cp1252", "latin-1")  # Swiss bank exports are often Windows-1252
@@ -404,6 +405,7 @@ def valid_category(ctx: Context, type_: str, category: str) -> bool:
     return ctx.store.income_categories.get(category) is not None
 
 
+@recorded(N_("Import transactions"))
 def commit(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Transaction]:
     """Save every included row as a transaction in one write. Nothing is saved if a row is invalid."""
     acc = ctx.store.accounts.get(account_id)

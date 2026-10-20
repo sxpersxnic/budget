@@ -23,6 +23,7 @@ from budget_app.domain.models import (
 from budget_app.i18n import N_, t
 from budget_app.services import accounts as acc_svc
 from budget_app.services.context import Context, ValidationError
+from budget_app.services.undo import recorded
 
 EPS = 0.005
 FROM, TO, ADVANCE = "from", "to", "advance"
@@ -295,6 +296,7 @@ def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Tra
     return tx
 
 
+@recorded(N_("Save a transaction"))
 def save(ctx: Context, inp: TransactionInput, editing_id: str = "") -> Transaction:
     validate(ctx, inp, editing_id)
     if editing_id:
@@ -367,6 +369,7 @@ def _store_exchange_split(ctx: Context, tx: Transaction, old: Transaction | None
     return saved
 
 
+@recorded(N_("Import transactions"))
 def save_many(ctx: Context, inputs: list[TransactionInput]) -> list[Transaction]:
     """Validate every new transaction first, then save them all in one write (used by imports)."""
     for i, inp in enumerate(inputs):
@@ -377,6 +380,7 @@ def save_many(ctx: Context, inputs: list[TransactionInput]) -> list[Transaction]
     return ctx.store.transactions.add_many([_build(ctx, inp, None) for inp in inputs])
 
 
+@recorded(N_("Apply exchange rates"))
 def revalue_to_transaction_dates(ctx: Context) -> int:
     """Value every transaction at the ECB rate of its date (the last rate on or before it).
 
@@ -441,6 +445,7 @@ def edit_input(ctx: Context, tx: Transaction) -> TransactionInput:
     return inp
 
 
+@recorded(N_("Delete transactions"))
 def delete(ctx: Context, ids: list[str]) -> int:
     ids_set = set(ids)
     blockers = [tx for tx in ctx.store.transactions.all() if tx.settles_id in ids_set and tx.id not in ids_set]

@@ -17,7 +17,8 @@ from budget_app import config, i18n
 from budget_app.domain import months
 from budget_app.i18n import N_, t
 from budget_app.services import transactions as tx_svc
-from budget_app.services.context import Context, get_ctx
+from budget_app.services import undo as undo_svc
+from budget_app.services.context import Context, ValidationError, get_ctx
 from budget_app.ui import theme
 
 log = logging.getLogger(__name__)
@@ -32,7 +33,12 @@ NAV = [
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")
 # Routes that are not in the sidebar highlight their parent.
-NAV_PARENT = {"/add-transaction": "/transactions", "/import": "/transactions", "/add-budget": "/budget-entries"}
+NAV_PARENT = {
+    "/add-transaction": "/transactions",
+    "/import": "/transactions",
+    "/add-budget": "/budget-entries",
+    "/history": "/settings",
+}
 
 _data_listeners: weakref.WeakKeyDictionary[Client, Callable[[], object]] = weakref.WeakKeyDictionary()
 
@@ -225,6 +231,31 @@ def error(message: str) -> None:
 
 def success(message: str) -> None:
     ui.notify(message, position="bottom", icon="check_circle", color="grey-9", timeout=1800)
+
+
+def undoable(message: str) -> None:
+    """Confirm a change, with an Undo button for the action that was just recorded (F28)."""
+    ctx = get_ctx()
+    act = undo_svc.latest(ctx)
+    if act is None or act.undone:
+        success(message)
+        return
+    note = ui.notification(message, position="bottom", icon="check_circle", color="grey-9", timeout=8)
+    # Quasar calls the action in the browser; it hands the click to the server as an 'undo' event
+    handler = f"() => getElement({note.id}).$emit('undo')"
+    note.props["options"]["actions"] = [{"label": t("Undo"), "color": "amber-3", "noCaps": True, ":handler": handler}]
+    note.update()
+
+    def undo() -> None:
+        try:
+            undo_svc.undo(ctx, act.id)
+        except ValidationError as exc:
+            error(str(exc))
+            return
+        success(t("Undone: {action}", action=undo_svc.label(ctx, act)))
+        ui.navigate.reload()  # every list and total on the page follows the restored records
+
+    note.on("undo", undo)
 
 
 MEDIA_TYPES = {

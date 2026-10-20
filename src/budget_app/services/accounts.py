@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR, Account, IncomeCategory
-from budget_app.i18n import t
+from budget_app.i18n import N_, t
 from budget_app.services.context import Context, ValidationError
+from budget_app.services.undo import recorded
 
 DEFAULT_ADVANCE_NAME = "Advance payments"  # stored account name, matched by value: not translated
 
@@ -41,11 +42,13 @@ def _check_name(ctx: Context, name: str, currency: str, kind: str, exclude_id: s
     return name
 
 
+@recorded(N_("Add an account"))
 def add_account(ctx: Context, name: str, currency: str, kind: str = ACCOUNT_REGULAR) -> Account:
     name = _check_name(ctx, name, currency, kind)
     return ctx.store.accounts.add(Account(name=name, currency=currency, kind=kind))
 
 
+@recorded(N_("Change an account"))
 def edit_account(ctx: Context, account_id: str, name: str, currency: str) -> Account:
     acc = ctx.store.accounts.get(account_id)
     if acc is None:
@@ -57,6 +60,7 @@ def edit_account(ctx: Context, account_id: str, name: str, currency: str) -> Acc
     return ctx.store.accounts.update(acc)
 
 
+@recorded(N_("Delete an account"))
 def delete_account(ctx: Context, account_id: str) -> None:
     if any(account_id in (tx.from_account, tx.to_account, tx.advance_account) for tx in ctx.store.transactions.all()):
         raise ValidationError(t("Accounts with transactions cannot be deleted"))
@@ -92,10 +96,12 @@ def _check_cat_name(ctx: Context, name: str, exclude_id: str = "") -> str:
     return name
 
 
+@recorded(N_("Add an income category"))
 def add_income_category(ctx: Context, name: str) -> IncomeCategory:
     return ctx.store.income_categories.add(IncomeCategory(name=_check_cat_name(ctx, name)))
 
 
+@recorded(N_("Rename an income category"))
 def rename_income_category(ctx: Context, cat_id: str, name: str) -> IncomeCategory:
     cat = ctx.store.income_categories.get(cat_id)
     if cat is None:
@@ -104,6 +110,7 @@ def rename_income_category(ctx: Context, cat_id: str, name: str) -> IncomeCatego
     return ctx.store.income_categories.update(cat)
 
 
+@recorded(N_("Delete an income category"))
 def delete_income_category(ctx: Context, cat_id: str) -> None:
     if income_category_in_use(ctx, cat_id):
         raise ValidationError(t("Income categories with entries cannot be deleted"))

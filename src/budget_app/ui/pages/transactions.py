@@ -20,7 +20,7 @@ from budget_app.services import items as items_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import ValidationError
 from budget_app.services.reports import ADV_REPAY_NAME
-from budget_app.ui.layout import date_input, error, frame, on_data_changed, parse_date, success
+from budget_app.ui.layout import date_input, error, frame, on_data_changed, parse_date, undoable
 from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
@@ -214,7 +214,7 @@ def page() -> None:
             def do() -> None:
                 try:
                     n = tx_svc.delete(ctx, [r["id"] for r in rows])
-                    success(tn("Deleted {n} transaction", "Deleted {n} transactions", n))
+                    undoable(tn("Deleted {n} transaction", "Deleted {n} transactions", n))
                 except ValidationError as exc:
                     error(str(exc))
                 apply_filters()

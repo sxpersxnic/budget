@@ -22,12 +22,12 @@ from budget_app.domain.models import (
     TX_TYPES,
     Transaction,
 )
-from budget_app.i18n import t, tc
+from budget_app.i18n import N_, t, tc
 from budget_app.services import items as items_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
-from budget_app.ui.layout import date_input, error, fmt, fmt_signed, parse_date, segmented, sheet, success
+from budget_app.ui.layout import date_input, error, fmt, fmt_signed, parse_date, segmented, sheet, undoable
 from budget_app.ui.widgets.item_list import ItemList
 from budget_app.ui.widgets.selects import (
     account_options,
@@ -453,12 +453,13 @@ class TransactionForm:
         item_inputs = self.items.read() if inp.type in (TX_EXPENDITURE, TX_INCOME) else []
         try:
             items_svc.validate(item_inputs)  # before saving, so a bad item cannot leave half a change
-            tx = tx_svc.save(self.ctx, inp, self.editing.id if self.editing else "")
-            items_svc.replace(self.ctx, tx.id, item_inputs)
+            with self.ctx.store.history.action(N_("Save a transaction")):  # one step to undo, items included
+                tx = tx_svc.save(self.ctx, inp, self.editing.id if self.editing else "")
+                items_svc.replace(self.ctx, tx.id, item_inputs)
         except Exception as exc:  # validation and FX errors
             error(str(exc))
             return
-        success(t("Changes saved") if self.editing else t("Transaction added"))
+        undoable(t("Changes saved") if self.editing else t("Transaction added"))
         if self.on_saved:
             self.on_saved(tx)
         if not self.editing:
