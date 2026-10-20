@@ -50,7 +50,7 @@ done first, and decisions are numbered as in
 | --- | --- | --- | --- | --- |
 | 14 | ☐ Open | **F36 · Closing balance from bank files.** | decision 6 | M |
 | 15 | ☐ Open | **F38 · Exchange-rate chart.** | – | S |
-| 16 | ☐ Open | **F37 · COICOP information page** with codes, names and search. | – | S |
+| 16 | ☑ Done | **F37 · COICOP information page** with codes, names and search. | – | S |
 
 #### Milestone 5 · COICOP data
 
@@ -153,7 +153,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
 | F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
 | F36 | ☐ Open | Closing balance from bank files | Data in | M | Local | F01 |
-| F37 | ☐ Open | COICOP information page | Organizing | S | Local | – (F40 adds notes) |
+| F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 adds notes) |
 | F38 | ☐ Open | Exchange-rate chart | Insight | S | Local | – |
 | F39 | ☐ Open | COICOP level 5 | Organizing | M | Local | source data |
 | F40 | ☐ Open | COICOP notes in search and on hover | Organizing | M | Local | source data |
@@ -186,11 +186,20 @@ import ignores it.
 
 ### F37 · COICOP information page
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20, `06698d9`)
 
 A page listing all COICOP categories as a tree with code and name, in the interface
 language, with a search box. Linked from the sidebar or Settings. With F40, each category
 also shows what it includes.
+
+**As built.** *Categories* in the sidebar (after Budget Plan, route `/categories`): all 602
+categories of the four levels as one tree, code and name in the interface language, divisions
+bold, the number of subcategories, and what was spent in each this calendar year in the display
+currency. The search matches code or name, ignoring case and accents (*getranke* finds
+*Getränke*); the ancestors of each match stay visible and open, and clearing the search
+restores what was open before. *Taxes* and *Advance payments* are the app's own categories, not
+COICOP, so a note below the tree explains them instead of listing them. F40 adds the notes to
+each node and to its search text.
 
 ### F38 · Exchange-rate chart
 

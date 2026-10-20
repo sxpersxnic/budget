@@ -184,7 +184,9 @@ The app opens in its own window and keeps all data in your user folder:
    e-banking standard) needs no column step at all, and the app remembers its account by IBAN.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
-6. **Overview / Budget:** compare actual against budget, check the projected wealth, build
+6. **Categories** (sidebar): look up a COICOP category by code or name; the ones you used
+   show what you spent in them this year.
+7. **Overview / Budget:** compare actual against budget, check the projected wealth, build
    charts, and export statements as Excel or PDF (share button on the Budget page).
 
 ## Building the installers
