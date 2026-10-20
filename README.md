@@ -192,6 +192,9 @@ The app opens in its own window and keeps all data in your user folder:
    e-banking standard) needs no column step at all, and the app remembers its account by IBAN.
    When the file shows the account balance, the review step also offers each month's closing
    balance to record (the month the file ends inside stays unticked).
+   To tidy up several transactions at once, select them in the list and choose **Edit**: change
+   their category, account or note (replace, append or clear) in one step, which one **Undo**
+   reverts. Rows a change doesn't fit (a transfer has no category) keep what they have.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
 6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is

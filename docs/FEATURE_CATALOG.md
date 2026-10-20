@@ -124,7 +124,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F10 | ☐ Open | Tags | Organizing | M | Local | – |
 | F11 | ☐ Open | Split transactions | Organizing | M | Local | – |
 | F12 | ☐ Open | Attachments | Organizing | M | Local | – |
-| F13 | ☐ Open | Bulk edit | Organizing | S | Local | – |
+| F13 | ☑ Done | Bulk edit | Organizing | S | Local | – |
 | F14 | ☐ Open | Savings goals | Planning | M | Local | – |
 | F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
 | F16 | ☐ Open | Budget from history | Planning | S | Local | – |
@@ -526,7 +526,21 @@ Keep receipts, invoices and contracts with the transaction.
 
 #### F13 · Bulk edit
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-20)
+
+**As built:** *Edit* in the Transactions selection bar opens *Edit {n} Transactions* when several
+rows are selected (one row still opens the editor). Every field starts as *Leave unchanged*: the
+expenditure category (the F08 picker) for expenditure rows, the income category for income rows
+other than repayments, the account (the From account of expenditure, the To account of income,
+offered from the accounts in the rows' currency and disabled when they mix currencies), and the
+note (*Replace*, *Append* or *Clear*). Hints say how many rows a field leaves alone ("1 of 3 rows
+is not expenditure and keeps its category"); transfers, exchanges and revaluations keep their
+accounts; a spread booking (F44) follows its exchange and keeps its note. The status line says
+how many rows change, and ⌘↩ / Ctrl+Enter saves. Each changed row goes through the same checks as
+a single edit (advance payments and repayments included); if one fails, nothing is saved and the
+failing rows are listed by date and amount. The whole edit is one undo step (*Edit several
+transactions*); booked rows keep their recurring series, valuation, items and import reference.
+Not built: tags (F10) and payees (F09 adds a field to the same sheet).
 
 Select many transactions → change category, account, tag or note in one step. The selection
 bar on the Transactions page already exists; this adds an *Edit* sheet for several rows.
