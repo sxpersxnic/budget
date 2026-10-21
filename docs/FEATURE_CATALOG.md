@@ -7,7 +7,7 @@ The app's ground rules still apply to every feature: local first (data in CSV fi
 user's computer), CHF as the base currency with ECB rates, COICOP 2018 for expenditure, and
 nothing uploaded without the user asking for it.
 
-**Status:** ☑ Done · ◐ Partly done · ☐ Open. Every table has a *Status* column, and every
+**Status:** ☑ Done · ◐ Partly done · ☐ Open · ☒ Dropped. Every table has a *Status* column, and every
 feature description starts with its status.
 **Effort:** S = up to a day · M = a few days · L = one to two weeks · XL = more than two weeks.
 **Network:** *Local* runs fully offline · *Optional* works offline, with an online extra the
@@ -29,7 +29,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 2 · Accounts and reconciliation | ☑ Done | 3 of 3 steps |
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
-| 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
+| 5 · COICOP data | ☐ Open | 0 of 1 step (F40; F39 dropped by decision 7) |
 | After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 open |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
@@ -37,21 +37,21 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 ## Open now
 
-State on 2026-10-20: milestones 1–4 and the follow-up fixes are done (see [Done](#done));
-milestone 5 waits for decision 7 (the COICOP source data), so the work after issue 01 comes
-next. Steps run in the order given; *Needs* lists what has to be done first, and decisions
+State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
+[Done](#done)); every decision is made. Next: milestone 5 (F40 notes) and the follow-ups of
+decisions 1 and 10–13, then step 25. Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
 
 #### Milestone 5 · COICOP data
 
-Waits for the source data (decision 7).
+Decision 7: notes from the UN COICOP 2018 publication, our own translations; no level 5.
 
 | Step | Status | Task | Needs | Effort |
 | --- | --- | --- | --- | --- |
-| 17 | ☐ Open | **F40 · COICOP notes in search and on hover**; also shown on the F37 page. | decision 7 | M |
-| 18 | ☐ Open | **F39 · COICOP level 5.** | decision 7 | M |
+| 17 | ☐ Open | **F40 · COICOP notes in search and on hover**; also shown on the F37 page. | decision 7 (decided) | M |
+| 18 | ☒ Dropped | **F39 · COICOP level 5.** | decision 7 (decided) | – |
 
 #### After issue 01
 
@@ -91,9 +91,11 @@ the Linux build.
 
 ### Decisions for the product owner
 
-Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each as recommended, decision 6 on 2026-10-20.
+Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each as recommended, decision 6 on 2026-10-20,
+decisions 1, 7 and 10–13 on 2026-10-21. All decisions are made; none is open.
 
-1. **B08:** side by side on wide windows and stacked on narrow ones — is that the intent? Built for now: stacked at every width, which meets the issue as written.
+1. ☑ **B08:** decided — the income and expenditure tables sit side by side on wide windows and
+   stack on narrow ones.
 2. ☑ **F42 / B04:** decided — replace *Unaccounted* by the reconciliation line, with the gap
    as an optional chart series. Built.
 3. ☑ **F43:** decided — revaluations do **not** count towards *Net income*; they have their own
@@ -104,7 +106,9 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
    recorded and budget per category). Built.
 6. ☑ **F36:** decided — a month the file ends inside is offered **unticked**, with the note
    "the file ends on *date* — not a month-end balance"; complete months are ticked. Built.
-7. **F39, F40:** which source for level 5 and for the German notes?
+7. ☑ **F39, F40:** decided — no level 5 (F39 dropped: the everyday names and search words of F08
+   cover the detail); the notes (F40) come from the official UN COICOP 2018 publication in English,
+   with our own German, French and Italian translations marked as unofficial, *excludes* included.
 8. ☑ **F07:** decided on 2026-10-20 — rules and learning from history, no AI. Confirming a
    suggestion does not create a rule; *Always categorize like this* does, on request. Built.
 9. ☑ **F21:** decided on 2026-10-21 — prices are entered by hand (or pasted from a bank or
@@ -112,6 +116,16 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
    investment* revaluation, so an account's booked value is always quantity × price; buys,
    sells, dividends and fees are modelled, so performance compares value with money put in.
    Built (architecture §7, decision 17).
+10. ☑ **F09:** decided — the German word for payee is *Gegenpartei* (it covers both who you pay
+    and who pays you).
+11. ☑ **F09:** decided — payee names keep their legal form (AG, GmbH, SA, Sagl); known brands
+    still get their short name.
+12. ☑ **F21:** decided — dividends are entered gross with their withholding tax (35 % prefilled
+    for CHF holdings); the net is credited, the tax is booked as Taxes, and a yearly sum of
+    reclaimable tax is shown.
+13. ☑ **F21:** decided — an account with history can become a securities or crypto account: its
+    balances stay as history up to the conversion month, then holdings with an opening
+    quantity and price take over.
 
 ## All features
 
@@ -155,7 +169,7 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F36 | ☑ Done | Closing balance from bank files | Data in | M | Local | F01 |
 | F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 adds notes) |
 | F38 | ☑ Done | Exchange-rate chart | Insight | S | Local | – |
-| F39 | ☐ Open | COICOP level 5 | Organizing | M | Local | source data |
+| F39 | ☒ Dropped | COICOP level 5 | Organizing | M | Local | source data |
 | F40 | ☐ Open | COICOP notes in search and on hover | Organizing | M | Local | source data |
 | F41 | ☑ Done | Opening balance and change per account | Wealth | S | Local | – |
 | F42 | ☑ Done | Reconciliation line instead of *Unaccounted* | Insight | S | Local | – |
@@ -231,7 +245,7 @@ index view (start = 100) when currencies differ in scale. Exportable like the ot
 
 ### F39 · COICOP level 5
 
-**Status:** ☐ Open
+**Status:** ☒ Dropped (decision 7: the everyday names and search words of F08 cover the detail)
 
 COICOP 2018 itself has four levels (division, group, class, subclass), and the app already
 ships all of them. A fifth level exists only in national extensions.
@@ -239,8 +253,7 @@ ships all of them. A fifth level exists only in national extensions.
 - Needs a source with a fifth level whose codes keep the COICOP 2018 codes, so saved data
   stays valid; German names for the new codes (and French and Italian later).
 - The code is ready for any depth; the work is the data and its translation.
-- **Decide:** which source. A Swiss classification from the Federal Statistical Office
-  would fit the users best, if it extends COICOP 2018.
+- **Decided** (decision 7): not built.
 
 ### F40 · COICOP notes in search and on hover
 
@@ -252,8 +265,8 @@ includes* and *excludes* notes. The shipped file has names only.
 - Add the notes (about 600) and a German translation of them.
 - Category search in every dropdown also matches the notes; hovering an entry shows them.
 - The import page's category select switches to the same control.
-- **Decide:** where the German notes come from (official translation, if one exists, or our
-  own); whether *excludes* is shown too (helps choosing, not asked for).
+- **Decided** (decision 7): the English notes of the UN publication, our own German, French
+  and Italian translations (marked unofficial), *excludes* shown too.
 
 ### F41 · Opening balance and change per account
 
@@ -898,8 +911,8 @@ Record expenses on the phone where they happen.
 
 These come up in several features; deciding them once keeps the features consistent.
 
-1. **AI and online services** (F04, F07, F21, F33): never, opt-in per use, or opt-in as a
-   setting? Which provider, and who pays?
+1. **AI and online services** (F04, F07, F21, F33): decided on 2026-10-21 — **never for now**;
+   everything stays local, and features that need a service stay in the backlog until revisited.
 2. **Exchange rate of transactions** (F01, F02, F03, F05, B03): decided — every transaction
    uses the ECB rate of its date (the last earlier rate on weekends and holidays); account
    balances use the last rate of the month; budget entries use the latest rate. Changed by
