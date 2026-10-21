@@ -42,7 +42,13 @@ BANK_LINES = [
     ("CAFE SPRUENGLI ZUERICH", "Sprüngli"),
     ("IKEA AG SPREITENBACH", "IKEA"),
     ("Migros Bank AG", "Migros Bank"),
-    ("Gutschrift Lohn Muster AG", "Muster"),
+    ("Gutschrift Lohn Muster AG", "Muster AG"),
+    # decision 11: the legal form stays, in its usual spelling; the location before it goes
+    ("EINKAUF MUSTER GMBH ZUERICH", "Muster GmbH"),
+    ("Restaurant Zum Hirschen Luzern AG", "Restaurant Zum Hirschen AG"),  # mixed case stays
+    ("Paiement à BOULANGERIE DUPONT SARL LAUSANNE", "Boulangerie Dupont Sàrl"),
+    ("Pagamento a Pizzeria Bella SAGL Lugano", "Pizzeria Bella Sagl"),
+    ("Zahlung Meier & Co Bern", "Meier"),  # "co" is also a plain word: dropped as before
     ("TWINT: Zahlung an +41 79 123 45 67", "TWINT"),
     ("Dauerauftrag Miete Oktober", ""),
     # TWINT, SumUp, PayPal and other payment services
@@ -58,8 +64,8 @@ BANK_LINES = [
     ("Achat VISA Debit 12.10.2026 MIGROS GENEVE CORNAVIN Numéro de carte XXXX1234", "Migros"),
     ("ACHAT/SERVICE DU 12.10.2026 NO DE CARTE XXXX1234 MANOR LAUSANNE", "Manor"),
     ("Paiement Swisscom (Suisse) SA", "Swisscom"),
-    ("Paiement à Café du Nord SA Genève", "Café du Nord"),
-    ("Ordre permanent Gérance Immobilière SA Loyer", "Gérance Immobilière"),
+    ("Paiement à Café du Nord SA Genève", "Café du Nord SA"),
+    ("Ordre permanent Gérance Immobilière SA Loyer", "Gérance Immobilière SA"),
     # Italian
     ("Acquisto carta di debito 12.10.2026 COOP LUGANO", "Coop"),
     ("Pagamento TWINT a Mario Rossi", "Mario Rossi"),
@@ -391,9 +397,10 @@ def test_a_camt_import_reads_the_payee_from_the_counterparty(ctx, setup):
         "",
     ]
     rows = importer.analyse(ctx, st.fresh_rows(), setup["chf"].id)
-    assert [r.payee for r in rows] == ["Migros", "Firma", "", "Swisscom", "EWZ", "Spende Sammelauftrag"]
+    assert [r.payee for r in rows] == ["Migros", "Firma AG", "", "Swisscom", "EWZ", "Spende Sammelauftrag"]
     for r in rows:
         r.category = setup["salary"].id if r.type == TX_INCOME else "01.1"
     camt.commit(ctx, st, rows, setup["chf"].id)
     assert payee_svc.find(ctx, "Migros").alias_list == ["migros zurich hb"]
-    assert {p.name for p in payee_svc.all_payees(ctx)} == {"Migros", "Firma", "Swisscom", "EWZ", "Spende Sammelauftrag"}
+    names = {p.name for p in payee_svc.all_payees(ctx)}
+    assert names == {"Migros", "Firma AG", "Swisscom", "EWZ", "Spende Sammelauftrag"}

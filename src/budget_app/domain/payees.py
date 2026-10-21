@@ -4,9 +4,10 @@ Deterministic and local. `clean_words` drops what changes from one booking to th
 reference, terminal and phone numbers, IBANs, postal codes) and the booking words Swiss banks put around the
 merchant (UBS, PostFinance, ZKB, Raiffeisen, Revolut, TWINT: "Einkauf", "Kauf/Dienstleistung", "Zahlung",
 "Debit", "Karte", "TWINT *", "SumUp *", "POS", "Achat", "Paiement", "Card payment" ...). `normalize` then names
-a known brand (`resources/payees.json`) or keeps the remaining words without the location and legal form, in
-sensible casing. `alias_key` is the folded cleaned text, which the payee table stores so that a renamed or
-merged payee keeps its bank texts (services/payees.py).
+a known brand (`resources/payees.json`) or keeps the remaining words without the location, in sensible casing;
+a legal form at the end stays, in its usual spelling ("Immo Muster AG", decision 11). `alias_key` is the folded
+cleaned text, which the payee table stores so that a renamed or merged payee keeps its bank texts
+(services/payees.py).
 """
 
 from __future__ import annotations
@@ -131,6 +132,26 @@ _SMALL_WORDS = _phrases(
 )
 _LEADING = _START | _NOISE_WORDS
 _TAIL = _LOCATION | _LEGAL
+# the legal forms a name keeps, in their usual spelling (decision 11); the others ("as", "co", "se" are also
+# plain words) are dropped as before
+_LEGAL_KEPT = {
+    "ag": "AG",
+    "gmbh": "GmbH",
+    "sa": "SA",
+    "s a": "SA",
+    "sarl": "Sàrl",
+    "s a r l": "Sàrl",
+    "sagl": "Sagl",
+    "genossenschaft": "Genossenschaft",
+    "ltd": "Ltd",
+    "limited": "Limited",
+    "inc": "Inc",
+    "llc": "LLC",
+    "kg": "KG",
+    "plc": "plc",
+    "spa": "SpA",
+    "srl": "Srl",
+}
 _NOT_ACRONYMS = _phrases("dr, st, str, mr, mrs, nr, ms")
 _DOMAIN_RE = re.compile(r"\.(?:ch|com|de|net|org|io|li|fr|it|eu|at|co\.uk|swiss)$", re.IGNORECASE)
 _SPLIT_RE = re.compile(r"[\s/,;:()\[\]{}\"|·<>_=!?]+")
@@ -246,18 +267,22 @@ def alias_key(raw: str) -> str:
 
 
 # ------------------------------------------------------------------ the name
-def _strip_tail(words: list[str]) -> list[str]:
-    """Without the location, country and legal form at the end ("Restaurant Zum Hirschen Luzern AG")."""
-    out = list(words)
+def _strip_tail(words: list[str]) -> tuple[list[str], str]:
+    """The words without the location, country and legal form at the end, and the legal form to keep:
+    "Restaurant Zum Hirschen Luzern AG" → (["Restaurant", "Zum", "Hirschen"], "AG")."""
+    out, legal = list(words), ""
     while len(out) > 1:
         keys = [key(w) for w in out]
         for n in (3, 2, 1):
-            if len(out) > n and " ".join(keys[-n:]) in _TAIL:
+            tail = " ".join(keys[-n:])
+            if len(out) > n and tail in _TAIL:
+                if not legal and tail in _LEGAL_KEPT:
+                    legal = _LEGAL_KEPT[tail]  # the one nearest the end, as the company writes it
                 del out[-n:]
                 break
         else:
             break
-    return out
+    return out, legal
 
 
 def _case(words: list[str]) -> list[str]:
@@ -284,7 +309,7 @@ def normalize(raw: str) -> str:
     keys = key(" ".join(cleaned.words)).split()
     if name := brand(keys):
         return name
-    words = _strip_tail(cleaned.words)
+    words, legal = _strip_tail(cleaned.words)
     if not words:  # only booking words: "TWINT: Zahlung an +41 79 …" is a TWINT payment
         return cleaned.provider or brand(key(raw).split())
-    return " ".join(_case(words))
+    return " ".join([*_case(words), legal] if legal else _case(words))

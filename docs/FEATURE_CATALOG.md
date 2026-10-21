@@ -527,7 +527,7 @@ and punctuation, with its *aliases*: the cleaned bank texts imported for it and 
 text up there first and only then normalize it (`domain/payees.py`: dates, times, card, reference, terminal and
 phone numbers, IBANs and postal codes go, so do the booking words of UBS, PostFinance, ZKB, Raiffeisen, Revolut
 and TWINT in German, French, Italian and English, payment services such as `TWINT *` and `SumUp *`, and the
-location and legal form at the end; about 170 brands, shops and banks in `resources/payees.json` get one
+location at the end (the legal form stays: "Immo Muster AG", decision 11); about 170 brands, shops and banks in `resources/payees.json` get one
 name, "MIGROS ZUERICH HB 1234" → "Migros"). The CSV import reads the payee from a counterparty column (*Empfänger*, *Payee*,
 *Merchant* …) or the description, camt from the counterparty's name; the preview shows it and it can be edited
 there, which teaches the alias. The form's payee field suggests known payees (recently used first) and takes a
