@@ -255,7 +255,7 @@ def _meter(actual: float, budget: float, lg: bool = False) -> None:
 
 # --------------------------------------------------------------------- page
 def page() -> None:
-    with frame(t("Budget"), "/budget") as (ctx, actions):
+    with frame(t("Budget"), "/budget", wide=True) as (ctx, actions):
         first, last = data_month_range(ctx)
         state = {
             "month": months.current_month(),
@@ -342,14 +342,16 @@ def page() -> None:
 
             if rep.complete:
                 reconciliation_card(rep)
-            ledger_card(rep, tc("heading", "Income"), rep.total_income, BUDGET_INCOME, lambda: income_rows(rep))
-            ledger_card(
-                rep,
-                tc("heading", "Expenditure"),
-                rep.total_expenditure,
-                BUDGET_EXPENDITURE,
-                lambda: expenditure_rows(rep),
-            )
+            # side by side on wide windows, stacked on narrow ones (B08, decision 1)
+            with ui.element("div").classes("ledger-pair-wrap"), ui.element("div").classes("ledger-pair"):
+                ledger_card(rep, tc("heading", "Income"), rep.total_income, BUDGET_INCOME, lambda: income_rows(rep))
+                ledger_card(
+                    rep,
+                    tc("heading", "Expenditure"),
+                    rep.total_expenditure,
+                    BUDGET_EXPENDITURE,
+                    lambda: expenditure_rows(rep),
+                )
             if rep.complete or any(abs(line.actual) > EPS for line in rep.revaluation_lines):
                 revaluations_card(rep)
             if rep.complete:

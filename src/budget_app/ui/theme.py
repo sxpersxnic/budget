@@ -100,6 +100,7 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 /* ---------------------------------------------------------------- page chrome */
 .page { width: 100%; max-width: 72rem; margin: 0 auto; padding: 28px 32px 64px; gap: 20px; }
 .page.narrow { max-width: 40rem; }
+.page.wide { max-width: 100rem; }  /* the budget page: room for two tables side by side */
 @media (max-width: 640px) { .page { padding: 16px 16px 48px; gap: 16px; } }
 .large-title { font-size: 28px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.15; color: var(--label); }
 .title-sub { font-size: 13px; color: var(--label-2); margin-top: 2px; }
@@ -186,6 +187,18 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 @container (max-width: 560px) {
   .ledger-row { grid-template-columns: minmax(0, 1fr) auto auto 1.5rem; column-gap: 10px; padding: 0 2px; }
   .ledger-row .c-bar, .ledger-row .c-diff { display: none; }
+}
+@container (min-width: 561px) and (max-width: 800px) {  /* the bar goes first, so names stay readable */
+  .ledger-row { grid-template-columns: minmax(0, 1fr) 6rem 6rem 6rem 1.75rem; }
+  .ledger-row .c-bar { display: none; }
+}
+/* income and expenditure side by side once each table gets about 750 px, stacked below that (B08, decision 1);
+   narrower halves would cut the category names short */
+.ledger-pair-wrap { width: 100%; container-type: inline-size; }
+.ledger-pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+@media (max-width: 640px) { .ledger-pair { gap: 16px; } }
+@container (min-width: 1500px) {
+  .ledger-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 }
 
 /* account balances (F41): name · opening · closing · change (account currency) · value in the view currency · action */

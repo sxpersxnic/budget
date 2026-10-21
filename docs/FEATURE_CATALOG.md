@@ -95,7 +95,8 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 decisions 1, 7 and 10–13 on 2026-10-21. All decisions are made; none is open.
 
 1. ☑ **B08:** decided — the income and expenditure tables sit side by side on wide windows and
-   stack on narrow ones.
+   stack on narrow ones. Built: side by side once each table gets about 750 px (windows from about 1,800 px;
+   narrower halves cut the category names short); tables of 560–800 px drop the progress bar.
 2. ☑ **F42 / B04:** decided — replace *Unaccounted* by the reconciliation line, with the gap
    as an optional chart series. Built.
 3. ☑ **F43:** decided — revaluations do **not** count towards *Net income*; they have their own
@@ -933,7 +934,7 @@ Merged into `main` on 2026-10-19.
 | --- | --- | --- | --- |
 | 1 | **B01** Excel and PDF buttons in the budget overview did nothing; **B02** chart image, CSV and PDF export didn't work | The app window (pywebview) drops browser downloads. Every export now goes through one helper: the system save dialog in the app window, a normal download in the browser. Charts gained *Save as PDF…*. | `cc05db9`, `ffa9733` |
 | 2 | **B05** Selecting and adding a chart didn't work | Adding worked but put the card out of sight. A new chart now goes first, scrolls into view and is highlighted; errors are shown. | `8e9ca8e`, `ffa9733` |
-| 3 | **B07** Accounts didn't adapt to the window; **B08** tables should stack when narrow | Account rows are a grid that follows the card's width; the ledgers use container queries. The tables stay below each other at every width (decision 1). | `6f34640` |
+| 3 | **B07** Accounts didn't adapt to the window; **B08** tables should stack when narrow | Account rows are a grid that follows the card's width; the ledgers use container queries. The tables stay below each other, and since decision 1 sit side by side once each gets about 750 px (windows from about 1,800 px). | `6f34640`, B08 follow-up |
 | 4 | **B03** Transactions used the latest exchange rate | Every transaction uses the rate of its date; stored ones are re-valued after each rate check. | `332eb81` |
 | 5 | **B06** Currency exchange converted the received amount | The amount received is typed in; the form compares it with the ECB rate. | `b73d8fe` |
 | 6 | **B09** Budget edit dialog lacked until, repeat and note | All three per entry; changing the schedule replans the series from that month on. | `ef5da63` |

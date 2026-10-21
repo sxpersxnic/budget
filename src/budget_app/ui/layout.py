@@ -148,7 +148,7 @@ def _page_shortcut(e: KeyEventArguments) -> None:
 
 
 @contextmanager
-def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = False):
+def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = False, wide: bool = False):
     """Page skeleton. Yields (ctx, actions): `actions` is the row beside the title for page-level buttons.
 
     On small screens the large title gives way to the compact header, and the actions wrap below it.
@@ -189,7 +189,7 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
         with ui.row().classes("w-full px-8 pt-4 max-sm:px-4"), ui.element("div").classes("callout"):
             ui.icon("o_cloud_off")
             ui.label(ctx.fx_service.last_error)
-    with ui.column().classes("page" + (" narrow" if narrow else "")):
+    with ui.column().classes("page" + (" narrow" if narrow else "") + (" wide" if wide else "")):
         with ui.row().classes("w-full items-end gap-3 flex-wrap"):
             with ui.column().classes("gap-0"):
                 ui.label(title).classes("large-title max-lg:hidden")
