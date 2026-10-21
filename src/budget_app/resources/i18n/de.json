@@ -7,13 +7,13 @@
  "A gain of {amount}": "Ein Gewinn von {amount}",
  "A holding with trades or prices stays in its account": "Eine Position mit Transaktionen oder Kursen bleibt in ihrem Konto",
  "A loss of {amount}": "Ein Verlust von {amount}",
- "A payee called “{name}” already exists. Merge the two instead.": "Es gibt schon einen Zahlungsempfänger «{name}». Führen Sie die beiden zusammen.",
+ "A payee called “{name}” already exists. Merge the two instead.": "Es gibt schon eine Gegenpartei «{name}». Führen Sie die beiden zusammen.",
  "A price list finds the holding by its name, ISIN or symbol.": "Eine Kursliste findet die Position über ihren Namen, ihre ISIN oder ihr Symbol.",
  "A revaluation is entered in the currency of its account": "Eine Neubewertung wird in der Währung ihres Kontos erfasst",
  "A rule for “{match}” already exists": "Es gibt schon eine Regel für «{match}»",
  "A rule for “{match}” already exists ({category}). Saving replaces it.": "Es gibt schon eine Regel für «{match}» ({category}). Beim Sichern wird sie ersetzt.",
  "A rule is for expenditure or income": "Eine Regel gilt für Ausgaben oder Einnahmen",
- "A rule suggests its category for new and imported transactions whose payee or bank text contains its text. The longest text wins. Create one with “Always Categorize Like This…” on a transaction.": "Eine Regel schlägt ihre Kategorie für neue und importierte Buchungen vor, deren Zahlungsempfänger oder Banktext ihren Text enthält. Der längste Text gewinnt. Erstellen Sie eine mit «Immer so kategorisieren …» bei einer Buchung.",
+ "A rule suggests its category for new and imported transactions whose payee or bank text contains its text. The longest text wins. Create one with “Always Categorize Like This…” on a transaction.": "Eine Regel schlägt ihre Kategorie für neue und importierte Buchungen vor, deren Gegenpartei oder Banktext ihren Text enthält. Der längste Text gewinnt. Erstellen Sie eine mit «Immer so kategorisieren …» bei einer Buchung.",
  "A securities or crypto account is valued from its holdings, not from balances": "Ein Wertschriften- oder Kryptokonto wird aus seinen Positionen bewertet, nicht aus Saldi",
  "Account": "Konto",
  "Account no longer exists": "Konto existiert nicht mehr",
@@ -206,7 +206,7 @@
  "Delete an income category": "Einnahmenkategorie löschen",
  "Delete budget entries": "Budgeteinträge löschen",
  "Delete categorization rules": "Kategorisierungsregeln löschen",
- "Delete payees": "Zahlungsempfänger löschen",
+ "Delete payees": "Gegenparteien löschen",
  "Delete the rule for “{match}”?": "Regel für «{match}» löschen?",
  "Delete this price?": "Diesen Kurs löschen?",
  "Delete this recurring transaction?": "Diese wiederkehrende Buchung löschen?",
@@ -285,7 +285,7 @@
  "Every month": "Jeden Monat",
  "Every quarter": "Jedes Quartal",
  "Every transaction on this account will be in this currency.": "Alle Buchungen auf diesem Konto sind in dieser Währung.",
- "Every transaction with this payee is renamed too. Imports keep finding it.": "Alle Buchungen mit diesem Zahlungsempfänger werden mit umbenannt. Importe finden ihn weiterhin.",
+ "Every transaction with this payee is renamed too. Imports keep finding it.": "Alle Buchungen mit dieser Gegenpartei werden mit umbenannt. Importe finden sie weiterhin.",
  "Every year": "Jedes Jahr",
  "Every {n} months": "Alle {n} Monate",
  "Exchange Rates": "Wechselkurse",
@@ -378,15 +378,15 @@
  "Leave unchanged": "Unverändert lassen",
  "Line {n}: {error}": "Zeile {n}: {error}",
  "Lines": "Linien",
- "Looked for in the payee and in the bank text or note, ignoring case and accents.": "Wird im Zahlungsempfänger und im Banktext oder in der Notiz gesucht, ohne Rücksicht auf Gross- und Kleinschreibung und Akzente.",
+ "Looked for in the payee and in the bank text or note, ignoring case and accents.": "Wird in der Gegenpartei und im Banktext oder in der Notiz gesucht, ohne Rücksicht auf Gross- und Kleinschreibung und Akzente.",
  "Make Recurring…": "Wiederkehrend machen …",
  "Max amount": "Höchstbetrag",
  "Merge": "Zusammenführen",
- "Merge Payees": "Zahlungsempfänger zusammenführen",
- "Merge payees": "Zahlungsempfänger zusammenführen",
+ "Merge Payees": "Gegenparteien zusammenführen",
+ "Merge payees": "Gegenparteien zusammenführen",
  "Merged {n} payee into “{name}”": [
-  "{n} Zahlungsempfänger in «{name}» zusammengeführt",
-  "{n} Zahlungsempfänger in «{name}» zusammengeführt"
+  "{n} Gegenpartei in «{name}» zusammengeführt",
+  "{n} Gegenparteien in «{name}» zusammengeführt"
  ],
  "Merge…": "Zusammenführen…",
  "Min amount": "Mindestbetrag",
@@ -427,8 +427,8 @@
  "No exchange rates yet": "Noch keine Wechselkurse",
  "No holding “{value}”": "Keine Position «{value}»",
  "No income this month.": "Keine Einnahmen in diesem Monat.",
- "No payee matches.": "Kein Zahlungsempfänger passt.",
- "No payees yet. Add one on a transaction, or import a bank file.": "Noch keine Zahlungsempfänger. Erfassen Sie einen bei einer Buchung oder importieren Sie eine Bankdatei.",
+ "No payee matches.": "Keine Gegenpartei passt.",
+ "No payees yet. Add one on a transaction, or import a bank file.": "Noch keine Gegenparteien. Erfassen Sie eine bei einer Buchung oder importieren Sie eine Bankdatei.",
  "No price yet": "Noch kein Kurs",
  "No recurring transactions yet.": "Noch keine wiederkehrenden Buchungen.",
  "No rules yet.": "Noch keine Regeln.",
@@ -466,9 +466,9 @@
  "Partly paid for others (advance payment)": "Teilweise für andere bezahlt (Auslage)",
  "Paste Prices": "Kurse einfügen",
  "Paste Prices…": "Kurse einfügen…",
- "Payee": "Zahlungsempfänger",
- "Payee not found": "Zahlungsempfänger nicht gefunden",
- "Payees": "Zahlungsempfänger",
+ "Payee": "Gegenpartei",
+ "Payee not found": "Gegenpartei nicht gefunden",
+ "Payees": "Gegenparteien",
  "Pension fund (pillar 2)": "Pensionskasse (2. Säule)",
  "Pillar 3a": "Säule 3a",
  "Pipe |": "Senkrechter Strich |",
@@ -517,8 +517,8 @@
  "Remove item": "Artikel entfernen",
  "Rename": "Umbenennen",
  "Rename Income Category": "Einnahmenkategorie umbenennen",
- "Rename Payee": "Zahlungsempfänger umbenennen",
- "Rename a payee": "Zahlungsempfänger umbenennen",
+ "Rename Payee": "Gegenpartei umbenennen",
+ "Rename a payee": "Gegenpartei umbenennen",
  "Rename an income category": "Einnahmenkategorie umbenennen",
  "Renamed to “{name}”": "Umbenannt in «{name}»",
  "Rent, premiums, subscriptions: transactions that repeat. When one is due, book it here; a series that books automatically needs no confirmation.": "Miete, Prämien, Abos: Buchungen, die sich wiederholen. Ist eine fällig, wird sie hier gebucht; eine Reihe, die automatisch bucht, braucht keine Bestätigung.",
@@ -552,7 +552,7 @@
  "Save Settings": "Einstellungen sichern",
  "Save Trade": "Transaktion speichern",
  "Save a categorization rule": "Kategorisierungsregel speichern",
- "Save a payee": "Zahlungsempfänger speichern",
+ "Save a payee": "Gegenpartei speichern",
  "Save a price": "Kurs speichern",
  "Save a recurring transaction": "Wiederkehrende Buchung speichern",
  "Save a template": "Vorlage speichern",
@@ -586,7 +586,7 @@
  "Select an asset class": "Wählen Sie eine Anlageklasse",
  "Select an expenditure category": "Bitte eine Ausgabenkategorie wählen",
  "Select an income category": "Bitte eine Einnahmenkategorie wählen",
- "Select at least two payees to merge": "Wählen Sie mindestens zwei Zahlungsempfänger zum Zusammenführen",
+ "Select at least two payees to merge": "Wählen Sie mindestens zwei Gegenparteien zum Zusammenführen",
  "Select buy, sell or dividend": "Wählen Sie Kauf, Verkauf oder Dividende",
  "Select exactly one budget entry to edit": "Bitte genau einen Budgeteintrag zum Bearbeiten auswählen",
  "Select exactly one transaction to categorize like it": "Genau eine Buchung als Vorbild wählen",
@@ -725,8 +725,8 @@
  "Use Total as Amount": "Total als Betrag übernehmen",
  "Use {category}": "{category} übernehmen",
  "Used {n} time for this payee": [
-  "{n}-mal für diesen Zahlungsempfänger verwendet",
-  "{n}-mal für diesen Zahlungsempfänger verwendet"
+  "{n}-mal für diese Gegenpartei verwendet",
+  "{n}-mal für diese Gegenpartei verwendet"
  ],
  "Used {n} time for this text": [
   "{n}-mal für diesen Text verwendet",
@@ -741,8 +741,8 @@
  "Wealth by Asset Class": "Vermögen nach Anlageklasse",
  "Wealth {month}": "Vermögen {month}",
  "What did the account hold at the end of the month?": "Welchen Saldo hatte das Konto am Monatsende?",
- "Which category new and imported transactions are given for a payee or bank text.": "Welche Kategorie neue und importierte Buchungen für einen Zahlungsempfänger oder Banktext erhalten.",
- "Who you pay and who pays you. Imports fill in the payee from the bank text; after a rename or a merge, the next import of the same text uses the payee you kept.": "Wen Sie bezahlen und wer Sie bezahlt. Importe übernehmen den Zahlungsempfänger aus dem Banktext; nach dem Umbenennen oder Zusammenführen landet derselbe Text beim nächsten Import beim behaltenen Zahlungsempfänger.",
+ "Which category new and imported transactions are given for a payee or bank text.": "Welche Kategorie neue und importierte Buchungen für eine Gegenpartei oder einen Banktext erhalten.",
+ "Who you pay and who pays you. Imports fill in the payee from the bank text; after a rename or a merge, the next import of the same text uses the payee you kept.": "Wen Sie bezahlen und wer Sie bezahlt. Importe übernehmen die Gegenpartei aus dem Banktext; nach dem Umbenennen oder Zusammenführen landet derselbe Text beim nächsten Import bei der behaltenen Gegenpartei.",
  "account|From": "Von Konto",
  "account|To": "Auf Konto",
  "added": "hinzugefügt",
@@ -862,8 +862,8 @@
   "{n} neu"
  ],
  "{n} of {total} rows is a transfer, exchange or revaluation and has no payee": [
-  "{n} von {total} Buchungen ist ein Kontoübertrag, Währungswechsel oder eine Neubewertung und hat keinen Zahlungsempfänger",
-  "{n} von {total} Buchungen sind Kontoüberträge, Währungswechsel oder Neubewertungen und haben keinen Zahlungsempfänger"
+  "{n} von {total} Buchungen ist ein Kontoübertrag, Währungswechsel oder eine Neubewertung und hat keine Gegenpartei",
+  "{n} von {total} Buchungen sind Kontoüberträge, Währungswechsel oder Neubewertungen und haben keine Gegenpartei"
  ],
  "{n} of {total} rows is a transfer, exchange or revaluation and keeps its accounts.": [
   "{n} von {total} Buchungen ist ein Kontoübertrag, Währungswechsel oder eine Neubewertung und behält ihre Konten.",
@@ -882,8 +882,8 @@
   "{n} von {total} Buchungen sind keine Einnahmen oder zahlen Auslagen zurück und behalten ihre Kategorie"
  ],
  "{n} payee": [
-  "{n} Zahlungsempfänger",
-  "{n} Zahlungsempfänger"
+  "{n} Gegenpartei",
+  "{n} Gegenparteien"
  ],
  "{n} pending entry left out": [
   "{n} vorgemerkte Buchung weggelassen",
@@ -947,8 +947,8 @@
  "{repeat}, forever": "{repeat}, unbefristet",
  "{series} (budget)": "{series} (Budget)",
  "{shown} of {n} payee": [
-  "{shown} von {n} Zahlungsempfänger",
-  "{shown} von {n} Zahlungsempfängern"
+  "{shown} von {n} Gegenpartei",
+  "{shown} von {n} Gegenparteien"
  ],
  "{shown} of {n} transaction": [
   "{shown} von {n} Buchung",
