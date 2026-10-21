@@ -10,7 +10,7 @@ from nicegui import ui
 
 from budget_app import i18n
 from budget_app.domain.fx import FxError
-from budget_app.domain.investments import PRICE, Performance, Step, fmt_price, fmt_quantity
+from budget_app.domain.investments import PRICE, Performance, Step, default_withholding, fmt_price, fmt_quantity
 from budget_app.domain.models import (
     ASSET_CLASSES,
     TRADE_BUY,
@@ -22,7 +22,7 @@ from budget_app.domain.models import (
     Trade,
     Transaction,
 )
-from budget_app.i18n import N_, t, tn
+from budget_app.i18n import N_, t, tc, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services.context import Context, ValidationError
@@ -46,7 +46,7 @@ from budget_app.ui.widgets.selects import account_options, set_options
 
 ROW_ACTION = "flat dense round size=sm"
 GAIN_NOTE = N_(
-    "Gain = value − money put in (buys − sales) + dividends − fees, and in percent of the money put in. "
+    "Gain = value − money put in (buys − sales) + net dividends − fees, and in percent of the money put in. "
     "Prices are the ones you enter or paste; a buy or sale counts as the price of its day."
 )
 
@@ -107,6 +107,18 @@ def _step_title(step: Step, currency: str) -> str:
     return t("Buy {what}", what=what) if e.kind == TRADE_BUY else t("Sell {what}", what=what)
 
 
+def tax_label(currency: str) -> str:
+    """ "Withholding tax": the Swiss one (Verrechnungssteuer) in CHF, a foreign one (Quellensteuer) otherwise."""
+    return t("Withholding tax") if currency == "CHF" else tc("foreign", "Withholding tax")
+
+
+def withholding_text(amount: float, currency: str) -> str:
+    """The withholding tax of a dividend: Swiss (reclaimable) in CHF, foreign otherwise."""
+    if currency == "CHF":
+        return t("withholding tax {amount}, reclaimable", amount=fmt(amount, currency))
+    return t("foreign withholding tax {amount}", amount=fmt(amount, currency))
+
+
 def _step_caption(ctx: Context, step: Step, trade: Trade | None, currency: str) -> str:
     parts = [i18n.date_label(step.event.date)]
     if trade is not None:
@@ -115,6 +127,9 @@ def _step_caption(ctx: Context, step: Step, trade: Trade | None, currency: str) 
             parts.append(acc.name)
         if trade.fee >= 0.005:
             parts.append(t("fee {amount}", amount=fmt(trade.fee, currency)))
+        if trade.kind == TRADE_DIVIDEND and trade.tax >= 0.005:
+            parts.append(withholding_text(trade.tax, currency))
+            parts.append(t("net {amount}", amount=fmt(trade.amount - trade.tax, currency)))
         if trade.comment:
             parts.append(trade.comment)
     return " · ".join(parts)
@@ -173,6 +188,8 @@ def open_trade_sheet(
     if not init.holding_id and len(options) == 1:
         init.holding_id = next(iter(options))
     touched = {"value": False}
+    # a new dividend's withholding tax follows the gross amount (35 % in CHF) until it is typed in
+    auto_tax = {"on": editing is None, "setting": False}
     with (
         sheet(t("Edit Trade") if editing else t("New Trade"), width="30rem") as dlg,
         ui.column().classes("w-full gap-4"),
@@ -188,8 +205,11 @@ def open_trade_sheet(
             price.props("dense outlined inputmode=decimal").classes("flex-1 min-w-0")
         fee = ui.number(t("Fee"), value=init.fee, min=0, format="%.2f", placeholder=t("Optional"))
         fee.props("dense outlined inputmode=decimal").classes("w-full")
-        amount = ui.number(t("Amount received"), value=init.amount, min=0, format="%.2f")
-        amount.props("dense outlined inputmode=decimal").classes("w-full")
+        with ui.row().classes("w-full gap-2 no-wrap") as dividend_row:
+            amount = ui.number(t("Gross dividend"), value=init.amount, min=0, format="%.2f")
+            amount.props("dense outlined inputmode=decimal").classes("flex-1 min-w-0")
+            tax = ui.number(t("Withholding tax"), value=init.tax, min=0, format="%.2f")
+            tax.props("dense outlined inputmode=decimal").classes("flex-1 min-w-0")
         cash = ui.select({}, label=t("Cash account"), with_input=True).props("dense outlined").classes("w-full")
         comment = ui.textarea(t("Note"), value=init.comment, placeholder=t("Optional"))
         comment.props("dense outlined autogrow rows=1").classes("w-full")
@@ -214,6 +234,7 @@ def open_trade_sheet(
             price=price.value,
             fee=fee.value,
             amount=amount.value,
+            tax=tax.value,
             cash_account=cash.value or "",
             comment=comment.value or "",
         )
@@ -222,7 +243,12 @@ def open_trade_sheet(
         """What a valid trade books, in a sentence."""
         cash_name, depot_name = (_account_name(ctx, a) for a in (inp.cash_account, h.account_id))
         if inp.kind == TRADE_DIVIDEND:
-            return t("Booked as income to {account}", account=cash_name)
+            gross, withheld = round(inp.amount or 0, 2), round(inp.tax or 0, 2)
+            text = t("Net {amount} to {account}", amount=fmt(gross - withheld, cur), account=cash_name)
+            if withheld < 0.005:
+                return text + " · " + t("income in Dividends")
+            details = t("income {gross} in Dividends, {tax} under Taxes", gross=fmt(gross, cur), tax=fmt(withheld, cur))
+            return f"{text} · {details}"
         moved = fmt(round((inp.quantity or 0) * (inp.price or 0), 2), cur)
         ends = (cash_name, depot_name) if inp.kind == TRADE_BUY else (depot_name, cash_name)
         text = t("Moves {amount} from {source} to {target}", amount=moved, source=ends[0], target=ends[1])
@@ -237,11 +263,19 @@ def open_trade_sheet(
         dividend = kind == TRADE_DIVIDEND
         trade_row.set_visibility(not dividend)
         fee.set_visibility(not dividend)
-        amount.set_visibility(dividend)
+        dividend_row.set_visibility(dividend)
         h = current_holding()
         cur = inv_svc.currency_of(ctx, h) if h else ""
-        for el in (price, fee, amount):
+        for el in (price, fee, amount, tax):
             el.props(f'suffix="{cur}"')
+        tax.props(f'label="{tax_label(cur)}"')
+        if dividend and auto_tax["on"]:
+            prefill = default_withholding(amount.value, cur)
+            if tax.value != prefill:
+                auto_tax["setting"] = True
+                tax.value = prefill  # comes back here through on_value_change
+                auto_tax["setting"] = False
+                return
         set_options(cash, account_options(ctx, currency=cur) if cur else {})
         if cash.value is None and cur:
             cash.value = inv_svc.last_cash_account(ctx, cur) or (
@@ -284,9 +318,15 @@ def open_trade_sheet(
 
         confirm(t("Delete this trade?"), do, detail=t("The transactions it booked are deleted with it."))
 
+    def tax_typed() -> None:
+        if not auto_tax["setting"]:
+            auto_tax["on"] = False  # typed in: it no longer follows the gross amount
+        changed()
+
     save_btn.on_click(save)
     for el in (typ, holding, when, quantity, price, fee, amount, cash):
         el.on_value_change(changed)
+    tax.on_value_change(tax_typed)
     changed()
     touched["value"] = True
 
@@ -489,7 +529,8 @@ def open_holding_sheet(ctx: Context, holding_id: str, on_change: Refresh = None)
                     (t("Last price"), _last_price(perf, cur)),
                     (t("Value"), fmt(perf.value, cur)),
                     (t("Money put in"), fmt(perf.invested, cur)),
-                    (t("Dividends"), fmt(perf.dividends, cur)),
+                    (t("Net dividends"), fmt(perf.dividends, cur)),
+                    *([(tax_label(cur), fmt(perf.withholding, cur))] if perf.withholding >= 0.005 else []),
                     (t("Fees"), fmt(perf.fees, cur)),
                     (t("Realized"), fmt(perf.realized, cur)),
                     (t("Unrealized"), fmt(perf.unrealized, cur)),
@@ -636,6 +677,26 @@ def _summary(ctx: Context, view: str) -> None:
             ).classes("metric-sub")
 
 
+RECLAIM_YEARS = 3  # the reclaimable withholding tax of this year and the two before
+
+
+def _reclaimable(ctx: Context) -> None:
+    """The Swiss withholding tax on CHF dividends of the last years, to claim back with the tax return."""
+    first = date.today().year - RECLAIM_YEARS + 1
+    years = {year: amount for year, amount in inv_svc.reclaimable_tax(ctx).items() if year >= first}
+    if not years:
+        return
+    with ui.column().classes("w-full gap-1"):
+        with ui.element("div").classes("group"):
+            for year, amount in years.items():
+                with ui.element("div").classes("group-row"):
+                    ui.label(t("Reclaimable withholding tax {year}", year=str(year))).classes("flex-1")
+                    ui.label(fmt(amount, "CHF")).classes("num font-medium")
+        ui.label(
+            t("Swiss withholding tax on dividends in CHF accounts. Claim it back with your tax return for that year.")
+        ).classes("caption px-1")
+
+
 def _holding_row(ctx: Context, h: Holding, cur: str, refresh: Callable[[], object]) -> Performance:
     perf = inv_svc.performance(ctx, h.id)
 
@@ -696,6 +757,7 @@ def page() -> None:
                 except FxError as exc:
                     error(str(exc))
                 ui.label(t(GAIN_NOTE)).classes("caption -mt-2 px-1")
+                _reclaimable(ctx)
             for acc in accounts:
                 with ui.column().classes("w-full gap-0"):
                     ui.label(f"{acc.name} · {acc.currency} · {t(ASSET_CLASSES[acc.asset_class])}").classes(

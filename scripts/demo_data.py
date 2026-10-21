@@ -261,17 +261,23 @@ def seed(ctx: Context) -> None:
         )
 
         def trade(
-            kind: str, holding: str, d: date, quantity: float = 0.0, fee: float = 0.0, amount: float = 0.0
+            kind: str,
+            holding: str,
+            d: date,
+            quantity: float = 0.0,
+            fee: float = 0.0,
+            amount: float = 0.0,
+            tax: float = 0.0,
         ) -> None:
             if d > today:
                 return
             inv_svc.save_trade(
                 ctx,
-                TradeInput(kind, holding, d, quantity, quote[holding], fee, amount, cash_account=bank.id),
+                TradeInput(kind, holding, d, quantity, quote[holding], fee, amount, tax, cash_account=bank.id),
             )
             month = d.strftime("%Y-%m")
             money = round(quantity * quote[holding], 2)
-            flows[month][bank.id] += {TRADE_BUY: -money, TRADE_SELL: money}.get(kind, amount) - fee
+            flows[month][bank.id] += {TRADE_BUY: -money, TRADE_SELL: money}.get(kind, amount - tax) - fee
 
         trade(TRADE_BUY, etf.id, day(5), round(500 / quote[etf.id], 6), fee=1.5)  # a monthly savings plan
         if k == 10:
@@ -282,7 +288,8 @@ def seed(ctx: Context) -> None:
             trade(TRADE_SELL, nestle.id, day(14), 8, fee=9.9)
         if mo == 4 and k < 10:
             held = inv_svc.performance(ctx, nestle.id).quantity
-            trade(TRADE_DIVIDEND, nestle.id, day(28), amount=round(held * 3.05 * 0.65, 2))  # after withholding tax
+            gross = round(held * 3.05, 2)  # 35 % Swiss withholding tax: the bank receives the net
+            trade(TRADE_DIVIDEND, nestle.id, day(28), amount=gross, tax=round(gross * 0.35, 2))
         for holding, (low, high) in moves.items():
             quote[holding] = round(quote[holding] * (1 + rng.uniform(low, high)), 2)
             if months.last_day(m) <= today and inv_svc.steps(ctx, holding):

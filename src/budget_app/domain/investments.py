@@ -12,6 +12,8 @@ event: a buy or sale moves round(quantity × price, 2) of money, and a revaluati
 
 which is quantity × (new price − previous price) up to the cent. Computing it from rounded values rather than
 from the price difference keeps the cents exact however many events there are.
+
+A dividend is entered gross with its withholding tax (decision 12): what counts as earned is the net.
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from budget_app.domain.models import TRADE_BUY, TRADE_DIVIDEND, TRADE_SELL, Pric
 PRICE = "price"  # the kind of an event that is a price typed in or pasted
 QTY_EPS = 1e-7  # quantities have up to 6 decimals
 EPS = 0.005  # money has 2
+SWISS_WITHHOLDING = 0.35  # Swiss withholding tax (Verrechnungssteuer) on dividends, reclaimable
 
 
 def qty(value: float) -> float:
@@ -34,6 +37,11 @@ def qty(value: float) -> float:
 
 def money(value: float) -> float:
     return round(float(value), 2)
+
+
+def default_withholding(gross: float | None, currency: str) -> float:
+    """The withholding tax to start a dividend with: 35 % in CHF (Swiss withholding tax), else none."""
+    return money((gross or 0) * SWISS_WITHHOLDING) if currency == "CHF" else 0.0
 
 
 @dataclass(frozen=True)
@@ -46,7 +54,8 @@ class Event:
     quantity: float = 0.0
     price: float = 0.0
     fee: float = 0.0
-    amount: float = 0.0  # dividend
+    amount: float = 0.0  # dividend, gross
+    tax: float = 0.0  # dividend, withholding tax
     seq: int = 0
 
     @property
@@ -66,7 +75,9 @@ class Event:
 def events(trades: Iterable[Trade], prices: Iterable[Price]) -> list[Event]:
     """The trades and prices of one holding in the order they count."""
     out = [
-        Event(tr.date, tr.kind, tr.id, qty(tr.quantity), tr.price, money(tr.fee), money(tr.amount), tr.seq)
+        Event(
+            tr.date, tr.kind, tr.id, qty(tr.quantity), tr.price, money(tr.fee), money(tr.amount), money(tr.tax), tr.seq
+        )
         for tr in trades
     ]
     out += [Event(p.date, PRICE, p.id, price=p.price) for p in prices]
@@ -140,15 +151,17 @@ def value_on(steps: list[Step], on: date | None = None) -> float:
 class Performance:
     """What a holding (or several, added up in one currency) earned.
 
-    gain = value − money put in + dividends − fees, where money put in = bought − sold. It splits into
-    realized (sales against the average cost of what was sold) and unrealized (value against the average
-    cost of what is still held), plus dividends, minus fees.
+    gain = value − money put in + dividends − fees, where money put in = bought − sold and dividends are net
+    (gross − withholding tax: what was actually received). It splits into realized (sales against the average
+    cost of what was sold) and unrealized (value against the average cost of what is still held), plus
+    dividends, minus fees. The withholding tax is kept apart (`withholding`): in CHF it can be reclaimed.
     """
 
     value: float = 0.0
     bought: float = 0.0
     sold: float = 0.0
-    dividends: float = 0.0
+    dividends: float = 0.0  # net: gross − withholding tax
+    withholding: float = 0.0  # withholding tax on the dividends
     fees: float = 0.0
     cost: float = 0.0  # average cost of the quantity still held
     realized: float = 0.0
@@ -182,6 +195,7 @@ class Performance:
             bought=self.bought * factor,
             sold=self.sold * factor,
             dividends=self.dividends * factor,
+            withholding=self.withholding * factor,
             fees=self.fees * factor,
             cost=self.cost * factor,
             realized=self.realized * factor,
@@ -194,6 +208,7 @@ class Performance:
             bought=self.bought + other.bought,
             sold=self.sold + other.sold,
             dividends=self.dividends + other.dividends,
+            withholding=self.withholding + other.withholding,
             fees=self.fees + other.fees,
             cost=self.cost + other.cost,
             realized=self.realized + other.realized,
@@ -219,7 +234,8 @@ def performance(steps: list[Step], on: date | None = None) -> Performance:
             perf.cost -= cost_sold
             perf.realized += proceeds - cost_sold
         elif e.kind == TRADE_DIVIDEND:
-            perf.dividends += e.amount
+            perf.dividends += e.amount - e.tax
+            perf.withholding += e.tax
         if e.kind != PRICE:
             perf.fees += e.fee
             perf.trades += 1

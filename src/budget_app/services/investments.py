@@ -6,7 +6,9 @@ Every change to a holding's trades or prices books its transactions again from a
 
 - a buy is a transfer of quantity × price from the cash account to the investment account, a sale the other
   way; a fee is an expenditure from the cash account (`FEE_CATEGORY`);
-- a dividend is income to the cash account, in the income category "Dividends" (added when missing);
+- a dividend is income of its gross amount to the cash account, in the income category "Dividends" (added when
+  missing), and its withholding tax an expenditure in Taxes from the same account: the account receives the net
+  (decision 12);
 - every price, a trade's included, books the change in value as a linked revaluation of the kind *Capital
   gains on investment* (see domain/investments.py), so the account's booked value is quantity × price.
 
@@ -25,7 +27,7 @@ from budget_app import i18n
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import investments as inv
 from budget_app.domain import months
-from budget_app.domain.coicop import fold
+from budget_app.domain.coicop import TAX, fold
 from budget_app.domain.investments import Performance, Step, fmt_price, fmt_quantity
 from budget_app.domain.models import (
     ACCOUNT_REGULAR,
@@ -137,6 +139,22 @@ def first_month(ctx: Context) -> str | None:
     return months.month_of(min(days)) if days else None
 
 
+def reclaimable(ctx: Context, holding: Holding | None) -> bool:
+    """Whether the withholding tax on the holding's dividends can be reclaimed: Swiss tax, in CHF accounts."""
+    return holding is not None and currency_of(ctx, holding) == BASE_CURRENCY
+
+
+def reclaimable_tax(ctx: Context) -> dict[int, float]:
+    """The withholding tax on dividends of holdings in CHF accounts, per year (newest first; years without left out).
+
+    The Swiss withholding tax is reclaimed with the tax return of the year the dividend was paid."""
+    out: dict[int, float] = {}
+    for tr in ctx.store.trades.all():
+        if tr.kind == TRADE_DIVIDEND and tr.tax >= inv.EPS and reclaimable(ctx, ctx.store.holdings.get(tr.holding_id)):
+            out[tr.date.year] = inv.money(out.get(tr.date.year, 0.0) + tr.tax)
+    return dict(sorted(out.items(), reverse=True))
+
+
 def source(ctx: Context, tx: Transaction) -> Trade | Price | None:
     """The trade or price that booked `tx` (F21), if it still exists."""
     if not tx.invest_id:
@@ -200,7 +218,8 @@ class TradeInput:
     quantity: float | None = None
     price: float | None = None
     fee: float | None = None
-    amount: float | None = None  # dividend received
+    amount: float | None = None  # dividend: the gross amount
+    tax: float | None = None  # dividend: the withholding tax (none: 0)
     cash_account: str = ""
     comment: str = ""
 
@@ -214,6 +233,7 @@ def to_input(trade: Trade) -> TradeInput:
         price=trade.price or None,
         fee=trade.fee or None,
         amount=trade.amount or None,
+        tax=trade.tax if trade.kind == TRADE_DIVIDEND else None,
         cash_account=trade.cash_account,
         comment=trade.comment,
     )
@@ -243,7 +263,11 @@ def validate_trade(ctx: Context, inp: TradeInput, editing_id: str = "") -> None:
     currency = currency_of(ctx, holding)
     if inp.kind == TRADE_DIVIDEND:
         if inp.amount is None or inp.amount < inv.EPS:
-            raise ValidationError(t("Enter the amount received"))
+            raise ValidationError(t("Enter the gross dividend"))
+        if (inp.tax or 0) < 0:
+            raise ValidationError(t("The withholding tax can’t be negative"))
+        if inv.money(inp.tax or 0) > inv.money(inp.amount):
+            raise ValidationError(t("The withholding tax can’t be more than the dividend"))
     else:
         if inp.quantity is None or inp.quantity < inv.QTY_EPS:
             raise ValidationError(t("Enter the quantity"))
@@ -300,6 +324,7 @@ def _build_trade(ctx: Context, inp: TradeInput, editing_id: str) -> Trade:
         price=0.0 if dividend else round(float(inp.price or 0), 6),
         fee=0.0 if dividend else inv.money(inp.fee or 0),
         amount=inv.money(inp.amount or 0) if dividend else 0.0,
+        tax=inv.money(inp.tax or 0) if dividend else 0.0,
         cash_account=inp.cash_account,
         comment=(inp.comment or "").strip(),
         seq=old.seq if old else max((tr.seq for tr in ctx.store.trades.all()), default=0) + 1,
@@ -532,7 +557,11 @@ def _rows(ctx: Context, holding: Holding, step: Step, trade: Trade | None) -> li
             fee_note = _note(t("Fee: {trade}", trade=text), comment)
             row(TX_EXPENDITURE, e.fee, category=FEE_CATEGORY, from_account=trade.cash_account, comment=fee_note)
     elif trade is not None and e.kind == TRADE_DIVIDEND:
-        row(TX_INCOME, e.amount, to_account=trade.cash_account, comment=_note(t("Dividend {name}", name=name), comment))
+        text = t("Dividend {name}", name=name)
+        row(TX_INCOME, e.amount, to_account=trade.cash_account, comment=_note(text, comment))
+        if e.tax >= inv.EPS:
+            tax_note = _note(t("Withholding tax: {dividend}", dividend=text), comment)
+            row(TX_EXPENDITURE, e.tax, category=TAX, from_account=trade.cash_account, comment=tax_note)
     if abs(step.revaluation) >= inv.EPS:
         before = fmt_price(step.price_before) if step.price_before is not None else "–"
         text = t("{name}: price {price}, before {before}", name=name, price=fmt_price(e.price), before=before)

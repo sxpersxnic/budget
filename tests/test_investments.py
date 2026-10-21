@@ -7,6 +7,7 @@ import pytest
 
 from budget_app.domain import investments as inv
 from budget_app.domain import months
+from budget_app.domain.coicop import TAX
 from budget_app.domain.models import (
     ASSET_CRYPTO,
     ASSET_PILLAR3A,
@@ -284,7 +285,7 @@ def test_trade_validation(ctx, depot):
         (TradeInput(**{**base.__dict__, "cash_account": ""}), "Select the cash account"),
         (TradeInput(**{**base.__dict__, "cash_account": depot["acc"].id}), "Select the cash account"),
         (TradeInput(**{**base.__dict__, "cash_account": eur_cash.id}), "must be in CHF"),
-        (TradeInput(**{**base.__dict__, "kind": TRADE_DIVIDEND, "amount": None}), "Enter the amount received"),
+        (TradeInput(**{**base.__dict__, "kind": TRADE_DIVIDEND, "amount": None}), "Enter the gross dividend"),
     ]
     for inp, message in cases:
         with pytest.raises(ValidationError, match=message):
@@ -312,6 +313,92 @@ def test_a_dividend_is_income_in_dividends(ctx, depot):
     assert len(ctx.store.income_categories.all()) == 2  # Salary and Dividends
     assert inv_svc.performance(ctx, depot["nestle"].id).dividends == 31.5
     assert booked(ctx, depot["acc"].id) == 1000  # a dividend doesn't change the account's value
+
+
+def test_a_dividend_books_the_gross_as_income_and_the_withholding_tax_as_taxes(ctx, depot):
+    buy(ctx, depot, D(2026, 8, 3), 10, 100)
+    div = buy(ctx, depot, D(2026, 9, 2), None, None, kind=TRADE_DIVIDEND, amount=100, tax=35)
+    rows = linked(ctx, div.id)
+    assert set(rows) == {TX_INCOME, TX_EXPENDITURE}  # one action, two linked rows
+    income, tax = rows[TX_INCOME], rows[TX_EXPENDITURE]
+    assert (income.amount, income.to_account) == (100, depot["bank"].id)
+    assert (tax.amount, tax.category, tax.from_account) == (35, TAX, depot["bank"].id)
+    assert tax.comment == "Withholding tax: Dividend Nestlé"
+    assert booked(ctx, depot["bank"].id, D(2026, 9, 30)) - booked(ctx, depot["bank"].id, D(2026, 8, 31)) == 65
+    perf = inv_svc.performance(ctx, depot["nestle"].id)
+    assert (perf.dividends, perf.withholding) == (65, 35)  # the gain counts what was received
+    assert perf.gain == pytest.approx(65)
+    rep = reports.month_report(ctx, "2026-09", "CHF", today=D(2026, 10, 21))
+    assert rep.total_income.actual == pytest.approx(100)
+    assert rep.expenditure_tree[TAX].actual == pytest.approx(35)
+    assert rep.total_income.actual - rep.total_expenditure.actual == pytest.approx(65)
+    # reclaimable: the Swiss withholding tax on CHF dividends, per year
+    buy(ctx, depot, D(2025, 12, 1), 1, 100, holding="etf")
+    buy(ctx, depot, D(2025, 12, 20), None, None, kind=TRADE_DIVIDEND, amount=10, tax=3.5, holding="etf")
+    buy(ctx, depot, D(2026, 10, 1), None, None, kind=TRADE_DIVIDEND, amount=20, tax=7, holding="etf")
+    buy(ctx, depot, D(2026, 10, 2), None, None, kind=TRADE_DIVIDEND, amount=20, holding="etf")  # no tax
+    usd = acc_svc.add_account(ctx, "USD cash", "USD")
+    broker = acc_svc.add_account(ctx, "Broker", "USD", asset_class=ASSET_SECURITIES)
+    apple = inv_svc.add_holding(ctx, broker.id, "Apple")
+    inv_svc.save_trade(
+        ctx, TradeInput(TRADE_DIVIDEND, apple.id, D(2026, 9, 5), amount=10, tax=1.5, cash_account=usd.id)
+    )
+    assert inv_svc.reclaimable_tax(ctx) == {2026: 42, 2025: 3.5}  # the foreign tax is not reclaimable here
+    assert list(inv_svc.reclaimable_tax(ctx)) == [2026, 2025]
+    assert inv.default_withholding(31.4, "CHF") == 10.99 and inv.default_withholding(31.4, "USD") == 0
+    assert inv.default_withholding(None, "CHF") == 0
+    # no tax: the expenditure row goes
+    edited = inv_svc.to_input(div)
+    assert (edited.amount, edited.tax) == (100, 35)
+    edited.tax = None
+    inv_svc.save_trade(ctx, edited, div.id)
+    assert set(linked(ctx, div.id)) == {TX_INCOME}
+    assert inv_svc.performance(ctx, depot["nestle"].id).dividends == 100
+
+
+def test_withholding_tax_validation(ctx, depot):
+    buy(ctx, depot, D(2026, 8, 3), 10, 100)
+    with pytest.raises(ValidationError, match="Enter the gross dividend"):
+        buy(ctx, depot, D(2026, 9, 2), None, None, kind=TRADE_DIVIDEND, tax=3)
+    with pytest.raises(ValidationError, match="can’t be negative"):
+        buy(ctx, depot, D(2026, 9, 2), None, None, kind=TRADE_DIVIDEND, amount=10, tax=-1)
+    with pytest.raises(ValidationError, match="can’t be more than the dividend"):
+        buy(ctx, depot, D(2026, 9, 2), None, None, kind=TRADE_DIVIDEND, amount=10, tax=10.01)
+    whole = buy(ctx, depot, D(2026, 9, 2), None, None, kind=TRADE_DIVIDEND, amount=10, tax=10)
+    assert linked(ctx, whole.id)[TX_EXPENDITURE].amount == 10
+    sale = buy(ctx, depot, D(2026, 9, 3), 1, 100, kind=TRADE_SELL, tax=5)
+    assert sale.tax == 0  # only dividends have a withholding tax
+    assert inv_svc.to_input(sale).tax is None
+
+
+def test_dividends_written_before_the_withholding_tax_load_as_gross_without_tax(tmp_path, rates):
+    from budget_app.services.context import Context  # noqa: PLC0415
+    from budget_app.storage.store import Store  # noqa: PLC0415
+
+    (tmp_path / "accounts.csv").write_text(
+        "name,currency,kind,created,asset_class,id\n"
+        "Bank,CHF,regular,2026-01-01,cash,bank\nDepot,CHF,regular,2026-01-01,securities,depot\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "holdings.csv").write_text("account_id,name,symbol,id\ndepot,Nestlé,,h1\n", encoding="utf-8")
+    (tmp_path / "trades.csv").write_text(
+        "holding_id,date,kind,quantity,price,fee,amount,cash_account,comment,seq,id\n"
+        "h1,2026-08-03,buy,10.0,100.0,0.0,0.0,bank,,1,t1\n"
+        "h1,2026-09-02,dividend,0.0,0.0,0.0,19.5,bank,,2,t2\n",
+        encoding="utf-8",
+    )
+    ctx = Context(store=Store(tmp_path), _fx=rates)
+    old = ctx.store.trades.get("t2")
+    assert old is not None and (old.amount, old.tax) == (19.5, 0)
+    assert inv_svc.performance(ctx, "h1").dividends == 19.5 and inv_svc.reclaimable_tax(ctx) == {}
+    edited = inv_svc.to_input(old)
+    assert (edited.amount, edited.tax) == (19.5, 0)  # the stored amount is the gross, without tax
+    edited.amount, edited.tax = 30, 10.5
+    inv_svc.save_trade(ctx, edited, "t2")
+    rows = linked(ctx, "t2")
+    assert (rows[TX_INCOME].amount, rows[TX_EXPENDITURE].amount) == (30, 10.5)
+    assert "tax" in (tmp_path / "trades.csv").read_text(encoding="utf-8").splitlines()[0].split(",")
+    assert inv_svc.reclaimable_tax(ctx) == {2026: 10.5}
 
 
 def test_a_renamed_dividends_category_is_kept(ctx, depot):
@@ -487,7 +574,7 @@ def test_the_reconciliation_explains_a_month_with_trades_and_prices(ctx, depot):
     inv_svc.save_price(ctx, depot["nestle"].id, D(2026, 9, 30), 112.35)
     inv_svc.save_price(ctx, depot["etf"].id, D(2026, 9, 1), 49.777)
     buy(ctx, depot, D(2026, 9, 20), 1.5, 51, holding="etf", fee=1)
-    buy(ctx, depot, D(2026, 9, 25), None, None, kind=TRADE_DIVIDEND, amount=12.6)
+    buy(ctx, depot, D(2026, 9, 25), None, None, kind=TRADE_DIVIDEND, amount=12.6, tax=4.41)
     _record(ctx, bank, "2026-09")
     for view in ("CHF", "EUR"):
         rep = reports.month_report(ctx, "2026-09", view, today=D(2026, 10, 21))

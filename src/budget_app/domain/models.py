@@ -269,7 +269,8 @@ class Trade:
     """A buy, sale or dividend of a holding (F21), paid from or to a cash account in the holding's currency.
 
     A buy or sale moves quantity × price between the cash account and the investment account, and its price
-    counts as a price of that day; a fee is spending from the cash account. A dividend is income `amount`."""
+    counts as a price of that day; a fee is spending from the cash account. A dividend is income of the gross
+    `amount` with its withholding `tax` booked as Taxes, so the cash account receives the net."""
 
     holding_id: str
     date: dt.date
@@ -277,7 +278,8 @@ class Trade:
     quantity: float = 0.0  # up to 6 decimals; 0 for a dividend
     price: float = 0.0  # per unit, up to 6 decimals; 0 for a dividend
     fee: float = 0.0
-    amount: float = 0.0  # dividend received
+    amount: float = 0.0  # dividend: the gross amount
+    tax: float = 0.0  # dividend: the withholding tax (decision 12); files written before it have none: 0
     cash_account: str = ""
     comment: str = ""
     seq: int = 0  # order of entry: trades of the same day count in this order
