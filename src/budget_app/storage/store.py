@@ -11,6 +11,7 @@ from typing import Any
 from budget_app.domain.models import (
     Account,
     AccountEntry,
+    Attachment,
     BudgetEntry,
     Holding,
     IncomeCategory,
@@ -61,6 +62,7 @@ class Store:
         self.income_categories = CsvTable(data_dir / "income_categories.csv", IncomeCategory, h)
         self.transactions = CsvTable(data_dir / "transactions.csv", Transaction, h)
         self.transaction_items = CsvTable(data_dir / "transaction_items.csv", TransactionItem, h)
+        self.attachments = CsvTable(data_dir / "attachments.csv", Attachment, h)  # F12; files in attachments/
         self.account_entries = CsvTable(data_dir / "account_entries.csv", AccountEntry, h)
         self.budget = CsvTable(data_dir / "budget_entries.csv", BudgetEntry, h)
         self.templates = CsvTable(data_dir / "templates.csv", Template, h)
@@ -80,6 +82,7 @@ class Store:
             self.income_categories,
             self.transactions,
             self.transaction_items,
+            self.attachments,
             self.account_entries,
             self.budget,
             self.templates,

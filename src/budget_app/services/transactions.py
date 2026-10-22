@@ -24,6 +24,7 @@ from budget_app.domain.models import (
 )
 from budget_app.i18n import N_, t
 from budget_app.services import accounts as acc_svc
+from budget_app.services import attachments
 from budget_app.services import payees as payee_svc
 from budget_app.services import tags as tag_svc
 from budget_app.services.context import Context, ValidationError
@@ -535,6 +536,7 @@ def delete(ctx: Context, ids: list[str]) -> int:
     items = [i.id for i in ctx.store.transaction_items.all() if i.transaction_id in ids_set]
     count = ctx.store.transactions.delete(list(ids_set))
     ctx.store.transaction_items.delete(items)  # a transaction's product list goes with it
+    attachments.remove_for(ctx, ids_set)  # and its attachments (their files stay while Undo can restore them)
     return count
 
 

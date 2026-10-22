@@ -73,6 +73,7 @@ def undo(ctx: Context, action_id: str) -> Action:
 TABLE_NAMES = {
     "transactions": N_("Transaction"),
     "transaction_items": N_("Item"),
+    "attachments": N_("Attachment"),
     "account_entries": N_("Balance"),
     "budget_entries": N_("Budget entry"),
     "accounts": N_("Account"),

@@ -249,6 +249,23 @@ class TransactionItem:
 
 
 @dataclass
+class Attachment:
+    """A file kept with a transaction (F12): a receipt, an invoice, a contract.
+
+    The file lies in `attachments/<transaction_id>/<stored>` in the data folder; `name` is the name
+    it had when it was added, only shown, never used as a path.
+    """
+
+    transaction_id: str
+    name: str
+    stored: str  # "<id>.<extension>" (domain.attachments.stored_name)
+    size: int = 0  # bytes
+    content_type: str = ""
+    added: dt.date = field(default_factory=dt.date.today)
+    id: str = field(default_factory=new_id)
+
+
+@dataclass
 class AccountEntry:
     """Recorded balance of an account at the end of a month."""
 

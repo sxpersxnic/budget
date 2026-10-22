@@ -38,6 +38,7 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
 from budget_app.ui.layout import (
+    data_changed,
     date_input,
     error,
     fmt,
@@ -50,6 +51,7 @@ from budget_app.ui.layout import (
     undoable,
 )
 from budget_app.ui.widgets.amount import AmountInput
+from budget_app.ui.widgets.attachments import AttachmentList
 from budget_app.ui.widgets.item_list import ItemList
 from budget_app.ui.widgets.rule_sheet import always_like_this
 from budget_app.ui.widgets.selects import (
@@ -257,6 +259,8 @@ class TransactionForm:
                 .props("dense outlined autogrow rows=1")
                 .classes("w-full")
             )
+            # F12: files kept with the transaction; a new one stores them when it is saved
+            self.attachments = AttachmentList(self.ctx, self.editing.id if self.editing else "", data_changed)
             with ui.row().classes("w-full items-center gap-2 no-wrap pt-1"):
                 self.status = ui.label().classes("caption")
                 ui.space()
@@ -664,6 +668,7 @@ class TransactionForm:
             with self.ctx.store.history.action(N_("Save a transaction")):  # one step to undo, items included
                 tx = tx_svc.save(self.ctx, inp, self.editing.id if self.editing else "")
                 items_svc.replace(self.ctx, tx.id, item_inputs)
+                self.attachments.store(tx.id)
         except Exception as exc:  # validation and FX errors
             error(str(exc))
             return
@@ -706,6 +711,7 @@ class TransactionForm:
             self._suggester = categorize.Suggester(self.ctx)  # and with what it was categorized as
             self.exp_adv_account.set_value(None)
             self.items.clear()
+            self.attachments.clear()
         finally:
             self._busy = False
         self._touched = False

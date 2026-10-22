@@ -331,6 +331,29 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
   .item-row .c-total { display: none; }
 }
 
+/* attachments in the transaction form (F12) */
+.attach-drop { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
+  padding: 10px 12px; border: 1px dashed var(--separator-strong); border-radius: 10px; cursor: pointer;
+  color: var(--label-2); font-size: 13px; }
+.attach-drop:hover { background: var(--fill-2); color: var(--accent); border-color: var(--accent); }
+.attach-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  width: 100%; padding: 4px 0; }
+.attach-thumb { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: var(--fill-2);
+  display: flex; align-items: center; justify-content: center; color: var(--label-2); }
+.attach-name { overflow: hidden; align-items: stretch; }
+.attach-name .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px;
+  max-width: 100%; }
+.nicegui-link.attach-link { display: inline-flex; align-items: center; justify-content: center; width: 32px;
+  height: 32px; color: var(--accent); text-decoration: none; border-radius: 50%; }
+.nicegui-link.attach-link:hover { background: var(--fill-2); }
+.attach-preview { border-radius: 10px; overflow: hidden; background: var(--fill-2); }
+.attach-preview-image { width: 100%; max-height: 360px; }
+.attach-preview-pdf { width: 100%; height: 420px; border: 0; display: block; background: #fff; }
+.clip-header .ag-header-cell-text { font-size: 0; }
+.clip-header .ag-header-cell-text::before { content: "attach_file"; font-family: "Material Icons"; font-size: 17px; }
+.clip-cell { display: inline-flex; align-items: center; gap: 2px; color: var(--label-2); }
+.clip-cell .material-icons { font-size: 16px; }
+
 /* indented, dependent group of fields */
 .subform { border-left: 2px solid var(--separator); padding-left: 14px; margin-left: 4px; }
 

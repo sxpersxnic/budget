@@ -20,6 +20,7 @@ from budget_app.domain.models import (
 )
 from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
+from budget_app.services import attachments as att_svc
 from budget_app.services import items as items_svc
 from budget_app.services import payees as payee_svc
 from budget_app.services import recurring as rec_svc
@@ -38,6 +39,9 @@ from budget_app.ui.widgets.selects import set_options
 from budget_app.ui.widgets.tags import CHIPS_RENDERER, TagSelect, grid_cells
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
+# the number of attachments beside a paper clip (a count from the server, so plain HTML is safe)
+CLIP = "p => p.value ? `<span class='clip-cell'><i class='material-icons'>attach_file</i>${p.value}</span>` : ''"
+
 
 def _columns() -> list[dict]:
     return [
@@ -47,6 +51,14 @@ def _columns() -> list[dict]:
         {"field": "tags", "headerName": t("Tags"), "width": 170, ":cellRenderer": CHIPS_RENDERER},  # F10
         money_col("amount", t("Amount"), width=150),
         {"field": "items", "headerName": t("Items"), "width": 90, "type": "rightAligned", "cellClass": "muted"},
+        {  # F12: a paper clip with the number of files; the header shows the clip, exports the word
+            "field": "attachments",
+            "headerName": t("Attachments"),
+            "headerTooltip": t("Attachments"),
+            "headerClass": "clip-header",
+            "width": 64,
+            ":cellRenderer": CLIP,
+        },
         {"field": "from", "headerName": tc("account", "From"), "width": 160},
         {"field": "to", "headerName": tc("account", "To"), "width": 180},
         {"field": "type", "headerName": t("Type"), "width": 130, "cellClass": "muted"},
@@ -71,6 +83,7 @@ def _row(
     received: float | None = None,
     repeats: dict[str, str] | None = None,
     tags: dict[str, Tag] | None = None,
+    attachments: tuple[dict[str, int], dict[str, str]] = ({}, {}),
 ) -> dict:
     if tx.type == TX_EXPENDITURE:
         category = get_coicop().label(tx.category)
@@ -107,6 +120,7 @@ def _row(
         "comment": tx.comment,
         "fx_date": tx.fx_date.isoformat(),
         "items": item_counts.get(tx.id) or None,
+        "attachments": attachments[0].get(tx.id) or None,
         "recurring": (repeats or {}).get(tx.recurring_id, "") if tx.recurring_id else "",
         "tags": tag_names,  # sorting, the column filter and the export; the cell shows `_tags` as chips
         "_tags": grid_cells(own_tags),
@@ -121,6 +135,7 @@ def _row(
                 str(tx.amount),
                 item_names.get(tx.id, ""),  # find a receipt by what was bought
                 tag_names,
+                attachments[1].get(tx.id, ""),  # or by the name of its file (F12)
             ]
         ).lower(),
         "_accounts": [tx.from_account, tx.to_account, tx.advance_account],
@@ -209,6 +224,7 @@ def page(tag: str = "") -> None:
             income_cats = {c.id: c.name for c in ctx.store.income_categories.all()}
             item_counts, item_names = items_svc.counts(ctx), items_svc.names_by_transaction(ctx)
             repeats = {r.id: recurrence_label(r.recur_months) for r in ctx.store.recurring.all()}
+            attached = (att_svc.counts(ctx), att_svc.names_by_transaction(ctx))
             rows = []
             for tx in ctx.store.transactions.all():
                 if (start and tx.date < start) or (end and tx.date > end):
@@ -224,7 +240,7 @@ def page(tag: str = "") -> None:
                 if wanted and wanted.isdisjoint(tag_codec.split(tx.tags)):
                     continue
                 received = tx_svc.received_amount(ctx, tx) if tx.type == TX_EXCHANGE else None
-                r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats, tags)
+                r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats, tags, attached)
                 if acc.value and acc.value not in r["_accounts"]:
                     continue
                 if q and q not in r["_search"]:
