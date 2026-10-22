@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 from nicegui import ui
 
 from budget_app.domain import months
+from budget_app.domain.models import ASSET_CLASSES
 from budget_app.i18n import N_, t
 from budget_app.services import export as export_svc
 from budget_app.services import reports
@@ -35,12 +36,14 @@ CHART_TYPES = {
     "flows": N_("Income and Expenditure"),
     "waterfall": N_("Change per Account"),
     "fx": N_("Exchange Rates"),
+    "classes": N_("Wealth by Asset Class"),
 }
 CHART_HINTS = {
     "wealth": N_("Recorded balances, then the budget projection"),
     "flows": N_("Monthly totals or chosen categories"),
     "waterfall": N_("How each account moved between two month ends"),
     "fx": N_("ECB rates against the display currency"),
+    "classes": N_("Month-end balances by asset class"),
 }
 
 
@@ -94,6 +97,23 @@ class ChartCard:
                     )
                     self.series.props("dense outlined use-chips options-dense").classes("w-full")
                     controls = [self.start, self.end, self.style, self.budget, self.series]
+                elif kind == "classes":
+                    prev = months.previous_month()
+                    self.start = (
+                        ui.select(
+                            opts,
+                            value=months.add_months(prev, -11) if months.add_months(prev, -11) in opts else first,
+                            label=t("From"),
+                        )
+                        .props("dense outlined options-dense")
+                        .classes("w-32")
+                    )
+                    self.end = (
+                        ui.select(opts, value=prev if prev in opts else last, label=t("To"))
+                        .props("dense outlined options-dense")
+                        .classes("w-32")
+                    )
+                    controls = [self.start, self.end]
                 elif kind == "waterfall":
                     prev = months.previous_month()
                     self.start = (
@@ -261,6 +281,23 @@ class ChartCard:
         fig.update_yaxes(tickformat=",~r" if not indexed else ",~f")  # rates need their decimals
         return fig
 
+    def _fig_classes(self, cur: str) -> go.Figure:
+        """Stacked bars: each month's wealth per asset class (F21)."""
+        start, end = sorted([self.start.value, self.end.value])
+        month_list = months.month_range(start, end)
+        per_month = {m: wealth_svc.by_class(self.ctx, m, cur) for m in month_list}
+        self.data = pd.DataFrame(
+            [{"month": m} | {t(ASSET_CLASSES[k]): round(v, 2) for k, v in per_month[m].items()} for m in month_list]
+        )
+        fig = go.Figure()
+        for i, key in enumerate(ASSET_CLASSES):
+            ys = [round(per_month[m].get(key, 0.0), 2) for m in month_list]
+            if any(abs(y) > 0.005 for y in ys):
+                fig.add_bar(x=month_list, y=ys, name=t(ASSET_CLASSES[key]), marker_color=SERIES[i % len(SERIES)])
+        fig.update_layout(barmode="relative")
+        fig.update_xaxes(type="category", tickvals=month_list, ticktext=[months.label(m) for m in month_list])
+        return chart_layout(fig, cur)
+
     def _fig_waterfall(self, cur: str) -> go.Figure:
         start, end = sorted([self.start.value, self.end.value])
         changes = reports.account_changes(self.ctx, start, end, cur)
@@ -319,6 +356,32 @@ class ChartCard:
         await save_file(data, self.file_name(kind))
 
 
+def class_breakdown(sums: dict[str, float], cur: str) -> None:
+    """Net worth by asset class (F21): one bar split by the classes' shares, and the amount of each."""
+    positive = sum(v for v in sums.values() if v > 0)
+    keys = list(ASSET_CLASSES)
+    with ui.element("div").classes("surface flex flex-col gap-3"):
+        with ui.row().classes("w-full items-baseline gap-2"):
+            ui.label(t("By Asset Class")).classes("section-title")
+            ui.label(t("End of {month}", month=months.label(months.previous_month()))).classes("caption")
+        if positive > 0:
+            with ui.element("div").classes("class-bar"):
+                for key, value in sums.items():
+                    if value > 0:
+                        color = SERIES[keys.index(key) % len(SERIES)]
+                        seg = ui.element("div").classes("class-seg")
+                        seg.style(f"flex: {value / positive:.4f} 1 0; background: {color}")
+                        seg.tooltip(t(ASSET_CLASSES[key]))
+        with ui.element("div").classes("class-legend"):
+            for key, value in sums.items():
+                color = SERIES[keys.index(key) % len(SERIES)]
+                with ui.row().classes("items-center gap-2 no-wrap min-w-0"):
+                    ui.element("span").classes("class-dot").style(f"background: {color}")
+                    ui.label(t(ASSET_CLASSES[key])).classes("flex-1 truncate text-[13px]")
+                    share = f" · {value / positive * 100:.0f} %" if positive > 0 and value > 0 else ""
+                    ui.label(fmt(value, cur) + share).classes("num text-[13px] text-2 whitespace-nowrap")
+
+
 def page() -> None:
     with frame(t("Overview"), "/") as (ctx, actions):
         currency = {"value": ctx.store.settings.display_currency}
@@ -349,6 +412,8 @@ def page() -> None:
                     ui.label(
                         t("{amount} by the end of the plan", amount=f"{'+' if change >= 0 else ''}{fmt(change, cur)}")
                     ).classes("metric-sub " + ("text-pos" if change >= 0 else "text-neg"))
+            if wealth_svc.uses_classes(ctx):
+                class_breakdown(wealth_svc.by_class(ctx, months.previous_month(), cur), cur)
 
         def set_currency(e) -> None:
             currency["value"] = e.value

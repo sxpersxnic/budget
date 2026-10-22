@@ -712,6 +712,11 @@ def open_transaction_sheet(
     items_from: str = "",
 ) -> None:
     """The transaction form as a modal sheet, so a transaction can be added from any page."""
+    if editing is not None and editing.invest_id:  # booked on the Investments page (F21): edit it there
+        from budget_app.ui.pages.investments import open_source  # noqa: PLC0415 - the page imports this module
+
+        open_source(ctx, editing, on_saved)
+        return
     if editing is not None and editing.type == TX_REVALUATION and editing.linked_id:
         editing = ctx.store.transactions.get(editing.linked_id) or editing  # a spread is edited via its exchange
 

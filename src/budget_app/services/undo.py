@@ -80,6 +80,9 @@ TABLE_NAMES = {
     "recurring": N_("Recurring transaction"),
     "payees": N_("Payee"),
     "rules": N_("Categorization rule"),
+    "holdings": N_("Holding"),
+    "trades": N_("Trade"),
+    "prices": N_("Price"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 
@@ -98,6 +101,10 @@ def describe_change(ctx: Context, change) -> str:
         what = f"{raw.get('month', '')} · {raw.get('category', '')} · {raw.get('amount', '')} {raw.get('currency', '')}"
     elif change.table == "rules":
         what = f"{raw.get('match', '')} · {raw.get('category', '')}"
+    elif change.table == "trades":
+        what = f"{raw.get('date', '')} · {raw.get('kind', '')} · {raw.get('quantity', '')} × {raw.get('price', '')}"
+    elif change.table == "prices":
+        what = f"{raw.get('date', '')} · {raw.get('price', '')}"
     else:
         what = raw.get("name", "")
     kind = t(TABLE_NAMES.get(change.table, change.table))

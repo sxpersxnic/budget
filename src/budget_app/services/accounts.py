@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
-from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR, Account, IncomeCategory
+from budget_app.domain.models import (
+    ACCOUNT_ADVANCE,
+    ACCOUNT_REGULAR,
+    ASSET_CASH,
+    ASSET_CLASSES,
+    HOLDING_CLASSES,
+    Account,
+    IncomeCategory,
+)
 from budget_app.i18n import N_, t
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
@@ -44,20 +52,47 @@ def _check_name(ctx: Context, name: str, currency: str, kind: str, exclude_id: s
     return name
 
 
+def has_holdings(ctx: Context, account_id: str) -> bool:
+    return any(h.account_id == account_id for h in ctx.store.holdings.all())
+
+
+def _check_class(ctx: Context, asset_class: str, kind: str, acc: Account | None = None) -> str:
+    """The asset class an account may have (F21): advance-payment accounts are cash. An account becomes a
+    securities or crypto account, valued from holdings, only while nothing is booked or recorded on it; it
+    stops being one only without holdings."""
+    if kind == ACCOUNT_ADVANCE:
+        return ASSET_CASH
+    if asset_class not in ASSET_CLASSES:
+        raise ValidationError(t("Select an asset class"))
+    if acc is None or asset_class == acc.asset_class:
+        return asset_class
+    if asset_class in HOLDING_CLASSES and acc.asset_class not in HOLDING_CLASSES and account_in_use(ctx, acc.id):
+        raise ValidationError(
+            t("Only an account without transactions or balances can become a securities or crypto account")
+        )
+    if acc.asset_class in HOLDING_CLASSES and asset_class not in HOLDING_CLASSES and has_holdings(ctx, acc.id):
+        raise ValidationError(t("This account has holdings; it stays a securities or crypto account"))
+    return asset_class
+
+
 @recorded(N_("Add an account"))
-def add_account(ctx: Context, name: str, currency: str, kind: str = ACCOUNT_REGULAR) -> Account:
+def add_account(
+    ctx: Context, name: str, currency: str, kind: str = ACCOUNT_REGULAR, asset_class: str = ASSET_CASH
+) -> Account:
     name = _check_name(ctx, name, currency, kind)
-    return ctx.store.accounts.add(Account(name=name, currency=currency, kind=kind))
+    asset_class = _check_class(ctx, asset_class, kind)
+    return ctx.store.accounts.add(Account(name=name, currency=currency, kind=kind, asset_class=asset_class))
 
 
 @recorded(N_("Change an account"))
-def edit_account(ctx: Context, account_id: str, name: str, currency: str) -> Account:
+def edit_account(ctx: Context, account_id: str, name: str, currency: str, asset_class: str | None = None) -> Account:
     acc = ctx.store.accounts.get(account_id)
     if acc is None:
         raise ValidationError(t("Account not found"))
     name = _check_name(ctx, name, currency, acc.kind, exclude_id=acc.id)
-    if currency != acc.currency and account_in_use(ctx, acc.id):
+    if currency != acc.currency and (account_in_use(ctx, acc.id) or has_holdings(ctx, acc.id)):
         raise ValidationError(t("The currency cannot be changed while transactions or entries use this account"))
+    acc.asset_class = _check_class(ctx, acc.asset_class if asset_class is None else asset_class, acc.kind, acc)
     acc.name, acc.currency = name, currency
     return ctx.store.accounts.update(acc)
 
@@ -68,6 +103,8 @@ def delete_account(ctx: Context, account_id: str) -> None:
         raise ValidationError(t("Accounts with transactions cannot be deleted"))
     if any(account_id in (r.from_account, r.to_account) for r in ctx.store.recurring.all()):
         raise ValidationError(t("Accounts used by recurring transactions cannot be deleted"))
+    if has_holdings(ctx, account_id):
+        raise ValidationError(t("Accounts with holdings cannot be deleted. Delete the holdings first."))
     ctx.store.account_entries.delete([e.id for e in ctx.store.account_entries.where(account_id=account_id)])
     ctx.store.accounts.delete([account_id])
 

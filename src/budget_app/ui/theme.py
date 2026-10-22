@@ -151,6 +151,13 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
   .metric-value.hero { font-size: 34px; }
 }
 
+/* net worth by asset class (Overview, F21) */
+.class-bar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; width: 100%; }
+.class-seg { min-width: 3px; }
+.class-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 6px 24px;
+  width: 100%; }
+.class-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
 /* callout */
 .callout { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border-radius: 10px;
   background: var(--warning-fill); color: var(--label); font-size: 13px; }

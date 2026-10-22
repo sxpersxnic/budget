@@ -140,10 +140,16 @@ def received_amount(ctx: Context, tx: Transaction) -> float:
 
 
 # ---------------------------------------------------------------- validation
+INVESTMENT_ACCOUNT = N_("Securities and crypto accounts change through trades and prices on the Investments page")
+BOOKED_BY_INVESTMENTS = N_("This transaction was booked on the Investments page. Change its trade or price there.")
+
+
 def _account(ctx: Context, account_id: str, role: str, kind: str, currency: str | None):
     acc = ctx.store.accounts.get(account_id) if account_id else None
     if acc is None or acc.kind != kind:
         raise ValidationError(t(_SELECT_ACCOUNT[role]))
+    if acc.holds_securities:
+        raise ValidationError(t(INVESTMENT_ACCOUNT))
     if currency and acc.currency != currency:
         raise ValidationError(t(_ACCOUNT_CURRENCY[role], currency=currency))
     return acc
@@ -158,6 +164,8 @@ def validate(ctx: Context, inp: TransactionInput, editing_id: str = "") -> None:
         current = ctx.store.transactions.get(editing_id)
         if current is not None and current.type == TX_REVALUATION and current.linked_id:
             raise ValidationError(t("This revaluation belongs to a currency exchange. Edit the exchange instead."))
+        if current is not None and current.invest_id:
+            raise ValidationError(t(BOOKED_BY_INVESTMENTS))
     if inp.type == TX_REVALUATION:
         _validate_revaluation(ctx, inp)
         return
@@ -218,6 +226,8 @@ def _validate_revaluation(ctx: Context, inp: TransactionInput) -> None:
     acc = ctx.store.accounts.get(inp.reval_account) if inp.reval_account else None
     if acc is None or acc.kind != ACCOUNT_REGULAR:
         raise ValidationError(t("Select an account"))
+    if acc.holds_securities:
+        raise ValidationError(t(INVESTMENT_ACCOUNT))
     if inp.currency != acc.currency:
         raise ValidationError(t("A revaluation is entered in the currency of its account"))
     if inp.category not in REVALUATION_KINDS:
@@ -496,6 +506,8 @@ def delete(ctx: Context, ids: list[str]) -> int:
             t("Some selected advance payments have repayments. Delete the repayments first (or select them as well).")
         )
     by_id = {tx.id: tx for tx in ctx.store.transactions.all()}
+    if any(by_id[i].invest_id for i in ids_set if i in by_id):
+        raise ValidationError(t(BOOKED_BY_INVESTMENTS))
     for tid in list(ids_set):
         tx = by_id.get(tid)
         if tx is None or not tx.linked_id:

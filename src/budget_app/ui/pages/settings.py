@@ -9,12 +9,13 @@ from nicegui import events, ui
 from budget_app import i18n
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months
-from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR
+from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR, ASSET_CASH, ASSET_CLASSES, HOLDING_CLASSES
 from budget_app.i18n import t, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import archive
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
+from budget_app.services import investments as inv_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
@@ -43,13 +44,36 @@ def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
             )
         elif not acc:
             ui.label(t("Every transaction on this account will be in this currency.")).classes("caption -mt-2")
+        asset_class = None
+        if not advance:  # F21: what the account holds; advance-payment accounts are cash
+            asset_class = (
+                ui.select(
+                    {k: t(v) for k, v in ASSET_CLASSES.items()},
+                    value=acc.asset_class if acc and acc.asset_class in ASSET_CLASSES else ASSET_CASH,
+                    label=t("Asset class"),
+                )
+                .props("dense outlined options-dense")
+                .classes("w-full")
+            )
+            class_note = ui.label().classes("caption -mt-2")
+
+            def explain() -> None:
+                class_note.set_text(
+                    t("Valued from its holdings on the Investments page; no balances to record.")
+                    if asset_class.value in HOLDING_CLASSES
+                    else t("Valued from the balances you record at the end of each month.")
+                )
+
+            asset_class.on_value_change(explain)
+            explain()
 
         def save():
+            chosen = asset_class.value if asset_class else ASSET_CASH
             try:
                 if acc:
-                    acc_svc.edit_account(ctx, acc.id, name.value, cur.value)
+                    acc_svc.edit_account(ctx, acc.id, name.value, cur.value, chosen)
                 else:
-                    acc_svc.add_account(ctx, name.value, cur.value, kind)
+                    acc_svc.add_account(ctx, name.value, cur.value, kind, chosen)
             except ValidationError as exc:
                 error(str(exc))
                 return
@@ -69,9 +93,17 @@ def _accounts_group(ctx: Context, kind: str, title: str) -> None:
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
                         ui.label(acc.name).classes("truncate")
-                        if kind == ACCOUNT_REGULAR:
-                            last = wealth_svc.balance_entry(ctx, acc.id, "9999-12")
+                        if kind == ACCOUNT_REGULAR and acc.holds_securities:
                             ui.label(
+                                t(
+                                    "{asset_class} · {amount} in holdings",
+                                    asset_class=t(ASSET_CLASSES[acc.asset_class]),
+                                    amount=fmt(inv_svc.account_value(ctx, acc.id), acc.currency),
+                                )
+                            ).classes("caption")
+                        elif kind == ACCOUNT_REGULAR:
+                            last = wealth_svc.balance_entry(ctx, acc.id, "9999-12")
+                            balance = (
                                 t(
                                     "{amount} at the end of {month}",
                                     amount=fmt(last.amount, acc.currency),
@@ -79,7 +111,12 @@ def _accounts_group(ctx: Context, kind: str, title: str) -> None:
                                 )
                                 if last
                                 else t("No balance recorded")
-                            ).classes("caption")
+                            )
+                            if acc.asset_class != ASSET_CASH:
+                                balance = (
+                                    f"{t(ASSET_CLASSES.get(acc.asset_class, ASSET_CLASSES[ASSET_CASH]))} · {balance}"
+                                )
+                            ui.label(balance).classes("caption")
                         else:
                             ui.label(
                                 t(

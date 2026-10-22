@@ -40,6 +40,31 @@ REVALUATION_KINDS = {
 BUDGET_INCOME = "income"
 BUDGET_EXPENDITURE = "expenditure"
 
+# asset classes of regular accounts (F21); advance-payment accounts are always cash
+ASSET_CASH = "cash"
+ASSET_SECURITIES = "securities"
+ASSET_PILLAR2 = "pillar2"
+ASSET_PILLAR3A = "pillar3a"
+ASSET_REAL_ESTATE = "real_estate"
+ASSET_CRYPTO = "crypto"
+ASSET_OTHER = "other"
+ASSET_CLASSES = {
+    ASSET_CASH: N_("Cash and accounts"),
+    ASSET_SECURITIES: N_("Securities"),
+    ASSET_PILLAR2: N_("Pension fund (pillar 2)"),
+    ASSET_PILLAR3A: N_("Pillar 3a"),
+    ASSET_REAL_ESTATE: N_("Real estate"),
+    ASSET_CRYPTO: N_("Crypto"),
+    ASSET_OTHER: N_("Other assets"),
+}
+# accounts of these classes are valued from their holdings (quantity × price), not from recorded balances
+HOLDING_CLASSES = (ASSET_SECURITIES, ASSET_CRYPTO)
+
+TRADE_BUY = "buy"
+TRADE_SELL = "sell"
+TRADE_DIVIDEND = "dividend"
+TRADE_KINDS = {TRADE_BUY: N_("Buy"), TRADE_SELL: N_("Sell"), TRADE_DIVIDEND: N_("Dividend")}
+
 
 @dataclass
 class Account:
@@ -47,7 +72,13 @@ class Account:
     currency: str
     kind: str = ACCOUNT_REGULAR
     created: dt.date = field(default_factory=dt.date.today)
+    asset_class: str = ASSET_CASH  # F21; files written before it have no such column: cash
     id: str = field(default_factory=new_id)
+
+    @property
+    def holds_securities(self) -> bool:
+        """Valued from its holdings (F21): securities and crypto accounts."""
+        return self.asset_class in HOLDING_CLASSES
 
 
 @dataclass
@@ -82,6 +113,8 @@ class Transaction:
     linked_id: str = ""
     recurring_id: str = ""  # set when booked from a recurring transaction (F05): the series' id
     payee: str = ""  # who was paid or who paid (F09): the name of a `Payee`; empty for transfers and older rows
+    # booked by the Investments page (F21): the id of the `Trade` or `Price` the row belongs to
+    invest_id: str = ""
     id: str = field(default_factory=new_id)
 
 
@@ -217,6 +250,48 @@ class Recurring:
     @property
     def end_date(self) -> dt.date | None:
         return dt.date.fromisoformat(self.end) if self.end else None
+
+
+@dataclass
+class Holding:
+    """A security or coin held in a securities or crypto account (F21), in the account's currency.
+
+    Its quantity comes from its trades; its value is that quantity times the latest price."""
+
+    account_id: str
+    name: str
+    symbol: str = ""  # ISIN, ticker or symbol; optional
+    id: str = field(default_factory=new_id)
+
+
+@dataclass
+class Trade:
+    """A buy, sale or dividend of a holding (F21), paid from or to a cash account in the holding's currency.
+
+    A buy or sale moves quantity × price between the cash account and the investment account, and its price
+    counts as a price of that day; a fee is spending from the cash account. A dividend is income `amount`."""
+
+    holding_id: str
+    date: dt.date
+    kind: str  # TRADE_BUY, TRADE_SELL or TRADE_DIVIDEND
+    quantity: float = 0.0  # up to 6 decimals; 0 for a dividend
+    price: float = 0.0  # per unit, up to 6 decimals; 0 for a dividend
+    fee: float = 0.0
+    amount: float = 0.0  # dividend received
+    cash_account: str = ""
+    comment: str = ""
+    seq: int = 0  # order of entry: trades of the same day count in this order
+    id: str = field(default_factory=new_id)
+
+
+@dataclass
+class Price:
+    """The price of a holding on a day (F21), typed in or pasted from a price list; one per holding and day."""
+
+    holding_id: str
+    date: dt.date
+    price: float
+    id: str = field(default_factory=new_id)
 
 
 @dataclass
