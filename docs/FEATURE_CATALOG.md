@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11 and F03 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03 and F14 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions and F03 QR bills done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills and F14 savings goals done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20, F16, F18, F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -167,7 +167,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F11 | ☑ Done | Split transactions | Organizing | M | Local | – |
 | F12 | ☑ Done | Attachments | Organizing | M | Local | – |
 | F13 | ☑ Done | Bulk edit | Organizing | S | Local | – |
-| F14 | ☐ Open | Savings goals | Planning | M | Local | – |
+| F14 | ☑ Done | Savings goals | Planning | M | Local | – |
 | F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
 | F16 | ☐ Open | Budget from history | Planning | S | Local | – |
 | F17 | ☐ Open | Subscription and recurring-spend detection | Insight | M | Local | F09 |
@@ -748,7 +748,30 @@ bar on the Transactions page already exists; this adds an *Edit* sheet for sever
 
 #### F14 · Savings goals
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built** (architecture §7, decision 23): `goals.csv` holds each goal: name, currency, a target amount or, for
+an emergency fund, a number of **months of spending** (the target is N × the average recorded spending of the last
+12 complete months, own share without advances, taxes included, counted from the first month with a transaction,
+so it follows the spending), an optional target date, an optional linked account (else an amount *saved so far*
+typed in), *reserve in the projection*, archived, and where the on-track line starts (the day it was added, or
+linked to another account or given another currency, and what it held then). A linked account's balance is its
+latest month-end balance plus what was booked on it since, up to today (holdings for securities and crypto
+accounts), converted at the latest rate. Progress in `domain/goals.py`: the percentage (never 100 % before the
+target), the **monthly amount needed** (what is left over the whole months to the target date, one less when the
+date's day comes before today's, at least one; rounded up to the cent), *Reached*, *Overdue since …*, and **on
+track / behind** against the straight line from the start to the target on its date; without a date "… to go · no
+target date". The **Goals** page (`/goals`, sidebar after Budget Plan, icon `o_flag`) lists the goals by date with
+a bar (green once reached), the plan line and the source; a sheet adds and edits (the months-of-spending target is
+worked out live), rows archive and delete, archived goals can be restored; each change is one undoable step. The
+**Overview** has a **Goals** card with the first three goals not archived (those still to reach first) and, when a
+goal reserves, "Projected for Dec 2027: … free after … reserved for goals"; the card is left out without goals.
+**Reserve:** the projection (F47) is unchanged; the *Wealth Over Time* chart adds a dashed *Free after goals* line
+(and a `free_after_goals` column in its export): projected wealth minus what each reserving goal is to hold at that
+month on its plan, today's amount plus the monthly amount needed per month and the full target from the month the
+plan reaches it; a goal without a date reserves what it holds, an overdue or reached one its target. A goal's money
+reserved stays reserved until the goal is archived, so a goal spent should be archived. Not built: reminders when
+a goal falls behind (F31), contributions booked from the goal, several accounts per goal.
 
 "Holiday 4'000 CHF by June", "Emergency fund 3 months of spending".
 

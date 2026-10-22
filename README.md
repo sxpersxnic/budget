@@ -235,6 +235,19 @@ The app opens in its own window and keeps all data in your user folder:
    transaction changes only the category of its rest, its lines keep theirs.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
+   **Goals** (sidebar): save towards something ("Holiday 4'000 CHF by June") with **New Goal**: a
+   target amount, or for an emergency fund a number of **months of spending** (the target is then
+   that many times your average monthly spending over the last 12 complete months, and follows it).
+   The target date is optional. Link the goal to an account and its balance (converted at the latest
+   rate when the currencies differ) is the progress, or type in what you have saved so far. Each goal
+   shows a bar, what you still need to put aside **each month** to reach it on time (rounded up to
+   the cent), and whether it is **on track** or **behind** a straight line from where it started to
+   the target; past its date it says **overdue**. Turn on **Reserve in the projection** and the
+   Overview's wealth chart gets a second, dashed line *Free after goals*: the projected wealth minus
+   what the goal is to hold by then (what it holds now, plus the monthly amount until the target
+   date, then the full target). The projection itself doesn't change. **Archive** a goal you reached
+   and spent (it leaves the lists and the reserve; **Restore** brings it back), or delete it. The
+   Overview shows your first three goals in a **Goals** card.
 6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is
    due it is listed for one-click booking (change the amount first if it varies, or skip it);
    turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
