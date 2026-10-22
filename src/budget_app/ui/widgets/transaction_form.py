@@ -61,6 +61,7 @@ from budget_app.ui.widgets.selects import (
     payee_input,
     set_options,
 )
+from budget_app.ui.widgets.tags import tag_select
 
 log = logging.getLogger(__name__)
 AUTO_ADVANCE = "__auto__"
@@ -250,6 +251,7 @@ class TransactionForm:
                     use_total=self._use_items_total,
                 )
 
+            self.tags = tag_select(self.ctx, init.tags, on_change=ch)  # F10, every type
             self.comment = (
                 ui.textarea(t("Note"), value=init.comment, placeholder=t("Optional"), on_change=ch)  # rules read it
                 .props("dense outlined autogrow rows=1")
@@ -342,6 +344,7 @@ class TransactionForm:
                 self.move_to.set_value(inp.to_account or None)
             self.comment.set_value(inp.comment)
             self.payee.set_value(inp.payee)
+            self.tags.set_value([i for i in inp.tags if i in self.tags.options])
         finally:
             self._busy = False
         self._changed()
@@ -617,6 +620,7 @@ class TransactionForm:
             currency=self.currency.value or "",
             comment=self.comment.value or "",
             payee=(self.payee.value or "") if kind in payee_svc.PAYEE_TYPES else "",
+            tags=list(self.tags.value or []),
         )
         if kind == TX_EXPENDITURE:
             inp.category = self.exp_category.value or ""
@@ -697,6 +701,8 @@ class TransactionForm:
             self.comment.set_value("")
             self.payee.set_value("")
             self.payee.set_autocomplete(payee_svc.names(self.ctx))  # with the payee just saved
+            self.tags.set_value([])
+            self.tags.refresh_tags(self.ctx)  # with the tags just added
             self._suggester = categorize.Suggester(self.ctx)  # and with what it was categorized as
             self.exp_adv_account.set_value(None)
             self.items.clear()

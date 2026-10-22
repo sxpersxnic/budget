@@ -36,6 +36,7 @@ from budget_app.services import accounts as acc_svc
 from budget_app.services import budget as budget_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services import items as items_svc
+from budget_app.services import tags as tag_svc
 from budget_app.services import templates as tpl_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
@@ -100,6 +101,11 @@ def seed(ctx: Context) -> None:
     quote = {etf.id: 150.0, nestle.id: 98.0, btc.id: 52000.0}
     moves = {etf.id: (-0.03, 0.04), nestle.id: (-0.04, 0.03), btc.id: (-0.12, 0.15)}
 
+    # F10: a holiday with a budget for its period, a renovation with an open-ended one, and a plain tag
+    holiday = tag_svc.add(ctx, "Holiday Italy", "green")
+    renovation = tag_svc.add(ctx, "Renovation", "orange")
+    business = tag_svc.add(ctx, "Business", "blue")
+
     balance = {bank.id: 5000.0, savings.id: 20000.0, euro.id: 300.0, pillar.id: 18000.0}
     flows: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
 
@@ -129,6 +135,7 @@ def seed(ctx: Context) -> None:
         currency: str = "CHF",
         comment: str = "",
         payee: str = "",
+        tags: tuple[str, ...] = (),
     ) -> None:
         book(
             TransactionInput(
@@ -140,6 +147,7 @@ def seed(ctx: Context) -> None:
                 from_account=account,
                 comment=comment,
                 payee=payee,
+                tags=list(tags),
             )
         )
 
@@ -186,6 +194,18 @@ def seed(ctx: Context) -> None:
             spend(day(8), rng.uniform(120, 260), "06.2", comment="Doctor")
         if mo == 5:
             spend(day(20), 380, "07.2", comment="Car service")
+        if k == 3:  # a week in Italy
+            trip = (holiday.id,)
+            spend(day(6), 186.40, "07.3", comment="Train to Florence", payee="SBB", tags=trip)
+            spend(day(6), 1240, "11.2", comment="Hotel, 6 nights", payee="Hotel Bellavista", tags=trip)
+            spend(day(8), 64.50, "11.1", account=euro.id, currency="EUR", payee="Trattoria da Mario", tags=trip)
+            spend(day(9), 38, "09.4", account=euro.id, currency="EUR", comment="Uffizi", tags=trip)
+            spend(day(10), 92.80, "11.1", account=euro.id, currency="EUR", payee="Osteria Nove", tags=trip)
+            spend(day(12), 186.40, "07.3", comment="Train home", payee="SBB", tags=trip)
+        if k in (2, 1):  # the bathroom
+            redo = (renovation.id,)
+            spend(day(7), rng.uniform(900, 1300), "04.3.1", comment="Tools and tiles", payee="Jumbo", tags=redo)
+            spend(day(21), rng.uniform(600, 900), "04.3.2", comment="Plumber", payee="Sanitär Huber", tags=redo)
 
         book(
             TransactionInput(
@@ -208,6 +228,7 @@ def seed(ctx: Context) -> None:
                     category=side_job.id,
                     to_account=bank.id,
                     comment="Tutoring",
+                    tags=[business.id],
                 )
             )
         book(
@@ -333,6 +354,10 @@ def seed(ctx: Context) -> None:
             comment="Sam, first half",
         ),
     )
+
+    trip_start = date.fromisoformat(months.add_months(cm, -3) + "-01")
+    tag_svc.set_budget(ctx, holiday.id, 2500, "CHF", trip_start, months.last_day(months.add_months(cm, -3)))
+    tag_svc.set_budget(ctx, renovation.id, 3000, "CHF")
 
     for type_, code, amount, currency in (
         ("expenditure", "04.1", 1900, "CHF"),

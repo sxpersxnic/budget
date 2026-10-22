@@ -17,11 +17,13 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date
 
+from budget_app.domain import tags as tag_codec
 from budget_app.domain.coicop import get_coicop
 from budget_app.domain.fx import FxError
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, TX_TRANSFER, Recurring, Transaction
 from budget_app.i18n import N_, t
 from budget_app.services import payees as payee_svc
+from budget_app.services import tags as tag_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
@@ -46,6 +48,7 @@ class RecurringInput:
     end: date | None = None  # None: no end
     auto: bool = False
     payee: str = ""  # expenditure and income (F09)
+    tags: list[str] = field(default_factory=list)  # F10: tag ids, or names of new tags
 
 
 @dataclass
@@ -111,6 +114,7 @@ def _template(inp: RecurringInput) -> TransactionInput:
         to_account=inp.to_account if inp.type != TX_EXPENDITURE else "",
         comment=inp.comment,
         payee=inp.payee if inp.type in payee_svc.PAYEE_TYPES else "",
+        tags=list(inp.tags),
     )
 
 
@@ -140,6 +144,7 @@ def to_input(series: Recurring) -> RecurringInput:
         end=series.end_date,
         auto=series.auto,
         payee=series.payee,
+        tags=tag_codec.split(series.tags),
     )
 
 
@@ -156,6 +161,7 @@ def from_transaction(tx: Transaction, recur_months: int = 1) -> RecurringInput:
         start=tx.date,
         recur_months=recur_months,
         payee=tx.payee,
+        tags=tag_codec.split(tx.tags),
     )
 
 
@@ -206,6 +212,7 @@ def save(ctx: Context, inp: RecurringInput, editing_id: str = "", first_booked: 
         end=inp.end.isoformat() if inp.end else "",
         auto=inp.auto,
         payee=payee_svc.ensure(ctx, tpl.payee),
+        tags=tag_svc.ensure(ctx, tpl.tags),
     )
     if editing_id:
         series.id = editing_id

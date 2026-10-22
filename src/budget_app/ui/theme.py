@@ -17,6 +17,18 @@ SERIES = ["#0a84ff", "#30b94d", "#ff9f0a", "#af52de", "#30b0c7", "#ff375f", "#5e
 POSITIVE = "#30b94d"
 NEGATIVE = "#ff453a"
 NEUTRAL = "#8e8e93"
+# Tag colours (F10, the keys of models.TAG_COLOURS): (mid tone for charts and chip fills, text on light, text on dark)
+TAG_SHADES = {
+    "grey": ("#8e8e93", "#636366", "#c7c7cc"),
+    "red": ("#ff453a", "#c4001a", "#ff8a80"),
+    "orange": ("#ff9f0a", "#b04a00", "#ffb84d"),
+    "yellow": ("#ffcc00", "#8a6100", "#ffd84d"),
+    "green": ("#30b94d", "#1d7a33", "#5fe07a"),
+    "teal": ("#30b0c7", "#00708a", "#70d7ff"),
+    "blue": ("#0a84ff", "#0050c8", "#70b4ff"),
+    "purple": ("#af52de", "#7f2fae", "#d9a0ff"),
+    "pink": ("#ff375f", "#c2003b", "#ff8aa5"),
+}
 
 CSS = r"""
 :root {
@@ -371,9 +383,33 @@ input[type=number] { -moz-appearance: textfield; }
 ACCENT = "#0071e3"
 
 
+def tag_css() -> str:
+    """One class per tag colour (`tag-blue` …): the chip's fill and its text, for light and dark mode."""
+    fill = "background: color-mix(in srgb, var(--tag) 18%, transparent)"
+    rules = [
+        ".tag-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px;"
+        " font-size: 12px; font-weight: 500; line-height: 20px; white-space: nowrap; max-width: 14rem;"
+        f" overflow: hidden; text-overflow: ellipsis; {fill}; color: var(--tag-text); }}",
+        ".q-chip.tag-chip { height: 22px; margin: 2px 4px 2px 0; padding: 0 4px 0 8px; display: inline-flex;"
+        f" {fill} !important; color: var(--tag-text) !important; }}",
+        ".q-chip.tag-chip .q-chip__icon--remove { opacity: 0.7; color: inherit; }",
+        ".tag-chip.cursor-pointer:hover { background: color-mix(in srgb, var(--tag) 30%, transparent); }",
+        ".tag-chips { display: inline-flex; gap: 4px; align-items: center; flex-wrap: nowrap; overflow: hidden; }",
+        ".tag-new { --tag: #8e8e93; --tag-text: var(--label-2); outline: 1px dashed var(--separator-strong); }",
+        ".tag-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--tag); }",
+        ".tag-swatch { width: 26px; height: 26px; min-width: 26px !important; min-height: 26px !important;"
+        " padding: 0 !important; border-radius: 50%; background: var(--tag) !important; }",
+        ".tag-swatch.selected { box-shadow: 0 0 0 2px var(--surface-raised), 0 0 0 4px var(--tag); }",
+    ]
+    for name, (mid, light, dark) in TAG_SHADES.items():
+        rules.append(f".tag-{name} {{ --tag: {mid}; --tag-text: {light}; }}")
+        rules.append(f"body.body--dark .tag-{name} {{ --tag-text: {dark}; }}")
+    return "\n".join(rules)
+
+
 def install() -> None:
     """Register the stylesheet for every page (call once at startup)."""
-    ui.add_css(CSS, shared=True)
+    ui.add_css(CSS + "\n" + tag_css(), shared=True)
 
 
 def apply_colors() -> None:

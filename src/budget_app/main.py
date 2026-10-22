@@ -33,6 +33,7 @@ from budget_app.ui.pages import (
     recurring,
     rules,
     settings,
+    tags,
     transactions,
 )
 from budget_app.ui.widgets import selects
@@ -48,6 +49,7 @@ PAGES = {
     "/budget-entries": budget_entries.page,
     "/categories": categories.page,
     "/payees": payees.page,
+    "/tags": tags.page,
     "/investments": investments.page,
     "/rules": rules.page,
     "/settings": settings.page,

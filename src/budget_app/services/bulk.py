@@ -1,4 +1,4 @@
-"""Bulk edit (F13): change the category, payee, account or note of several transactions in one step.
+"""Bulk edit (F13): change the category, payee, account, tags or note of several transactions in one step.
 
 Every changed row goes through the same checks as an edit in the transaction form
 (`transactions.prepare_edit`), so accounts stay in the transaction's currency, advance payments and
@@ -7,9 +7,9 @@ every row is checked first, and if one fails nothing is saved and the failures n
 
 A field leaves the rows it does not apply to as they are: an expenditure category applies to
 expenditure, an income category to income other than repayments, a payee to expenditure and income
-(F09), an account to the From account of expenditure and the To account of income. A spread booking
-(a revaluation linked to its exchange, F44) follows its exchange and is never changed on its own.
-Booked rows keep their recurring series.
+(F09), an account to the From account of expenditure and the To account of income, added and removed tags
+(F10) to every row. A spread booking (a revaluation linked to its exchange, F44) follows its exchange and is
+never changed on its own. Booked rows keep their recurring series.
 """
 
 from __future__ import annotations
@@ -37,6 +37,8 @@ class BulkChanges:
     income_category: str | None = None  # an income category id
     payee: str | None = None  # a payee name; a new one becomes a payee when saved
     account: str | None = None  # expenditure: the From account; income: the To account
+    add_tags: list[str] = field(default_factory=list)  # F10: tag ids, or names of new tags (added when saved)
+    remove_tags: list[str] = field(default_factory=list)  # tag ids
     note_mode: str = NOTE_KEEP
     note: str = ""  # the text for NOTE_REPLACE and NOTE_APPEND
 
@@ -66,6 +68,10 @@ def takes_payee(tx: Transaction) -> bool:
 
 def takes_account(tx: Transaction) -> bool:
     return tx.type in (TX_EXPENDITURE, TX_INCOME) and not is_invested(tx)
+
+
+def takes_tags(tx: Transaction) -> bool:
+    return not is_spread(tx) and not is_invested(tx)
 
 
 def takes_note(tx: Transaction) -> bool:
@@ -118,6 +124,9 @@ def apply(tx: Transaction, inp: TransactionInput, changes: BulkChanges) -> Trans
             out.from_account = changes.account
         else:
             out.to_account = changes.account
+    if takes_tags(tx) and (changes.add_tags or changes.remove_tags):
+        kept = [i for i in inp.tags if i not in changes.remove_tags]
+        out.tags = kept + [i for i in changes.add_tags if i not in kept and i not in changes.remove_tags]
     if takes_note(tx):
         out.comment = _note(inp.comment, changes)
     return out

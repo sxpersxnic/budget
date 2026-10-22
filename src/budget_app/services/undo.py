@@ -83,6 +83,7 @@ TABLE_NAMES = {
     "holdings": N_("Holding"),
     "trades": N_("Trade"),
     "prices": N_("Price"),
+    "tags": N_("Tag"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 

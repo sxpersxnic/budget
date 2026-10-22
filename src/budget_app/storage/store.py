@@ -19,6 +19,7 @@ from budget_app.domain.models import (
     Recurring,
     Rule,
     Settings,
+    Tag,
     Template,
     Trade,
     Transaction,
@@ -69,6 +70,7 @@ class Store:
         self.holdings = CsvTable(data_dir / "holdings.csv", Holding, h)  # F21
         self.trades = CsvTable(data_dir / "trades.csv", Trade, h)
         self.prices = CsvTable(data_dir / "prices.csv", Price, h)
+        self.tags = CsvTable(data_dir / "tags.csv", Tag, h)  # F10
         self._settings = SettingsStore(data_dir / "settings.json")
 
     def tables(self) -> dict[str, CsvTable]:
@@ -87,6 +89,7 @@ class Store:
             self.holdings,
             self.trades,
             self.prices,
+            self.tags,
         ]
         return {t.name: t for t in tables}
 

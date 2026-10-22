@@ -34,6 +34,7 @@ NAV = [
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
     ("/categories", N_("Categories"), "o_account_tree"),
     ("/payees", N_("Payees"), "o_storefront"),
+    ("/tags", N_("Tags"), "o_sell"),
     ("/investments", N_("Investments"), "o_show_chart"),
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")

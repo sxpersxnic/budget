@@ -126,6 +126,7 @@ class Transaction:
     payee: str = ""  # who was paid or who paid (F09): the name of a `Payee`; empty for transfers and older rows
     # booked by the Investments page (F21): the id of the `Trade` or `Price` the row belongs to
     invest_id: str = ""
+    tags: str = ""  # F10: ids of `Tag`s, separated by "|" (domain.tags.split / join); empty in older files
     id: str = field(default_factory=new_id)
 
 
@@ -151,6 +152,50 @@ class Payee:
 
     def set_aliases(self, aliases: list[str]) -> None:
         self.aliases = ALIAS_SEP.join(sorted(dict.fromkeys(a for a in aliases if a)))
+
+
+TAG_COLOURS = {  # F10: the fixed palette of tag colours; the shades for light and dark mode are in ui/theme.py
+    "grey": N_("Grey"),
+    "red": N_("Red"),
+    "orange": N_("Orange"),
+    "yellow": N_("Yellow"),
+    "green": N_("Green"),
+    "teal": N_("Teal"),
+    "blue": N_("Blue"),
+    "purple": N_("Purple"),
+    "pink": N_("Pink"),
+}
+TAG_DEFAULT_COLOUR = "grey"
+
+
+@dataclass
+class Tag:
+    """A label across categories (F10), such as "Holiday Italy 2026" or "Renovation".
+
+    Transactions, templates and recurring series name their tags by id (`Transaction.tags`), so renaming a tag
+    changes one row here. A tag can have a budget: `budget` in `budget_currency` for the tagged spending between
+    `budget_start` and `budget_end` (each 'YYYY-MM-DD' or empty for an open end); `budget` 0 means no budget.
+    """
+
+    name: str
+    colour: str = TAG_DEFAULT_COLOUR  # a key of TAG_COLOURS
+    budget: float = 0.0
+    budget_currency: str = ""
+    budget_start: str = ""
+    budget_end: str = ""
+    id: str = field(default_factory=new_id)
+
+    @property
+    def has_budget(self) -> bool:
+        return self.budget > 0
+
+    @property
+    def start_date(self) -> dt.date | None:
+        return dt.date.fromisoformat(self.budget_start) if self.budget_start else None
+
+    @property
+    def end_date(self) -> dt.date | None:
+        return dt.date.fromisoformat(self.budget_end) if self.budget_end else None
 
 
 @dataclass
@@ -183,6 +228,7 @@ class Template:
     to_account: str = ""
     comment: str = ""
     payee: str = ""  # F09
+    tags: str = ""  # F10: tag ids separated by "|"
     id: str = field(default_factory=new_id)
 
 
@@ -256,6 +302,7 @@ class Recurring:
     end: str = ""  # last day an occurrence may fall on ('YYYY-MM-DD'); empty: no end
     auto: bool = False  # book due occurrences without asking
     payee: str = ""  # F09
+    tags: str = ""  # F10: tag ids separated by "|"
     id: str = field(default_factory=new_id)
 
     @property

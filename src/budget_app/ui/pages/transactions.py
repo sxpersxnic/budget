@@ -6,6 +6,7 @@ from datetime import date
 
 from nicegui import ui
 
+from budget_app.domain import tags as tag_codec
 from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import (
     REVALUATION_KINDS,
@@ -14,6 +15,7 @@ from budget_app.domain.models import (
     TX_INCOME,
     TX_REVALUATION,
     TX_TYPES,
+    Tag,
     Transaction,
 )
 from budget_app.i18n import t, tc, tn
@@ -22,6 +24,7 @@ from budget_app.services import items as items_svc
 from budget_app.services import payees as payee_svc
 from budget_app.services import recurring as rec_svc
 from budget_app.services import rules as rules_svc
+from budget_app.services import tags as tag_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import ValidationError
 from budget_app.services.reports import ADV_REPAY_NAME
@@ -32,6 +35,7 @@ from budget_app.ui.widgets.bulk_edit import open_bulk_edit_sheet
 from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
 from budget_app.ui.widgets.rule_sheet import always_like_this
 from budget_app.ui.widgets.selects import set_options
+from budget_app.ui.widgets.tags import CHIPS_RENDERER, TagSelect, grid_cells
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 
@@ -40,6 +44,7 @@ def _columns() -> list[dict]:
         date_col("date", t("Date"), sort="desc", width=120),
         {"field": "payee", "headerName": t("Payee"), "width": 180},
         {"field": "category", "headerName": t("Category"), "width": 250},
+        {"field": "tags", "headerName": t("Tags"), "width": 170, ":cellRenderer": CHIPS_RENDERER},  # F10
         money_col("amount", t("Amount"), width=150),
         {"field": "items", "headerName": t("Items"), "width": 90, "type": "rightAligned", "cellClass": "muted"},
         {"field": "from", "headerName": tc("account", "From"), "width": 160},
@@ -65,6 +70,7 @@ def _row(
     item_names: dict,
     received: float | None = None,
     repeats: dict[str, str] | None = None,
+    tags: dict[str, Tag] | None = None,
 ) -> dict:
     if tx.type == TX_EXPENDITURE:
         category = get_coicop().label(tx.category)
@@ -82,6 +88,10 @@ def _row(
     to = accs.get(tx.to_account, "")
     if tx.type == TX_EXCHANGE:  # what the bank credited, spread included (F44)
         to += f" (+{received if received is not None else tx.to_amount:.2f} {tx.to_currency})"
+    own_tags = sorted(
+        (tags[i] for i in tag_codec.split(tx.tags) if tags and i in tags), key=lambda g: tag_codec.key(g.name)
+    )
+    tag_names = ", ".join(g.name for g in own_tags)
     return {
         "id": tx.id,
         "date": tx.date.isoformat(),
@@ -98,6 +108,8 @@ def _row(
         "fx_date": tx.fx_date.isoformat(),
         "items": item_counts.get(tx.id) or None,
         "recurring": (repeats or {}).get(tx.recurring_id, "") if tx.recurring_id else "",
+        "tags": tag_names,  # sorting, the column filter and the export; the cell shows `_tags` as chips
+        "_tags": grid_cells(own_tags),
         "_search": " ".join(
             [
                 tx.payee,
@@ -108,6 +120,7 @@ def _row(
                 tx.comment,
                 str(tx.amount),
                 item_names.get(tx.id, ""),  # find a receipt by what was bought
+                tag_names,
             ]
         ).lower(),
         "_accounts": [tx.from_account, tx.to_account, tx.advance_account],
@@ -116,7 +129,8 @@ def _row(
     }
 
 
-def page() -> None:
+def page(tag: str = "") -> None:
+    """`tag` (a query parameter, from the Tags page) starts the list filtered by that tag."""
     with frame(t("Transactions"), "/transactions") as (ctx, actions):
         with actions:
             text = (
@@ -153,7 +167,9 @@ def page() -> None:
                 .props("dense outlined")
                 .classes("w-44")
             )
-        filters.set_visibility(False)
+            tag_filter = TagSelect(ctx, [tag] if tag else [], label=t("Tags"), allow_new=False)  # any of them
+            tag_filter.classes("w-64")
+        filters.set_visibility(bool(tag_filter.value))
         filter_btn.on_click(lambda: filters.set_visibility(not filters.visible))
         with ui.element("div").classes("selection-bar") as bar:
             selected_label = ui.label().classes("font-medium")
@@ -184,6 +200,9 @@ def page() -> None:
 
         def apply_filters() -> None:
             set_options(payee, [p.name for p in payee_svc.all_payees(ctx)])  # with payees added since
+            tag_filter.refresh_tags(ctx)  # and tags
+            wanted = set(tag_filter.value or [])
+            tags = tag_svc.by_id(ctx)
             start, end = parse_date(d_from.value), parse_date(d_to.value)
             q = (text.value or "").lower().strip()
             accs = {a.id: acc_svc.account_label(a) for a in ctx.store.accounts.all()}
@@ -202,8 +221,10 @@ def page() -> None:
                     continue
                 if payee.value and tx.payee != payee.value:
                     continue
+                if wanted and wanted.isdisjoint(tag_codec.split(tx.tags)):
+                    continue
                 received = tx_svc.received_amount(ctx, tx) if tx.type == TX_EXCHANGE else None
-                r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats)
+                r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats, tags)
                 if acc.value and acc.value not in r["_accounts"]:
                     continue
                 if q and q not in r["_search"]:
@@ -221,7 +242,7 @@ def page() -> None:
             )
             bar.set_visibility(False)
 
-        for el in (d_from, d_to, a_min, a_max, acc, payee, typ, text):
+        for el in (d_from, d_to, a_min, a_max, acc, payee, typ, tag_filter, text):
             el.on_value_change(apply_filters)
         apply_filters()
         on_data_changed(apply_filters)
