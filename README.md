@@ -234,7 +234,13 @@ The app opens in its own window and keeps all data in your user folder:
    reverts. Rows a change doesn't fit (a transfer has no category) keep what they have; a split
    transaction changes only the category of its rest, its lines keep theirs.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
-   for open-ended budgets.
+   for open-ended budgets. To start from what actually happened, choose **Propose from History…**:
+   pick the last 3, 6 or 12 complete months, average or median, the COICOP level (division, group
+   or class) and the rounding (for example to 10 CHF). Each category you spent or received money in
+   gets a row with its months, the budget it already has and a proposed monthly amount in CHF, which
+   you can change. Rows that already have a budget in the chosen months start unticked; ticking one
+   replaces that budget there. Rows booked by a recurring transaction say so. **Create Budget**
+   adds the ticked rows as monthly budgets in one step, which one **Undo** reverts.
    **Goals** (sidebar): save towards something ("Holiday 4'000 CHF by June") with **New Goal**: a
    target amount, or for an emergency fund a number of **months of spending** (the target is then
    that many times your average monthly spending over the last 12 complete months, and follows it).
