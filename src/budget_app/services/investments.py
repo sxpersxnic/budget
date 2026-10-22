@@ -6,12 +6,20 @@ Every change to a holding's trades or prices books its transactions again from a
 
 - a buy is a transfer of quantity × price from the cash account to the investment account, a sale the other
   way; a fee is an expenditure from the cash account (`FEE_CATEGORY`);
-- a dividend is income to the cash account, in the income category "Dividends" (added when missing);
+- a dividend is income of its gross amount to the cash account, in the income category "Dividends" (added when
+  missing), and its withholding tax an expenditure in Taxes from the same account: the account receives the net
+  (decision 12);
 - every price, a trade's included, books the change in value as a linked revaluation of the kind *Capital
   gains on investment* (see domain/investments.py), so the account's booked value is quantity × price.
 
 These rows carry the trade's or price's id in `invest_id`; they change only with it. A securities or crypto
 account's month-end balance is not typed in: `value_entry` computes it from the holdings.
+
+An account with history becomes one through a conversion (decision 13, `convert_account`): its recorded
+balances stay its history up to the month before the conversion month, and its opening holdings (trades of the
+kind TRADE_OPENING on the first day of that month) take over. The difference between the last recorded balance
+and their value is booked as one linked *Capital gains on investment* revaluation whose `invest_id` is the
+account's id (`book_conversion`), so the conversion month reconciles.
 """
 
 from __future__ import annotations
@@ -25,14 +33,16 @@ from budget_app import i18n
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import investments as inv
 from budget_app.domain import months
-from budget_app.domain.coicop import fold
-from budget_app.domain.investments import Performance, Step, fmt_price, fmt_quantity
+from budget_app.domain.coicop import TAX, fold
+from budget_app.domain.investments import Performance, Step, fmt_money, fmt_price, fmt_quantity
 from budget_app.domain.models import (
     ACCOUNT_REGULAR,
+    HOLDING_CLASSES,
     REVAL_INVEST,
     TRADE_BUY,
     TRADE_DIVIDEND,
     TRADE_KINDS,
+    TRADE_OPENING,
     TRADE_SELL,
     TX_EXPENDITURE,
     TX_INCOME,
@@ -46,7 +56,7 @@ from budget_app.domain.models import (
     Trade,
     Transaction,
 )
-from budget_app.i18n import N_, t
+from budget_app.i18n import N_, t, tn
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
 
@@ -112,11 +122,12 @@ def first_day(ctx: Context, account_id: str) -> date | None:
 def value_entry(ctx: Context, acc: Account, month: str) -> AccountEntry | None:
     """The month-end balance of a securities or crypto account, computed from its holdings (not stored).
 
-    None before its first trade or price; afterwards the value at the end of `month`, which is what the
-    linked transfers and revaluations booked on the account add up to.
+    None before its first trade or price (before its conversion month for a converted account, whose recorded
+    balances count until then); afterwards the value at the end of `month`, which is what the linked transfers
+    and revaluations booked on the account add up to (plus, for a converted account, its last recorded balance).
     """
-    first = first_day(ctx, acc.id)
-    if first is None or months.month_of(first) > month:
+    first = acc.invest_from or (months.month_of(day) if (day := first_day(ctx, acc.id)) else None)
+    if first is None or first > month:
         return None
     rate_date = ctx.month_rate_date(month)
     amount = account_value(ctx, acc.id, months.last_day(month))
@@ -137,11 +148,29 @@ def first_month(ctx: Context) -> str | None:
     return months.month_of(min(days)) if days else None
 
 
-def source(ctx: Context, tx: Transaction) -> Trade | Price | None:
-    """The trade or price that booked `tx` (F21), if it still exists."""
+def reclaimable(ctx: Context, holding: Holding | None) -> bool:
+    """Whether the withholding tax on the holding's dividends can be reclaimed: Swiss tax, in CHF accounts."""
+    return holding is not None and currency_of(ctx, holding) == BASE_CURRENCY
+
+
+def reclaimable_tax(ctx: Context) -> dict[int, float]:
+    """The withholding tax on dividends of holdings in CHF accounts, per year (newest first; years without left out).
+
+    The Swiss withholding tax is reclaimed with the tax return of the year the dividend was paid."""
+    out: dict[int, float] = {}
+    for tr in ctx.store.trades.all():
+        if tr.kind == TRADE_DIVIDEND and tr.tax >= inv.EPS and reclaimable(ctx, ctx.store.holdings.get(tr.holding_id)):
+            out[tr.date.year] = inv.money(out.get(tr.date.year, 0.0) + tr.tax)
+    return dict(sorted(out.items(), reverse=True))
+
+
+def source(ctx: Context, tx: Transaction) -> Trade | Price | Account | None:
+    """The trade or price that booked `tx` (F21), or the converted account whose opening it is, if it still exists."""
     if not tx.invest_id:
         return None
-    return ctx.store.trades.get(tx.invest_id) or ctx.store.prices.get(tx.invest_id)
+    found = ctx.store.trades.get(tx.invest_id) or ctx.store.prices.get(tx.invest_id)
+    acc = ctx.store.accounts.get(tx.invest_id) if found is None else None
+    return found or (acc if acc is not None and acc.invest_from else None)
 
 
 # ------------------------------------------------------------------ holdings
@@ -183,12 +212,13 @@ def edit_holding(ctx: Context, holding_id: str, name: str, symbol: str = "", acc
 @recorded(N_("Delete a holding"))
 def delete_holding(ctx: Context, holding_id: str) -> None:
     """Delete a holding with its trades and prices, and the transactions they booked."""
+    holding = ctx.store.holdings.get(holding_id)
     trades = [tr.id for tr in trades_of(ctx, holding_id)]
     prices = [p.id for p in prices_of(ctx, holding_id)]
     ctx.store.trades.delete(trades)
     ctx.store.prices.delete(prices)
     ctx.store.holdings.delete([holding_id])
-    _book(ctx, holding_id)
+    _book(ctx, holding_id, holding.account_id if holding else "")
 
 
 # ------------------------------------------------------------------ trades
@@ -200,7 +230,8 @@ class TradeInput:
     quantity: float | None = None
     price: float | None = None
     fee: float | None = None
-    amount: float | None = None  # dividend received
+    amount: float | None = None  # dividend: the gross amount
+    tax: float | None = None  # dividend: the withholding tax (none: 0)
     cash_account: str = ""
     comment: str = ""
 
@@ -214,6 +245,7 @@ def to_input(trade: Trade) -> TradeInput:
         price=trade.price or None,
         fee=trade.fee or None,
         amount=trade.amount or None,
+        tax=trade.tax if trade.kind == TRADE_DIVIDEND else None,
         cash_account=trade.cash_account,
         comment=trade.comment,
     )
@@ -226,24 +258,55 @@ def _holding(ctx: Context, holding_id: str) -> Holding:
     return holding
 
 
-def _check_date(day: date | None) -> date:
+def _check_date(ctx: Context, holding: Holding, day: date | None) -> date:
     if day is None:
         raise ValidationError(t("Date is required"))
     if day > date.today():
         raise ValidationError(t("The date can’t be in the future"))
+    if (message := _before_conversion(ctx, holding, day)) is not None:
+        raise ValidationError(message)
     return day
+
+
+def _before_conversion(ctx: Context, holding: Holding, day: date) -> str | None:
+    """Why `day` can't have a trade or price of the holding: its account was converted later (decision 13)."""
+    acc = ctx.store.accounts.get(holding.account_id)
+    if acc is None or not acc.invest_from or day >= months.first_day(acc.invest_from):
+        return None
+    return t(
+        "{account} is valued from its holdings from {month} on; earlier days belong to its recorded balances",
+        account=acc.name,
+        month=months.label(acc.invest_from),
+    )
+
+
+def _normalized(ctx: Context, inp: TradeInput, editing_id: str) -> TradeInput:
+    """The trade as it is saved: an opening holding keeps its holding and day, and has no fee or cash account."""
+    old = ctx.store.trades.get(editing_id) if editing_id else None
+    if old is None or old.kind != TRADE_OPENING:
+        return inp
+    return replace(inp, holding_id=old.holding_id, date=old.date, fee=None, amount=None, tax=None, cash_account="")
 
 
 def validate_trade(ctx: Context, inp: TradeInput, editing_id: str = "") -> None:
     """Every rule a trade has to meet, including that no sale sells more than is held at that point."""
-    if inp.kind not in TRADE_KINDS:
+    old = ctx.store.trades.get(editing_id) if editing_id else None
+    opening = old is not None and old.kind == TRADE_OPENING
+    if opening and inp.kind != TRADE_OPENING:
+        raise ValidationError(t("An opening holding stays one; change its quantity or price"))
+    if not opening and inp.kind not in TRADE_KINDS:
         raise ValidationError(t("Select buy, sell or dividend"))
+    inp = _normalized(ctx, inp, editing_id)
     holding = _holding(ctx, inp.holding_id)
-    _check_date(inp.date)
+    _check_date(ctx, holding, inp.date)
     currency = currency_of(ctx, holding)
     if inp.kind == TRADE_DIVIDEND:
         if inp.amount is None or inp.amount < inv.EPS:
-            raise ValidationError(t("Enter the amount received"))
+            raise ValidationError(t("Enter the gross dividend"))
+        if (inp.tax or 0) < 0:
+            raise ValidationError(t("The withholding tax can’t be negative"))
+        if inv.money(inp.tax or 0) > inv.money(inp.amount):
+            raise ValidationError(t("The withholding tax can’t be more than the dividend"))
     else:
         if inp.quantity is None or inp.quantity < inv.QTY_EPS:
             raise ValidationError(t("Enter the quantity"))
@@ -252,9 +315,11 @@ def validate_trade(ctx: Context, inp: TradeInput, editing_id: str = "") -> None:
         if (inp.fee or 0) < 0:
             raise ValidationError(t("The fee can’t be negative"))
     cash = ctx.store.accounts.get(inp.cash_account) if inp.cash_account else None
-    if cash is None or cash.kind != ACCOUNT_REGULAR or cash.holds_securities:
+    if opening:
+        pass  # its value was in the account already: no money moves
+    elif cash is None or cash.kind != ACCOUNT_REGULAR or cash.holds_securities:
         raise ValidationError(t("Select the cash account"))
-    if cash.currency != currency:
+    elif cash.currency != currency:
         raise ValidationError(
             t(
                 "The cash account must be in {currency}, the currency of {name}. Exchange the money first.",
@@ -289,6 +354,7 @@ def _check_sequence(ctx: Context, holding_id: str, changed: Trade | None, change
 
 def _build_trade(ctx: Context, inp: TradeInput, editing_id: str) -> Trade:
     old = ctx.store.trades.get(editing_id) if editing_id else None
+    inp = _normalized(ctx, inp, editing_id)
     dividend = inp.kind == TRADE_DIVIDEND
     if inp.date is None:  # pragma: no cover - checked by validate_trade() first
         raise ValidationError(t("Date is required"))
@@ -300,6 +366,7 @@ def _build_trade(ctx: Context, inp: TradeInput, editing_id: str) -> Trade:
         price=0.0 if dividend else round(float(inp.price or 0), 6),
         fee=0.0 if dividend else inv.money(inp.fee or 0),
         amount=inv.money(inp.amount or 0) if dividend else 0.0,
+        tax=inv.money(inp.tax or 0) if dividend else 0.0,
         cash_account=inp.cash_account,
         comment=(inp.comment or "").strip(),
         seq=old.seq if old else max((tr.seq for tr in ctx.store.trades.all()), default=0) + 1,
@@ -319,7 +386,8 @@ def save_trade(ctx: Context, inp: TradeInput, editing_id: str = "") -> Trade:
     else:
         saved = ctx.store.trades.update(trade)
         if old.holding_id != trade.holding_id:
-            _book(ctx, old.holding_id)
+            moved_from = ctx.store.holdings.get(old.holding_id)
+            _book(ctx, old.holding_id, moved_from.account_id if moved_from else "")
     _book(ctx, trade.holding_id)
     return saved
 
@@ -342,8 +410,7 @@ def price_on(ctx: Context, holding_id: str, day: date) -> Price | None:
 
 def validate_price(ctx: Context, holding_id: str, day: date | None, price: float | None) -> tuple[date, float]:
     """Check a price; returns its day and value."""
-    _holding(ctx, holding_id)
-    day = _check_date(day)
+    day = _check_date(ctx, _holding(ctx, holding_id), day)
     if price is None or price <= 0:
         raise ValidationError(t("Enter the price"))
     return day, price
@@ -368,7 +435,8 @@ def _put_price(ctx: Context, holding_id: str, day: date, price: float, editing_i
         editing.holding_id, editing.date, editing.price = holding_id, day, value
         saved = ctx.store.prices.update(editing)
         if moved_from != holding_id:
-            _book(ctx, moved_from)
+            old_holding = ctx.store.holdings.get(moved_from)
+            _book(ctx, moved_from, old_holding.account_id if old_holding else "")
         return saved
     if same_day is not None:
         same_day.price = value
@@ -463,6 +531,8 @@ def read_price_list(ctx: Context, text: str) -> list[PriceLine]:
                 pl.error = t("No holding “{value}”", value=", ".join(cells[1:-1]))
             elif pl.price is None or pl.price <= 0:
                 pl.error = t("Not a price: {value}", value=cells[-1])
+            elif (before := _before_conversion(ctx, holding, day)) is not None:
+                pl.error = before
             else:
                 pl.holding_id = holding.id
                 same = price_on(ctx, holding.id, day)
@@ -532,7 +602,11 @@ def _rows(ctx: Context, holding: Holding, step: Step, trade: Trade | None) -> li
             fee_note = _note(t("Fee: {trade}", trade=text), comment)
             row(TX_EXPENDITURE, e.fee, category=FEE_CATEGORY, from_account=trade.cash_account, comment=fee_note)
     elif trade is not None and e.kind == TRADE_DIVIDEND:
-        row(TX_INCOME, e.amount, to_account=trade.cash_account, comment=_note(t("Dividend {name}", name=name), comment))
+        text = t("Dividend {name}", name=name)
+        row(TX_INCOME, e.amount, to_account=trade.cash_account, comment=_note(text, comment))
+        if e.tax >= inv.EPS:
+            tax_note = _note(t("Withholding tax: {dividend}", dividend=text), comment)
+            row(TX_EXPENDITURE, e.tax, category=TAX, from_account=trade.cash_account, comment=tax_note)
     if abs(step.revaluation) >= inv.EPS:
         before = fmt_price(step.price_before) if step.price_before is not None else "–"
         text = t("{name}: price {price}, before {before}", name=name, price=fmt_price(e.price), before=before)
@@ -541,11 +615,12 @@ def _rows(ctx: Context, holding: Holding, step: Step, trade: Trade | None) -> li
     return out
 
 
-def _book(ctx: Context, holding_id: str) -> None:
+def _book(ctx: Context, holding_id: str, account_id: str = "") -> None:
     """Book the holding's transactions again from its trades and prices, changing only what differs.
 
     Rows of trades and prices that no longer exist go too. Rows keep their ids, and their valuation in CHF
-    while amount, currency and date stay the same (like an edited transaction).
+    while amount, currency and date stay the same (like an edited transaction). The conversion's revaluation
+    of the holding's account (or of `account_id`, for a holding just deleted) follows its opening holdings.
     """
     holding = ctx.store.holdings.get(holding_id)
     trades = trades_of(ctx, holding_id) if holding else []
@@ -553,6 +628,7 @@ def _book(ctx: Context, holding_id: str) -> None:
     by_id = {tr.id: tr for tr in trades}
     ids = set(by_id) | {p.id for p in prices}
     alive = {tr.id for tr in ctx.store.trades.all()} | {p.id for p in ctx.store.prices.all()}
+    alive |= {a.id for a in ctx.store.accounts.all() if a.invest_from}  # the rows of conversions
     store = ctx.store.transactions
     existing = {
         (tx.invest_id, tx.type): tx
@@ -583,3 +659,214 @@ def _book(ctx: Context, holding_id: str) -> None:
         store.update_many(updates)
     if adds:
         store.add_many(adds)
+    if account_id or holding is not None:
+        book_conversion(ctx, account_id or (holding.account_id if holding else ""))
+
+
+# ------------------------------------------------------------------ converting an account with history
+@dataclass
+class OpeningHolding:
+    """A holding an account starts with when it is converted: its name, ISIN or symbol, quantity and price."""
+
+    name: str = ""
+    symbol: str = ""
+    quantity: float | None = None
+    price: float | None = None
+
+    @property
+    def blank(self) -> bool:
+        return (
+            not (self.name or "").strip() and not (self.symbol or "").strip() and not self.quantity and not self.price
+        )
+
+
+@dataclass
+class Conversion:
+    """What converting an account would do (`check_conversion`), or did."""
+
+    day: date  # the opening holdings' day: the first day of the conversion month
+    balance: float  # the last balance recorded before the conversion month (0 without one)
+    balance_month: str | None  # its month
+    value: float  # Σ round(quantity × price, 2) of the opening holdings
+    replaced: list[str]  # months from the conversion month on with a recorded balance, which the holdings replace
+
+    @property
+    def difference(self) -> float:
+        """The revaluation the conversion books: opening value − last recorded balance."""
+        return inv.money(self.value - self.balance)
+
+
+def recorded_before(ctx: Context, account_id: str, month: str) -> AccountEntry | None:
+    """The latest balance recorded for the account in a month before `month`."""
+    found = [e for e in ctx.store.account_entries.all() if e.account_id == account_id and e.month < month]
+    return max(found, key=lambda e: e.month) if found else None
+
+
+def opening_value(ctx: Context, account_id: str) -> float:
+    """What the account's opening holdings were worth on the conversion day: Σ round(quantity × price, 2)."""
+    ids = {h.id for h in holdings(ctx, account_id)}
+    trades = [tr for tr in ctx.store.trades.all() if tr.holding_id in ids and tr.kind == TRADE_OPENING]
+    return inv.money(sum(inv.money(inv.qty(tr.quantity) * tr.price) for tr in trades))
+
+
+def conversion_of(ctx: Context, acc: Account) -> Conversion | None:
+    """The conversion of a converted account as it stands (None for an account that wasn't converted)."""
+    if not acc.invest_from or not acc.holds_securities:
+        return None
+    before = recorded_before(ctx, acc.id, acc.invest_from)
+    return Conversion(
+        months.first_day(acc.invest_from),
+        before.amount if before else 0.0,
+        before.month if before else None,
+        opening_value(ctx, acc.id),
+        [],
+    )
+
+
+def book_conversion(ctx: Context, account_id: str) -> None:
+    """Book the conversion's revaluation again: opening value − last recorded balance, on the conversion day.
+
+    It is linked to the account (`invest_id`), kept in step with the opening holdings and the recorded balance,
+    and removed when the account is no longer a converted securities or crypto account."""
+    acc = ctx.store.accounts.get(account_id) if account_id else None
+    store = ctx.store.transactions
+    old = [tx for tx in store.all() if tx.invest_id == account_id] if account_id else []
+    conv = conversion_of(ctx, acc) if acc else None
+    if acc is None or conv is None or abs(conv.difference) < inv.EPS:
+        if old:
+            store.delete([tx.id for tx in old])
+        return
+    text = t(
+        "Opening holdings of {name} worth {value}, last recorded balance {balance}",
+        name=acc.name,
+        value=fmt_money(conv.value, acc.currency),
+        balance=fmt_money(conv.balance, acc.currency),
+    )
+    gain = conv.difference > 0
+    tx = Transaction(
+        conv.day,
+        TX_REVALUATION,
+        abs(conv.difference),
+        acc.currency,
+        amount_chf=0.0,
+        fx_date=conv.day,
+        category=REVAL_INVEST,
+        from_account="" if gain else acc.id,
+        to_account=acc.id if gain else "",
+        comment=text,
+        invest_id=acc.id,
+    )
+    kept = old[0] if old else None
+    if (
+        kept is not None
+        and abs(kept.amount - tx.amount) < inv.EPS
+        and (kept.currency, kept.date) == (tx.currency, tx.date)
+    ):
+        tx.amount_chf, tx.fx_date = kept.amount_chf, kept.fx_date
+    else:
+        tx.amount_chf, tx.fx_date = ctx.to_base_on(tx.amount, tx.currency, tx.date)
+    if len(old) > 1:  # pragma: no cover - one is booked per account; a second would come from a hand-edited file
+        store.delete([extra.id for extra in old[1:]])
+    if kept is None:
+        store.add(tx)
+        return
+    tx.id = kept.id
+    if tx != kept:
+        store.update(tx)
+
+
+def needs_conversion(ctx: Context, account_id: str, asset_class: str) -> bool:
+    """Whether giving the account `asset_class` takes a conversion: a securities or crypto class for an account
+    with transactions or recorded balances that isn't valued from holdings yet."""
+    from budget_app.services import accounts as acc_svc  # noqa: PLC0415 - accounts imports this module
+
+    acc = ctx.store.accounts.get(account_id)
+    return (
+        acc is not None
+        and asset_class in HOLDING_CLASSES
+        and not acc.holds_securities
+        and acc_svc.account_in_use(ctx, acc.id)
+    )
+
+
+def check_conversion(
+    ctx: Context, account_id: str, asset_class: str, month: str, opening: Iterable[OpeningHolding]
+) -> Conversion:
+    """Every rule a conversion has to meet; returns what it would do. Blank holding rows are left out."""
+    acc = ctx.store.accounts.get(account_id) if account_id else None
+    if acc is None or acc.kind != ACCOUNT_REGULAR:
+        raise ValidationError(t("Account not found"))
+    if asset_class not in HOLDING_CLASSES:
+        raise ValidationError(t("Select securities or crypto"))
+    if acc.holds_securities:
+        raise ValidationError(t("This account is valued from its holdings already"))
+    if not month:
+        raise ValidationError(t("Select a month"))
+    if month > months.current_month():
+        raise ValidationError(t("The conversion month can’t be in the future"))
+    day = months.first_day(month)
+    later = [tx for tx in ctx.store.transactions.all() if acc.id in (tx.from_account, tx.to_account) and tx.date >= day]
+    if later:
+        raise ValidationError(
+            tn(
+                "{n} transaction on this account is dated in {month} or later. Choose a later month, or move it to "
+                "another account first.",
+                "{n} transactions on this account are dated in {month} or later. Choose a later month, or move them "
+                "to another account first.",
+                len(later),
+                month=months.label(month),
+            )
+        )
+    for r in ctx.store.recurring.all():
+        ended = r.end_date is not None and r.next_due > r.end_date
+        if acc.id in (r.from_account, r.to_account) and not ended:
+            raise ValidationError(t("A recurring transaction uses this account. Change or delete it first."))
+    rows = [o for o in opening if not o.blank]
+    if not rows:
+        raise ValidationError(t("Add at least one holding"))
+    seen: set[str] = set()
+    for n, o in enumerate(rows, start=1):
+        name = (o.name or "").strip()
+        if not name:
+            raise ValidationError(t("Holding {n}: enter its name", n=n))
+        if fold(name) in seen:
+            raise ValidationError(t("Holding {n}: “{name}” is listed twice", n=n, name=name))
+        seen.add(fold(name))
+        if o.quantity is None or o.quantity < inv.QTY_EPS:
+            raise ValidationError(t("Holding {n}: enter the quantity", n=n))
+        if o.price is None or o.price <= 0:
+            raise ValidationError(t("Holding {n}: enter the price", n=n))
+    before = recorded_before(ctx, acc.id, month)
+    value = inv.money(sum(inv.money(inv.qty(o.quantity or 0) * round(float(o.price or 0), 6)) for o in rows))
+    replaced = sorted({e.month for e in ctx.store.account_entries.all() if e.account_id == acc.id and e.month >= month})
+    return Conversion(day, before.amount if before else 0.0, before.month if before else None, value, replaced)
+
+
+@recorded(N_("Convert an account"))
+def convert_account(
+    ctx: Context, account_id: str, asset_class: str, month: str, opening: Iterable[OpeningHolding]
+) -> Account:
+    """Make an account with history a securities or crypto account from `month` on (decision 13).
+
+    Its balances recorded before `month` stay; those from `month` on are replaced by the holdings' value. The
+    opening holdings are trades on the first day of `month`, and the difference between the last recorded
+    balance and their value is booked as a linked revaluation, so the month reconciles. One undoable step."""
+    rows = [o for o in opening if not o.blank]
+    conv = check_conversion(ctx, account_id, asset_class, month, rows)
+    acc = ctx.store.accounts.get(account_id)
+    if acc is None:  # pragma: no cover - checked by check_conversion() first
+        raise ValidationError(t("Account not found"))
+    acc.asset_class, acc.invest_from = asset_class, month
+    saved = ctx.store.accounts.update(acc)
+    gone = [e.id for e in ctx.store.account_entries.all() if e.account_id == acc.id and e.month >= month]
+    ctx.store.account_entries.delete(gone)
+    seq = max((tr.seq for tr in ctx.store.trades.all()), default=0)
+    for o in rows:
+        holding = ctx.store.holdings.add(
+            Holding(account_id=acc.id, name=o.name.strip(), symbol=(o.symbol or "").strip())
+        )
+        seq += 1
+        quantity, price = inv.qty(o.quantity or 0), round(float(o.price or 0), 6)
+        ctx.store.trades.add(Trade(holding.id, conv.day, TRADE_OPENING, quantity, price, seq=seq))
+        _book(ctx, holding.id)
+    return saved

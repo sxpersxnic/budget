@@ -17,6 +17,18 @@ SERIES = ["#0a84ff", "#30b94d", "#ff9f0a", "#af52de", "#30b0c7", "#ff375f", "#5e
 POSITIVE = "#30b94d"
 NEGATIVE = "#ff453a"
 NEUTRAL = "#8e8e93"
+# Tag colours (F10, the keys of models.TAG_COLOURS): (mid tone for charts and chip fills, text on light, text on dark)
+TAG_SHADES = {
+    "grey": ("#8e8e93", "#636366", "#c7c7cc"),
+    "red": ("#ff453a", "#c4001a", "#ff8a80"),
+    "orange": ("#ff9f0a", "#b04a00", "#ffb84d"),
+    "yellow": ("#ffcc00", "#8a6100", "#ffd84d"),
+    "green": ("#30b94d", "#1d7a33", "#5fe07a"),
+    "teal": ("#30b0c7", "#00708a", "#70d7ff"),
+    "blue": ("#0a84ff", "#0050c8", "#70b4ff"),
+    "purple": ("#af52de", "#7f2fae", "#d9a0ff"),
+    "pink": ("#ff375f", "#c2003b", "#ff8aa5"),
+}
 
 CSS = r"""
 :root {
@@ -100,6 +112,7 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 /* ---------------------------------------------------------------- page chrome */
 .page { width: 100%; max-width: 72rem; margin: 0 auto; padding: 28px 32px 64px; gap: 20px; }
 .page.narrow { max-width: 40rem; }
+.page.wide { max-width: 100rem; }  /* the budget page: room for two tables side by side */
 @media (max-width: 640px) { .page { padding: 16px 16px 48px; gap: 16px; } }
 .large-title { font-size: 28px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.15; color: var(--label); }
 .title-sub { font-size: 13px; color: var(--label-2); margin-top: 2px; }
@@ -187,6 +200,18 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
   .ledger-row { grid-template-columns: minmax(0, 1fr) auto auto 1.5rem; column-gap: 10px; padding: 0 2px; }
   .ledger-row .c-bar, .ledger-row .c-diff { display: none; }
 }
+@container (min-width: 561px) and (max-width: 800px) {  /* the bar goes first, so names stay readable */
+  .ledger-row { grid-template-columns: minmax(0, 1fr) 6rem 6rem 6rem 1.75rem; }
+  .ledger-row .c-bar { display: none; }
+}
+/* income and expenditure side by side once each table gets about 750 px, stacked below that (B08, decision 1);
+   narrower halves would cut the category names short */
+.ledger-pair-wrap { width: 100%; container-type: inline-size; }
+.ledger-pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+@media (max-width: 640px) { .ledger-pair { gap: 16px; } }
+@container (min-width: 1500px) {
+  .ledger-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+}
 
 /* account balances (F41): name · opening · closing · change (account currency) · value in the view currency · action */
 .accounts { container-type: inline-size; }
@@ -227,6 +252,22 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .cat-node .spent { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;
   color: var(--label-2); }
 @media (max-width: 640px) { .cat-node .caption { display: none; } }
+/* COICOP notes (F40): in the picker's tooltip, inside a picker option (touch) and below a tree row */
+.cat-item { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+.cat-node .notes-btn { align-self: center; margin: -4px 0; color: var(--label-3); }
+.cat-node .notes-btn[aria-expanded=true] { color: var(--accent); }
+.cat-notes { font-size: 12.5px; line-height: 1.4; color: var(--label-2); white-space: normal; }
+.cat-notes__part + .cat-notes__part { margin-top: 6px; }
+.cat-notes__head { font-weight: 600; color: var(--label); font-size: 12px; }
+.cat-notes ul { margin: 2px 0 0; padding-left: 16px; }
+.cat-notes li { margin: 1px 0; }
+.cat-notes__foot { margin-top: 6px; font-size: 11px; color: var(--label-3); font-style: italic; }
+.cat-item > .cat-notes { padding: 4px 6px 8px 0; max-width: 72ch; }
+.q-item .cat-notes { margin-top: 6px; }
+.cat-notes-tip.q-tooltip { background: var(--surface-raised); color: var(--label); padding: 10px 12px;
+  border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.18), 0 0 0 0.5px var(--separator);
+  max-height: 70vh; overflow: hidden; }
+.cat-notes-tip .cat-notes { margin-top: 0; }
 .reval-row { grid-template-columns: minmax(0, 1fr) 9rem; }
 /* change history (F28): the details toggle reads like a caption, not a list item */
 .history-details .q-item { min-height: 22px; padding: 2px 0; font-size: 12px; color: var(--label-2);
@@ -281,14 +322,49 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
 .q-toggle__inner--truthy .q-toggle__thumb:after { background: #fff !important; }
 
 /* product list rows in the transaction form */
-.item-row { display: grid; grid-template-columns: minmax(0, 1fr) 4.5rem 6.5rem 5.5rem 1.75rem; gap: 6px;
+.item-row { display: grid; grid-template-columns: minmax(0, 1fr) 4.5rem 6.5rem 5.5rem 1.75rem 1.75rem; gap: 6px;
   align-items: center; width: 100%; }
 .item-row.head { font-size: 12px; color: var(--label-2); font-weight: 500; padding: 0 2px; }
 .item-row .r { text-align: right; }
+/* F11: a line's own category and tags, below it and as wide as the row */
+.item-split { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 6px;
+  padding: 0 0 6px 12px; border-left: 2px solid var(--separator-strong); margin-left: 4px; }
 @media (max-width: 520px) {
-  .item-row { grid-template-columns: minmax(0, 1fr) 3.75rem 5.5rem 1.75rem; }
+  .item-row { grid-template-columns: minmax(0, 1fr) 3.25rem 5rem 1.5rem 1.5rem; gap: 4px; }
   .item-row .c-total { display: none; }
+  .item-split { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* QR bills (F03) */
+.bill-drop { padding: 22px 12px; font-size: 14px; flex-direction: column; text-align: center; }
+.bill-drop .q-icon { font-size: 28px; }
+.due-late { color: var(--negative); }
+.due-soon { color: var(--warning); }
+.bill-amount { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 500; }
+.closed-bills .nicegui-expansion-content { padding: 0; gap: 0; align-items: stretch; }
+
+/* attachments in the transaction form (F12) */
+.attach-drop { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
+  padding: 10px 12px; border: 1px dashed var(--separator-strong); border-radius: 10px; cursor: pointer;
+  color: var(--label-2); font-size: 13px; }
+.attach-drop:hover { background: var(--fill-2); color: var(--accent); border-color: var(--accent); }
+.attach-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  width: 100%; padding: 4px 0; }
+.attach-thumb { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: var(--fill-2);
+  display: flex; align-items: center; justify-content: center; color: var(--label-2); }
+.attach-name { overflow: hidden; align-items: stretch; }
+.attach-name .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px;
+  max-width: 100%; }
+.nicegui-link.attach-link { display: inline-flex; align-items: center; justify-content: center; width: 32px;
+  height: 32px; color: var(--accent); text-decoration: none; border-radius: 50%; }
+.nicegui-link.attach-link:hover { background: var(--fill-2); }
+.attach-preview { border-radius: 10px; overflow: hidden; background: var(--fill-2); }
+.attach-preview-image { width: 100%; max-height: 360px; }
+.attach-preview-pdf { width: 100%; height: 420px; border: 0; display: block; background: #fff; }
+.clip-header .ag-header-cell-text { font-size: 0; }
+.clip-header .ag-header-cell-text::before { content: "attach_file"; font-family: "Material Icons"; font-size: 17px; }
+.clip-cell { display: inline-flex; align-items: center; gap: 2px; color: var(--label-2); }
+.clip-cell .material-icons { font-size: 16px; }
 
 /* indented, dependent group of fields */
 .subform { border-left: 2px solid var(--separator); padding-left: 14px; margin-left: 4px; }
@@ -342,9 +418,33 @@ input[type=number] { -moz-appearance: textfield; }
 ACCENT = "#0071e3"
 
 
+def tag_css() -> str:
+    """One class per tag colour (`tag-blue` …): the chip's fill and its text, for light and dark mode."""
+    fill = "background: color-mix(in srgb, var(--tag) 18%, transparent)"
+    rules = [
+        ".tag-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px;"
+        " font-size: 12px; font-weight: 500; line-height: 20px; white-space: nowrap; max-width: 14rem;"
+        f" overflow: hidden; text-overflow: ellipsis; {fill}; color: var(--tag-text); }}",
+        ".q-chip.tag-chip { height: 22px; margin: 2px 4px 2px 0; padding: 0 4px 0 8px; display: inline-flex;"
+        f" {fill} !important; color: var(--tag-text) !important; }}",
+        ".q-chip.tag-chip .q-chip__icon--remove { opacity: 0.7; color: inherit; }",
+        ".tag-chip.cursor-pointer:hover { background: color-mix(in srgb, var(--tag) 30%, transparent); }",
+        ".tag-chips { display: inline-flex; gap: 4px; align-items: center; flex-wrap: nowrap; overflow: hidden; }",
+        ".tag-new { --tag: #8e8e93; --tag-text: var(--label-2); outline: 1px dashed var(--separator-strong); }",
+        ".tag-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--tag); }",
+        ".tag-swatch { width: 26px; height: 26px; min-width: 26px !important; min-height: 26px !important;"
+        " padding: 0 !important; border-radius: 50%; background: var(--tag) !important; }",
+        ".tag-swatch.selected { box-shadow: 0 0 0 2px var(--surface-raised), 0 0 0 4px var(--tag); }",
+    ]
+    for name, (mid, light, dark) in TAG_SHADES.items():
+        rules.append(f".tag-{name} {{ --tag: {mid}; --tag-text: {light}; }}")
+        rules.append(f"body.body--dark .tag-{name} {{ --tag-text: {dark}; }}")
+    return "\n".join(rules)
+
+
 def install() -> None:
     """Register the stylesheet for every page (call once at startup)."""
-    ui.add_css(CSS, shared=True)
+    ui.add_css(CSS + "\n" + tag_css(), shared=True)
 
 
 def apply_colors() -> None:

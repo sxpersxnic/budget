@@ -155,13 +155,71 @@ async def test_selling_more_than_held_is_explained(user: User, ctx, bought) -> N
 
 async def test_a_dividend_in_the_sheet(user: User, ctx, bought) -> None:
     await user.open("/investments")
+    await user.should_not_see("Reclaimable withholding tax")
     await click(user, page_button(user, "Dividend"))
-    assert field(user, ui.number, "Amount received").visible
-    await put(user, field(user, ui.number, "Amount received"), 28.6)
-    assert "Booked as income to Bank" in sheet_texts(user)
+    gross, tax = field(user, ui.number, "Gross dividend"), field(user, ui.number, "Withholding tax")
+    assert gross.visible and tax.visible
+    await put(user, gross, 28.6)
+    assert tax.value == 10.01  # 35 % Swiss withholding tax in a CHF account
+    assert "Net 18.59 CHF to Bank · income 28.60 CHF in Dividends, 10.01 CHF under Taxes" in sheet_texts(user)
+    await put(user, gross, 100)
+    assert tax.value == 35  # follows the gross amount until typed in
+    await put(user, tax, 30)
+    await put(user, gross, 120)
+    assert tax.value == 30
+    assert "Net 90.00 CHF to Bank" in sheet_texts(user)
+    await put(user, tax, 130)
+    assert "can’t be more than the dividend" in sheet_texts(user)
+    await put(user, tax, 30)
     await click(user, sheet_button(user, "Save Trade"))
     [income] = [tx for tx in ctx.store.transactions.all() if tx.type == TX_INCOME]
-    assert income.amount == 28.6 and ctx.store.income_categories.get(income.category).name == "Dividends"
+    assert income.amount == 120 and ctx.store.income_categories.get(income.category).name == "Dividends"
+    [withheld] = [tx for tx in ctx.store.transactions.all() if tx.category == "TAX"]
+    assert withheld.amount == 30 and withheld.invest_id == income.invest_id
+    await user.should_see(f"Reclaimable withholding tax {TODAY.year}")
+    await user.should_see("30.00 CHF")
+    await user.should_see("Claim it back with your tax return")
+    # the holding sheet: net dividends and the tax apart, and the tax in the dividend's history line
+    rows = [e for e in user.find(kind=ui.element).elements if "cursor-pointer" in e.classes]
+    await click(user, rows[0])
+    texts = sheet_texts(user)
+    for text in (
+        "Net dividends",
+        "90.00 CHF",
+        "Withholding tax",
+        "withholding tax 30.00 CHF, reclaimable",
+        "net 90.00",
+    ):
+        assert text in texts, text
+    edit = [e for e in top_sheet(user).descendants() if isinstance(e, ui.button) and e.props.get("icon") == "o_edit"]
+    await click(user, edit[0])  # newest first: the dividend
+    assert (field(user, ui.number, "Gross dividend").value, field(user, ui.number, "Withholding tax").value) == (
+        120,
+        30,
+    )
+    await put(user, field(user, ui.number, "Gross dividend"), 110)
+    assert field(user, ui.number, "Withholding tax").value == 30  # an edit keeps the tax as it is
+    await put(user, field(user, ui.number, "Withholding tax"), 0)
+    assert "Net 110.00 CHF to Bank · income in Dividends" in sheet_texts(user)
+    await click(user, sheet_button(user, "Save Changes"))
+    assert not [tx for tx in ctx.store.transactions.all() if tx.category == "TAX"]
+
+
+async def test_a_foreign_dividend_has_no_tax_prefilled(user: User, ctx, setup) -> None:
+    usd = acc_svc.add_account(ctx, "USD cash", "USD")
+    broker = acc_svc.add_account(ctx, "Broker", "USD", asset_class=ASSET_SECURITIES)
+    apple = inv_svc.add_holding(ctx, broker.id, "Apple")
+    inv_svc.save_trade(ctx, TradeInput(TRADE_BUY, apple.id, EARLIER, 2, 200, cash_account=usd.id))
+    await user.open("/investments")
+    await click(user, page_button(user, "Dividend"))
+    await put(user, field(user, ui.number, "Gross dividend"), 10)
+    assert field(user, ui.number, "Withholding tax").value == 0
+    await put(user, field(user, ui.number, "Withholding tax"), 1.5)
+    await click(user, sheet_button(user, "Save Trade"))
+    await user.should_not_see("Reclaimable withholding tax")  # not Swiss tax
+    with user:
+        page.open_holding_sheet(ctx, apple.id)
+    assert "foreign withholding tax 1.50 USD" in sheet_texts(user)
 
 
 async def test_update_a_price(user: User, ctx, bought) -> None:

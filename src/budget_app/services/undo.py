@@ -73,6 +73,7 @@ def undo(ctx: Context, action_id: str) -> Action:
 TABLE_NAMES = {
     "transactions": N_("Transaction"),
     "transaction_items": N_("Item"),
+    "attachments": N_("Attachment"),
     "account_entries": N_("Balance"),
     "budget_entries": N_("Budget entry"),
     "accounts": N_("Account"),
@@ -83,6 +84,8 @@ TABLE_NAMES = {
     "holdings": N_("Holding"),
     "trades": N_("Trade"),
     "prices": N_("Price"),
+    "tags": N_("Tag"),
+    "bills": N_("Bill"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 
@@ -103,6 +106,8 @@ def describe_change(ctx: Context, change) -> str:
         what = f"{raw.get('match', '')} · {raw.get('category', '')}"
     elif change.table == "trades":
         what = f"{raw.get('date', '')} · {raw.get('kind', '')} · {raw.get('quantity', '')} × {raw.get('price', '')}"
+    elif change.table == "bills":
+        what = f"{raw.get('creditor', '')} · {raw.get('amount', '')} {raw.get('currency', '')}"
     elif change.table == "prices":
         what = f"{raw.get('date', '')} · {raw.get('price', '')}"
     else:

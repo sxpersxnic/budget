@@ -130,6 +130,17 @@ To keep the DMG under GitHub's 50 MiB recommended file size, `build.py` removes 
 payloads the app never loads: unused NiceGUI element bundles, and Plotly's Jupyter widget and
 offline-HTML scripts. NiceGUI renders charts with its own plotly.js.
 
+**QR-bill libraries (F03).** `pypdfium2` (PDFium, about 7 MB) and `zxing-cpp` (1.4 MB) bring native code.
+Both ship wheels for every target: pypdfium2 `py3-none` wheels for macOS 13+ arm64 and x86_64, Windows x64
+and arm64 and manylinux 2.17 x86_64 and aarch64; zxing-cpp `cp312-abi3` wheels (so also Python 3.13) for
+macOS 11+ arm64, 10.13+ x86_64, Windows x64 and arm64 and manylinux 2.27/2.28 x86_64 and aarch64. The build
+needs no change: `pyinstaller-hooks-contrib` has hooks for `pypdfium2` and `pypdfium2_raw` (they collect
+`libpdfium` and its `version.json`), and `zxingcpp` is a single extension module that the import analysis
+finds even though the app imports it only when a bill is scanned. Checked on macOS arm64 with a frozen
+probe that read a QR bill from a generated PDF and a PNG. PDFium's macOS library is built for macOS 13
+(`minos 13.0`) and numpy's arm64 wheel needs macOS 14, so `Info.plist` declares 14.0 as the minimum
+(it said 11.0 before, which the bundled numpy never ran on).
+
 ## Signing (optional)
 
 - **macOS:** the build is ad-hoc signed by default. Users confirm the first launch once with

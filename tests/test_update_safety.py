@@ -25,10 +25,10 @@ def test_older_version_keeps_columns_written_by_a_newer_one(tmp_path):
     table.delete(["a2"])
 
     text = path.read_text(encoding="utf-8")
-    # a column this version adds (the asset class, F21) gets its default; the newer one is kept at the end
-    assert text.splitlines()[0] == "name,currency,kind,created,asset_class,id,iban"
-    assert "Bank (renamed),CHF,regular,2026-01-02,cash,a1,CH93 0076 2011 6238 5295 7" in text
-    assert "New,EUR,regular,2026-03-01,cash,a3," in text
+    # columns this version adds (the asset class and conversion month, F21) get their defaults; the newer one is kept
+    assert text.splitlines()[0] == "name,currency,kind,created,asset_class,invest_from,id,iban"
+    assert "Bank (renamed),CHF,regular,2026-01-02,cash,,a1,CH93 0076 2011 6238 5295 7" in text
+    assert "New,EUR,regular,2026-03-01,cash,,a3," in text
     assert "a2" not in text
 
 

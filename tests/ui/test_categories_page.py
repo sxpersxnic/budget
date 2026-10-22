@@ -4,6 +4,7 @@ from datetime import date
 
 from nicegui import ui
 from nicegui.testing import User
+from nicegui.testing.user_interaction import UserInteraction
 
 from budget_app import i18n
 from budget_app.domain.coicop import fold, get_coicop
@@ -48,22 +49,40 @@ async def test_the_sidebar_links_to_the_page(user: User) -> None:
     assert "active" in links[0].classes
 
 
+def filtered(tree: ui.tree) -> list[str]:
+    """The codes the browser keeps: the filter lists them between spaces (`categories.FILTER_METHOD`)."""
+    return (tree.props.get("filter") or "").split()
+
+
 async def test_search_narrows_and_opens_the_matches(user: User) -> None:
     await user.open("/categories")
     tree = the_tree(user)
     tree.props["expanded"] = ["04"]  # the user had a division open
     search = user.find(ui.input)
-    search.type("CÉRÉAL")  # case and accents do not matter
-    await user.should_see("5 matches")
-    assert tree.props["filter"] == "cereal"
+    search.type("BREAKFAST CÉRÉAL")  # case and accents do not matter; every word must match
+    await user.should_see("1 match")
+    assert filtered(tree) == ["01.1.1.4"]
     assert tree.props["expanded"] == ["01", "01.1", "01.1.1"]
-    await user.should_see("01.1.1.1 Cereals")
     await user.should_see("01.1.1.4 Breakfast cereals")
+    assert "' ' + node.id + ' '" in tree.props[":filter-method"]
+    assert not any("search" in node for node in categories.all_nodes(tree.props["nodes"]))  # searched in Python
 
     search.clear()
     await user.should_see("602 categories")
     assert not tree.props["filter"]
     assert tree.props["expanded"] == ["04"]  # back to what was open before searching
+
+
+async def test_search_finds_what_a_category_includes(user: User) -> None:
+    await user.open("/categories")
+    tree = the_tree(user)
+    search = user.find(ui.input)
+    search.type("teff")  # only in the notes of 01.1.1.1
+    await user.should_see("1 match")
+    assert filtered(tree) == ["01.1.1.1"]
+    search.clear().type("funicular")  # 07.3.6 includes it, 07.3.1 excludes it
+    await user.should_see("matches")
+    assert "07.3.6" in filtered(tree) and "07.3.1" not in filtered(tree)
 
 
 async def test_search_by_code_and_without_matches(user: User) -> None:
@@ -72,13 +91,42 @@ async def test_search_by_code_and_without_matches(user: User) -> None:
     search = user.find(ui.input)
     search.type("07.2.2")
     await user.should_see("matches")
-    found, expand = categories.matches(get_coicop(), tree.props["nodes"], "07.2.2")
+    found, expand = categories.matches(get_coicop(), categories.search_index(get_coicop()), "07.2.2")
     assert found[0] == "07.2.2" and all(code.startswith("07.2.2") for code in found)
+    assert filtered(tree) == found
     assert tree.props["expanded"] == expand == ["07", "07.2", "07.2.2"]
     search.clear().type("zzz")
     await user.should_see("0 matches")
+    assert tree.props["filter"].strip() == "" and tree.props["filter"]  # filtering, nothing kept
     assert tree.props["expanded"] == []
     assert tree.props["no-results-label"] == "No category matches."
+
+
+async def test_each_category_opens_its_notes(user: User) -> None:
+    await user.open("/categories")
+    await user.should_see("The notes are those of the UN's COICOP 2018 publication", kind=ui.label)
+    tree = the_tree(user)
+    nodes = {n["id"]: n for n in categories.all_nodes(tree.props["nodes"])}
+    assert nodes["01.1.1.1"]["has_notes"] and not nodes["01"]["has_notes"]
+    assert "notes" not in nodes["01.1.1.1"]  # only open nodes carry their notes
+    tree.props["expanded"] = ["01"]
+    UserInteraction(user, {tree}, None).trigger("notes", "01.1.1.1")
+    nodes = {n["id"]: n for n in categories.all_nodes(tree.props["nodes"])}
+    notes = nodes["01.1.1.1"]["notes"]
+    assert [p["head"] for p in notes["parts"]] == ["Includes", "Also includes", "Excludes"]
+    assert notes["parts"][0]["items"][:2] == ["wheat", "rice, including parboiled rice"]
+    assert notes["foot"] == ""  # the UN's own English
+    assert tree.props["expanded"] == ["01"]  # opening notes keeps the tree as it was
+    assert "notes" not in nodes["01.1.2.1"]  # the others stay closed
+    UserInteraction(user, {tree}, None).trigger("notes", "01.1.1.1")  # closes again
+    assert "notes" not in {n["id"]: n for n in categories.all_nodes(tree.props["nodes"])}["01.1.1.1"]
+    UserInteraction(user, {tree}, None).trigger("notes", "nope")  # unknown codes are ignored
+
+
+def test_notes_view_leaves_out_empty_parts() -> None:
+    view = categories.notes_view("12.1.2", "en")
+    assert view is not None and [p["head"] for p in view["parts"]] == ["Includes", "Also includes"]
+    assert categories.notes_view("01", "en") is None
 
 
 async def test_the_page_speaks_german(user: User) -> None:
@@ -93,6 +141,14 @@ async def test_the_page_speaks_german(user: User) -> None:
         tree = the_tree(user)
         assert "01" in tree.props["expanded"]
         await user.should_see("01.1 Nahrungsmittel")
+        user.find(ui.input).clear().type("hirse")  # the German notes
+        await user.should_see("1 Treffer")
+        assert filtered(tree) == ["01.1.1.1"]
+        UserInteraction(user, {tree}, None).trigger("notes", "01.1.1.1")
+        node = next(n for n in categories.all_nodes(tree.props["nodes"]) if n["id"] == "01.1.1.1")
+        assert [p["head"] for p in node["notes"]["parts"]] == ["Umfasst", "Umfasst auch", "Umfasst nicht"]
+        assert node["notes"]["parts"][0]["items"][0] == "Weizen"
+        assert node["notes"]["foot"] == "Inoffizielle Übersetzung"
     finally:
         i18n.set_language("en")
 

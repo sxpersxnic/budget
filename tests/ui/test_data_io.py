@@ -74,7 +74,7 @@ async def test_transactions_export_follows_the_filters(user: User, demo) -> None
     response = await downloaded(user)
     df = pd.read_csv(io.BytesIO(response.content))
     assert set(df["Type"]) == {"Income"} and len(df) == 6
-    assert list(df.columns[:5]) == ["Date", "Payee", "Category", "Amount", "Currency"]
+    assert list(df.columns[:6]) == ["Date", "Payee", "Category", "Tags", "Amount", "Currency"]
     assert set(df["Currency"]) == {"CHF"}
     assert list(df["Date"]) == sorted(df["Date"], reverse=True)  # newest first, like the list
 

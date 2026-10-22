@@ -7,7 +7,7 @@ The app's ground rules still apply to every feature: local first (data in CSV fi
 user's computer), CHF as the base currency with ECB rates, COICOP 2018 for expenditure, and
 nothing uploaded without the user asking for it.
 
-**Status:** ☑ Done · ◐ Partly done · ☐ Open. Every table has a *Status* column, and every
+**Status:** ☑ Done · ◐ Partly done · ☐ Open · ☒ Dropped. Every table has a *Status* column, and every
 feature description starts with its status.
 **Effort:** S = up to a day · M = a few days · L = one to two weeks · XL = more than two weeks.
 **Network:** *Local* runs fully offline · *Optional* works offline, with an online extra the
@@ -29,29 +29,29 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 2 · Accounts and reconciliation | ☑ Done | 3 of 3 steps |
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
-| 5 · COICOP data | ☐ Open | 0 of 2 steps; waits for decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 open |
+| 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11 and F03 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
 
 ## Open now
 
-State on 2026-10-20: milestones 1–4 and the follow-up fixes are done (see [Done](#done));
-milestone 5 waits for decision 7 (the COICOP source data), so the work after issue 01 comes
-next. Steps run in the order given; *Needs* lists what has to be done first, and decisions
+State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
+[Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions and F03 QR bills done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
 
 #### Milestone 5 · COICOP data
 
-Waits for the source data (decision 7).
+Decision 7: notes from the UN COICOP 2018 publication, our own translations; no level 5.
 
 | Step | Status | Task | Needs | Effort |
 | --- | --- | --- | --- | --- |
-| 17 | ☐ Open | **F40 · COICOP notes in search and on hover**; also shown on the F37 page. | decision 7 | M |
-| 18 | ☐ Open | **F39 · COICOP level 5.** | decision 7 | M |
+| 17 | ☑ Done | **F40 · COICOP notes in search and on hover**; also shown on the F37 page. Built with the UN's English notes and our German, French and Italian translations. | decision 7 (decided) | M |
+| 18 | ☒ Dropped | **F39 · COICOP level 5.** | decision 7 (decided) | – |
 
 #### After issue 01
 
@@ -63,7 +63,7 @@ Waits for the source data (decision 7).
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -91,9 +91,12 @@ the Linux build.
 
 ### Decisions for the product owner
 
-Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each as recommended, decision 6 on 2026-10-20.
+Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each as recommended, decision 6 on 2026-10-20,
+decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All decisions are made; none is open.
 
-1. **B08:** side by side on wide windows and stacked on narrow ones — is that the intent? Built for now: stacked at every width, which meets the issue as written.
+1. ☑ **B08:** decided — the income and expenditure tables sit side by side on wide windows and
+   stack on narrow ones. Built: side by side once each table gets about 750 px (windows from about 1,800 px;
+   narrower halves cut the category names short); tables of 560–800 px drop the progress bar.
 2. ☑ **F42 / B04:** decided — replace *Unaccounted* by the reconciliation line, with the gap
    as an optional chart series. Built.
 3. ☑ **F43:** decided — revaluations do **not** count towards *Net income*; they have their own
@@ -104,7 +107,9 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
    recorded and budget per category). Built.
 6. ☑ **F36:** decided — a month the file ends inside is offered **unticked**, with the note
    "the file ends on *date* — not a month-end balance"; complete months are ticked. Built.
-7. **F39, F40:** which source for level 5 and for the German notes?
+7. ☑ **F39, F40:** decided — no level 5 (F39 dropped: the everyday names and search words of F08
+   cover the detail); the notes (F40) come from the official UN COICOP 2018 publication in English,
+   with our own German, French and Italian translations marked as unofficial, *excludes* included.
 8. ☑ **F07:** decided on 2026-10-20 — rules and learning from history, no AI. Confirming a
    suggestion does not create a rule; *Always categorize like this* does, on request. Built.
 9. ☑ **F21:** decided on 2026-10-21 — prices are entered by hand (or pasted from a bank or
@@ -112,6 +117,27 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
    investment* revaluation, so an account's booked value is always quantity × price; buys,
    sells, dividends and fees are modelled, so performance compares value with money put in.
    Built (architecture §7, decision 17).
+10. ☑ **F09:** decided — the German word for payee is *Gegenpartei* (it covers both who you pay
+    and who pays you).
+11. ☑ **F09:** decided — payee names keep their legal form (AG, GmbH, SA, Sagl); known brands
+    still get their short name.
+12. ☑ **F21:** decided — dividends are entered gross with their withholding tax (35 % prefilled
+    for CHF holdings); the net is credited, the tax is booked as Taxes, and a yearly sum of
+    reclaimable tax is shown. Built (architecture §4.6, decision 18).
+13. ☑ **F21:** decided — an account with history can become a securities or crypto account: its
+    balances stay as history up to the conversion month, then holdings with an opening
+    quantity and price take over. Built (architecture §4.6).
+14. ☑ **F11:** decided on 2026-10-22 — a split is a category per item line: the Items list gets an
+    optional category per line, lines without one keep the transaction's category, and reports
+    and budgets count each line in its own category. Built (architecture §4.3, decision 21).
+15. ☑ **F03:** decided — the app tracks open bills: a scanned QR bill waits in a Bills list with
+    its due date until *Mark Paid* books the expenditure; the PDF stays as an attachment.
+    Built (architecture §7, decision 22).
+16. ☑ **F12:** decided — attachments are copied into the data folder
+    (`attachments/<transaction id>/`), so backups and restore include them; one file at most 20 MB.
+    Built (architecture §7, decision 20).
+17. ☑ **F10:** decided — the first version has tags with filter, totals and chart, and a budget per
+    tag (amount, optional period) with actual against budget. Built (see F10).
 
 ## All features
 
@@ -119,16 +145,16 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | --- | --- | --- | --- | --- | --- | --- |
 | F01 | ☑ Done | CSV import of transactions | Data in | M | Local | – |
 | F02 | ☑ Done | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
-| F03 | ☐ Open | Swiss QR-bill scanning | Data in | M | Local | – |
+| F03 | ☑ Done | Swiss QR-bill scanning | Data in | M | Local | – |
 | F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
 | F05 | ☑ Done | Recurring transactions | Data in | M | Local | – |
 | F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
 | F07 | ☑ Done | Automatic categorization | Organizing | M–L | Local | F09 |
 | F08 | ☑ Done | Simpler category picker | Organizing | S | Local | – |
 | F09 | ☑ Done | Payees | Organizing | M | Local | – |
-| F10 | ☐ Open | Tags | Organizing | M | Local | – |
-| F11 | ☐ Open | Split transactions | Organizing | M | Local | – |
-| F12 | ☐ Open | Attachments | Organizing | M | Local | – |
+| F10 | ☑ Done | Tags | Organizing | M | Local | – |
+| F11 | ☑ Done | Split transactions | Organizing | M | Local | – |
+| F12 | ☑ Done | Attachments | Organizing | M | Local | – |
 | F13 | ☑ Done | Bulk edit | Organizing | S | Local | – |
 | F14 | ☐ Open | Savings goals | Planning | M | Local | – |
 | F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
@@ -153,10 +179,10 @@ Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each 
 | F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
 | F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
 | F36 | ☑ Done | Closing balance from bank files | Data in | M | Local | F01 |
-| F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 adds notes) |
+| F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 added the notes) |
 | F38 | ☑ Done | Exchange-rate chart | Insight | S | Local | – |
-| F39 | ☐ Open | COICOP level 5 | Organizing | M | Local | source data |
-| F40 | ☐ Open | COICOP notes in search and on hover | Organizing | M | Local | source data |
+| F39 | ☒ Dropped | COICOP level 5 | Organizing | M | Local | source data |
+| F40 | ☑ Done | COICOP notes in search and on hover | Organizing | M | Local | – |
 | F41 | ☑ Done | Opening balance and change per account | Wealth | S | Local | – |
 | F42 | ☑ Done | Reconciliation line instead of *Unaccounted* | Insight | S | Local | – |
 | F43 | ☑ Done | Revaluation transactions | Wealth | M | Local | – |
@@ -214,8 +240,9 @@ bold, the number of subcategories, and what was spent in each this calendar year
 currency. The search matches code or name, ignoring case and accents (*getranke* finds
 *Getränke*); the ancestors of each match stay visible and open, and clearing the search
 restores what was open before. *Taxes* and *Advance payments* are the app's own categories, not
-COICOP, so a note below the tree explains them instead of listing them. F40 adds the notes to
-each node and to its search text.
+COICOP, so a note below the tree explains them instead of listing them. Since F40 an info
+button beside a category's name opens its notes below the row, and the search also finds what a
+category includes (see F40).
 
 ### F38 · Exchange-rate chart
 
@@ -231,20 +258,45 @@ index view (start = 100) when currencies differ in scale. Exportable like the ot
 
 ### F39 · COICOP level 5
 
-**Status:** ☐ Open
+**Status:** ☒ Dropped (decision 7: the everyday names and search words of F08 cover the detail)
 
 COICOP 2018 itself has four levels (division, group, class, subclass), and the app already
-ships all of them. A fifth level exists only in national extensions.
+ships all of them. A fifth level exists in national extensions; the UN's own structure file
+(used for F40) has 269 five-digit codes, all in division 01 (food and non-alcoholic beverages).
 
 - Needs a source with a fifth level whose codes keep the COICOP 2018 codes, so saved data
   stays valid; German names for the new codes (and French and Italian later).
 - The code is ready for any depth; the work is the data and its translation.
-- **Decide:** which source. A Swiss classification from the Federal Statistical Office
-  would fit the users best, if it extends COICOP 2018.
+- **Decided** (decision 7): not built.
 
 ### F40 · COICOP notes in search and on hover
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22: English, German, French and Italian)
+
+**As built.** The notes come from the UN Statistics Division's *Final structure (Excel)* of
+COICOP 2018 (Statistical Papers Series M No. 99), downloaded on 2026-10-21;
+`scripts/coicop_notes.py` turns it into `resources/coicop_notes.json` (one item per line) and can be
+re-run. 440 of the 602 categories have notes; the other 162 have none in the source (most
+divisions and groups, which the publication describes only in an introduction, and all of
+divisions 14 and 15). The source's 269 level-5 codes are not used (F39). The German, French and
+Italian translations (`coicop_notes_de.json`, `_fr.json`, `_it.json`, 1'732 distinct items each) are
+the app's own and marked *Unofficial translation*; each names categories as the app's COICOP names in
+that language do (French *aides techniques*, Italian *n.a.c.*, *ausili*, *in regime di ricovero*), and
+the Italian follows Swiss (Ticino) usage. A language file marked `_untranslated` would show English.
+
+- **Search:** the picker (every category dropdown, the import page included) and the
+  *Categories* page also find a category by the words of what it *includes* and *also includes*,
+  in the interface language and in English. *Excludes* is shown but not searched, so a category
+  is never found by what it does not cover. In the picker, matches by name or search word come
+  first, matches by notes after them. The words travel with each option (about 115 kB more per
+  picker in English, 215 kB in German); the notes themselves do not.
+- **Hover:** the picker loads the notes of the interface language once per page, when it first
+  opens (`/coicop-notes/<lang>`, about 40 kB compressed, cached by the browser), and shows an
+  option's notes in a tooltip on hover or when the arrow keys reach it: *Includes*, *Also
+  includes*, *Excludes*, and "Unofficial translation" in small print for a translation. On touch
+  screens an info button in the option opens the notes inside it; a tap on the option still
+  selects it.
+- **Categories page:** an info button beside a category's name opens its notes below the row.
 
 The official COICOP 2018 publication describes each category with *includes*, *also
 includes* and *excludes* notes. The shipped file has names only.
@@ -252,8 +304,8 @@ includes* and *excludes* notes. The shipped file has names only.
 - Add the notes (about 600) and a German translation of them.
 - Category search in every dropdown also matches the notes; hovering an entry shows them.
 - The import page's category select switches to the same control.
-- **Decide:** where the German notes come from (official translation, if one exists, or our
-  own); whether *excludes* is shown too (helps choosing, not asked for).
+- **Decided** (decision 7): the English notes of the UN publication, our own German, French
+  and Italian translations (marked unofficial), *excludes* shown too.
 
 ### F41 · Opening balance and change per account
 
@@ -368,7 +420,36 @@ camt.052 intraday reports, files holding several accounts (refused with a messag
 
 #### F03 · Swiss QR-bill scanning
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built (decision 15):** **Bills** in the sidebar (after Recurring, route `/bills`, icon `o_request_quote`) with a
+badge counting the open bills that are overdue or due within 7 days. A drop zone, "Drop QR bills (PDF or photo)",
+takes PDFs (every page, up to 20, is rendered with PDFium and searched; a document without a code is read once
+more at double resolution) and photos (JPEG, PNG, WebP; EXIF orientation applied); the QR codes are found with
+ZXing, all on the computer. Every code that is a QR bill is read and checked like a bank would
+(`domain/qrbill.py`, SIX Implementation Guidelines 2.3, payload version 0200): IBAN check digits (CH and LI only),
+QR-IBAN only with a QR reference and the reverse, QR reference (27 digits, mod 10 recursive), creditor reference
+(ISO 11649), currency CHF or EUR, amount format and range (an empty amount is filled in when paying; 0.00 is a
+notice and refused), structured (S) and combined (K) addresses with their field lengths, the 140- and
+997-character limits and the EPD trailer. Each valid bill becomes a record in `bills.csv` (creditor, address,
+IBAN, amount, currency, reference type and reference, message, bill information, due date, status
+open/paid/dismissed, the paying transaction, added); the due date is read from Swico bill information
+(`//S1/…/11/<invoice date>/…/40/0:30` = invoice date plus the net term) and can be set or cleared per bill.
+A bill already in the list (same IBAN, reference and amount, whatever its status; without a reference also the
+same message and bill information) is refused with "This bill is already in the list"; a file without one says
+"No QR bill found in this file", a broken code names its fault ("The creditor’s IBAN … is invalid"). The file
+is kept as an attachment of the bill (`attachments/<bill id>/`, decision 22). The **Open** list is sorted by due
+date (overdue in red, due within a week in orange, bills without a date last) and shows creditor, amount,
+due date, message and reference and a link to the file; **Mark Paid…** opens the transaction sheet ("Pay
+Bill") prefilled with the creditor as payee (a known payee keeps its spelling: "Swisscom (Schweiz) AG" finds
+the payee of that name, a new one is cleaned like a bank text), the amount and currency, the message and the
+formatted reference as note and today's date; the category is suggested with its reason (F07) and the bill's
+file is listed under Attachments; **Mark Paid** saves the expenditure and marks the bill paid in one undo
+step, and the file then belongs to the transaction. Dismiss (paid elsewhere, not owed), Reopen, the due date
+and Delete are undoable too; *Paid and Dismissed* is collapsed below, with *Show Payment* for a paid bill.
+Deleting the payment opens the bill again. Not built: HEIC photos (Pillow needs a plugin; the message asks for
+JPEG or PNG), the camera, reminders outside the app (F31), and matching a bill with a payment already
+imported from the bank (it is booked as a new expenditure).
 
 Every Swiss invoice carries a QR code with the amount, currency, creditor and reference.
 
@@ -493,7 +574,8 @@ Krankenkasse, Serafe, Kita, Nebenkosten) in `resources/everyday_categories.json`
 category keeps its translated COICOP name. The picker shows "Groceries · 01.1" with the official
 name as a second line and lists the last ten distinct expenditure categories first (marked with a
 history icon). The search matches everyday name, search words, official name and code, ignoring
-case and accents, in the browser. Transaction form, budget forms, the Budget Plan sheet and the
+case and accents, in the browser; since F40 also what the COICOP notes say a category includes
+(listed after the matches by name), and hovering an option shows its notes. Transaction form, budget forms, the Budget Plan sheet and the
 import page use it; the stored value stays the COICOP code. Not built: favourites, and everyday
 names outside the picker (lists and reports keep the COICOP labels).
 
@@ -514,14 +596,14 @@ and punctuation, with its *aliases*: the cleaned bank texts imported for it and 
 text up there first and only then normalize it (`domain/payees.py`: dates, times, card, reference, terminal and
 phone numbers, IBANs and postal codes go, so do the booking words of UBS, PostFinance, ZKB, Raiffeisen, Revolut
 and TWINT in German, French, Italian and English, payment services such as `TWINT *` and `SumUp *`, and the
-location and legal form at the end; about 170 brands, shops and banks in `resources/payees.json` get one
+location at the end (the legal form stays: "Immo Muster AG", decision 11); about 170 brands, shops and banks in `resources/payees.json` get one
 name, "MIGROS ZUERICH HB 1234" → "Migros"). The CSV import reads the payee from a counterparty column (*Empfänger*, *Payee*,
 *Merchant* …) or the description, camt from the counterparty's name; the preview shows it and it can be edited
 there, which teaches the alias. The form's payee field suggests known payees (recently used first) and takes a
 new name as typed. Transactions has a Payee column, search and filter. The **Payees** page lists every payee
 with its number of transactions and what was spent and received, and renames, merges (several → one name; their
 transactions, templates, series and aliases move) and deletes unused payees, each as one undo step. Not built:
-QR-bill creditors (with F03), a "top merchants" report, and payees on transfers. Category suggestions per payee
+a "top merchants" report, and payees on transfers (QR-bill creditors became payees with F03). Category suggestions per payee
 came with F07.
 
 A payee or merchant field, normalized ("MIGROS ZUERICH HB 1234" → "Migros").
@@ -532,7 +614,29 @@ A payee or merchant field, normalized ("MIGROS ZUERICH HB 1234" → "Migros").
 
 #### F10 · Tags
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built (decision 17):** `tags.csv` holds each tag with a colour from a fixed palette of nine (grey, red,
+orange, yellow, green, teal, blue, purple, pink; shades for light and dark mode) and an optional budget (amount,
+currency, optional start and end date). Transactions, templates and recurring series store the **ids** of their
+tags in a `tags` column, separated by `|`, so a rename touches one row; older files load without tags. The
+transaction form has a **Tags** field for every type (a spread booking follows its exchange and stays untagged), a
+chip input with suggestions: existing tags are picked (typing a tag's name in any case picks it), a new name shows
+as a dashed chip and becomes a tag only when the transaction is saved, in the same undo step. The recurring sheet,
+templates, *Duplicate*, *Make Recurring…* and booked occurrences carry the tags; bulk edit (F13) has **Add Tags**
+and **Remove Tags**. **Transactions** shows the tags as coloured chips (an AG Grid cell renderer; export and
+sorting use the names), filters by tag (any of the chosen) and finds tag names in the search. The **Tags** page
+(`/tags`, sidebar after Payees) lists each tag with its number of transactions, what was spent and received, and
+with a budget a bar "540.00 of 2'500.00 CHF · 1'960.00 CHF left · 1 Jul 2026 – 31 Jul 2026" (red when over); a
+click on a tag opens Transactions filtered by it (`?tag=<id>`); it adds tags, edits name and colour, merges,
+deletes and sets budgets, each one undoable step. The Overview has a **Spending by Tag** chart (one bar per tag in
+its colour, between two months; PNG, PDF, CSV and Excel like the other charts). **Decided while building:**
+spending counts the own share of tagged expenditure (the part paid for others is an advance that comes back), and
+tagged income other than repayments counts as received; a tag's budget compares only that spending within its
+period, income does not reduce it. Deleting a tag in use is allowed: it is taken off every transaction, template
+and series in one undoable action, and the confirmation says how many transactions lose it. The German word is
+*Schlagwort* ("Tag" means day), French *étiquette*, Italian *etichetta*. Tags per item line came with F11 (a line's
+tag counts that line's part). Not built: budgets per tag and month, and the tax summary's use of tags (F20).
 
 Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
@@ -542,7 +646,30 @@ Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
 #### F11 · Split transactions
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built (decision 14):** a split is a category per item line. In the transaction form each item line of an
+expenditure has a split button that opens a row below it with the category picker (F08) and a tag field (F10) for
+that line; lines without a category keep the transaction's. Below the list, "Rest in 01.1 Food: 23.40 CHF" shows
+what stays in the transaction's category, live. `transaction_items.csv` got `category` and `tags` columns (older
+files load unchanged). **How the amount is counted** (`domain.splits`, the one place every consumer uses): each
+line with its own category (or tags) counts its total there, in CHF at the transaction's own rate rounded to the
+cent; the rest (lines without a category, deposits, rounding, anything not itemised) stays in the transaction's
+category and takes the rounding, so the parts add up to the amount and to `amount_chf` exactly. Lines with their
+own category may not add up to more than the amount (Save refuses it with the totals); a negative line is a
+discount on its category and raises the rest by as much. **Advances:** every part gives the same share
+(advance / amount) to *Advance payments*, so the advance, its repayments and their settlement are unchanged.
+**Counted per part:** the monthly statement and its export, budget vs. actual, the expenditure tree, the
+*Income and Expenditure* chart series and their exports, the projection's "higher of recorded and budget", the
+COICOP page's spending this year, and tag totals, budgets and the *Spending by Tag* chart (a line's tags count
+that line, on top of the transaction's). Net income, account balances and the reconciliation use the whole
+transaction and never change (tested). **Transactions** shows a split as "01.1 Food + 2 more"; the search finds
+its lines' categories, and the tag column and filter include its lines' tags. Deleting or merging a tag rewrites
+the lines too. **Bulk edit** changes only the rest's category (the hint says how many rows are split). Income,
+transfers, exchanges and revaluations are not split: the form hides the split buttons for income and says that
+lines with a category lose it when saved. Undo covers the lines (they are saved in the transaction's action).
+Not built: a drill-down from a Budget category to its transactions (the page has none yet); recurring series
+and templates have no items, so *Make Recurring…* of a split transaction books unsplit occurrences.
 
 One payment, several categories: a supermarket receipt with food, household goods and a
 gift.
@@ -554,7 +681,27 @@ gift.
 
 #### F12 · Attachments
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built:** every transaction type has an *Attachments* section in its form, under the note: a drop
+zone (drag files onto it, or click to choose several), then one row per file with a thumbnail (photos)
+or an icon, the name, size and date added, and *Open*, *Save a Copy…* and *Remove*. Clicking the name of
+a photo or PDF shows it below the list (the PDF in the window's own viewer). In the edit sheet a file is
+attached, or removed, at once, each with an Undo toast; a new transaction keeps the chosen files ("Attached
+when you save") and stores them with it, in the same undo step, so a receipt can go with the expenditure
+it belongs to. Accepted: PDF, photos (JPEG, PNG, HEIC, WebP), Word, Excel and OpenDocument files, text and
+CSV, at most 20 MB each and checked by content as well as by extension (no HTML, SVG, scripts or old
+binary Office files); the same check runs again before a file is opened, served or restored from a
+backup, so a crafted backup can't place a program that *Open* would run. Files are copied to `attachments/<transaction id>/<attachment id>.<ext>` in the data
+folder, never under the user's name; `attachments.csv` keeps the name. *Open* uses the system's viewer in
+the app window and a link to `/attachment/<id>` in a browser; that route serves only files of existing
+attachment records. Removing an attachment or deleting its transaction can be undone; the file is deleted
+at a later start, once no undo can bring it back (architecture §7, decision 20). Backups contain the
+files, a restore brings them back, and the copies made before an update or a restore keep them too. The
+Transactions list has a paper-clip column with the number of files, and its search finds attachment
+names. Not built: attaching from the Transactions list, sync, previews of office files and OCR (F04). Since
+F03 a QR bill keeps its file as an attachment of the bill, which belongs to the payment once the bill is paid
+(decision 22).
 
 Keep receipts, invoices and contracts with the transaction.
 
@@ -580,7 +727,8 @@ how many rows change, and ⌘↩ / Ctrl+Enter saves. Each changed row goes throu
 a single edit (advance payments and repayments included); if one fails, nothing is saved and the
 failing rows are listed by date and amount. The whole edit is one undo step (*Edit several
 transactions*); booked rows keep their recurring series, valuation, items and import reference.
-Not built: tags (F10).
+Tags came with F10: *Add Tags* and *Remove Tags*. With F11, a split transaction changes only the category
+of its rest; its lines keep theirs.
 
 Select many transactions → change category, account, tag or note in one step. The selection
 bar on the Transactions page already exists; this adds an *Edit* sheet for several rows.
@@ -655,34 +803,58 @@ Cantonal rules differ, so the app lists amounts and leaves the judgment to the u
 
 #### F21 · Investments and asset classes
 
-**Status:** ☑ Done (2026-10-21)
+**Status:** ☑ Done (2026-10-21; dividends with withholding tax and conversions, decisions 12 and 13, on 2026-10-22)
 
-**As built** (decision 9; architecture §7, decision 17):
+**As built** (decisions 9, 12 and 13; architecture §4.6, §7 decisions 17 and 18):
 
 - **Asset classes:** every account has one (`accounts.csv` → `asset_class`): cash (the default,
   also for files written before and for advance-payment accounts), securities, pillar 2, pillar 3a,
   real estate, crypto, other. It is set in the account sheet in Settings. Securities and crypto
-  accounts are valued from their holdings; an account becomes one only while it has no transactions
-  or balances, and stays one while it has holdings. The Overview shows wealth at the end of last
+  accounts are valued from their holdings; an account without transactions or balances becomes one
+  right away, and stays one while it has holdings. The Overview shows wealth at the end of last
   month by class (a split bar with amounts and shares) once any account is not cash, and the chart
   *Wealth by Asset Class* stacks it month by month. Pillar 2/3a, real estate and other keep their
   recorded month-end balances.
+- **Converting an account with history** (decision 13): choosing Securities or Crypto for an account
+  with transactions or balances opens a conversion sheet – the conversion month (this month by
+  default) and the opening holdings (name, optional ISIN/symbol, quantity, price; rows added and
+  removed), with the last recorded balance, the opening value and the difference shown live. The
+  account keeps its recorded balances up to the month before (`accounts.csv` → `invest_from`); those
+  from the conversion month on are replaced, and its value comes from the holdings, which start as
+  *opening* trades on the first day of that month (no money moves; their value counts as money put
+  in, so no gain). The difference between the last recorded balance and the opening value is booked
+  as one linked *Capital gains on investment* revaluation, so the conversion month reconciles to 0
+  (tested in CHF and EUR). Refused while a transaction is dated in or after that month or a recurring
+  series uses the account. Transactions and balances before the month stay editable; trades and
+  prices before it are refused. An opening holding can be edited (quantity, price) or deleted; the
+  revaluation follows. One undo step. Converting back stays refused while holdings exist, with a
+  message that says to delete them on the Investments page first.
 - **Holdings, trades, prices:** `holdings.csv` (account, name, ISIN or symbol), `trades.csv` (buy,
-  sell, dividend with date, quantity, price, fee, amount, cash account, note) and `prices.csv` (one
-  price per holding and day). Every change rebooks the holding's linked transactions in date order
+  sell, dividend, opening with date, quantity, price, fee, amount, tax, cash account, note) and
+  `prices.csv` (one price per holding and day). Every change rebooks the holding's linked transactions in date order
   (`invest_id` points at the trade or price): a buy or sale is a transfer of quantity × price
   between the cash account (same currency, else refused) and the investment account, a fee an
-  expenditure in 12.2.9.9 *Other financial services n.e.c.*, a dividend income in *Dividends*
-  (added when missing), and each price — a trade's price counts as one — a *Capital gains on
+  expenditure in 12.2.9.9 *Other financial services n.e.c.*, a dividend its gross as income in
+  *Dividends* (added when missing) and its withholding tax as an expenditure in *Taxes*, both from
+  the same cash account, and each price — a trade's price counts as one — a *Capital gains on
   investment* revaluation of quantity × the price change, rounded so the booked value is exactly
   round(quantity × latest price, 2). A sale of more than is held, or an edit or delete that would
   leave one, is refused; dates in the future are refused.
 - **Month-end balance:** computed from the holdings (Σ quantity × latest price on or before the
   month end), not typed in and not stored; the reconciliation comes out at 0 (tested, also for a
   foreign-currency depot in another view currency).
-- **Performance:** per holding and in total: value, money put in (buys − sales), dividends, fees,
-  gain = value − money put in + dividends − fees and its percentage of the money put in; the
-  holding sheet splits it into realized and unrealized (average cost).
+- **Dividends** (decision 12): the sheet asks for the gross dividend, the withholding tax (35 % of the
+  gross prefilled in CHF accounts, 0 in other currencies, editable; it follows the gross until typed
+  in) and the cash account, and shows the net that account receives. `trades.csv` gained a `tax`
+  column; older dividends load with tax 0 (their amount is the gross) and re-book correctly when
+  edited.
+- **Reclaimable withholding tax:** the Investments page lists *Reclaimable withholding tax {year}*
+  for this year and the two before (the tax on dividends in CHF accounts), and the holding sheet shows
+  the tax and the net in each dividend's history line (foreign tax as *foreign withholding tax*).
+- **Performance:** per holding and in total: value, money put in (opening value + buys − sales),
+  net dividends, fees, gain = value − money put in + net dividends − fees and its percentage of the
+  money put in; the holding sheet shows the withholding tax apart and splits the gain into realized
+  and unrealized (average cost).
 - **Investments page** (`/investments`, sidebar after Payees): holdings by account with quantity,
   last price and date, value, gain and %, totals; *Buy*, *Sell*, *Dividend*, *Update Price* and
   *Paste Prices…* (tab, semicolon or comma separated, header line skipped, Swiss and other number
@@ -690,8 +862,8 @@ Cantonal rules differ, so the app lists amounts and leaves the judgment to the u
   price, rename, delete with everything it booked). The booked rows appear in Transactions; opening
   one opens its trade or price, deleting or bulk-editing it there is refused. Every save is one
   undoable step.
-- Not built: online prices (decision 9), withholding tax on dividends as its own field (enter the
-  amount received), transaction-level lots (the average cost method is used).
+- Not built: online prices (decision 9), transaction-level lots (the average cost method is used),
+  editing a conversion's month afterwards (undo it and convert again).
 
 The proposal:
 
@@ -898,8 +1070,8 @@ Record expenses on the phone where they happen.
 
 These come up in several features; deciding them once keeps the features consistent.
 
-1. **AI and online services** (F04, F07, F21, F33): never, opt-in per use, or opt-in as a
-   setting? Which provider, and who pays?
+1. **AI and online services** (F04, F07, F21, F33): decided on 2026-10-21 — **never for now**;
+   everything stays local, and features that need a service stay in the backlog until revisited.
 2. **Exchange rate of transactions** (F01, F02, F03, F05, B03): decided — every transaction
    uses the ECB rate of its date (the last earlier rate on weekends and holidays); account
    balances use the last rate of the month; budget entries use the latest rate. Changed by
@@ -908,7 +1080,8 @@ These come up in several features; deciding them once keeps the features consist
    needs a default for old data (the update backup covers mistakes); see
    [packaging/README.md](../packaging/README.md#releasing-an-update).
 4. **Languages** (F29): decided and built — English, German, French and Italian. Every new
-   text needs all three translations; the tests enforce it.
+   text needs all three translations; the tests enforce it. The COICOP notes (F40) have
+   their own translation files, done for German, French and Italian.
 
 ## Done
 
@@ -920,7 +1093,7 @@ Merged into `main` on 2026-10-19.
 | --- | --- | --- | --- |
 | 1 | **B01** Excel and PDF buttons in the budget overview did nothing; **B02** chart image, CSV and PDF export didn't work | The app window (pywebview) drops browser downloads. Every export now goes through one helper: the system save dialog in the app window, a normal download in the browser. Charts gained *Save as PDF…*. | `cc05db9`, `ffa9733` |
 | 2 | **B05** Selecting and adding a chart didn't work | Adding worked but put the card out of sight. A new chart now goes first, scrolls into view and is highlighted; errors are shown. | `8e9ca8e`, `ffa9733` |
-| 3 | **B07** Accounts didn't adapt to the window; **B08** tables should stack when narrow | Account rows are a grid that follows the card's width; the ledgers use container queries. The tables stay below each other at every width (decision 1). | `6f34640` |
+| 3 | **B07** Accounts didn't adapt to the window; **B08** tables should stack when narrow | Account rows are a grid that follows the card's width; the ledgers use container queries. The tables stay below each other, and since decision 1 sit side by side once each gets about 750 px (windows from about 1,800 px). | `6f34640`, B08 follow-up |
 | 4 | **B03** Transactions used the latest exchange rate | Every transaction uses the rate of its date; stored ones are re-valued after each rate check. | `332eb81` |
 | 5 | **B06** Currency exchange converted the received amount | The amount received is typed in; the form compares it with the ECB rate. | `b73d8fe` |
 | 6 | **B09** Budget edit dialog lacked until, repeat and note | All three per entry; changing the schedule replans the series from that month on. | `ef5da63` |
@@ -971,7 +1144,9 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | --- | --- | --- |
 | F01 · CSV import of transactions | ☑ Done | Details below. |
 | F29 · Multi-language support | ☑ Done | English, German, French and Italian, including the COICOP names. |
-| Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. Covers part of F11 and gives F04 a place for receipt lines. |
+| F12 · Attachments | ☑ Done | Receipts and invoices with their transaction, in the data folder and in backups; details under F12. |
+| Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. F11 added a category and tags per line; gives F04 a place for receipt lines. |
+| F03 · Swiss QR-bill scanning | ☑ Done | QR bills from PDFs and photos into a Bills list with due dates, paid through the transaction sheet; details under F03. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
 | CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
 

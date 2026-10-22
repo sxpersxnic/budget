@@ -15,6 +15,7 @@ from pathlib import Path
 from nicegui import app, native, ui
 
 from budget_app import config, i18n
+from budget_app.services import attachments as attachments_svc
 from budget_app.services.context import init_context
 from budget_app.storage import lock as instance_lock
 from budget_app.ui import theme
@@ -22,6 +23,7 @@ from budget_app.ui.layout import book_recurring, refresh_rates
 from budget_app.ui.pages import (
     add_budget,
     add_transaction,
+    bills,
     budget_entries,
     budget_overview,
     categories,
@@ -33,8 +35,11 @@ from budget_app.ui.pages import (
     recurring,
     rules,
     settings,
+    tags,
     transactions,
 )
+from budget_app.ui.widgets import attachments as attachments_ui
+from budget_app.ui.widgets import selects
 
 PAGES = {
     "/": overview.page,
@@ -42,11 +47,13 @@ PAGES = {
     "/add-transaction": add_transaction.page,
     "/transactions": transactions.page,
     "/recurring": recurring.page,
+    "/bills": bills.page,
     "/import": import_transactions.page,
     "/add-budget": add_budget.page,
     "/budget-entries": budget_entries.page,
     "/categories": categories.page,
     "/payees": payees.page,
+    "/tags": tags.page,
     "/investments": investments.page,
     "/rules": rules.page,
     "/settings": settings.page,
@@ -56,10 +63,13 @@ PAGES = {
 
 def setup(data_dir: Path) -> None:
     ctx = init_context(data_dir)
+    attachments_svc.cleanup(ctx)  # files whose removal can no longer be undone (F12)
     i18n.set_language(ctx.store.settings.language)
     theme.install()
+    attachments_ui.register(app)  # serves attachment files to the page, by record id
     for path, builder in PAGES.items():
         ui.page(path, title="Budget")(builder)  # each page sets its translated title in layout.frame
+    selects.add_notes_route()
 
     async def refresh() -> None:
         await refresh_rates(ctx)

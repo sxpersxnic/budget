@@ -12,6 +12,7 @@ from budget_app.domain.models import (
     IncomeCategory,
 )
 from budget_app.i18n import N_, t
+from budget_app.services import investments as inv_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
 
@@ -58,8 +59,9 @@ def has_holdings(ctx: Context, account_id: str) -> bool:
 
 def _check_class(ctx: Context, asset_class: str, kind: str, acc: Account | None = None) -> str:
     """The asset class an account may have (F21): advance-payment accounts are cash. An account becomes a
-    securities or crypto account, valued from holdings, only while nothing is booked or recorded on it; it
-    stops being one only without holdings."""
+    securities or crypto account, valued from holdings, right away while nothing is booked or recorded on it,
+    and through a conversion otherwise (`investments.convert_account`, decision 13); it stops being one only
+    without holdings."""
     if kind == ACCOUNT_ADVANCE:
         return ASSET_CASH
     if asset_class not in ASSET_CLASSES:
@@ -68,10 +70,15 @@ def _check_class(ctx: Context, asset_class: str, kind: str, acc: Account | None 
         return asset_class
     if asset_class in HOLDING_CLASSES and acc.asset_class not in HOLDING_CLASSES and account_in_use(ctx, acc.id):
         raise ValidationError(
-            t("Only an account without transactions or balances can become a securities or crypto account")
+            t("An account with transactions or balances becomes a securities or crypto account through a conversion")
         )
     if acc.asset_class in HOLDING_CLASSES and asset_class not in HOLDING_CLASSES and has_holdings(ctx, acc.id):
-        raise ValidationError(t("This account has holdings; it stays a securities or crypto account"))
+        raise ValidationError(
+            t(
+                "This account still has holdings, with their trades and prices. It stays a securities or crypto "
+                "account until they are deleted on the Investments page."
+            )
+        )
     return asset_class
 
 
@@ -94,7 +101,13 @@ def edit_account(ctx: Context, account_id: str, name: str, currency: str, asset_
         raise ValidationError(t("The currency cannot be changed while transactions or entries use this account"))
     acc.asset_class = _check_class(ctx, acc.asset_class if asset_class is None else asset_class, acc.kind, acc)
     acc.name, acc.currency = name, currency
-    return ctx.store.accounts.update(acc)
+    converted_back = bool(acc.invest_from) and not acc.holds_securities
+    if converted_back:  # its recorded balances count again; the conversion's revaluation goes
+        acc.invest_from = ""
+    saved = ctx.store.accounts.update(acc)
+    if converted_back:
+        inv_svc.book_conversion(ctx, acc.id)
+    return saved
 
 
 @recorded(N_("Delete an account"))

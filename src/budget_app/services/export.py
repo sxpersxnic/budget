@@ -283,6 +283,7 @@ def everything_json(ctx: Context) -> bytes:
         "income_categories": table(store.income_categories.all()),
         "transactions": table(sorted(store.transactions.all(), key=lambda x: (x.date, x.id))),
         "transaction_items": table(store.transaction_items.all()),
+        "attachments": table(store.attachments.all()),  # the records; the files are in full backups
         "account_entries": table(sorted(store.account_entries.all(), key=lambda e: (e.month, e.account_id))),
         "budget_entries": table(sorted(store.budget.all(), key=lambda b: (b.month, b.type, b.category))),
         "recurring": table(sorted(store.recurring.all(), key=lambda r: (r.start, r.id))),
@@ -291,5 +292,7 @@ def everything_json(ctx: Context) -> bytes:
         "holdings": table(sorted(store.holdings.all(), key=lambda h: (h.account_id, h.name.lower()))),
         "trades": table(sorted(store.trades.all(), key=lambda x: (x.date, x.seq))),
         "prices": table(sorted(store.prices.all(), key=lambda x: (x.date, x.holding_id))),
+        "tags": table(sorted(store.tags.all(), key=lambda g: (g.name.lower(), g.id))),
+        "bills": table(sorted(store.bills.all(), key=lambda b: (b.added, b.id))),  # F03
     }
     return json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8")

@@ -252,7 +252,7 @@ def test_the_import_suggests_rules_and_history_and_can_clear_them(ctx, setup):
     assert [(r.payee, r.category, r.suggested) for r in rows] == [
         ("Migros", "01.1", True),
         ("Brezelkönig", "11.1", True),
-        ("Muster", setup["salary"].id, True),
+        ("Muster AG", setup["salary"].id, True),
     ]
     assert [r.reason for r in rows] == [
         "Rule: contains “migros”",

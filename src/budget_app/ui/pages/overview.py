@@ -14,6 +14,7 @@ from budget_app.domain.models import ASSET_CLASSES
 from budget_app.i18n import N_, t
 from budget_app.services import export as export_svc
 from budget_app.services import reports
+from budget_app.services import tags as tag_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context
 from budget_app.ui.layout import (
@@ -28,7 +29,16 @@ from budget_app.ui.layout import (
     save_file,
     segmented,
 )
-from budget_app.ui.theme import CHART_GRID, NEGATIVE, NEUTRAL, POSITIVE, SERIES, chart_layout, figure_dict
+from budget_app.ui.theme import (
+    CHART_GRID,
+    NEGATIVE,
+    NEUTRAL,
+    POSITIVE,
+    SERIES,
+    TAG_SHADES,
+    chart_layout,
+    figure_dict,
+)
 from budget_app.ui.widgets.selects import currency_select
 
 CHART_TYPES = {
@@ -37,6 +47,7 @@ CHART_TYPES = {
     "waterfall": N_("Change per Account"),
     "fx": N_("Exchange Rates"),
     "classes": N_("Wealth by Asset Class"),
+    "tags": N_("Spending by Tag"),
 }
 CHART_HINTS = {
     "wealth": N_("Recorded balances, then the budget projection"),
@@ -44,6 +55,7 @@ CHART_HINTS = {
     "waterfall": N_("How each account moved between two month ends"),
     "fx": N_("ECB rates against the display currency"),
     "classes": N_("Month-end balances by asset class"),
+    "tags": N_("Tagged spending in a period, one bar per tag"),
 }
 
 
@@ -97,6 +109,22 @@ class ChartCard:
                     )
                     self.series.props("dense outlined use-chips options-dense").classes("w-full")
                     controls = [self.start, self.end, self.style, self.budget, self.series]
+                elif kind == "tags":
+                    self.start = (
+                        ui.select(
+                            opts,
+                            value=months.add_months(cm, -11) if months.add_months(cm, -11) in opts else first,
+                            label=t("From"),
+                        )
+                        .props("dense outlined options-dense")
+                        .classes("w-32")
+                    )
+                    self.end = (
+                        ui.select(opts, value=cm if cm in opts else last, label=t("To"))
+                        .props("dense outlined options-dense")
+                        .classes("w-32")
+                    )
+                    controls = [self.start, self.end]
                 elif kind == "classes":
                     prev = months.previous_month()
                     self.start = (
@@ -297,6 +325,43 @@ class ChartCard:
         fig.update_layout(barmode="relative")
         fig.update_xaxes(type="category", tickvals=month_list, ticktext=[months.label(m) for m in month_list])
         return chart_layout(fig, cur)
+
+    def _fig_tags(self, cur: str) -> go.Figure:
+        """One bar per tag: its tagged spending (own share) from the first day of `start` to the end of `end` (F10)."""
+        start, end = sorted([self.start.value, self.end.value])
+        first, last = date.fromisoformat(f"{start}-01"), months.last_day(end)
+        totals = tag_svc.totals(self.ctx, cur, first, last)
+        tags = sorted(
+            (g for g in tag_svc.all_tags(self.ctx) if g.id in totals and totals[g.id].spent > 0.005),
+            key=lambda g: -totals[g.id].spent,
+        )
+        self.data = pd.DataFrame(
+            [
+                {
+                    "tag": g.name,
+                    "spent": round(totals[g.id].spent, 2),
+                    "received": round(totals[g.id].received, 2),
+                    "transactions": totals[g.id].count,
+                }
+                for g in tags
+            ]
+        )
+        fig = go.Figure()
+        if tags:
+            fig.add_bar(
+                x=[g.name for g in tags],
+                y=[round(totals[g.id].spent, 2) for g in tags],
+                marker_color=[TAG_SHADES[tag_svc.colour(g)][0] for g in tags],
+                hovertemplate="%{x}: %{y:,.2f} " + cur + "<extra></extra>",
+            )
+        else:
+            fig.add_annotation(
+                text=t("No tagged spending in this period"), showarrow=False, xref="paper", yref="paper", x=0.5, y=0.5
+            )
+        fig = chart_layout(fig, cur)
+        fig.update_layout(hovermode="closest", showlegend=False)
+        fig.update_xaxes(type="category")
+        return fig
 
     def _fig_waterfall(self, cur: str) -> go.Figure:
         start, end = sorted([self.start.value, self.end.value])

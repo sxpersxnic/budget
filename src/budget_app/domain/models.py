@@ -64,6 +64,9 @@ TRADE_BUY = "buy"
 TRADE_SELL = "sell"
 TRADE_DIVIDEND = "dividend"
 TRADE_KINDS = {TRADE_BUY: N_("Buy"), TRADE_SELL: N_("Sell"), TRADE_DIVIDEND: N_("Dividend")}
+# the quantity and price a holding starts with when an account with history becomes a securities or crypto
+# account (decision 13); booked by the conversion, not chosen in the trade sheet
+TRADE_OPENING = "opening"
 
 
 @dataclass
@@ -73,12 +76,20 @@ class Account:
     kind: str = ACCOUNT_REGULAR
     created: dt.date = field(default_factory=dt.date.today)
     asset_class: str = ASSET_CASH  # F21; files written before it have no such column: cash
+    # the month (YYYY-MM) an account with history became a securities or crypto account (decision 13); empty for
+    # accounts that were one from the start, and in files written before it
+    invest_from: str = ""
     id: str = field(default_factory=new_id)
 
     @property
     def holds_securities(self) -> bool:
         """Valued from its holdings (F21): securities and crypto accounts."""
         return self.asset_class in HOLDING_CLASSES
+
+    def holds_in(self, month: str) -> bool:
+        """Valued from its holdings at the end of `month`: a securities or crypto account, from the month it was
+        converted on (before it, its recorded balances count)."""
+        return self.holds_securities and (not self.invest_from or month >= self.invest_from)
 
 
 @dataclass
@@ -115,6 +126,7 @@ class Transaction:
     payee: str = ""  # who was paid or who paid (F09): the name of a `Payee`; empty for transfers and older rows
     # booked by the Investments page (F21): the id of the `Trade` or `Price` the row belongs to
     invest_id: str = ""
+    tags: str = ""  # F10: ids of `Tag`s, separated by "|" (domain.tags.split / join); empty in older files
     id: str = field(default_factory=new_id)
 
 
@@ -140,6 +152,50 @@ class Payee:
 
     def set_aliases(self, aliases: list[str]) -> None:
         self.aliases = ALIAS_SEP.join(sorted(dict.fromkeys(a for a in aliases if a)))
+
+
+TAG_COLOURS = {  # F10: the fixed palette of tag colours; the shades for light and dark mode are in ui/theme.py
+    "grey": N_("Grey"),
+    "red": N_("Red"),
+    "orange": N_("Orange"),
+    "yellow": N_("Yellow"),
+    "green": N_("Green"),
+    "teal": N_("Teal"),
+    "blue": N_("Blue"),
+    "purple": N_("Purple"),
+    "pink": N_("Pink"),
+}
+TAG_DEFAULT_COLOUR = "grey"
+
+
+@dataclass
+class Tag:
+    """A label across categories (F10), such as "Holiday Italy 2026" or "Renovation".
+
+    Transactions, templates and recurring series name their tags by id (`Transaction.tags`), so renaming a tag
+    changes one row here. A tag can have a budget: `budget` in `budget_currency` for the tagged spending between
+    `budget_start` and `budget_end` (each 'YYYY-MM-DD' or empty for an open end); `budget` 0 means no budget.
+    """
+
+    name: str
+    colour: str = TAG_DEFAULT_COLOUR  # a key of TAG_COLOURS
+    budget: float = 0.0
+    budget_currency: str = ""
+    budget_start: str = ""
+    budget_end: str = ""
+    id: str = field(default_factory=new_id)
+
+    @property
+    def has_budget(self) -> bool:
+        return self.budget > 0
+
+    @property
+    def start_date(self) -> dt.date | None:
+        return dt.date.fromisoformat(self.budget_start) if self.budget_start else None
+
+    @property
+    def end_date(self) -> dt.date | None:
+        return dt.date.fromisoformat(self.budget_end) if self.budget_end else None
 
 
 @dataclass
@@ -172,23 +228,89 @@ class Template:
     to_account: str = ""
     comment: str = ""
     payee: str = ""  # F09
+    tags: str = ""  # F10: tag ids separated by "|"
     id: str = field(default_factory=new_id)
 
 
 @dataclass
 class TransactionItem:
-    """One line of a transaction's product list (e.g. a receipt), in the transaction's currency."""
+    """One line of a transaction's product list (e.g. a receipt), in the transaction's currency.
+
+    A line of an expenditure may have its own `category` and `tags` (F11, decision 14): it is then a split
+    line, and reports count its total in that category (`domain.splits`). Files written before F11 have
+    neither column: every line keeps the transaction's category.
+    """
 
     transaction_id: str
     name: str
     quantity: float = 1.0
     unit_price: float = 0.0  # negative for discounts
     position: int = 0  # order within the list
+    category: str = ""  # F11: a COICOP code or TAX; empty: the transaction's category
+    tags: str = ""  # F11: ids of `Tag`s, separated by "|", counted for this line on top of the transaction's
     id: str = field(default_factory=new_id)
 
     @property
     def total(self) -> float:
         return round(self.quantity * self.unit_price, 2)
+
+
+@dataclass
+class Attachment:
+    """A file kept with a transaction (F12): a receipt, an invoice, a contract; or with a QR bill (F03).
+
+    The file lies in `attachments/<folder>/<stored>` in the data folder; `name` is the name it had when
+    it was added, only shown, never used as a path. A bill's file has `bill_id` and lies in the bill's
+    folder; paying the bill sets `transaction_id`, so the file then belongs to the payment as well and
+    never moves (architecture §7, decision 22).
+    """
+
+    transaction_id: str  # empty while the bill it came with is open
+    name: str
+    stored: str  # "<id>.<extension>" (domain.attachments.stored_name)
+    size: int = 0  # bytes
+    content_type: str = ""
+    added: dt.date = field(default_factory=dt.date.today)
+    bill_id: str = ""  # F03: the bill the file came with; older files have no such column
+    id: str = field(default_factory=new_id)
+
+    @property
+    def folder(self) -> str:
+        """The folder under `attachments/` the file lies in: the bill's, else the transaction's."""
+        return self.bill_id or self.transaction_id
+
+
+BILL_OPEN = "open"
+BILL_PAID = "paid"
+BILL_DISMISSED = "dismissed"
+
+
+@dataclass
+class Bill:
+    """A scanned Swiss QR bill (F03, decision 15): open until it is paid (an expenditure is booked) or dismissed.
+
+    Its file is an `Attachment` with this bill's id. `amount` 0 means the bill leaves the amount to the payer;
+    `due` is 'YYYY-MM-DD' (from the bill information, or set by the user) or empty.
+    """
+
+    creditor: str
+    iban: str
+    currency: str
+    amount: float = 0.0
+    creditor_address: str = ""  # one line: "Rue du Lac 1268, 2501 Biel, CH"
+    reference_type: str = ""  # QRR, SCOR or NON
+    reference: str = ""
+    message: str = ""
+    bill_info: str = ""
+    due: str = ""
+    status: str = BILL_OPEN
+    transaction_id: str = ""  # the expenditure that paid it
+    added: dt.date = field(default_factory=dt.date.today)
+    id: str = field(default_factory=new_id)
+
+    @property
+    def due_date(self) -> dt.date | None:
+        return dt.date.fromisoformat(self.due) if self.due else None
 
 
 @dataclass
@@ -245,6 +367,7 @@ class Recurring:
     end: str = ""  # last day an occurrence may fall on ('YYYY-MM-DD'); empty: no end
     auto: bool = False  # book due occurrences without asking
     payee: str = ""  # F09
+    tags: str = ""  # F10: tag ids separated by "|"
     id: str = field(default_factory=new_id)
 
     @property
@@ -269,15 +392,17 @@ class Trade:
     """A buy, sale or dividend of a holding (F21), paid from or to a cash account in the holding's currency.
 
     A buy or sale moves quantity × price between the cash account and the investment account, and its price
-    counts as a price of that day; a fee is spending from the cash account. A dividend is income `amount`."""
+    counts as a price of that day; a fee is spending from the cash account. A dividend is income of the gross
+    `amount` with its withholding `tax` booked as Taxes, so the cash account receives the net."""
 
     holding_id: str
     date: dt.date
-    kind: str  # TRADE_BUY, TRADE_SELL or TRADE_DIVIDEND
+    kind: str  # TRADE_BUY, TRADE_SELL, TRADE_DIVIDEND or TRADE_OPENING
     quantity: float = 0.0  # up to 6 decimals; 0 for a dividend
     price: float = 0.0  # per unit, up to 6 decimals; 0 for a dividend
     fee: float = 0.0
-    amount: float = 0.0  # dividend received
+    amount: float = 0.0  # dividend: the gross amount
+    tax: float = 0.0  # dividend: the withholding tax (decision 12); files written before it have none: 0
     cash_account: str = ""
     comment: str = ""
     seq: int = 0  # order of entry: trades of the same day count in this order

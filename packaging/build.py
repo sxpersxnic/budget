@@ -147,7 +147,9 @@ def build_macos(app: Path) -> Path:
             "CFBundleShortVersionString": version(),
             "CFBundleVersion": version(),
             "NSHighResolutionCapable": True,
-            "LSMinimumSystemVersion": "11.0",
+            # the oldest macOS the bundled libraries run on: numpy's arm64 build needs 14 (PDFium 13), so
+            # older systems get a clear "requires a newer macOS" message instead of a crash at start
+            "LSMinimumSystemVersion": "14.0",
             "NSHumanReadableCopyright": "Local budgeting app",
         }
     )

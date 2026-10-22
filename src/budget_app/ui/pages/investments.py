@@ -9,20 +9,23 @@ from datetime import date
 from nicegui import ui
 
 from budget_app import i18n
+from budget_app.domain import months
 from budget_app.domain.fx import FxError
-from budget_app.domain.investments import PRICE, Performance, Step, fmt_price, fmt_quantity
+from budget_app.domain.investments import PRICE, Performance, Step, default_withholding, fmt_price, fmt_quantity
 from budget_app.domain.models import (
     ASSET_CLASSES,
     TRADE_BUY,
     TRADE_DIVIDEND,
     TRADE_KINDS,
+    TRADE_OPENING,
     TRADE_SELL,
+    Account,
     Holding,
     Price,
     Trade,
     Transaction,
 )
-from budget_app.i18n import N_, t, tn
+from budget_app.i18n import N_, t, tc, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services.context import Context, ValidationError
@@ -34,6 +37,7 @@ from budget_app.ui.layout import (
     fmt_signed,
     frame,
     metric,
+    month_options,
     on_data_changed,
     parse_date,
     segmented,
@@ -46,7 +50,7 @@ from budget_app.ui.widgets.selects import account_options, set_options
 
 ROW_ACTION = "flat dense round size=sm"
 GAIN_NOTE = N_(
-    "Gain = value − money put in (buys − sales) + dividends − fees, and in percent of the money put in. "
+    "Gain = value − money put in (buys − sales) + net dividends − fees, and in percent of the money put in. "
     "Prices are the ones you enter or paste; a buy or sale counts as the price of its day."
 )
 
@@ -104,7 +108,21 @@ def _step_title(step: Step, currency: str) -> str:
     if e.kind == TRADE_DIVIDEND:
         return t("Dividend {amount}", amount=fmt(e.amount, currency))
     what = f"{fmt_quantity(e.quantity)} × {fmt_price(e.price)}"
+    if e.kind == TRADE_OPENING:
+        return t("Opening holding {what}", what=what)
     return t("Buy {what}", what=what) if e.kind == TRADE_BUY else t("Sell {what}", what=what)
+
+
+def tax_label(currency: str) -> str:
+    """ "Withholding tax": the Swiss one (Verrechnungssteuer) in CHF, a foreign one (Quellensteuer) otherwise."""
+    return t("Withholding tax") if currency == "CHF" else tc("foreign", "Withholding tax")
+
+
+def withholding_text(amount: float, currency: str) -> str:
+    """The withholding tax of a dividend: Swiss (reclaimable) in CHF, foreign otherwise."""
+    if currency == "CHF":
+        return t("withholding tax {amount}, reclaimable", amount=fmt(amount, currency))
+    return t("foreign withholding tax {amount}", amount=fmt(amount, currency))
 
 
 def _step_caption(ctx: Context, step: Step, trade: Trade | None, currency: str) -> str:
@@ -115,6 +133,9 @@ def _step_caption(ctx: Context, step: Step, trade: Trade | None, currency: str) 
             parts.append(acc.name)
         if trade.fee >= 0.005:
             parts.append(t("fee {amount}", amount=fmt(trade.fee, currency)))
+        if trade.kind == TRADE_DIVIDEND and trade.tax >= 0.005:
+            parts.append(withholding_text(trade.tax, currency))
+            parts.append(t("net {amount}", amount=fmt(trade.amount - trade.tax, currency)))
         if trade.comment:
             parts.append(trade.comment)
     return " · ".join(parts)
@@ -173,14 +194,27 @@ def open_trade_sheet(
     if not init.holding_id and len(options) == 1:
         init.holding_id = next(iter(options))
     touched = {"value": False}
-    with (
-        sheet(t("Edit Trade") if editing else t("New Trade"), width="30rem") as dlg,
-        ui.column().classes("w-full gap-4"),
-    ):
-        typ = segmented({k: t(v) for k, v in TRADE_KINDS.items()}, init.kind, full=True)
+    # a new dividend's withholding tax follows the gross amount (35 % in CHF) until it is typed in
+    auto_tax = {"on": editing is None, "setting": False}
+    # an opening holding of a converted account (decision 13): only its quantity and price change
+    opening = editing is not None and editing.kind == TRADE_OPENING
+    title = t("Edit Opening Holding") if opening else t("Edit Trade") if editing else t("New Trade")
+    with sheet(title, width="30rem") as dlg, ui.column().classes("w-full gap-4"):
+        kinds = {TRADE_OPENING: t("Opening holding")} if opening else {k: t(v) for k, v in TRADE_KINDS.items()}
+        typ = segmented(kinds, init.kind, full=True)
+        typ.set_visibility(not opening)
         holding = ui.select(options, value=init.holding_id or None, label=t("Holding"), with_input=True)
         holding.props("dense outlined").classes("w-full")
         when = date_input(t("Date"), init.date.isoformat() if init.date else "").classes("w-full")
+        if opening:
+            holding.disable()
+            when.disable()
+            ui.label(
+                t(
+                    "The holding the account started with on the day of its conversion. The difference between its "
+                    "value and the last recorded balance is booked as Capital gains on investment."
+                )
+            ).classes("caption -mt-2 px-1")
         with ui.row().classes("w-full gap-2 no-wrap") as trade_row:
             quantity = ui.number(t("Quantity"), value=init.quantity, min=0, precision=6)
             quantity.props("dense outlined inputmode=decimal").classes("flex-1 min-w-0")
@@ -188,8 +222,11 @@ def open_trade_sheet(
             price.props("dense outlined inputmode=decimal").classes("flex-1 min-w-0")
         fee = ui.number(t("Fee"), value=init.fee, min=0, format="%.2f", placeholder=t("Optional"))
         fee.props("dense outlined inputmode=decimal").classes("w-full")
-        amount = ui.number(t("Amount received"), value=init.amount, min=0, format="%.2f")
-        amount.props("dense outlined inputmode=decimal").classes("w-full")
+        with ui.row().classes("w-full gap-2 no-wrap") as dividend_row:
+            amount = ui.number(t("Gross dividend"), value=init.amount, min=0, format="%.2f")
+            amount.props("dense outlined inputmode=decimal").classes("flex-1 min-w-0")
+            tax = ui.number(t("Withholding tax"), value=init.tax, min=0, format="%.2f")
+            tax.props("dense outlined inputmode=decimal").classes("flex-1 min-w-0")
         cash = ui.select({}, label=t("Cash account"), with_input=True).props("dense outlined").classes("w-full")
         comment = ui.textarea(t("Note"), value=init.comment, placeholder=t("Optional"))
         comment.props("dense outlined autogrow rows=1").classes("w-full")
@@ -214,6 +251,7 @@ def open_trade_sheet(
             price=price.value,
             fee=fee.value,
             amount=amount.value,
+            tax=tax.value,
             cash_account=cash.value or "",
             comment=comment.value or "",
         )
@@ -221,8 +259,16 @@ def open_trade_sheet(
     def describe(inp: TradeInput, h: Holding, cur: str) -> str:
         """What a valid trade books, in a sentence."""
         cash_name, depot_name = (_account_name(ctx, a) for a in (inp.cash_account, h.account_id))
+        if opening:
+            value = fmt(round((inp.quantity or 0) * (inp.price or 0), 2), cur)
+            return t("Worth {amount} on the day of the conversion", amount=value)
         if inp.kind == TRADE_DIVIDEND:
-            return t("Booked as income to {account}", account=cash_name)
+            gross, withheld = round(inp.amount or 0, 2), round(inp.tax or 0, 2)
+            text = t("Net {amount} to {account}", amount=fmt(gross - withheld, cur), account=cash_name)
+            if withheld < 0.005:
+                return text + " · " + t("income in Dividends")
+            details = t("income {gross} in Dividends, {tax} under Taxes", gross=fmt(gross, cur), tax=fmt(withheld, cur))
+            return f"{text} · {details}"
         moved = fmt(round((inp.quantity or 0) * (inp.price or 0), 2), cur)
         ends = (cash_name, depot_name) if inp.kind == TRADE_BUY else (depot_name, cash_name)
         text = t("Moves {amount} from {source} to {target}", amount=moved, source=ends[0], target=ends[1])
@@ -236,12 +282,21 @@ def open_trade_sheet(
         kind = typ.value
         dividend = kind == TRADE_DIVIDEND
         trade_row.set_visibility(not dividend)
-        fee.set_visibility(not dividend)
-        amount.set_visibility(dividend)
+        fee.set_visibility(not dividend and not opening)
+        cash.set_visibility(not opening)
+        dividend_row.set_visibility(dividend)
         h = current_holding()
         cur = inv_svc.currency_of(ctx, h) if h else ""
-        for el in (price, fee, amount):
+        for el in (price, fee, amount, tax):
             el.props(f'suffix="{cur}"')
+        tax.props(f'label="{tax_label(cur)}"')
+        if dividend and auto_tax["on"]:
+            prefill = default_withholding(amount.value, cur)
+            if tax.value != prefill:
+                auto_tax["setting"] = True
+                tax.value = prefill  # comes back here through on_value_change
+                auto_tax["setting"] = False
+                return
         set_options(cash, account_options(ctx, currency=cur) if cur else {})
         if cash.value is None and cur:
             cash.value = inv_svc.last_cash_account(ctx, cur) or (
@@ -284,9 +339,15 @@ def open_trade_sheet(
 
         confirm(t("Delete this trade?"), do, detail=t("The transactions it booked are deleted with it."))
 
+    def tax_typed() -> None:
+        if not auto_tax["setting"]:
+            auto_tax["on"] = False  # typed in: it no longer follows the gross amount
+        changed()
+
     save_btn.on_click(save)
     for el in (typ, holding, when, quantity, price, fee, amount, cash):
         el.on_value_change(changed)
+    tax.on_value_change(tax_typed)
     changed()
     touched["value"] = True
 
@@ -488,8 +549,10 @@ def open_holding_sheet(ctx: Context, holding_id: str, on_change: Refresh = None)
                     (t("Quantity"), fmt_quantity(perf.quantity)),
                     (t("Last price"), _last_price(perf, cur)),
                     (t("Value"), fmt(perf.value, cur)),
+                    *([(t("Opening value"), fmt(perf.opening, cur))] if perf.opening >= 0.005 else []),
                     (t("Money put in"), fmt(perf.invested, cur)),
-                    (t("Dividends"), fmt(perf.dividends, cur)),
+                    (t("Net dividends"), fmt(perf.dividends, cur)),
+                    *([(tax_label(cur), fmt(perf.withholding, cur))] if perf.withholding >= 0.005 else []),
                     (t("Fees"), fmt(perf.fees, cur)),
                     (t("Realized"), fmt(perf.realized, cur)),
                     (t("Unrealized"), fmt(perf.unrealized, cur)),
@@ -607,8 +670,152 @@ def open_source(ctx: Context, tx: Transaction, on_saved: Refresh = None) -> None
         open_trade_sheet(ctx, on_saved, editing=found)
     elif isinstance(found, Price):
         open_price_sheet(ctx, on_saved, editing=found)
+    elif isinstance(found, Account):
+        ui.notify(
+            t(
+                "Booked when {name} became a securities or crypto account in {month}: the difference between its "
+                "last recorded balance and the value of its opening holdings. It follows them on the Investments page.",
+                name=found.name,
+                month=months.label(found.invest_from),
+            ),
+            position="bottom",
+            timeout=8000,
+        )
     else:
         error(t("This transaction was booked on the Investments page; its trade or price no longer exists."))
+
+
+# ------------------------------------------------------------------ converting an account with history
+def open_conversion_sheet(ctx: Context, account_id: str, asset_class: str, on_done: Refresh = None) -> None:
+    """Make an account with transactions or balances a securities or crypto account (decision 13): the month it
+    happens in, and the holdings it starts with at their price on that month's first day."""
+    acc = ctx.store.accounts.get(account_id)
+    if acc is None:
+        return
+    rows: list[inv_svc.OpeningHolding] = [inv_svc.OpeningHolding()]
+    current = months.current_month()
+    used = [e.month for e in ctx.store.account_entries.all() if e.account_id == acc.id]
+    used += [
+        months.month_of(tx.date) for tx in ctx.store.transactions.all() if acc.id in (tx.from_account, tx.to_account)
+    ]
+    first = min([*used, current])
+    with sheet(t("Convert to {asset_class}", asset_class=t(ASSET_CLASSES[asset_class])), width="42rem") as dlg:
+        ui.label(
+            t(
+                "{name} has transactions or recorded balances. They stay as its history up to the month before the "
+                "conversion. From the conversion month on, it is valued from the holdings below, at their price on "
+                "the first day of that month, and takes no other transactions or balances.",
+                name=acc.name,
+            )
+        ).classes("caption -mt-2 px-1")
+        month = ui.select(month_options(first, current), value=current, label=t("Conversion month"))
+        month.props("dense outlined options-dense").classes("w-full")
+        balance_note = ui.label().classes("caption -mt-2 px-1")
+        ui.label(t("Opening Holdings")).classes("group-header pt-2")
+
+        @ui.refreshable
+        def holdings_list() -> None:
+            with ui.element("div").classes("group shrink-0 w-full"):
+                for n, row in enumerate(rows):
+                    with ui.element("div").classes("group-row flex-wrap gap-2"):
+                        name = ui.input(t("Name"), value=row.name).props("dense outlined")
+                        name.classes("flex-[2] min-w-[8rem]")
+                        symbol = ui.input(t("ISIN or symbol"), value=row.symbol, placeholder=t("Optional"))
+                        symbol.props("dense outlined").classes("flex-1 min-w-[7rem]")
+                        quantity = ui.number(t("Quantity"), value=row.quantity, min=0, precision=6)
+                        quantity.props("dense outlined inputmode=decimal").classes("flex-1 min-w-[6rem]")
+                        price = ui.number(t("Price"), value=row.price, min=0, precision=6)
+                        price.props(f'dense outlined inputmode=decimal suffix="{acc.currency}"')
+                        price.classes("flex-1 min-w-[6rem]")
+                        for el, attr in ((name, "name"), (symbol, "symbol"), (quantity, "quantity"), (price, "price")):
+                            el.on_value_change(lambda e, r=row, a=attr: keep(r, a, e.value))
+                        ui.button(icon="o_delete", on_click=lambda n=n: remove(n)).props(ROW_ACTION).classes(
+                            "text-negative self-center"
+                        ).tooltip(t("Remove"))
+
+        holdings_list()
+        ui.button(t("Add Holding"), icon="add", on_click=lambda: add()).props("flat dense no-caps").classes(  # noqa: PLW0108 - defined below
+            "text-primary self-start"
+        )
+        summary = ui.label().classes("caption px-1")
+        with ui.row().classes("w-full items-center gap-2 no-wrap pt-1"):
+            status = ui.label().classes("caption text-neg")
+            ui.space()
+            ui.button(t("Cancel"), on_click=dlg.close).props("flat").classes("text-primary")
+            save_btn = ui.button(t("Convert")).props("unelevated")
+
+    def keep(row: inv_svc.OpeningHolding, attr: str, value: object) -> None:
+        setattr(row, attr, (value or "") if attr in ("name", "symbol") else value)
+        changed()
+
+    def add() -> None:
+        rows.append(inv_svc.OpeningHolding())
+        holdings_list.refresh()
+        changed()
+
+    def remove(n: int) -> None:
+        rows.pop(n)
+        if not rows:
+            rows.append(inv_svc.OpeningHolding())
+        holdings_list.refresh()
+        changed()
+
+    def changed() -> None:
+        cur = acc.currency
+        before = inv_svc.recorded_before(ctx, acc.id, month.value or current)
+        balance_note.set_text(
+            t(
+                "Last recorded balance: {amount} at the end of {month}.",
+                amount=fmt(before.amount, cur),
+                month=months.label(before.month),
+            )
+            if before
+            else t("No balance recorded before; it starts from 0.")
+        )
+        try:
+            conv = inv_svc.check_conversion(ctx, acc.id, asset_class, month.value or "", rows)
+        except ValidationError as exc:
+            save_btn.disable()
+            status.set_text(str(exc) if any(not r.blank for r in rows) or month.value != current else "")
+            summary.set_text("")
+            return
+        save_btn.enable()
+        status.set_text("")
+        parts = [
+            t(
+                "Opening value {value}, a difference of {difference} to the last balance, booked on {date} as Capital "
+                "gains on investment.",
+                value=fmt(conv.value, cur),
+                difference=(fmt_signed(conv.difference) or fmt(0)) + f" {cur}",
+                date=i18n.date_label(conv.day),
+            )
+        ]
+        if conv.replaced:
+            parts.append(
+                tn(
+                    "The balance recorded for {month} is replaced by the value of the holdings.",
+                    "The {n} balances recorded from {month} on are replaced by the value of the holdings.",
+                    len(conv.replaced),
+                    month=months.label(conv.replaced[0]),
+                )
+            )
+        summary.set_text(" ".join(parts))
+
+    def save() -> None:
+        try:
+            inv_svc.convert_account(ctx, acc.id, asset_class, month.value or "", rows)
+        except (ValidationError, FxError) as exc:
+            error(str(exc))
+            return
+        undoable(
+            t("{name} is valued from its holdings from {month} on", name=acc.name, month=months.label(month.value))
+        )
+        dlg.close()
+        _done(on_done)
+
+    save_btn.on_click(save)
+    month.on_value_change(changed)
+    changed()
 
 
 # ------------------------------------------------------------------ the page
@@ -634,6 +841,26 @@ def _summary(ctx: Context, view: str) -> None:
                 if total.pct is not None
                 else t("Nothing put in")
             ).classes("metric-sub")
+
+
+RECLAIM_YEARS = 3  # the reclaimable withholding tax of this year and the two before
+
+
+def _reclaimable(ctx: Context) -> None:
+    """The Swiss withholding tax on CHF dividends of the last years, to claim back with the tax return."""
+    first = date.today().year - RECLAIM_YEARS + 1
+    years = {year: amount for year, amount in inv_svc.reclaimable_tax(ctx).items() if year >= first}
+    if not years:
+        return
+    with ui.column().classes("w-full gap-1"):
+        with ui.element("div").classes("group"):
+            for year, amount in years.items():
+                with ui.element("div").classes("group-row"):
+                    ui.label(t("Reclaimable withholding tax {year}", year=str(year))).classes("flex-1")
+                    ui.label(fmt(amount, "CHF")).classes("num font-medium")
+        ui.label(
+            t("Swiss withholding tax on dividends in CHF accounts. Claim it back with your tax return for that year.")
+        ).classes("caption px-1")
 
 
 def _holding_row(ctx: Context, h: Holding, cur: str, refresh: Callable[[], object]) -> Performance:
@@ -696,6 +923,7 @@ def page() -> None:
                 except FxError as exc:
                     error(str(exc))
                 ui.label(t(GAIN_NOTE)).classes("caption -mt-2 px-1")
+                _reclaimable(ctx)
             for acc in accounts:
                 with ui.column().classes("w-full gap-0"):
                     ui.label(f"{acc.name} · {acc.currency} · {t(ASSET_CLASSES[acc.asset_class])}").classes(

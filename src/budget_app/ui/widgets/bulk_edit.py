@@ -1,4 +1,4 @@
-"""The bulk edit sheet (F13): change the category, payee, account or note of several transactions at once."""
+"""The bulk edit sheet (F13): change the category, payee, account, tags or note of several transactions at once."""
 
 from __future__ import annotations
 
@@ -7,9 +7,11 @@ from collections.abc import Callable
 from nicegui import ui
 from nicegui.events import KeyEventArguments
 
+from budget_app.domain import tags as tag_codec
 from budget_app.domain.fx import FxError
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME
 from budget_app.i18n import t, tn
+from budget_app.services import aggregates
 from budget_app.services import bulk as bulk_svc
 from budget_app.services.bulk import BulkChanges, BulkEditError
 from budget_app.services.context import Context, ValidationError
@@ -20,6 +22,7 @@ from budget_app.ui.widgets.selects import (
     income_category_select,
     payee_input,
 )
+from budget_app.ui.widgets.tags import tag_select
 
 NOTE_TEXT = (bulk_svc.NOTE_REPLACE, bulk_svc.NOTE_APPEND)  # the note modes that take a text
 
@@ -46,6 +49,7 @@ class BulkEditSheet:
             self._category_fields()
             self._payee_field()
             self._account_field()
+            self._tag_fields()
             self._note_field()
             self.problems = ui.label().classes("caption text-negative whitespace-pre-line px-1")
             with ui.row().classes("w-full items-center gap-2 no-wrap pt-1"):
@@ -54,7 +58,8 @@ class BulkEditSheet:
                 ui.button(t("Cancel"), on_click=self.dlg.close).props("flat").classes("text-primary")
                 self.save_btn = ui.button(t("Save"), on_click=self._save).props("unelevated")
             ui.keyboard(on_key=self._shortcut, ignore=[])
-        for el in (self.exp_cat, self.inc_cat, self.payee, self.account, self.note_mode, self.note):
+        fields = (self.exp_cat, self.inc_cat, self.payee, self.account, self.add_tags, self.remove_tags)
+        for el in (*fields, self.note_mode, self.note):
             if el is not None:
                 el.on_value_change(self._changed)
         self._changed()
@@ -79,6 +84,15 @@ class BulkEditSheet:
                         "{n} of {total} rows are not expenditure and keep their category",
                         k,
                         total=self.n,
+                    )
+                )
+            lines = aggregates.split_lines(self.ctx)
+            if split := sum(1 for tx in expenditure if aggregates.is_split(self.ctx, tx, lines.get(tx.id, []))):
+                _hint(  # F11: the items keep their own categories
+                    tn(
+                        "{n} row is split by its items: only the rest in its own category changes",
+                        "{n} rows are split by their items: only the rest in their own category changes",
+                        split,
                     )
                 )
         if income:
@@ -163,6 +177,29 @@ class BulkEditSheet:
         if hints:
             _hint(" ".join(hints))
 
+    def _tag_fields(self) -> None:
+        """Tags to add to every row (a name typed new becomes a tag when saved) and tags to take off (F10)."""
+        rows = self.sel.taking(bulk_svc.takes_tags)
+        self.add_tags = self.remove_tags = None
+        if not rows:
+            return
+        with ui.row().classes("w-full gap-2 no-wrap max-sm:flex-wrap"):
+            self.add_tags = tag_select(self.ctx, label=t("Add Tags")).props(self._unchanged).classes("flex-1 min-w-0")
+            present = {i for tx in rows for i in tag_codec.split(tx.tags)}
+            self.remove_tags = tag_select(self.ctx, label=t("Remove Tags"), allow_new=False, only=present)
+            self.remove_tags.props(self._unchanged).classes("flex-1 min-w-0")
+            if not present:
+                self.remove_tags.disable()
+        if k := self._left_out(rows):
+            _hint(
+                tn(
+                    "{n} of {total} rows is a spread booking or booked on the Investments page and keeps its tags",
+                    "{n} of {total} rows are spread bookings or booked on the Investments page and keep their tags",
+                    k,
+                    total=self.n,
+                )
+            )
+
     def _note_field(self) -> None:
         """Replace, append to or clear the note."""
         with ui.column().classes("w-full gap-2"):
@@ -205,6 +242,8 @@ class BulkEditSheet:
             income_category=(self.inc_cat.value or None) if self.inc_cat else None,
             payee=((self.payee.value or "").strip() or None) if self.payee else None,
             account=(account.value or None) if account and account.enabled else None,
+            add_tags=list(self.add_tags.value or []) if self.add_tags else [],
+            remove_tags=list(self.remove_tags.value or []) if self.remove_tags else [],
             note_mode=mode,
             note=(self.note.value or "") if mode in NOTE_TEXT else "",
         )
@@ -212,6 +251,9 @@ class BulkEditSheet:
     # ------------------------------------------------------------------ events
     def _changed(self) -> None:
         self.note.set_visibility(self.note_mode.value in NOTE_TEXT)
+        for tags in (self.add_tags, self.remove_tags):  # "Leave unchanged" only while no tag is chosen
+            if tags is not None:
+                tags.props(remove="placeholder") if tags.value else tags.props(self._unchanged)
         changes = self.read()
         planned = bulk_svc.plan(self.ctx, self.ids, changes)
         self.save_btn.set_enabled(bool(planned.edits) and not planned.failures)
