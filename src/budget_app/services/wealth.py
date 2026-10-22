@@ -27,6 +27,7 @@ class AccountRow:
     flows: float = 0.0  # the month's recorded movements, in the account's currency
     unexplained: float | None = None  # change minus flows (F46); only with a balance recorded for this month
     fx_gain: float = 0.0  # value change from exchange-rate moves, in the view currency (decision 4)
+    valued: bool = False  # valued from its holdings this month (F21), not from a recorded balance
 
     @property
     def change(self) -> float | None:
@@ -44,10 +45,11 @@ def entry_for(ctx: Context, account_id: str, month: str) -> AccountEntry | None:
 def balance_entry(ctx: Context, account_id: str, month: str) -> AccountEntry | None:
     """Latest entry for the account in or before `month` (balances carry forward).
 
-    A securities or crypto account has no recorded entries: its balance is computed from its holdings (F21).
+    A securities or crypto account has no recorded entries: its balance is computed from its holdings (F21). One
+    converted from an account with history (decision 13) keeps its recorded balances before the conversion month.
     """
     acc = ctx.store.accounts.get(account_id)
-    if acc is not None and acc.holds_securities:
+    if acc is not None and acc.holds_in(month):
         return inv_svc.value_entry(ctx, acc, month)
     best = None
     for e in ctx.store.account_entries.all():
@@ -65,7 +67,15 @@ def upsert_entry(ctx: Context, account_id: str, month: str, amount: float | None
         raise ValidationError(t("Select a month"))
     if amount is None:
         raise ValidationError(t("Enter the amount"))
-    if acc.holds_securities:
+    if acc.holds_in(month):
+        if acc.invest_from:
+            raise ValidationError(
+                t(
+                    "{name} is valued from its holdings from {month} on; balances can be recorded for earlier months",
+                    name=acc.name,
+                    month=months.label(acc.invest_from),
+                )
+            )
         raise ValidationError(t("A securities or crypto account is valued from its holdings, not from balances"))
     rate_date = ctx.month_rate_date(month)
     amount = round(float(amount), 2)
@@ -73,17 +83,21 @@ def upsert_entry(ctx: Context, account_id: str, month: str, amount: float | None
     existing = entry_for(ctx, account_id, month)
     if existing:
         updated = replace(existing, amount=amount, currency=acc.currency, amount_chf=amount_chf, fx_date=rate_date)
-        return ctx.store.account_entries.update(updated)
-    return ctx.store.account_entries.add(
-        AccountEntry(
-            account_id=account_id,
-            month=month,
-            amount=amount,
-            currency=acc.currency,
-            amount_chf=amount_chf,
-            fx_date=rate_date,
+        saved = ctx.store.account_entries.update(updated)
+    else:
+        saved = ctx.store.account_entries.add(
+            AccountEntry(
+                account_id=account_id,
+                month=month,
+                amount=amount,
+                currency=acc.currency,
+                amount_chf=amount_chf,
+                fx_date=rate_date,
+            )
         )
-    )
+    if acc.invest_from:  # a balance before the conversion: its revaluation starts from the last one (decision 13)
+        inv_svc.book_conversion(ctx, acc.id)
+    return saved
 
 
 def first_recorded_month(ctx: Context) -> str | None:
@@ -108,13 +122,15 @@ def account_rows(ctx: Context, month: str, view_cur: str) -> list[AccountRow]:
         if entry is None:
             continue
         has = entry.month == month
+        valued = acc.holds_in(month)
         rows.append(
             AccountRow(
                 acc,
                 entry.amount,
                 ctx.convert_on(entry.amount, acc.currency, view_cur, rate_date),
                 has,
-                needs_entry=not has and abs(entry.amount) > 0.005 and not acc.holds_securities,
+                needs_entry=not has and abs(entry.amount) > 0.005 and not valued,
+                valued=valued,
             )
         )
     return rows

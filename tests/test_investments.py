@@ -473,12 +473,12 @@ def test_asset_classes_of_accounts(ctx, setup, tmp_path):
     with pytest.raises(ValidationError, match="Select an asset class"):
         acc_svc.add_account(ctx, "X", "CHF", asset_class="gold")
     wealth_svc.upsert_entry(ctx, setup["chf"].id, "2026-08", 100)
-    with pytest.raises(ValidationError, match="Only an account without transactions or balances"):
+    with pytest.raises(ValidationError, match="through a conversion"):
         acc_svc.edit_account(ctx, setup["chf"].id, "Bank", "CHF", ASSET_SECURITIES)
     acc_svc.edit_account(ctx, setup["chf"].id, "Bank", "CHF", ASSET_PILLAR3A)  # between valued classes: fine
     fresh = acc_svc.edit_account(ctx, setup["eur"].id, "Euro account", "EUR", ASSET_SECURITIES)
     inv_svc.add_holding(ctx, fresh.id, "Airbus")
-    with pytest.raises(ValidationError, match="it stays a securities or crypto account"):
+    with pytest.raises(ValidationError, match="still has holdings, with their trades and prices"):
         acc_svc.edit_account(ctx, fresh.id, "Euro account", "EUR", ASSET_PILLAR3A)
     acc_svc.edit_account(ctx, fresh.id, "Euros", "EUR", ASSET_CRYPTO)  # one holdings class to the other
     assert acc_svc.edit_account(ctx, fresh.id, "Euros", "EUR").asset_class == ASSET_CRYPTO  # None keeps it

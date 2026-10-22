@@ -64,6 +64,9 @@ TRADE_BUY = "buy"
 TRADE_SELL = "sell"
 TRADE_DIVIDEND = "dividend"
 TRADE_KINDS = {TRADE_BUY: N_("Buy"), TRADE_SELL: N_("Sell"), TRADE_DIVIDEND: N_("Dividend")}
+# the quantity and price a holding starts with when an account with history becomes a securities or crypto
+# account (decision 13); booked by the conversion, not chosen in the trade sheet
+TRADE_OPENING = "opening"
 
 
 @dataclass
@@ -73,12 +76,20 @@ class Account:
     kind: str = ACCOUNT_REGULAR
     created: dt.date = field(default_factory=dt.date.today)
     asset_class: str = ASSET_CASH  # F21; files written before it have no such column: cash
+    # the month (YYYY-MM) an account with history became a securities or crypto account (decision 13); empty for
+    # accounts that were one from the start, and in files written before it
+    invest_from: str = ""
     id: str = field(default_factory=new_id)
 
     @property
     def holds_securities(self) -> bool:
         """Valued from its holdings (F21): securities and crypto accounts."""
         return self.asset_class in HOLDING_CLASSES
+
+    def holds_in(self, month: str) -> bool:
+        """Valued from its holdings at the end of `month`: a securities or crypto account, from the month it was
+        converted on (before it, its recorded balances count)."""
+        return self.holds_securities and (not self.invest_from or month >= self.invest_from)
 
 
 @dataclass
@@ -274,7 +285,7 @@ class Trade:
 
     holding_id: str
     date: dt.date
-    kind: str  # TRADE_BUY, TRADE_SELL or TRADE_DIVIDEND
+    kind: str  # TRADE_BUY, TRADE_SELL, TRADE_DIVIDEND or TRADE_OPENING
     quantity: float = 0.0  # up to 6 decimals; 0 for a dividend
     price: float = 0.0  # per unit, up to 6 decimals; 0 for a dividend
     fee: float = 0.0

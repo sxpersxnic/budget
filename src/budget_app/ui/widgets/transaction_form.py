@@ -414,6 +414,7 @@ class TransactionForm:
     # ------------------------------------------------------------- dependents
     def _refresh_options(self) -> None:
         kind, cur = self.type.value, self.currency.value
+        conv = self.editing is not None  # a converted account keeps its transactions from before (decision 13)
         self.exp_box.set_visibility(kind == TX_EXPENDITURE)
         self.inc_box.set_visibility(kind == TX_INCOME)
         self.move_box.set_visibility(kind in (TX_TRANSFER, TX_EXCHANGE))
@@ -430,8 +431,8 @@ class TransactionForm:
         self.inc_category.set_visibility(not self.inc_adv.value)
         set_options(self.inc_category, income_category_options(self.ctx))
 
-        set_options(self.exp_from, self._recent_first(account_options(self.ctx, currency=cur)))
-        set_options(self.inc_to, self._recent_first(account_options(self.ctx, currency=cur)))
+        set_options(self.exp_from, self._recent_first(account_options(self.ctx, converted=conv, currency=cur)))
+        set_options(self.inc_to, self._recent_first(account_options(self.ctx, converted=conv, currency=cur)))
 
         adv_opts = {AUTO_ADVANCE: t("Advance payments (default)")} | dict(
             account_options(self.ctx, ACCOUNT_ADVANCE, cur).items()
@@ -468,7 +469,7 @@ class TransactionForm:
             set_options(self.open_items, item_opts)
 
         if kind == TX_REVALUATION:
-            set_options(self.reval_account, self._recent_first(account_options(self.ctx)))
+            set_options(self.reval_account, self._recent_first(account_options(self.ctx, converted=conv)))
             acc = self.ctx.store.accounts.get(self.reval_account.value) if self.reval_account.value else None
             if acc and self.currency.value != acc.currency:
                 self.currency.set_value(acc.currency)
@@ -476,21 +477,23 @@ class TransactionForm:
             for el in (self.reval_change, self.reval_old, self.reval_new):
                 el.props(suffix)
         if kind == TX_EXCHANGE:
-            set_options(self.move_from, self._recent_first(account_options(self.ctx)))
+            set_options(self.move_from, self._recent_first(account_options(self.ctx, converted=conv)))
             src = self.ctx.store.accounts.get(self.move_from.value) if self.move_from.value else None
             if src and self.currency.value != src.currency:
                 self.currency.set_value(src.currency)
             set_options(
                 self.move_to,
-                self._recent_first(account_options(self.ctx, exclude_currency=src.currency if src else None)),
+                self._recent_first(
+                    account_options(self.ctx, converted=conv, exclude_currency=src.currency if src else None)
+                ),
             )
             self.currency.disable()
             dst = self.ctx.store.accounts.get(self.move_to.value) if self.move_to.value else None
             self.to_amount.props(f'suffix="{dst.currency}"' if dst else "remove=suffix")
         else:
             self.currency.enable()
-            set_options(self.move_from, self._recent_first(account_options(self.ctx, currency=cur)))
-            set_options(self.move_to, self._recent_first(account_options(self.ctx, currency=cur)))
+            set_options(self.move_from, self._recent_first(account_options(self.ctx, converted=conv, currency=cur)))
+            set_options(self.move_to, self._recent_first(account_options(self.ctx, converted=conv, currency=cur)))
 
     def _account_field(self, kind: str) -> ui.select:
         return self.exp_from if kind == TX_EXPENDITURE else self.inc_to

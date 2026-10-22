@@ -14,6 +14,11 @@ which is quantity × (new price − previous price) up to the cent. Computing it
 from the price difference keeps the cents exact however many events there are.
 
 A dividend is entered gross with its withholding tax (decision 12): what counts as earned is the net.
+
+An opening holding (decision 13: an account with history became a securities or crypto account) starts the
+holding with its quantity and price, before anything else of its day. It moves its value into the holding like
+a buy, without any money leaving another account: it was already in the account. Its value counts as money put
+in, so the gain is measured from the conversion on.
 """
 
 from __future__ import annotations
@@ -23,7 +28,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
-from budget_app.domain.models import TRADE_BUY, TRADE_DIVIDEND, TRADE_SELL, Price, Trade
+from budget_app.domain.models import TRADE_BUY, TRADE_DIVIDEND, TRADE_OPENING, TRADE_SELL, Price, Trade
 
 PRICE = "price"  # the kind of an event that is a price typed in or pasted
 QTY_EPS = 1e-7  # quantities have up to 6 decimals
@@ -49,7 +54,7 @@ class Event:
     """A trade or a price of a holding, in the form the replay needs."""
 
     date: date
-    kind: str  # TRADE_BUY, TRADE_SELL, TRADE_DIVIDEND or PRICE
+    kind: str  # TRADE_BUY, TRADE_SELL, TRADE_DIVIDEND, TRADE_OPENING or PRICE
     id: str
     quantity: float = 0.0
     price: float = 0.0
@@ -60,16 +65,17 @@ class Event:
 
     @property
     def sets_price(self) -> bool:
-        return self.kind in (TRADE_BUY, TRADE_SELL, PRICE)
+        return self.kind in (TRADE_BUY, TRADE_SELL, TRADE_OPENING, PRICE)
 
     @property
     def change(self) -> float:
-        """Quantity bought (+) or sold (−)."""
-        return {TRADE_BUY: self.quantity, TRADE_SELL: -self.quantity}.get(self.kind, 0.0)
+        """Quantity bought or opened with (+) or sold (−)."""
+        return {TRADE_BUY: self.quantity, TRADE_OPENING: self.quantity, TRADE_SELL: -self.quantity}.get(self.kind, 0.0)
 
     @property
     def sort_key(self) -> tuple:
-        return (self.date, 1 if self.kind == PRICE else 0, self.seq, self.id)
+        rank = 0 if self.kind == TRADE_OPENING else 2 if self.kind == PRICE else 1  # the opening first, prices last
+        return (self.date, rank, self.seq, self.id)
 
 
 def events(trades: Iterable[Trade], prices: Iterable[Price]) -> list[Event]:
@@ -158,6 +164,7 @@ class Performance:
     """
 
     value: float = 0.0
+    opening: float = 0.0  # the value of the opening holding (decision 13)
     bought: float = 0.0
     sold: float = 0.0
     dividends: float = 0.0  # net: gross − withholding tax
@@ -172,8 +179,8 @@ class Performance:
 
     @property
     def invested(self) -> float:
-        """Money put in: buys minus sales."""
-        return self.bought - self.sold
+        """Money put in: the opening value, plus buys, minus sales."""
+        return self.opening + self.bought - self.sold
 
     @property
     def unrealized(self) -> float:
@@ -192,6 +199,7 @@ class Performance:
         """The money amounts times `factor` (another currency); quantity and price drop out."""
         return Performance(
             value=self.value * factor,
+            opening=self.opening * factor,
             bought=self.bought * factor,
             sold=self.sold * factor,
             dividends=self.dividends * factor,
@@ -205,6 +213,7 @@ class Performance:
     def __add__(self, other: Performance) -> Performance:
         return Performance(
             value=self.value + other.value,
+            opening=self.opening + other.opening,
             bought=self.bought + other.bought,
             sold=self.sold + other.sold,
             dividends=self.dividends + other.dividends,
@@ -225,6 +234,9 @@ def performance(steps: list[Step], on: date | None = None) -> Performance:
             break
         if e.kind == TRADE_BUY:
             perf.bought += s.moved
+            perf.cost += s.moved
+        elif e.kind == TRADE_OPENING:
+            perf.opening += s.moved
             perf.cost += s.moved
         elif e.kind == TRADE_SELL:
             proceeds = -s.moved
@@ -249,6 +261,12 @@ def fmt_quantity(value: float) -> str:
     """12, 0.5, 1'250.125, 0.000125: up to 6 decimals, no trailing zeros, Swiss thousands."""
     text = f"{value:,.6f}".rstrip("0").rstrip(".")
     return text.replace(",", "'").replace("-", "−")
+
+
+def fmt_money(value: float, currency: str) -> str:
+    """1'234.50 CHF (in descriptions of booked rows; the pages format with layout.fmt)."""
+    text = f"{round(value, 2) + 0.0:,.2f}".replace(",", "'").replace("-", "−")
+    return f"{text} {currency}"
 
 
 def fmt_price(value: float) -> str:

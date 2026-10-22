@@ -20,6 +20,7 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import error, fmt, frame, month_options, save_file, sheet, sheet_buttons, success, undoable
+from budget_app.ui.pages.investments import open_conversion_sheet
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select
 
@@ -58,13 +59,33 @@ def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
             class_note = ui.label().classes("caption -mt-2")
 
             def explain() -> None:
-                class_note.set_text(
-                    t("Valued from its holdings on the Investments page; no balances to record.")
-                    if asset_class.value in HOLDING_CLASSES
-                    else t("Valued from the balances you record at the end of each month.")
-                )
+                fresh = ctx.store.accounts.get(acc.id) if acc else None
+                if fresh is not None and fresh.invest_from and asset_class.value in HOLDING_CLASSES:
+                    text = t(
+                        "Valued from its holdings from {month} on; the balances recorded before stay as its history.",
+                        month=months.label(fresh.invest_from),
+                    )
+                elif asset_class.value in HOLDING_CLASSES:
+                    text = t("Valued from its holdings on the Investments page; no balances to record.")
+                else:
+                    text = t("Valued from the balances you record at the end of each month.")
+                class_note.set_text(text)
 
-            asset_class.on_value_change(explain)
+            def class_chosen() -> None:
+                chosen = asset_class.value
+                if acc is not None and inv_svc.needs_conversion(ctx, acc.id, chosen):
+                    # an account with history becomes a securities or crypto account through a conversion (decision 13)
+                    fresh = ctx.store.accounts.get(acc.id)
+                    asset_class.value = fresh.asset_class if fresh else ASSET_CASH  # until the conversion is saved
+
+                    def converted() -> None:  # the conversion saved the class: this sheet is done
+                        dlg.close()
+                        refresh()
+
+                    open_conversion_sheet(ctx, acc.id, chosen, converted)
+                explain()
+
+            asset_class.on_value_change(class_chosen)
             explain()
 
         def save():

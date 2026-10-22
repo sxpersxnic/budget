@@ -138,7 +138,7 @@ def month_report(ctx: Context, month: str, view_cur: str, today: date | None = N
         start_rate, end_rate = ctx.month_rate_date(prev), ctx.month_rate_date(month)
         for r in wealth_svc.account_rows(ctx, month, view_cur):
             before = wealth_svc.balance_entry(ctx, r.account.id, prev)
-            r.opening = before.amount if before else (0.0 if r.account.holds_securities else None)
+            r.opening = before.amount if before else (0.0 if r.valued else None)
             moves = flows.get(r.account.id, [])
             r.flows = sum(a for a, _ in moves)
             if r.has_entry and r.opening is not None:

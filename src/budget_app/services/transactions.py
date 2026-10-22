@@ -18,6 +18,7 @@ from budget_app.domain.models import (
     TX_REVALUATION,
     TX_TRANSFER,
     TX_TYPES,
+    Account,
     Transaction,
 )
 from budget_app.i18n import N_, t
@@ -144,11 +145,17 @@ INVESTMENT_ACCOUNT = N_("Securities and crypto accounts change through trades an
 BOOKED_BY_INVESTMENTS = N_("This transaction was booked on the Investments page. Change its trade or price there.")
 
 
-def _account(ctx: Context, account_id: str, role: str, kind: str, currency: str | None):
+def _valued_on(acc: Account, day: date | None) -> bool:
+    """Whether the account takes no transactions on `day`: it is valued from its holdings then (F21). A converted
+    account (decision 13) still takes them before its conversion month."""
+    return acc.holds_securities and (day is None or acc.holds_in(f"{day:%Y-%m}"))
+
+
+def _account(ctx: Context, day: date | None, account_id: str, role: str, kind: str, currency: str | None):
     acc = ctx.store.accounts.get(account_id) if account_id else None
     if acc is None or acc.kind != kind:
         raise ValidationError(t(_SELECT_ACCOUNT[role]))
-    if acc.holds_securities:
+    if _valued_on(acc, day):
         raise ValidationError(t(INVESTMENT_ACCOUNT))
     if currency and acc.currency != currency:
         raise ValidationError(t(_ACCOUNT_CURRENCY[role], currency=currency))
@@ -177,20 +184,20 @@ def validate(ctx: Context, inp: TransactionInput, editing_id: str = "") -> None:
     if inp.type == TX_EXPENDITURE:
         if inp.category != TAX and get_coicop().get(inp.category) is None:
             raise ValidationError(t("Select an expenditure category"))
-        _account(ctx, inp.from_account, FROM, ACCOUNT_REGULAR, inp.currency)
+        _account(ctx, inp.date, inp.from_account, FROM, ACCOUNT_REGULAR, inp.currency)
         if inp.is_advance:
             share = advance_share(inp)
             if share <= 0 or share > inp.amount + EPS:
                 raise ValidationError(t("The advance share must be greater than 0 and at most the amount"))
             if inp.advance_account:
-                _account(ctx, inp.advance_account, ADVANCE, ACCOUNT_ADVANCE, inp.currency)
+                _account(ctx, inp.date, inp.advance_account, ADVANCE, ACCOUNT_ADVANCE, inp.currency)
             if not inp.debtor.strip():
                 raise ValidationError(t("Enter the debtor"))
 
     elif inp.type == TX_INCOME:
-        _account(ctx, inp.to_account, TO, ACCOUNT_REGULAR, inp.currency)
+        _account(ctx, inp.date, inp.to_account, TO, ACCOUNT_REGULAR, inp.currency)
         if inp.is_advance:
-            _account(ctx, inp.advance_account, ADVANCE, ACCOUNT_ADVANCE, inp.currency)
+            _account(ctx, inp.date, inp.advance_account, ADVANCE, ACCOUNT_ADVANCE, inp.currency)
             adv = ctx.store.transactions.get(inp.settles_id) if inp.settles_id else None
             if adv is None or adv.advance_account != inp.advance_account:
                 raise ValidationError(t("Select the outstanding advance payment that is repaid"))
@@ -206,14 +213,14 @@ def validate(ctx: Context, inp: TransactionInput, editing_id: str = "") -> None:
             raise ValidationError(t("Select an income category"))
 
     elif inp.type == TX_TRANSFER:
-        _account(ctx, inp.from_account, FROM, ACCOUNT_REGULAR, inp.currency)
-        _account(ctx, inp.to_account, TO, ACCOUNT_REGULAR, inp.currency)
+        _account(ctx, inp.date, inp.from_account, FROM, ACCOUNT_REGULAR, inp.currency)
+        _account(ctx, inp.date, inp.to_account, TO, ACCOUNT_REGULAR, inp.currency)
         if inp.from_account == inp.to_account:
             raise ValidationError(t("From and To account must differ"))
 
     elif inp.type == TX_EXCHANGE:
-        src = _account(ctx, inp.from_account, FROM, ACCOUNT_REGULAR, None)
-        dst = _account(ctx, inp.to_account, TO, ACCOUNT_REGULAR, None)
+        src = _account(ctx, inp.date, inp.from_account, FROM, ACCOUNT_REGULAR, None)
+        dst = _account(ctx, inp.date, inp.to_account, TO, ACCOUNT_REGULAR, None)
         if src.currency == dst.currency:
             raise ValidationError(t("For a currency exchange the accounts need different currencies"))
         if inp.currency != src.currency:
@@ -226,7 +233,7 @@ def _validate_revaluation(ctx: Context, inp: TransactionInput) -> None:
     acc = ctx.store.accounts.get(inp.reval_account) if inp.reval_account else None
     if acc is None or acc.kind != ACCOUNT_REGULAR:
         raise ValidationError(t("Select an account"))
-    if acc.holds_securities:
+    if _valued_on(acc, inp.date):
         raise ValidationError(t(INVESTMENT_ACCOUNT))
     if inp.currency != acc.currency:
         raise ValidationError(t("A revaluation is entered in the currency of its account"))
