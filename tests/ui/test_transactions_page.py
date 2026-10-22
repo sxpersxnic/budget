@@ -261,13 +261,18 @@ async def test_delete_without_a_selection_does_nothing(user: User, ctx, demo, sh
     assert ctx.store.transactions.get(shop["receipt"].id) is not None
 
 
-async def test_edit_needs_exactly_one_selected_row(user: User, ctx, demo, shop) -> None:
+async def test_edit_opens_the_editor_for_one_row_and_the_bulk_sheet_for_several(user: User, ctx, demo, shop) -> None:
     await user.open("/transactions")
     await select(user, shop["receipt"].id, shop["exchange"].id)
     click(user, button(user, "Edit"))
-    await settle()
+    await user.should_see("Edit 2 Transactions")  # F13
     await user.should_not_see("Edit Transaction")
-    assert notified(user, "Select exactly one transaction to edit")
+    click(user, button(user, "Cancel"))
+
+    user.javascript_rules[SELECTED] = lambda _: []  # deselected in the meantime: nothing opens
+    click(user, button(user, "Edit"))
+    await settle()
+    await user.should_not_see("Edit 0 Transactions")
 
     await select(user, shop["receipt"].id)
     click(user, button(user, "Edit"))

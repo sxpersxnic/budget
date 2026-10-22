@@ -104,7 +104,13 @@ def seed(ctx: Context) -> None:
             flows[m][inp.reval_account] += amount
 
     def spend(
-        d: date, amount: float, code: str, account: str = bank.id, currency: str = "CHF", comment: str = ""
+        d: date,
+        amount: float,
+        code: str,
+        account: str = bank.id,
+        currency: str = "CHF",
+        comment: str = "",
+        payee: str = "",
     ) -> None:
         book(
             TransactionInput(
@@ -115,6 +121,7 @@ def seed(ctx: Context) -> None:
                 category=code,
                 from_account=account,
                 comment=comment,
+                payee=payee,
             )
         )
 
@@ -125,10 +132,18 @@ def seed(ctx: Context) -> None:
         def day(n: int, y: int = y, mo: int = mo) -> date:
             return date(y, mo, n)
 
-        spend(day(1), 1900, "04.1", comment="Rent")
-        spend(day(2), 85, "07.3", comment="Monthly pass")
-        spend(day(15), 49.90, "08.3", comment="Mobile")
-        spend(day(12), rng.uniform(40, 90), "09.4", account=euro.id, currency="EUR", comment="Streaming and cinema")
+        spend(day(1), 1900, "04.1", comment="Rent", payee="Immo Muster AG")
+        spend(day(2), 85, "07.3", comment="Monthly pass", payee="ZVV")
+        spend(day(15), 49.90, "08.3", comment="Mobile", payee="Swisscom")
+        spend(
+            day(12),
+            rng.uniform(40, 90),
+            "09.4",
+            account=euro.id,
+            currency="EUR",
+            comment="Streaming and cinema",
+            payee=rng.choice(["Netflix", "Kino Arthouse"]),
+        )
         for n in (3, 10, 17, 24):
             if n == 3:  # one receipt a month with its items
                 basket = [ItemInput(name, rng.randint(1, 3), price) for name, price in rng.sample(GROCERIES, 4)]
@@ -141,13 +156,14 @@ def seed(ctx: Context) -> None:
                         category="01.1",
                         from_account=bank.id,
                         comment="Migros",
+                        payee="Migros",
                     ),
                     basket,
                 )
             else:
-                spend(day(n), rng.uniform(70, 160), "01.1", comment="Coop")
+                spend(day(n), rng.uniform(70, 160), "01.1", comment="Coop", payee="Coop")
         for n in rng.sample(range(5, 28), 2):
-            spend(day(n), rng.uniform(25, 90), "11.1")
+            spend(day(n), rng.uniform(25, 90), "11.1", payee=rng.choice(["Restaurant Hirschen", "tibits", "Holy Cow"]))
         if mo in (3, 9):
             spend(day(8), rng.uniform(120, 260), "06.2", comment="Doctor")
         if mo == 5:
@@ -155,7 +171,13 @@ def seed(ctx: Context) -> None:
 
         book(
             TransactionInput(
-                date=day(25), type=TX_INCOME, amount=6200, currency="CHF", category=salary.id, to_account=bank.id
+                date=day(25),
+                type=TX_INCOME,
+                amount=6200,
+                currency="CHF",
+                category=salary.id,
+                to_account=bank.id,
+                payee="Muster AG",
             )
         )
         if mo % 3 == 0:

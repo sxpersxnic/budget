@@ -10,6 +10,7 @@ No column mapping is needed: dates, signed amounts, currency and the bank's refe
   becomes one row per detail.
 - `import_ref` is `camt:<IBAN>:<bank reference>` (`AcctSvcrRef`, else `NtryRef`, else a content
   hash), so re-importing the same or an overlapping statement skips exact duplicates.
+- The payee (F09) is read from the counterparty's name (`RltdPties`), else from the entry's text.
 - The account chosen for a statement's IBAN is remembered in `import_accounts.json`.
 
 The XML is parsed with the standard library after a pre-scan that refuses any document type
@@ -240,12 +241,14 @@ def _entry_rows(ntry: ET.Element, currency: str) -> list[ImportRow]:
             info,
         )
         row = _row(booked, amount, sign, ccy, currency, text)
+        row.counterparty = _counterparty(tx, sign) if tx is not None else ""
         row.import_ref = ref or _hash(row, ccy)
         return [row]
     rows = []
     for i, (tx, tx_amount, tx_sign) in enumerate(parts, start=1):
         text = _join(_counterparty(tx, tx_sign), _remittance(tx)) or _join(_text(tx, "AddtlTxInf"), info)
         row = _row(booked, tx_amount, tx_sign, ccy, currency, text)
+        row.counterparty = _counterparty(tx, tx_sign)
         part_ref = _text(tx, "Refs/AcctSvcrRef") or str(i)
         row.import_ref = f"{ref}/{part_ref}" if ref else _hash(row, ccy)
         rows.append(row)

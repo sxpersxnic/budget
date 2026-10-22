@@ -10,6 +10,7 @@ from budget_app.domain.everyday import CategoryOption, category_options
 from budget_app.domain.models import ACCOUNT_REGULAR
 from budget_app.i18n import t
 from budget_app.services import accounts as acc_svc
+from budget_app.services import payees as payee_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context
 
@@ -48,6 +49,17 @@ class CategorySelect(ui.select, component=RESOURCES_DIR / "category_select.js"):
         super()._update_options()
         details = getattr(self, "_details", {})
         self._props["options"] = [opt | details.get(self._values[opt["value"]], {}) for opt in self._props["options"]]
+
+
+class PayeeInput(ui.input, component=RESOURCES_DIR / "payee_input.js"):
+    """The payee field (F09): free text, with the known payees as suggestions below it (`autocomplete`, in
+    order). Its value is the text typed or the suggestion picked, so a new payee is simply typed."""
+
+
+def payee_input(ctx: Context, value: str = "", on_change=None) -> PayeeInput:
+    """A payee field suggesting the recently used payees first, then the others by name."""
+    inp = PayeeInput(t("Payee"), value=value or "", autocomplete=payee_svc.names(ctx), on_change=on_change)
+    return inp.props("dense outlined clearable options-dense").classes("w-full")
 
 
 def expenditure_category_select(

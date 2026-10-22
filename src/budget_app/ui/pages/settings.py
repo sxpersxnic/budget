@@ -184,6 +184,15 @@ def _income_group(ctx: Context) -> None:
     with ui.column().classes("w-full gap-0"):
         ui.label(t("Income Categories")).classes("group-header")
         body()
+        with ui.element("div").classes("group mt-3"), ui.element("div").classes("group-row"):
+            with ui.column().classes("gap-0 flex-1 min-w-0"):
+                ui.label(t("Categorization Rules"))
+                ui.label(t("Which category new and imported transactions are given for a payee or bank text.")).classes(
+                    "caption"
+                )
+            ui.button(t("Rules…"), on_click=lambda: ui.navigate.to("/rules")).props("flat dense no-caps").classes(
+                "text-primary"
+            )
 
 
 def _restore(ctx: Context, files: dict[str, bytes], source: str) -> None:

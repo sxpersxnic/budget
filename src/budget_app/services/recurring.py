@@ -21,6 +21,7 @@ from budget_app.domain.coicop import get_coicop
 from budget_app.domain.fx import FxError
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, TX_TRANSFER, Recurring, Transaction
 from budget_app.i18n import N_, t
+from budget_app.services import payees as payee_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
@@ -44,6 +45,7 @@ class RecurringInput:
     recur_months: int = 1
     end: date | None = None  # None: no end
     auto: bool = False
+    payee: str = ""  # expenditure and income (F09)
 
 
 @dataclass
@@ -108,6 +110,7 @@ def _template(inp: RecurringInput) -> TransactionInput:
         from_account=inp.from_account if inp.type != TX_INCOME else "",
         to_account=inp.to_account if inp.type != TX_EXPENDITURE else "",
         comment=inp.comment,
+        payee=inp.payee if inp.type in payee_svc.PAYEE_TYPES else "",
     )
 
 
@@ -136,6 +139,7 @@ def to_input(series: Recurring) -> RecurringInput:
         recur_months=series.recur_months,
         end=series.end_date,
         auto=series.auto,
+        payee=series.payee,
     )
 
 
@@ -151,6 +155,7 @@ def from_transaction(tx: Transaction, recur_months: int = 1) -> RecurringInput:
         comment=tx.comment,
         start=tx.date,
         recur_months=recur_months,
+        payee=tx.payee,
     )
 
 
@@ -183,6 +188,8 @@ def save(ctx: Context, inp: RecurringInput, editing_id: str = "", first_booked: 
     linked to the series, and the occurrences up to its date count as handled.
     """
     validate(ctx, inp)
+    if editing_id and ctx.store.recurring.get(editing_id) is None:
+        raise ValidationError(t("Recurring transaction not found"))
     tpl = _template(inp)
     start = inp.start or date.today()  # validated above
     series = Recurring(
@@ -198,10 +205,9 @@ def save(ctx: Context, inp: RecurringInput, editing_id: str = "", first_booked: 
         recur_months=inp.recur_months,
         end=inp.end.isoformat() if inp.end else "",
         auto=inp.auto,
+        payee=payee_svc.ensure(ctx, tpl.payee),
     )
     if editing_id:
-        if ctx.store.recurring.get(editing_id) is None:
-            raise ValidationError(t("Recurring transaction not found"))
         series.id = editing_id
         return ctx.store.recurring.update(series)
     if first_booked:
@@ -225,12 +231,14 @@ def series(ctx: Context) -> list[Recurring]:
 
 
 def title(ctx: Context, series: Recurring) -> str:
-    """What a series is about: its category, or for a transfer its accounts."""
+    """What a series is about: its payee and category, or for a transfer its accounts."""
     if series.type == TX_EXPENDITURE:
-        return get_coicop().label(series.category)
+        label = get_coicop().label(series.category)
+        return f"{series.payee} · {label}" if series.payee else label
     if series.type == TX_INCOME:
         cat = ctx.store.income_categories.get(series.category)
-        return cat.name if cat else ""
+        label = cat.name if cat else ""
+        return f"{series.payee} · {label}" if series.payee else label
     names = {a.id: a.name for a in ctx.store.accounts.all()}
     return f"{names.get(series.from_account, '')} → {names.get(series.to_account, '')}"
 

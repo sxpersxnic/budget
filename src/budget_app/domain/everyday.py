@@ -74,6 +74,17 @@ def _all_options(lang: str) -> tuple[CategoryOption, ...]:
     return tuple(_option(cat, lang) for cat in get_coicop().categories.values() if cat.code != ADV)
 
 
+@cache
+def _by_code(lang: str) -> dict[str, CategoryOption]:
+    return {o.code: o for o in _all_options(lang)}
+
+
+def label(code: str) -> str:
+    """The picker's label of one category in the interface language ("Groceries · 01.1"); `code` when unknown."""
+    option = _by_code(i18n.language()).get(code)
+    return option.label if option else code
+
+
 def category_options(recent: Iterable[str] = ()) -> list[CategoryOption]:
     """The picker's options in the interface language: the `recent` codes first, in their order, then the rest."""
     options = _all_options(i18n.language())

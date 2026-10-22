@@ -34,6 +34,7 @@ from budget_app.ui.widgets.selects import (
     expenditure_category_select,
     income_category_options,
     income_category_select,
+    payee_input,
     set_options,
 )
 
@@ -67,6 +68,7 @@ def open_recurring_sheet(
             cur = currency_select(ctx, init.currency)
         exp_cat = expenditure_category_select(init.category if init.type == TX_EXPENDITURE else None)
         inc_cat = income_category_select(ctx, init.category if init.type == TX_INCOME else None)
+        payee = payee_input(ctx, init.payee)
         with ui.row().classes("w-full gap-2 no-wrap max-sm:flex-wrap"):
             from_acc = _account_select(t("From Account"), init.from_account)
             to_acc = _account_select(t("To Account"), init.to_account)
@@ -112,12 +114,14 @@ def open_recurring_sheet(
             recur_months=int(recur.value or 1),
             end=parse_date(end.value),
             auto=bool(auto.value),
+            payee=(payee.value or "") if kind in (TX_EXPENDITURE, TX_INCOME) else "",
         )
 
     def changed() -> None:
         kind = typ.value
         exp_cat.set_visibility(kind == TX_EXPENDITURE)
         inc_cat.set_visibility(kind == TX_INCOME)
+        payee.set_visibility(kind in (TX_EXPENDITURE, TX_INCOME))
         from_acc.set_visibility(kind != TX_INCOME)
         to_acc.set_visibility(kind != TX_EXPENDITURE)
         set_options(inc_cat, income_category_options(ctx))

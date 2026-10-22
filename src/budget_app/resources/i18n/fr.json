@@ -6,8 +6,14 @@
  "= {amount} (ECB rate of {date})": "= {amount} (taux BCE du {date})",
  "A gain of {amount}": "Un gain de {amount}",
  "A loss of {amount}": "Une perte de {amount}",
+ "A payee called “{name}” already exists. Merge the two instead.": "Un bénéficiaire «{name}» existe déjà. Fusionnez-les plutôt.",
  "A revaluation is entered in the currency of its account": "Une réévaluation se saisit dans la monnaie de son compte",
+ "A rule for “{match}” already exists": "Une règle pour «{match}» existe déjà",
+ "A rule for “{match}” already exists ({category}). Saving replaces it.": "Une règle pour «{match}» existe déjà ({category}). L’enregistrement la remplace.",
+ "A rule is for expenditure or income": "Une règle s’applique aux dépenses ou aux revenus",
+ "A rule suggests its category for new and imported transactions whose payee or bank text contains its text. The longest text wins. Create one with “Always Categorize Like This…” on a transaction.": "Une règle propose sa catégorie pour les transactions nouvelles et importées dont le bénéficiaire ou le texte bancaire contient son texte. Le texte le plus long l’emporte. Créez-en une avec «Toujours catégoriser ainsi…» sur une transaction.",
  "Account": "Compte",
+ "Account no longer exists": "Le compte n’existe plus",
  "Account not found": "Compte introuvable",
  "Account remembered from the last import of this IBAN.": "Compte repris de la dernière importation de cet IBAN.",
  "Account transfer": "Virement entre comptes",
@@ -23,6 +29,7 @@
  "Add Item": "Ajouter un article",
  "Add Recurring Transaction": "Ajouter une transaction récurrente",
  "Add Recurring Transaction…": "Ajouter une transaction récurrente…",
+ "Add Rule…": "Ajouter une règle…",
  "Add Transaction": "Ajouter une transaction",
  "Add a budget entry": "Ajouter un poste budgétaire",
  "Add an account": "Ajouter un compte",
@@ -42,12 +49,15 @@
  "All accounts, month end": "Tous les comptes, fin de mois",
  "All records as one JSON file, for other programs. It can’t be restored.": "Toutes les données dans un fichier JSON, pour d’autres programmes. Il ne peut pas être restauré.",
  "All records in one ZIP file. Keep it somewhere safe; it can be restored here.": "Toutes les données dans un fichier ZIP. À conserver en lieu sûr ; il peut être restauré ici.",
+ "All time, {currency}": "Depuis le début, {currency}",
  "Already imported": "Déjà importée",
  "Already recorded. Saving replaces it.": "Déjà saisi. L’enregistrement remplace la valeur.",
  "Also change the {n} later month of this series": [
   "Modifier aussi {n} mois ultérieur de cette série",
   "Modifier aussi les {n} mois ultérieurs de cette série"
  ],
+ "Always Categorize Like This": "Toujours catégoriser ainsi",
+ "Always Categorize Like This…": "Toujours catégoriser ainsi…",
  "Amount": "Montant",
  "Amount ({currency})": "Montant ({currency})",
  "Amount Received": "Montant reçu",
@@ -59,6 +69,7 @@
  "Amounts in {currency} · month not yet complete (budget view)": "Montants en {currency} · mois pas encore terminé (vue budgétaire)",
  "An account '{name}' in {currency} already exists": "Un compte «{name}» en {currency} existe déjà",
  "Appears once balances are recorded for this and the previous month.": "Apparaît dès que les soldes de ce mois et du mois précédent sont saisis.",
+ "Append": "Ajouter",
  "Apply": "Appliquer",
  "Apply exchange rates": "Appliquer les taux de change",
  "Automatic Backups": "Sauvegardes automatiques",
@@ -105,7 +116,10 @@
  "Capital gains on investment": "Gains en capital sur placements",
  "Categories": "Catégories",
  "Categories that are in use can’t be deleted.": "Les catégories utilisées ne peuvent pas être supprimées.",
+ "Categorization Rules": "Règles de catégorisation",
+ "Categorization rule": "Règle de catégorisation",
  "Category": "Catégorie",
+ "Category no longer exists": "La catégorie n’existe plus",
  "Change": "Variation",
  "Change History": "Historique des modifications",
  "Change a budget entry": "Modifier un poste budgétaire",
@@ -115,17 +129,31 @@
  "Change per Account": "Variation par compte",
  "Change the budget": "Modifier le budget",
  "Change the planning horizon": "Modifier l’horizon de planification",
+ "Changed {n} transaction": [
+  "{n} transaction modifiée",
+  "{n} transactions modifiées"
+ ],
  "Changes apply from the next occurrence on. Transactions already booked stay as they are.": "Les modifications s’appliquent à partir de la prochaine échéance. Les transactions déjà comptabilisées restent inchangées.",
  "Changes saved": "Modifications enregistrées",
+ "Changes {n} transaction": [
+  "Modifie {n} transaction",
+  "Modifie {n} transactions"
+ ],
  "Changing Until or Repeat replans this budget from {month} on.": "Modifier «Jusqu’à» ou «Répétition» replanifie ce budget dès {month}.",
  "Chart error: {error}": "Erreur de graphique : {error}",
  "Choose Backup…": "Choisir une sauvegarde…",
  "Choose File…": "Choisir un fichier…",
+ "Choose a category": "Choisir une catégorie",
  "Choose a category first": "Choisir d’abord une catégorie",
+ "Choose an expenditure or income that has a category": "Choisir une dépense ou un revenu avec une catégorie",
  "Choose the account the file belongs to": "Choisir le compte auquel appartient le fichier",
  "Choose the account this file belongs to.": "Choisir le compte auquel appartient ce fichier.",
+ "Clear": "Effacer",
+ "Clear Selection": "Désélectionner",
+ "Clear Suggestions": "Effacer les suggestions",
  "Closing": "Clôture",
  "Comma ,": "Virgule ,",
+ "Contains “{match}”": "Contient «{match}»",
  "Could not create the image: {error}": "Impossible de créer l’image : {error}",
  "Could not read exchange rates: {error}": "Impossible de lire les taux de change : {error}",
  "Could not save {name}: {error}": "Impossible d’enregistrer «{name}» : {error}",
@@ -151,6 +179,9 @@
  "Delete an account": "Supprimer un compte",
  "Delete an income category": "Supprimer une catégorie de revenus",
  "Delete budget entries": "Supprimer des postes budgétaires",
+ "Delete categorization rules": "Supprimer des règles de catégorisation",
+ "Delete payees": "Supprimer des bénéficiaires",
+ "Delete the rule for “{match}”?": "Supprimer la règle pour «{match}» ?",
  "Delete this recurring transaction?": "Supprimer cette transaction récurrente ?",
  "Delete transactions": "Supprimer des transactions",
  "Delete {n} budget entry?": [
@@ -162,6 +193,7 @@
   "Supprimer {n} transactions ?"
  ],
  "Delete “{name}”?": "Supprimer «{name}» ?",
+ "Deleted the rule for “{match}”": "Règle pour «{match}» supprimée",
  "Deleted {name}": "Supprimé : {name}",
  "Deleted {n} budget entry": [
   "{n} poste budgétaire supprimé",
@@ -189,8 +221,14 @@
  "Edit Account": "Modifier le compte",
  "Edit Advance Payment Account": "Modifier le compte d’avances",
  "Edit Recurring Transaction": "Modifier la transaction récurrente",
+ "Edit Rule": "Modifier la règle",
  "Edit Transaction": "Modifier la transaction",
  "Edit budget": "Modifier le budget",
+ "Edit several transactions": "Modifier plusieurs transactions",
+ "Edit {n} Transaction": [
+  "Modifier {n} transaction",
+  "Modifier {n} transactions"
+ ],
  "End of {month}": "Fin {month}",
  "Enter a name for these settings": "Saisir un nom pour ces paramètres",
  "Enter the amount": "Saisir le montant",
@@ -198,6 +236,7 @@
  "Enter the change in value": "Saisir la variation de valeur",
  "Enter the debtor": "Saisir le débiteur",
  "Enter the old and the new value": "Saisir l’ancienne et la nouvelle valeur",
+ "Enter the text to look for": "Saisir le texte à rechercher",
  "Every 2 months": "Tous les 2 mois",
  "Every 4 months": "Tous les 4 mois",
  "Every amount is also stored in this currency. It can’t be changed.": "Chaque montant est aussi enregistré dans cette monnaie. Elle ne peut pas être modifiée.",
@@ -206,6 +245,7 @@
  "Every month": "Chaque mois",
  "Every quarter": "Chaque trimestre",
  "Every transaction on this account will be in this currency.": "Toutes les transactions de ce compte seront dans cette monnaie.",
+ "Every transaction with this payee is renamed too. Imports keep finding it.": "Toutes les transactions de ce bénéficiaire sont renommées aussi. Les importations le retrouvent.",
  "Every year": "Chaque année",
  "Every {n} months": "Tous les {n} mois",
  "Exchange Rates": "Taux de change",
@@ -213,6 +253,7 @@
  "Exchanges and revaluations can’t be saved as templates": "Les opérations de change et les réévaluations ne peuvent pas être enregistrées comme modèles",
  "Exclude": "Exclure",
  "Expenditure": "Dépense",
+ "Expenditure category": "Catégorie de dépenses",
  "Export Data as CSV…": "Exporter les données en CSV…",
  "Export Data as Excel…": "Exporter les données en Excel…",
  "Export Everything": "Tout exporter",
@@ -228,6 +269,7 @@
  "Filters": "Filtres",
  "First Date": "Première date",
  "For a currency exchange the accounts need different currencies": "Pour une opération de change, les comptes doivent être tenus dans des monnaies différentes",
+ "For expenditure the From account, for income the To account.": "Pour les dépenses le compte débité, pour les revenus le compte crédité.",
  "Forever": "Sans limite",
  "From": "Du",
  "From Account": "Compte débité",
@@ -271,12 +313,23 @@
  "Item {n}: the quantity must be greater than 0": "Article {n} : la quantité doit être supérieure à 0",
  "Items": "Articles",
  "Its recorded balances are removed too. Accounts with transactions can’t be deleted.": "Ses soldes saisis sont aussi supprimés. Les comptes avec des transactions ne peuvent pas être supprimés.",
+ "Keep the name": "Garder le nom",
  "Kind": "Type",
  "Language": "Langue",
  "Leave Until empty to repeat without an end.": "Laisser «Jusqu’à» vide pour répéter sans fin.",
+ "Leave unchanged": "Laisser inchangé",
  "Lines": "Courbes",
+ "Looked for in the payee and in the bank text or note, ignoring case and accents.": "Recherché dans le bénéficiaire et dans le texte bancaire ou la remarque, sans tenir compte des majuscules ni des accents.",
  "Make Recurring…": "Rendre récurrente…",
  "Max amount": "Montant max.",
+ "Merge": "Fusionner",
+ "Merge Payees": "Fusionner les bénéficiaires",
+ "Merge payees": "Fusionner des bénéficiaires",
+ "Merged {n} payee into “{name}”": [
+  "{n} bénéficiaire fusionné dans «{name}»",
+  "{n} bénéficiaires fusionnés dans «{name}»"
+ ],
+ "Merge…": "Fusionner…",
  "Min amount": "Montant min.",
  "Money that arrived without a record": "Argent arrivé sans écriture",
  "Money that left without a record": "Argent sorti sans écriture",
@@ -295,6 +348,7 @@
  "New Budget Entry": "Nouveau poste budgétaire",
  "New Income Category": "Nouvelle catégorie de revenus",
  "New Recurring Transaction": "Nouvelle transaction récurrente",
+ "New Rule": "Nouvelle règle",
  "New Transaction": "Nouvelle transaction",
  "New value": "Nouvelle valeur",
  "Next month": "Mois suivant",
@@ -308,11 +362,16 @@
  "No changes yet.": "Aucune modification pour l’instant.",
  "No exchange rates yet": "Pas encore de taux de change",
  "No income this month.": "Aucun revenu ce mois-ci.",
+ "No payee matches.": "Aucun bénéficiaire ne correspond.",
+ "No payees yet. Add one on a transaction, or import a bank file.": "Pas encore de bénéficiaires. Indiquez-en un sur une transaction ou importez un fichier bancaire.",
  "No recurring transactions yet.": "Pas encore de transactions récurrentes.",
+ "No rules yet.": "Aucune règle pour l’instant.",
+ "No transactions": "Aucune transaction",
  "No valid amount": "Montant non valable",
  "No valid date": "Date non valable",
  "Not recorded, last balance carried over": "Non saisi, dernier solde reporté",
  "Note": "Remarque",
+ "Nothing changes: the rows already look like this.": "Rien ne change : les transactions sont déjà ainsi.",
  "Nothing is due.": "Rien à comptabiliser.",
  "Nothing matches these filters.": "Aucune entrée ne correspond à ces filtres.",
  "Old and New Value": "Ancienne et nouvelle valeur",
@@ -322,12 +381,17 @@
  "Only expenditure, income and account transfers without an advance payment can repeat": "Seuls les dépenses, revenus et virements entre comptes sans avance peuvent se répéter",
  "Opening": "Ouverture",
  "Optional": "Facultatif",
+ "Optional. Suggested as the From account when a transaction has none yet.": "Facultatif. Proposé comme compte débité quand une transaction n’en a pas encore.",
+ "Optional. Suggested as the To account when a transaction has none yet.": "Facultatif. Proposé comme compte crédité quand une transaction n’en a pas encore.",
  "Other change": "Autre modification",
  "Others: {others} · own share: {own}": "Autres : {others} · part personnelle : {own}",
  "Outstanding Payment": "Avance ouverte",
  "Overview": "Aperçu",
  "Paid for others": "Payé pour d’autres",
  "Partly paid for others (advance payment)": "Payé en partie pour d’autres (avance)",
+ "Payee": "Bénéficiaire",
+ "Payee not found": "Bénéficiaire introuvable",
+ "Payees": "Bénéficiaires",
  "Pipe |": "Barre verticale |",
  "Plan Until": "Planifier jusqu’à",
  "Planned income and spending, month by month": "Revenus et dépenses prévus, mois par mois",
@@ -366,11 +430,16 @@
  "Remove item": "Retirer l’article",
  "Rename": "Renommer",
  "Rename Income Category": "Renommer la catégorie de revenus",
+ "Rename Payee": "Renommer le bénéficiaire",
+ "Rename a payee": "Renommer un bénéficiaire",
  "Rename an income category": "Renommer une catégorie de revenus",
+ "Renamed to “{name}”": "Renommé en «{name}»",
  "Rent, premiums, subscriptions: transactions that repeat. When one is due, book it here; a series that books automatically needs no confirmation.": "Loyer, primes, abonnements : des transactions qui se répètent. Quand l’une est échue, comptabilisez-la ici ; une série comptabilisée automatiquement n’a pas besoin de confirmation.",
  "Repays an advance payment": "Remboursement d’une avance",
  "Repeat": "Répétition",
  "Repeats": "Périodicité",
+ "Replace": "Remplacer",
+ "Replace Rule": "Remplacer la règle",
  "Replace all records with {source}?": "Remplacer toutes les données par {source} ?",
  "Replace existing budget for this category in these months": "Remplacer le budget existant de cette catégorie pour ces mois",
  "Replaces all records with those of a backup file.": "Remplace toutes les données par celles d’un fichier de sauvegarde.",
@@ -382,10 +451,16 @@
  "Revaluations": "Réévaluations",
  "Row {n}: choose a category": "Ligne {n} : choisir une catégorie",
  "Row {n}: {error}": "Ligne {n} : {error}",
+ "Rule not found": "Règle introuvable",
+ "Rule: contains “{match}”": "Règle : contient «{match}»",
+ "Rules…": "Règles…",
  "Save": "Enregistrer",
  "Save Changes": "Enregistrer les modifications",
  "Save Image…": "Enregistrer l’image…",
+ "Save Rule": "Enregistrer la règle",
  "Save Settings": "Enregistrer les paramètres",
+ "Save a categorization rule": "Enregistrer une règle de catégorisation",
+ "Save a payee": "Enregistrer un bénéficiaire",
  "Save a recurring transaction": "Enregistrer une transaction récurrente",
  "Save a template": "Enregistrer un modèle",
  "Save a transaction": "Enregistrer une transaction",
@@ -394,6 +469,7 @@
  "Save as Template…": "Enregistrer comme modèle…",
  "Save items": "Enregistrer les articles",
  "Saved settings": "Paramètres enregistrés",
+ "Saved the rule for “{match}”": "Règle pour «{match}» enregistrée",
  "Saved “{name}”": "Enregistré : «{name}»",
  "Search": "Rechercher",
  "Search code or name": "Rechercher un code ou un nom",
@@ -401,9 +477,10 @@
  "Select an account": "Choisir un compte",
  "Select an expenditure category": "Choisir une catégorie de dépenses",
  "Select an income category": "Choisir une catégorie de revenus",
+ "Select at least two payees to merge": "Sélectionnez au moins deux bénéficiaires à fusionner",
  "Select exactly one budget entry to edit": "Sélectionner exactement un poste budgétaire à modifier",
+ "Select exactly one transaction to categorize like it": "Choisir exactement une transaction comme modèle",
  "Select exactly one transaction to duplicate": "Choisir exactement une transaction à dupliquer",
- "Select exactly one transaction to edit": "Sélectionner exactement une transaction à modifier",
  "Select exactly one transaction to make recurring": "Sélectionner exactement une transaction à rendre récurrente",
  "Select expenditure, income or account transfer": "Choisir dépense, revenu ou virement entre comptes",
  "Select income or expenditure": "Choisir revenu ou dépense",
@@ -431,10 +508,12 @@
  "Spread of the exchange against the ECB rate": "Écart de change par rapport au taux BCE",
  "Statement {month}": "Relevé {month}",
  "Status": "Statut",
+ "Suggestion": "Suggestion",
  "System ({name})": "Système ({name})",
  "Tab": "Tabulation",
  "Taxes": "Impôts",
  "Templates": "Modèles",
+ "Text contains": "Le texte contient",
  "That month has passed, so extend it first.": "Ce mois est déjà passé : prolonger d’abord la planification.",
  "The From account must be in {currency}": "Le compte débité doit être tenu en {currency}",
  "The To account must be in {currency}": "Le compte crédité doit être tenu en {currency}",
@@ -468,8 +547,11 @@
  "The plan ends in {month}, before the first month. Extend it in Settings.": "La planification se termine en {month}, avant le premier mois. La prolonger dans les Réglages.",
  "The recurrence must be at least every month": "La périodicité doit être au moins mensuelle",
  "The repayment exceeds the outstanding amount ({amount})": "Le remboursement dépasse le montant ouvert ({amount})",
+ "The rows are in different currencies ({currencies}), so their account can’t be changed together.": "Les transactions sont dans des devises différentes ({currencies}), leur compte ne peut donc pas être modifié ensemble.",
  "The statement has no booked entries": "Le relevé ne contient aucune écriture comptabilisée",
  "The statement is in {currency}, but “{account}” is in {account_currency}. Choose an account in {currency}.": "Le relevé est en {currency}, mais «{account}» est en {account_currency}. Choisir un compte en {currency}.",
+ "The text needs at least two characters": "Le texte doit compter au moins deux caractères",
+ "The transactions, templates, recurring transactions and bank texts of the others move to it.": "Les transactions, modèles, transactions récurrentes et textes bancaires des autres lui sont transférés.",
  "The value did not change": "La valeur n’a pas changé",
  "This advance already has repayments: its currency and advance payment account cannot change": "Cette avance a déjà des remboursements : sa monnaie et son compte d’avances ne peuvent plus être modifiés",
  "This backup was made by a newer version of Budget. Update the app first.": "Cette sauvegarde provient d’une version plus récente de Budget. Mettre d’abord l’application à jour.",
@@ -496,8 +578,11 @@
  "Transaction added": "Transaction ajoutée",
  "Transaction not found": "Transaction introuvable",
  "Transactions": "Transactions",
+ "Transactions it categorized keep their category.": "Les transactions qu’elle a catégorisées gardent leur catégorie.",
  "Transactions it has already booked stay.": "Les transactions déjà comptabilisées sont conservées.",
+ "Transfers, exchanges and revaluations keep their accounts.": "Les virements, opérations de change et réévaluations gardent leurs comptes.",
  "Type": "Type",
+ "Unchanged": "Inchangée",
  "Undo": "Annuler",
  "Undo: {action}": "Annulation : {action}",
  "Undone: {action}": "Annulé : {action}",
@@ -506,10 +591,21 @@
  "Until": "Jusqu’à",
  "Until must not be before the first date": "«Jusqu’à» ne peut pas précéder la première date",
  "Use Total as Amount": "Reprendre le total comme montant",
+ "Use {category}": "Utiliser {category}",
+ "Used {n} time for this payee": [
+  "Utilisée {n} fois pour ce bénéficiaire",
+  "Utilisée {n} fois pour ce bénéficiaire"
+ ],
+ "Used {n} time for this text": [
+  "Utilisée {n} fois pour ce texte",
+  "Utilisée {n} fois pour ce texte"
+ ],
  "Wealth": "Fortune",
  "Wealth Over Time": "Évolution de la fortune",
  "Wealth {month}": "Fortune {month}",
  "What did the account hold at the end of the month?": "Quel était le solde du compte à la fin du mois ?",
+ "Which category new and imported transactions are given for a payee or bank text.": "Quelle catégorie reçoivent les transactions nouvelles et importées pour un bénéficiaire ou un texte bancaire.",
+ "Who you pay and who pays you. Imports fill in the payee from the bank text; after a rename or a merge, the next import of the same text uses the payee you kept.": "Qui vous payez et qui vous paie. Les importations reprennent le bénéficiaire du texte bancaire ; après un renommage ou une fusion, la prochaine importation du même texte utilise le bénéficiaire conservé.",
  "account|From": "Du compte",
  "account|To": "Au compte",
  "added": "ajouté",
@@ -527,8 +623,10 @@
  "incomplete": "incomplète",
  "last booked on {date}": "dernière le {date}",
  "next on {date}": "prochaine le {date}",
+ "received {amount}": "reçu {amount}",
  "repaid by {debtor}": "remboursé par {debtor}",
  "replaces {amount}": "remplace {amount}",
+ "spent {amount}": "dépensé {amount}",
  "the backup of {date}": "la sauvegarde du {date}",
  "the backup “{name}”": "la sauvegarde «{name}»",
  "the file ends on {date} — not a month-end balance": "le fichier se termine le {date} — pas un solde de fin de mois",
@@ -542,7 +640,6 @@
  "{amount} outstanding": "{amount} restant dû",
  "{amount} over the {budget} budget": "Dépassement de {amount} sur un budget de {budget}",
  "{amount} still expected of {budget}": "Encore attendu : {amount} sur {budget}",
- "{category} (suggested)": "{category} (suggérée)",
  "{counts}. Duplicates and unreadable lines are left out; tick them to import anyway.": "{counts}. Les doublons et les lignes illisibles sont exclus ; les cocher pour les importer quand même.",
  "{count} · matches the amount": "{count} · correspond au montant",
  "{count} · {difference} more than the amount": "{count} · {difference} de plus que le montant",
@@ -581,6 +678,10 @@
   "{n} catégorie",
   "{n} catégories"
  ],
+ "{n} category is a suggestion (in italics): check it before importing.": [
+  "{n} catégorie est une suggestion (en italique) : à vérifier avant l’import.",
+  "{n} catégories sont des suggestions (en italique) : à vérifier avant l’import."
+ ],
  "{n} change": [
   "{n} modification",
   "{n} modifications"
@@ -613,6 +714,30 @@
   "{n} nouvelle",
   "{n} nouvelles"
  ],
+ "{n} of {total} rows is a transfer, exchange or revaluation and has no payee": [
+  "{n} transaction sur {total} est un virement, une opération de change ou une réévaluation et n’a pas de bénéficiaire",
+  "{n} transactions sur {total} sont des virements, des opérations de change ou des réévaluations et n’ont pas de bénéficiaire"
+ ],
+ "{n} of {total} rows is a transfer, exchange or revaluation and keeps its accounts.": [
+  "{n} transaction sur {total} est un virement, une opération de change ou une réévaluation et garde ses comptes.",
+  "{n} transactions sur {total} sont des virements, des opérations de change ou des réévaluations et gardent leurs comptes."
+ ],
+ "{n} of {total} rows is not expenditure and keeps its category": [
+  "{n} transaction sur {total} n’est pas une dépense et garde sa catégorie",
+  "{n} transactions sur {total} ne sont pas des dépenses et gardent leur catégorie"
+ ],
+ "{n} of {total} rows is not income and keeps its category": [
+  "{n} transaction sur {total} n’est pas un revenu et garde sa catégorie",
+  "{n} transactions sur {total} ne sont pas des revenus et gardent leur catégorie"
+ ],
+ "{n} of {total} rows is not income, or repays an advance, and keeps its category": [
+  "{n} transaction sur {total} n’est pas un revenu, ou rembourse une avance, et garde sa catégorie",
+  "{n} transactions sur {total} ne sont pas des revenus, ou remboursent une avance, et gardent leur catégorie"
+ ],
+ "{n} payee": [
+  "{n} bénéficiaire",
+  "{n} bénéficiaires"
+ ],
  "{n} pending entry left out": [
   "{n} écriture en attente omise",
   "{n} écritures en attente omises"
@@ -633,9 +758,17 @@
   "{n} ligne ignorée : cette catégorie est réservée aux dépenses",
   "{n} lignes ignorées : cette catégorie est réservée aux dépenses"
  ],
+ "{n} rule": [
+  "{n} règle",
+  "{n} règles"
+ ],
  "{n} selected": [
   "Sélection : {n}",
   "Sélection : {n}"
+ ],
+ "{n} spread booking of a currency exchange keeps its note; it changes with its exchange.": [
+  "{n} écart de change garde sa remarque ; il suit son opération de change.",
+  "{n} écarts de change gardent leur remarque ; ils suivent leur opération de change."
  ],
  "{n} subcategory": [
   "{n} sous-catégorie",
@@ -649,14 +782,23 @@
   "{n} transaction comptabilisée",
   "{n} transactions comptabilisées"
  ],
+ "{n} transaction can’t be changed, so nothing is saved:": [
+  "{n} transaction ne peut pas être modifiée, donc rien n’est enregistré :",
+  "{n} transactions ne peuvent pas être modifiées, donc rien n’est enregistré :"
+ ],
  "{n} unreadable": [
   "{n} illisible",
   "{n} illisibles"
  ],
  "{repeat}, forever": "{repeat}, sans limite",
  "{series} (budget)": "{series} (budget)",
+ "{shown} of {n} payee": [
+  "{shown} sur {n} bénéficiaire",
+  "{shown} sur {n} bénéficiaires"
+ ],
  "{shown} of {n} transaction": [
   "{shown} sur {n} transaction",
   "{shown} sur {n} transactions"
- ]
+ ],
+ "“{name}” is still in use and can’t be deleted": "«{name}» est encore utilisé et ne peut pas être supprimé"
 }

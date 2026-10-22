@@ -78,6 +78,8 @@ TABLE_NAMES = {
     "accounts": N_("Account"),
     "income_categories": N_("Income category"),
     "recurring": N_("Recurring transaction"),
+    "payees": N_("Payee"),
+    "rules": N_("Categorization rule"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 
@@ -94,6 +96,8 @@ def describe_change(ctx: Context, change) -> str:
         what = f"{raw.get('next_due', '')} · {raw.get('amount', '')} {raw.get('currency', '')}"
     elif change.table == "budget_entries":
         what = f"{raw.get('month', '')} · {raw.get('category', '')} · {raw.get('amount', '')} {raw.get('currency', '')}"
+    elif change.table == "rules":
+        what = f"{raw.get('match', '')} · {raw.get('category', '')}"
     else:
         what = raw.get("name", "")
     kind = t(TABLE_NAMES.get(change.table, change.table))

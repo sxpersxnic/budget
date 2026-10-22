@@ -175,3 +175,21 @@ def test_recorded_needs_the_context_first():
 
     with pytest.raises(TypeError, match="first argument"):
         broken("not a context")
+
+
+def test_the_file_keeps_up_with_undo_and_trimming(tmp_path):
+    """Saved lines are reused between saves; an undone action is written again, a dropped one goes."""
+    data = tmp_path / "data"
+    store = Store(data)
+    store.history.keep = 3
+    first = store.accounts.add(Account(name="A", currency="CHF"))
+    store.accounts.add(Account(name="B", currency="CHF"))
+    undone = store.history.actions()[0]
+    store.history.undo(undone.id, store.tables(), "Undo")
+    again = Store(data)  # read back from the file
+    assert [(a.label, a.undone) for a in again.history.actions()] == [("Undo", False), ("", True), ("", False)]
+    store.accounts.add(Account(name="C", currency="CHF"))  # the oldest action drops out
+    again = Store(data)
+    assert len(again.history.actions()) == 3
+    assert first.id not in {c.record_id for a in again.history.actions() for c in a.changes}
+    assert set(store.history._lines) == {a.id for a in store.history.actions()}

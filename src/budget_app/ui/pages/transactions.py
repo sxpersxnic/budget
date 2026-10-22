@@ -19,20 +19,26 @@ from budget_app.domain.models import (
 from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import items as items_svc
+from budget_app.services import payees as payee_svc
 from budget_app.services import recurring as rec_svc
+from budget_app.services import rules as rules_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import ValidationError
 from budget_app.services.reports import ADV_REPAY_NAME
 from budget_app.ui.layout import date_input, error, frame, on_data_changed, parse_date, undoable
 from budget_app.ui.pages.add_budget import recurrence_label
 from budget_app.ui.pages.recurring import open_recurring_sheet
+from budget_app.ui.widgets.bulk_edit import open_bulk_edit_sheet
 from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
+from budget_app.ui.widgets.rule_sheet import always_like_this
+from budget_app.ui.widgets.selects import set_options
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 
 def _columns() -> list[dict]:
     return [
         date_col("date", t("Date"), sort="desc", width=120),
+        {"field": "payee", "headerName": t("Payee"), "width": 180},
         {"field": "category", "headerName": t("Category"), "width": 250},
         money_col("amount", t("Amount"), width=150),
         {"field": "items", "headerName": t("Items"), "width": 90, "type": "rightAligned", "cellClass": "muted"},
@@ -84,6 +90,7 @@ def _row(
         "currency": tx.currency,
         "amount_chf": round(tx.amount_chf, 2),
         "category": category,
+        "payee": tx.payee,
         "from": accs.get(tx.from_account, ""),
         "to": to,
         "advance": advance,
@@ -93,6 +100,7 @@ def _row(
         "recurring": (repeats or {}).get(tx.recurring_id, "") if tx.recurring_id else "",
         "_search": " ".join(
             [
+                tx.payee,
                 category,
                 accs.get(tx.from_account, ""),
                 to,
@@ -136,6 +144,10 @@ def page() -> None:
                 clearable=True,
             )
             acc.props("dense outlined").classes("w-56")
+            payee = ui.select(
+                [p.name for p in payee_svc.all_payees(ctx)], label=t("Payee"), with_input=True, clearable=True
+            )
+            payee.props("dense outlined").classes("w-56")
             typ = (
                 ui.select({k: t(v) for k, v in TX_TYPES.items()}, label=t("Type"), clearable=True)
                 .props("dense outlined")
@@ -157,6 +169,11 @@ def page() -> None:
             ui.button(t("Make Recurring…"), icon="o_event_repeat", on_click=lambda: make_recurring()).props(  # noqa: PLW0108 - defined below
                 "flat dense"
             ).classes("text-primary")
+            ui.button(
+                t("Always Categorize Like This…"),
+                icon="o_rule",
+                on_click=lambda: categorize_like_this(),  # noqa: PLW0108 - defined below
+            ).props("flat dense").classes("text-primary")
             ui.button(t("Delete"), icon="o_delete", on_click=lambda: delete_selected()).props("flat dense").classes(  # noqa: PLW0108 - defined below
                 "text-negative"
             )
@@ -166,6 +183,7 @@ def page() -> None:
         shown: list[dict] = []  # the rows the filters let through, for the export
 
         def apply_filters() -> None:
+            set_options(payee, [p.name for p in payee_svc.all_payees(ctx)])  # with payees added since
             start, end = parse_date(d_from.value), parse_date(d_to.value)
             q = (text.value or "").lower().strip()
             accs = {a.id: acc_svc.account_label(a) for a in ctx.store.accounts.all()}
@@ -181,6 +199,8 @@ def page() -> None:
                 ):
                     continue
                 if typ.value and tx.type != typ.value:
+                    continue
+                if payee.value and tx.payee != payee.value:
                     continue
                 received = tx_svc.received_amount(ctx, tx) if tx.type == TX_EXCHANGE else None
                 r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats)
@@ -201,7 +221,7 @@ def page() -> None:
             )
             bar.set_visibility(False)
 
-        for el in (d_from, d_to, a_min, a_max, acc, typ, text):
+        for el in (d_from, d_to, a_min, a_max, acc, payee, typ, text):
             el.on_value_change(apply_filters)
         apply_filters()
         on_data_changed(apply_filters)
@@ -217,11 +237,12 @@ def page() -> None:
             selected_label.set_text(tn("{n} selected", "{n} selected", len(rows)))
 
         async def edit_selected() -> None:
+            """One row opens the editor, several the bulk edit sheet (F13)."""
             rows = await grid.get_selected_rows()
-            if len(rows) != 1:
-                error(t("Select exactly one transaction to edit"))
-                return
-            open_editor(rows[0]["id"])
+            if len(rows) == 1:
+                open_editor(rows[0]["id"])
+            elif rows:
+                open_bulk_edit_sheet(ctx, [r["id"] for r in rows], apply_filters)
 
         async def duplicate_selected() -> None:
             rows = await grid.get_selected_rows()
@@ -247,6 +268,18 @@ def page() -> None:
                 error(t("This transaction already belongs to a recurring transaction"))
                 return
             open_recurring_sheet(ctx, apply_filters, prefill=rec_svc.from_transaction(tx), first_booked=tx.id)
+
+        async def categorize_like_this() -> None:
+            """A rule that gives transactions like the selected one its category from now on (F07)."""
+            rows = await grid.get_selected_rows()
+            tx = ctx.store.transactions.get(rows[0]["id"]) if len(rows) == 1 else None
+            if tx is None:
+                error(t("Select exactly one transaction to categorize like it"))
+                return
+            if tx.type not in rules_svc.RULE_TYPES or not tx.category:
+                error(t("Choose an expenditure or income that has a category"))
+                return
+            always_like_this(ctx, tx.type, tx.category, tx.payee, tx.comment)
 
         async def delete_selected() -> None:
             rows = await grid.get_selected_rows()
