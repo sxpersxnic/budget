@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16 and F20 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20 and F18 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history and F20 tax summary done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18, F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -171,7 +171,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
 | F16 | ☑ Done | Budget from history | Planning | S | Local | – |
 | F17 | ☐ Open | Subscription and recurring-spend detection | Insight | M | Local | F09 |
-| F18 | ☐ Open | Trends and unusual spending | Insight | M | Local | – |
+| F18 | ☑ Done | Trends and unusual spending | Insight | M | Local | – |
 | F19 | ☐ Open | Year in review | Insight | M | Local | – |
 | F20 | ☑ Done | Swiss tax summary | Insight | M | Local | F10 |
 | F21 | ☑ Done | Investments and asset classes | Wealth | L | Local | – |
@@ -835,7 +835,34 @@ the yearly total. One click turns a detected subscription into a recurring trans
 
 #### F18 · Trends and unusual spending
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built:** **Budget page:** *Compare with* above the two ledgers is a segmented control *Budget · Sep 2026 ·
+Oct 2025* (the month before and the same month a year earlier, named). It changes the meaning of the existing
+columns instead of adding any, so the ledgers keep their B08 layout: the *Budget* column becomes that month's
+amount and *Difference* becomes *Change*, "▲ 25 %" / "▼ 100 %" / "new" (red when spending rose or income fell;
+the amount in the cell's tooltip), and the ledger caption says "17 % less than in Sep 2026 (4'793.15 CHF)".
+Below 560 px, where the difference column was hidden, compare mode shows the change instead of the other
+month's amount (a fixed column, so the changes align). The budget meters and the pencil are hidden while
+comparing; for the current month a caption says "Oct 2026 so far, against all of Sep 2026". A category or
+income recorded only in the compared month gets its own row, so a stop shows as ▼ 100 %. Amounts are in the
+page's currency and count per part (F11): a split line in its own category, the share paid for others in
+*Advance payments*. **Overview:** a *Notable This Month* card after the wealth card lists at most five items,
+exceeded budgets first, then large payments, categories well above their usual level and budgets on pace to be
+exceeded; each row links to `/budget?month=…&category=…` (the month, the category's division opened and the row
+marked and scrolled into view) or to `/transactions?month=…&category=…` (From and To set to the month, and a new
+*Category* filter that includes subcategories and split lines). The card hides when nothing stands out (and
+when nothing is recorded); with fewer than three recorded months it checks only budgets and says "Comparisons
+with your usual spending start once 3 months are recorded." **Rules** (`domain.trends`, architecture §7,
+decision 26; the README explains them): the usual level is the median of the last six complete months since the
+first recorded expenditure; a group (COICOP level 2) is *well above usual* at 1.5 times it and 100 CHF more,
+unless its budget covers it or one large payment explains half the excess; a payment is *large* from 250 CHF
+when it is four times the median payment of its group (with three or more earlier payments), else from a
+quarter of a usual month; a budget is *exceeded* 10 CHF above it and *on pace* when, from the 7th and with three
+payments or more, spent ÷ day × days of the month ends 10 CHF above it (the most specific of nested budgets is
+listed). CHF thresholds are converted to the display currency at the latest rate. The demo data has a washing
+machine this month. Not built: notable items for past months, income trends on the Overview, and a chart of a
+category's months (the *Income and Expenditure* chart shows that).
 
 - Month-over-month and year-over-year change per category on the Budget page.
 - A short "Notable this month" list on the Overview: categories well above their usual

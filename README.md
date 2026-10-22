@@ -288,6 +288,25 @@ The app opens in its own window and keeps all data in your user folder:
    charts, and export statements as Excel or PDF (share button on the Budget page).
    Once an account has an asset class other than cash, the Overview shows your wealth **by asset
    class**, and *Add Chart → Wealth by Asset Class* shows it month by month.
+   **Compare with** above the Budget page's tables switches their third column from the budget to the
+   month before or the same month last year: that month's amount per category and the change as
+   ▲/▼ and a percentage (hover it for the amount; narrow windows show the change instead of the
+   amount). Split lines count in their own category, and the part paid for others in *Advance
+   payments*, as everywhere on the page.
+   **Notable this month** on the Overview lists up to five things that stand out in the current month,
+   each linking to the Budget page or to the matching transactions. It stays hidden when nothing
+   stands out, and until three months are recorded it only checks budgets. The rules (amounts in CHF,
+   converted to the display currency):
+   - **Budget exceeded:** spending in a budgeted category is 10 CHF or more above its budget.
+   - **On pace to exceed:** from the 7th of the month, a budgeted category with three or more payments
+     this month would end 10 CHF or more above its budget at the pace so far (spent ÷ day × days of
+     the month). A bill paid once, such as the rent, is never projected.
+   - **Large payment:** a payment of 250 CHF or more that is four times the usual size in its
+     category (the median of its payments in the last six months, with at least three of them), or,
+     in a category with fewer earlier payments, a quarter of a usual month's spending or more.
+   - **Well above usual:** a category (COICOP group, such as *01.1 Food*) at 1.5 times its usual
+     month (the median of the last six complete months) and at least 100 CHF above it, unless its
+     budget covers the amount or one large payment explains it.
 9. **Investments** (sidebar, optional): give an account the asset class *Securities* or *Crypto*
    in **Settings** (edit the account), then add its holdings (name, optional ISIN or symbol) on the
    Investments page. An account that already has transactions or balances is **converted**: choose

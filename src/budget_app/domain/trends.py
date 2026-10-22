@@ -1,7 +1,7 @@
 """F18, pure. Changes against another month, and the rules and thresholds of "Notable this month".
 
 Every threshold of the Overview's *Notable this month* card is defined here, in one place (architecture §7,
-decision 23). Amounts are in CHF and converted to the display currency by the caller, at the latest rate like
+decision 26). Amounts are in CHF and converted to the display currency by the caller, at the latest rate like
 budget entries, so a threshold means the same in every view currency.
 """
 
