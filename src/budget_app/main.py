@@ -37,6 +37,7 @@ from budget_app.ui.pages import (
     rules,
     settings,
     tags,
+    tax,
     transactions,
 )
 from budget_app.ui.widgets import attachments as attachments_ui
@@ -57,6 +58,7 @@ PAGES = {
     "/payees": payees.page,
     "/tags": tags.page,
     "/investments": investments.page,
+    "/tax": tax.page,
     "/rules": rules.page,
     "/settings": settings.page,
     "/history": history.page,

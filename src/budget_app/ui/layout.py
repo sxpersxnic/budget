@@ -39,6 +39,7 @@ NAV = [
     ("/payees", N_("Payees"), "o_storefront"),
     ("/tags", N_("Tags"), "o_sell"),
     ("/investments", N_("Investments"), "o_show_chart"),
+    ("/tax", N_("Tax Summary"), "o_account_balance"),  # F20: once a year, so last; it draws on all the others
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")
 # Routes that are not in the sidebar highlight their parent.
@@ -315,6 +316,7 @@ MEDIA_TYPES = {
     ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ".pdf": "application/pdf",
     ".png": "image/png",
+    ".zip": "application/zip",
 }
 
 

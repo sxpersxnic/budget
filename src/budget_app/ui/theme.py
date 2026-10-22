@@ -347,6 +347,16 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
 .bill-amount { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 500; }
 .closed-bills .nicegui-expansion-content { padding: 0; gap: 0; align-items: stretch; }
 
+/* tax summary (F20) */
+.tax-section + .tax-section { border-top: 0.5px solid var(--separator); }
+.tax-section .q-item { padding: 6px 16px; }
+.tax-section .nicegui-expansion-content { padding: 0 0 4px; gap: 0; align-items: stretch; }
+.tax-section .group-row { padding-left: 28px; }
+.tax-section .group-row + .group-row::before { left: 28px; }
+.tax-tags { min-height: 36px; flex-wrap: wrap; gap: 6px; }
+.tax-note { align-items: flex-start; }
+.tax-links { max-height: 62vh; overflow-y: auto; padding-right: 4px; }
+
 /* attachments in the transaction form (F12) */
 .attach-drop { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
   padding: 10px 12px; border: 1px dashed var(--separator-strong); border-radius: 10px; cursor: pointer;

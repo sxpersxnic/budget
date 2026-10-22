@@ -280,6 +280,15 @@ class Attachment:
         return self.bill_id or self.transaction_id
 
 
+@dataclass
+class TaxSection:
+    """The tags linked to a section of the tax summary (F20): transactions with one of them count in that section,
+    on top of its categories. `id` is the section's key (`domain.tax`); a tag is linked to one section at most."""
+
+    tags: str = ""  # tag ids separated by "|"
+    id: str = field(default_factory=new_id)
+
+
 BILL_OPEN = "open"
 BILL_PAID = "paid"
 BILL_DISMISSED = "dismissed"
