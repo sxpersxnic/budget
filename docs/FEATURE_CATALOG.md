@@ -134,7 +134,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
     its due date until *Mark Paid* books the expenditure; the PDF stays as an attachment.
 16. ☑ **F12:** decided — attachments are copied into the data folder
     (`attachments/<transaction id>/`), so backups and restore include them; one file at most 20 MB.
-    Built (architecture §7, decision 18).
+    Built (architecture §7, decision 20).
 17. ☑ **F10:** decided — the first version has tags with filter, totals and chart, and a budget per
     tag (amount, optional period) with actual against budget. Built (see F10).
 
@@ -643,7 +643,7 @@ backup, so a crafted backup can't place a program that *Open* would run. Files a
 folder, never under the user's name; `attachments.csv` keeps the name. *Open* uses the system's viewer in
 the app window and a link to `/attachment/<id>` in a browser; that route serves only files of existing
 attachment records. Removing an attachment or deleting its transaction can be undone; the file is deleted
-at a later start, once no undo can bring it back (architecture §7, decision 18). Backups contain the
+at a later start, once no undo can bring it back (architecture §7, decision 20). Backups contain the
 files, a restore brings them back, and the copies made before an update or a restore keep them too. The
 Transactions list has a paper-clip column with the number of files, and its search finds attachment
 names. Not built: attaching from the Transactions list, sync, previews of office files, OCR (F04) and QR
