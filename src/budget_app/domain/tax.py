@@ -1,7 +1,7 @@
 """Swiss tax summary (F20), pure: the sections of the summary and the COICOP codes each one covers.
 
 The summary helps with the yearly tax declaration without filing it: it lists the year's amounts per typical
-deduction area and leaves the judgement to the user, since cantonal rules differ (architecture §7, decision 23).
+deduction area and leaves the judgement to the user, since cantonal rules differ (architecture §7, decision 25).
 
 A section collects the expenditure of its COICOP **codes** (each code with all its subcategories) and **exact** codes
 (that code only, for a parent whose other children don't belong there, such as *07.3 Passenger transport services*

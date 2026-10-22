@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14 and F16 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16 and F20 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals and F16 budget from history done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history and F20 tax summary done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20, F16 (done), F18, F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18, F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -173,7 +173,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F17 | ☐ Open | Subscription and recurring-spend detection | Insight | M | Local | F09 |
 | F18 | ☐ Open | Trends and unusual spending | Insight | M | Local | – |
 | F19 | ☐ Open | Year in review | Insight | M | Local | – |
-| F20 | ☐ Open | Swiss tax summary | Insight | M | Local | F10 |
+| F20 | ☑ Done | Swiss tax summary | Insight | M | Local | F10 |
 | F21 | ☑ Done | Investments and asset classes | Wealth | L | Local | – |
 | F22 | ☐ Open | Loans and mortgages | Wealth | M | Local | – |
 | F23 | ☐ Open | Who owes what (shared expenses) | Wealth | M | Local | – |
@@ -647,7 +647,7 @@ tagged income other than repayments counts as received; a tag's budget compares 
 period, income does not reduce it. Deleting a tag in use is allowed: it is taken off every transaction, template
 and series in one undoable action, and the confirmation says how many transactions lose it. The German word is
 *Schlagwort* ("Tag" means day), French *étiquette*, Italian *etichetta*. Tags per item line came with F11 (a line's
-tag counts that line's part). Not built: budgets per tag and month, and the tax summary's use of tags (F20).
+tag counts that line's part). Not built: budgets per tag and month. Since F20, tags can be linked to sections of the tax summary.
 
 Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
@@ -851,7 +851,28 @@ statement export.
 
 #### F20 · Swiss tax summary
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built** (architecture §7, decision 25): a **Tax Summary** page (`/tax`, last in the sidebar: used once a year,
+it draws on categories, tags and investments) with a year picker (last year by default) and nine sections, each
+with its total in CHF and, opened, its rows (payee or note, date, category, amount, the tags that brought a row in,
+the attachments as links, a button that opens the transaction): *professional expenses* (07.3 itself, rail, bus,
+fare network passes; workplace canteens; post-secondary, tertiary and other education), *pillar 3a payments*
+(transfers into an account of the asset class pillar 3a from one of another class), *insurance premiums* (12.1
+itself, life and accident, health), *medical and dental costs* (06, and 14.2, 15.2), *donations* (14 itself, 14.5,
+14.6), *childcare* (13.3.0.1), *debt interest* (12.2.1, mostly by tag), *withholding tax to reclaim* (the tax of
+dividends in CHF accounts, F21) and *dividends and interest* for the securities list (every dividend gross with the
+tax withheld, ISIN in the payee, and income in a category named Dividends or Interest in any language). Split
+lines (F11) count in their own category, the share paid for others doesn't count. **Sections…** links tags to
+sections (`tax_sections.csv`, a tag in one section at most, new names become tags, one undo step); a tagged
+expenditure part, income or transfer then counts there too, income in a spending section as a refund (negative).
+Sections can overlap only by a tag, and the page says so (and how many transactions do). Exports: **PDF** (a
+summary page with the note that cantonal rules differ, then a table per section with date, payee, category, amount
+and the attachment names as *Proof*), **CSV** (one row per section row, formula-safe) and **Proofs as ZIP…** (the
+PDF, the CSV and the attachment files in one folder per section, each read through F12's check; files that fail
+it are left out and named). Not built: other deductions (property maintenance, alimony, the second-earner
+deduction), amounts per canton, and a link from a section to Transactions. To confirm with the product owner: the
+narrow code lists (professional expenses, insurance and donations leave out what is rarely deductible).
 
 Help with the annual tax declaration, without trying to file it:
 

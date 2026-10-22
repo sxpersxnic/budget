@@ -306,6 +306,18 @@ The app opens in its own window and keeps all data in your user folder:
    click it for its history, where trades and prices can be edited or deleted. The page also sums
    the Swiss withholding tax you can reclaim with your tax return, per year. Pillar 2,
    pillar 3a, real estate and other assets keep their recorded month-end balances.
+10. **Tax Summary** (sidebar, once a year): the amounts for your tax declaration, last year by
+    default, in CHF, in sections for professional expenses, pillar 3a payments, insurance premiums,
+    medical and dental costs, donations, childcare, debt interest, the withholding tax to reclaim
+    and the dividends and interest for the securities list. A section finds its transactions by
+    category (a split receipt counts each line in its own), pillar 3a payments are transfers to an
+    account of the asset class *Pillar 3a*, and the last two come from the Investments page. Open a
+    section to see its transactions and their attachments. **Sections…** links tags to sections, so
+    for example everything tagged *Work* counts as professional expenses too; a refund tagged for a
+    section lowers it. The app lists amounts and does not judge what you may deduct: cantonal rules
+    differ. The share button saves the summary as **PDF** (a summary page and a table per section,
+    with the attached files named as proof) or **CSV**, or **Proofs as ZIP…**: the PDF, the CSV and
+    the attached files, in one folder per section.
 
 ## Building the installers
 

@@ -3,7 +3,7 @@
 The summary helps with the tax declaration without filing it and without judging what is deductible: it lists
 amounts in CHF (the declaration's currency) and leaves the judgement to the user, as cantonal rules differ.
 
-**What counts in a section** (`domain.tax.SECTIONS`, architecture §7, decision 23):
+**What counts in a section** (`domain.tax.SECTIONS`, architecture §7, decision 25):
 
 * expenditure by its category: each part of a split transaction (F11) in its own category, the share paid for
   others (an advance) left out;
