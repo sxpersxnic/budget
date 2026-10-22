@@ -25,6 +25,9 @@ Two workflows in [`.github/workflows/`](../.github/workflows):
     `SHA256SUMS.txt`. The tag must match `[project] version` in `pyproject.toml`, or the
     release job stops.
 
+When the hosted minutes run out, the jobs can run on self-hosted runners instead: see
+[`infra/docker/github-action-runners`](../infra/docker/github-action-runners/README.md).
+
 The CI builds are unsigned, like the local ones (see [Signing](#signing-optional)). Code-signing
 secrets can be added to the build job later.
 

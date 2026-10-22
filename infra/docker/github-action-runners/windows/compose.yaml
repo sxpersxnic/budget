@@ -1,0 +1,23 @@
+# Self-hosted Windows runner for the Installers workflow's Windows build.
+# Run on a Windows host with Docker in Windows-container mode. Settings come from .env next
+# to this file (copy .env.example); see ../README.md.
+name: budget-runners-windows
+
+services:
+  runner:
+    build:
+      context: .
+      args:
+        # Must not be newer than the host; ltsc2022 runs on Windows Server 2022 and Windows 11.
+        WINDOWS_TAG: ${WINDOWS_TAG:-ltsc2022}
+    image: budget-runner-windows:2.338.0
+    restart: unless-stopped
+    environment:
+      RUNNER_REPOSITORY: ${RUNNER_REPOSITORY:-sxpersxnic/budget}
+      RUNNER_ACCESS_TOKEN: ${RUNNER_ACCESS_TOKEN:?Set RUNNER_ACCESS_TOKEN in .env}
+      RUNNER_NAME_PREFIX: ${RUNNER_NAME_PREFIX:-budget-windows}
+      # The workflow picks this runner through the WINDOWS_RUNNER repository variable.
+      RUNNER_LABELS: ${RUNNER_LABELS:-budget-windows}
+    # Windows 10/11 run containers in Hyper-V isolation, which defaults to 1 GB of memory.
+    mem_limit: ${RUNNER_MEMORY:-8g}
+    cpus: ${RUNNER_CPUS:-4}

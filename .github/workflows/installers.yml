@@ -28,18 +28,21 @@ jobs:
   build:
     name: ${{ matrix.name }}
     needs: checks
+    # The *_RUNNER repository variables move a build to a self-hosted runner (see
+    # infra/docker/github-action-runners); unset, it runs on GitHub's runner.
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: macOS
-            os: macos-latest # Apple Silicon (arm64)
+            os: ${{ vars.MACOS_RUNNER || 'macos-latest' }} # Apple Silicon (arm64)
             pattern: dist/Budget-*-macOS-*.dmg
           - name: Windows
-            os: windows-latest
+            os: ${{ vars.WINDOWS_RUNNER || 'windows-latest' }}
             pattern: dist/Budget-*-Windows-Setup.exe
           - name: Linux
-            os: ubuntu-22.04 # oldest supported glibc for the Qt WebEngine wheels (2.34+)
+            # oldest supported glibc for the Qt WebEngine wheels (2.34+); the self-hosted image is 22.04 too
+            os: ${{ vars.LINUX_RUNNER || 'ubuntu-22.04' }}
             pattern: dist/Budget-*-Linux-*.tar.gz
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -82,7 +85,7 @@ jobs:
     name: Release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
     steps:

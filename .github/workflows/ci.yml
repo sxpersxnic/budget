@@ -18,7 +18,9 @@ concurrency:
 jobs:
   checks:
     name: Lint, types, tests
-    runs-on: ubuntu-latest
+    # LINUX_RUNNER (repository variable) moves the job to the self-hosted runners in
+    # infra/docker/github-action-runners. Pull requests from forks stay on GitHub's runners.
+    runs-on: ${{ (github.event.pull_request.head.repo.fork && 'ubuntu-latest') || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
