@@ -81,7 +81,7 @@ def test_the_files_are_sorted_and_formatted_like_the_translations(lang: str) -> 
     assert text == json.dumps(raw, ensure_ascii=False, indent=1) + "\n"
 
 
-@pytest.mark.parametrize("lang", ["de", "it"])
+@pytest.mark.parametrize("lang", ["de", "fr", "it"])
 def test_the_translation_is_complete(lang: str) -> None:
     raw = load(lang)
     assert not raw.get("_untranslated") and raw["_translation"] == {"language": lang, "unofficial": True}
@@ -95,29 +95,13 @@ def test_the_translation_is_complete(lang: str) -> None:
                 continue
             lines, items = text.split("\n"), translated.split("\n")
             assert len(items) == len(lines), (code, name)  # item by item
-            for item, item_ours in zip(lines, items, strict=True):
-                assert item_ours.strip() == item_ours and item_ours, (code, name)
+            for item, item_tr in zip(lines, items, strict=True):
+                assert item_tr.strip() == item_tr and item_tr, (code, name)
                 codes = re.findall(r"\d+(?:\.\d+)+", item)
-                assert re.findall(r"\d+(?:\.\d+)+", item_ours) == codes, (code, item)  # references kept
+                assert re.findall(r"\d+(?:\.\d+)+", item_tr) == codes, (code, item)  # references kept
             if lang == "de":
                 assert "ß" not in translated  # Swiss German
     assert coicop.notes_translated(lang)
-
-
-@pytest.mark.parametrize("lang", ["fr"])
-def test_french_waits_for_its_translation(lang: str) -> None:
-    """Until translated, the file is an English copy marked `_untranslated`; the app then shows English."""
-    raw = load(lang)
-    english = entries(load("en"))
-    if raw.get("_untranslated"):
-        assert entries(raw) == english
-        assert not coicop.notes_translated(lang)
-    else:  # translated: same codes, text wherever the UN has some
-        assert list(entries(raw)) == list(english)
-        for code, entry in english.items():
-            for name, text in entry.items():
-                assert bool(raw[code][name]) == bool(text), (code, name)
-        assert coicop.notes_translated(lang)
 
 
 def test_the_conversion_script_cleans_the_un_text() -> None:
@@ -161,6 +145,14 @@ def test_italian_notes_are_marked_as_our_translation() -> None:
     assert coicop.notes_payload("it")["notes"]["01.1.1.1"]["includes"][0] == "frumento"
 
 
+def test_french_notes_are_marked_as_our_translation() -> None:
+    cereals = coicop.notes("01.1.1.1", "fr")
+    assert cereals is not None and cereals.translated
+    assert cereals.includes[:3] == ("blé", "riz, y compris le riz étuvé", "sorgho")
+    assert cereals.excludes[0] == "farines de céréales (01.1.1.2)"  # the category's French name
+    assert coicop.notes_translated("fr")
+
+
 def test_an_untranslated_or_missing_language_shows_english(tmp_path: Path, monkeypatch) -> None:
     untranslated = tmp_path / "coicop_notes_xx.json"
     untranslated.write_text(json.dumps({"_untranslated": True, "01.1.1.1": {"includes": "Weizen"}}), "utf-8")
@@ -188,7 +180,9 @@ def test_notes_for_the_browser() -> None:
     assert payload["translated"] is True
     assert payload["notes"]["01.1.1.1"]["includes"][0] == "Weizen"
     assert "01" not in payload["notes"] and len(payload["notes"]) == 440
-    assert coicop.notes_payload("fr")["translated"] is coicop.notes_translated("fr")
+    french = coicop.notes_payload("fr")
+    assert french["translated"] is True and french["notes"]["01.1.1.1"]["includes"][0] == "blé"
+    assert coicop.notes_payload("it")["translated"] is coicop.notes_translated("it")
     assert re.fullmatch(r"[0-9a-f]{12}", coicop.notes_version("de"))
     assert coicop.notes_version("de") != coicop.notes_version("en")
 
@@ -223,6 +217,15 @@ def test_italian_note_words_find_the_category() -> None:
     i18n.set_language("it")
     try:
         assert "01.1.1.1" in [o.code for o in ev.search(ev.category_options(), "miglio")]
+    finally:
+        i18n.set_language("en")
+
+
+def test_french_note_words_find_the_category() -> None:
+    i18n.set_language("fr")
+    try:
+        assert [o.code for o in ev.search(ev.category_options(), "sarrasin")] == ["01.1.1.1"]  # buckwheat
+        assert [o.code for o in ev.search(ev.category_options(), "buckwheat")] == ["01.1.1.1"]  # and English
     finally:
         i18n.set_language("en")
 

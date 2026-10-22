@@ -400,8 +400,8 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
   the English file from the UN workbook, reports codes without notes and the source's codes the
   app lacks, and (re)writes untranslated copies; translated files are left alone. They are loaded
   on first use, not at startup. `tests/test_coicop_notes.py` checks every code, the known empty
-  ones, the format, and that the German and Italian files have the same codes, the same number of
-  items per field and the same code references (German without "ß").
+  ones, the format, and that the German, French and Italian files have the same codes, the same
+  number of items per field and the same code references (German without "ß").
 - The language is a setting (`settings.json` → `language`; empty means follow the system:
   `LANG`, macOS `AppleLanguages`, or the Windows locale). Changing it reloads the page. Quasar
   (date picker) uses `de-CH` / `fr` / `it` / `en-GB`, AG Grid gets `localeText` per language, and
