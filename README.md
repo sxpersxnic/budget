@@ -192,6 +192,9 @@ The app opens in its own window and keeps all data in your user folder:
    suggestions (your recent payees come first) or type a new name. Once the payee is known, the
    app suggests a category below the category field, with the reason ("Used 14 times for this
    payee"); click **Use …** to take it, or choose another one.
+   **Tags** label transactions across categories ("Holiday Italy", "Renovation"): pick existing
+   ones or type a new name and press Enter; it becomes a tag when you save. A transaction can have
+   several.
 4. **Transactions → Import…** (optional): bring in a CSV export from your e-banking
    instead of typing. Choose the account, check the detected columns, give the new rows a
    category and import. The column settings can be saved per bank; transactions already
@@ -208,7 +211,8 @@ The app opens in its own window and keeps all data in your user folder:
    **Always Categorize Like This…** (also in the edit sheet): adjust the text it looks for ("migros")
    and save the rule. Taking a suggestion never creates a rule on its own.
    To tidy up several transactions at once, select them in the list and choose **Edit**: change
-   their category, payee, account or note (replace, append or clear) in one step, which one **Undo**
+   their category, payee, account, tags (add or remove) or note (replace, append or clear) in one step,
+   which one **Undo**
    reverts. Rows a change doesn't fit (a transfer has no category) keep what they have.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
@@ -225,6 +229,13 @@ The app opens in its own window and keeps all data in your user folder:
    search for a payee or choose one under **Filters**. **Payees → Rules…** (or **Settings → Rules…**)
    lists your categorization rules, to add, change or delete them. When several rules match, the one
    with the longest text wins.
+   **Tags** (sidebar) lists your tags with their number of transactions and what was spent and
+   received. Click a tag to see its transactions. Give a tag a **budget** (piggy bank button: an
+   amount, optionally a period such as the dates of a holiday) and a bar shows the tagged spending
+   against it; the part paid for others and income don't count. Rename or recolour a tag, merge
+   several, or delete one (it is taken off its transactions; **Undo** brings it back). On
+   **Transactions**, filter by tag under **Filters** or search for a tag name, and *Add Chart →
+   Spending by Tag* on the Overview compares the tags over a period.
 8. **Overview / Budget:** compare actual against budget, check the projected wealth, build
    charts, and export statements as Excel or PDF (share button on the Budget page).
    Once an account has an asset class other than cash, the Overview shows your wealth **by asset

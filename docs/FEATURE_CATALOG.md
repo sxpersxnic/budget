@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 open |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Next: step 25. Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11, F12, F03, F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -135,7 +135,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
 16. ☑ **F12:** decided — attachments are copied into the data folder
     (`attachments/<transaction id>/`), so backups and restore include them; one file at most 20 MB.
 17. ☑ **F10:** decided — the first version has tags with filter, totals and chart, and a budget per
-    tag (amount, optional period) with actual against budget.
+    tag (amount, optional period) with actual against budget. Built (see F10).
 
 ## All features
 
@@ -150,7 +150,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
 | F07 | ☑ Done | Automatic categorization | Organizing | M–L | Local | F09 |
 | F08 | ☑ Done | Simpler category picker | Organizing | S | Local | – |
 | F09 | ☑ Done | Payees | Organizing | M | Local | – |
-| F10 | ☐ Open | Tags | Organizing | M | Local | – |
+| F10 | ☑ Done | Tags | Organizing | M | Local | – |
 | F11 | ☐ Open | Split transactions | Organizing | M | Local | – |
 | F12 | ☐ Open | Attachments | Organizing | M | Local | – |
 | F13 | ☑ Done | Bulk edit | Organizing | S | Local | – |
@@ -583,7 +583,29 @@ A payee or merchant field, normalized ("MIGROS ZUERICH HB 1234" → "Migros").
 
 #### F10 · Tags
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built (decision 17):** `tags.csv` holds each tag with a colour from a fixed palette of nine (grey, red,
+orange, yellow, green, teal, blue, purple, pink; shades for light and dark mode) and an optional budget (amount,
+currency, optional start and end date). Transactions, templates and recurring series store the **ids** of their
+tags in a `tags` column, separated by `|`, so a rename touches one row; older files load without tags. The
+transaction form has a **Tags** field for every type (a spread booking follows its exchange and stays untagged), a
+chip input with suggestions: existing tags are picked (typing a tag's name in any case picks it), a new name shows
+as a dashed chip and becomes a tag only when the transaction is saved, in the same undo step. The recurring sheet,
+templates, *Duplicate*, *Make Recurring…* and booked occurrences carry the tags; bulk edit (F13) has **Add Tags**
+and **Remove Tags**. **Transactions** shows the tags as coloured chips (an AG Grid cell renderer; export and
+sorting use the names), filters by tag (any of the chosen) and finds tag names in the search. The **Tags** page
+(`/tags`, sidebar after Payees) lists each tag with its number of transactions, what was spent and received, and
+with a budget a bar "540.00 of 2'500.00 CHF · 1'960.00 CHF left · 1 Jul 2026 – 31 Jul 2026" (red when over); a
+click on a tag opens Transactions filtered by it (`?tag=<id>`); it adds tags, edits name and colour, merges,
+deletes and sets budgets, each one undoable step. The Overview has a **Spending by Tag** chart (one bar per tag in
+its colour, between two months; PNG, PDF, CSV and Excel like the other charts). **Decided while building:**
+spending counts the own share of tagged expenditure (the part paid for others is an advance that comes back), and
+tagged income other than repayments counts as received; a tag's budget compares only that spending within its
+period, income does not reduce it. Deleting a tag in use is allowed: it is taken off every transaction, template
+and series in one undoable action, and the confirmation says how many transactions lose it. The German word is
+*Schlagwort* ("Tag" means day), French *étiquette*, Italian *etichetta*. Not built: tags per item line (comes with
+F11, which plugs into `tags.tagged_amounts`), budgets per tag and month, and the tax summary's use of tags (F20).
 
 Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
@@ -631,7 +653,7 @@ how many rows change, and ⌘↩ / Ctrl+Enter saves. Each changed row goes throu
 a single edit (advance payments and repayments included); if one fails, nothing is saved and the
 failing rows are listed by date and amount. The whole edit is one undo step (*Edit several
 transactions*); booked rows keep their recurring series, valuation, items and import reference.
-Not built: tags (F10).
+Tags came with F10: *Add Tags* and *Remove Tags*.
 
 Select many transactions → change category, account, tag or note in one step. The selection
 bar on the Transactions page already exists; this adds an *Edit* sheet for several rows.
