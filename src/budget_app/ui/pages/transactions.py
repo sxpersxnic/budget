@@ -6,6 +6,7 @@ from datetime import date
 
 from nicegui import ui
 
+from budget_app.domain import months
 from budget_app.domain import tags as tag_codec
 from budget_app.domain.coicop import ADV, get_coicop
 from budget_app.domain.models import (
@@ -36,7 +37,7 @@ from budget_app.ui.pages.recurring import open_recurring_sheet
 from budget_app.ui.widgets.bulk_edit import open_bulk_edit_sheet
 from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
 from budget_app.ui.widgets.rule_sheet import always_like_this
-from budget_app.ui.widgets.selects import set_options
+from budget_app.ui.widgets.selects import expenditure_category_select, set_options
 from budget_app.ui.widgets.tags import CHIPS_RENDERER, TagSelect, grid_cells
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
@@ -167,8 +168,27 @@ def _row(
     }
 
 
-def page(tag: str = "") -> None:
-    """`tag` (a query parameter, from the Tags page) starts the list filtered by that tag."""
+def month_dates(month: str) -> tuple[str, str]:
+    """The first and last day of a month given as YYYY-MM, or two empty texts for anything else."""
+    try:
+        return months.first_day(month).isoformat(), months.last_day(month).isoformat()
+    except ValueError:
+        return "", ""
+
+
+def in_category(ctx: Context, tx: Transaction, code: str, lines: dict[str, list]) -> bool:
+    """Whether an expenditure counts in `code` or a category below it, by its own category or a split line's."""
+    if tx.type != TX_EXPENDITURE:
+        return False
+    coicop = get_coicop()
+    return any(
+        code in coicop.ancestors(p.category) for p in aggregates.transaction_parts(ctx, tx, lines.get(tx.id, []))
+    )
+
+
+def page(tag: str = "", month: str = "", category: str = "") -> None:
+    """Query parameters start the list filtered: `tag` (from the Tags page), `month` (YYYY-MM) and `category` (an
+    expenditure category, its subcategories included; both from the Overview's *Notable this month*, F18)."""
     with frame(t("Transactions"), "/transactions") as (ctx, actions):
         with actions:
             text = (
@@ -185,8 +205,9 @@ def page(tag: str = "") -> None:
                 t("New Transaction"), icon="add", on_click=lambda: open_transaction_sheet(ctx, apply_filters)
             ).props("unelevated")
         with ui.row().classes("w-full items-start gap-2 flex-wrap") as filters:
-            d_from = date_input(t("From")).classes("w-40")
-            d_to = date_input(t("To")).classes("w-40")
+            first_day, last_day = month_dates(month)
+            d_from = date_input(t("From"), first_day).classes("w-40")
+            d_to = date_input(t("To"), last_day).classes("w-40")
             a_min = ui.number(t("Min amount")).props("dense outlined").classes("w-32")
             a_max = ui.number(t("Max amount")).props("dense outlined").classes("w-32")
             acc = ui.select(
@@ -207,7 +228,9 @@ def page(tag: str = "") -> None:
             )
             tag_filter = TagSelect(ctx, [tag] if tag else [], label=t("Tags"), allow_new=False)  # any of them
             tag_filter.classes("w-64")
-        filters.set_visibility(bool(tag_filter.value))
+            known = category if category and get_coicop().get(category) and category != ADV else None
+            cat_filter = expenditure_category_select(known, ctx=ctx).classes(remove="w-full", add="w-64")
+        filters.set_visibility(bool(tag_filter.value or first_day or cat_filter.value))
         filter_btn.on_click(lambda: filters.set_visibility(not filters.visible))
         with ui.element("div").classes("selection-bar") as bar:
             selected_label = ui.label().classes("font-medium")
@@ -264,6 +287,8 @@ def page(tag: str = "") -> None:
                 split = split_columns(ctx, tx, lines)
                 if wanted and wanted.isdisjoint([*tag_codec.split(tx.tags), *split[1]]):
                     continue
+                if cat_filter.value and not in_category(ctx, tx, cat_filter.value, lines):
+                    continue
                 received = tx_svc.received_amount(ctx, tx) if tx.type == TX_EXCHANGE else None
                 r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats, tags, attached, split)
                 if acc.value and acc.value not in r["_accounts"]:
@@ -283,7 +308,7 @@ def page(tag: str = "") -> None:
             )
             bar.set_visibility(False)
 
-        for el in (d_from, d_to, a_min, a_max, acc, payee, typ, tag_filter, text):
+        for el in (d_from, d_to, a_min, a_max, acc, payee, typ, tag_filter, cat_filter, text):
             el.on_value_change(apply_filters)
         apply_filters()
         on_data_changed(apply_filters)

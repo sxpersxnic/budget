@@ -85,6 +85,11 @@ class MonthReport:
         return out
 
 
+def income_names(ctx: Context) -> dict[str, str]:
+    """The names of the income lines: income categories by id, and the advance repayments."""
+    return {c.id: c.name for c in ctx.store.income_categories.all()} | {ADV_REPAY: t(ADV_REPAY_NAME)}
+
+
 def month_report(ctx: Context, month: str, view_cur: str, today: date | None = None) -> MonthReport:
     coicop = get_coicop()
     complete = months.is_complete(month, today)
@@ -114,7 +119,7 @@ def month_report(ctx: Context, month: str, view_cur: str, today: date | None = N
 
     act_inc = actual_income(ctx, mset, view_cur)
     bud_inc = budgeted(ctx, mset, BUDGET_INCOME, view_cur)
-    names = {c.id: c.name for c in ctx.store.income_categories.all()} | {ADV_REPAY: t(ADV_REPAY_NAME)}
+    names = income_names(ctx)
     for key in sorted(set(act_inc) | set(bud_inc), key=lambda k: (names.get(k) or k).lower()):
         line = Line(key, names.get(key, key), act_inc.get(key, 0.0), bud_inc.get(key, 0.0), editable=key != ADV_REPAY)
         if abs(line.actual) > 0.005 or abs(line.budget) > 0.005:

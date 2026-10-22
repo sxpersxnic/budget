@@ -330,6 +330,8 @@ def seed(ctx: Context) -> None:
                     ItemInput("Birthday card", 1, 4.90, "09.2.1", [gift.id]),
                 ],
             )
+        if k == 0:  # F18: something notable this month, a large payment in a category that is usually empty
+            spend(day(min(today.day, 8)), 1290, "05.3.1.2", comment="Washing machine", payee="Fust")
         if k in (2, 1):  # the bathroom
             redo = (renovation.id,)
             spend(day(7), rng.uniform(900, 1300), "04.3.1", comment="Tools and tiles", payee="Jumbo", tags=redo)

@@ -41,6 +41,7 @@ from budget_app.ui.theme import (
     chart_layout,
     figure_dict,
 )
+from budget_app.ui.widgets.notable import notable_card
 from budget_app.ui.widgets.selects import currency_select
 
 CHART_TYPES = {
@@ -496,6 +497,7 @@ def page() -> None:
                     ui.label(
                         t("{amount} by the end of the plan", amount=f"{'+' if change >= 0 else ''}{fmt(change, cur)}")
                     ).classes("metric-sub " + ("text-pos" if change >= 0 else "text-neg"))
+            notable_card(ctx, cur)  # F18: hidden when nothing stands out
             if wealth_svc.uses_classes(ctx):
                 class_breakdown(wealth_svc.by_class(ctx, months.previous_month(), cur), cur)
 
