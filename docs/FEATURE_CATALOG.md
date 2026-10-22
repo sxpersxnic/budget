@@ -92,7 +92,7 @@ the Linux build.
 ### Decisions for the product owner
 
 Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each as recommended, decision 6 on 2026-10-20,
-decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All decisions are made; none is open.
+decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All decisions are made; none is open.
 
 1. ☑ **B08:** decided — the income and expenditure tables sit side by side on wide windows and
    stack on narrow ones. Built: side by side once each table gets about 750 px (windows from about 1,800 px;
@@ -138,6 +138,17 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
     Built (architecture §7, decision 20).
 17. ☑ **F10:** decided — the first version has tags with filter, totals and chart, and a budget per
     tag (amount, optional period) with actual against budget. Built (see F10).
+18. ☑ **F15:** decided on 2026-10-22 — any number of named scenarios, each a set of budget changes
+    on top of the plan and never written into it; the Overview wealth chart shows the plan and the
+    chosen scenarios; *Adopt into Plan* copies a scenario's changes into the budget as one undo step.
+19. ☑ **F26:** decided — one computer at a time: the data folder can move into a cloud folder, a
+    lock file there warns when another computer has the app open, and files changed elsewhere are
+    detected and reloaded; no merging.
+20. ☑ **F27:** decided — an app lock (password, or Touch ID / Windows Hello where available)
+    before the app opens, and encryption at rest as an opt-in on top, with a recovery key; without
+    the opt-in the files stay readable CSV.
+21. ☑ **F35:** decided — a phone-friendly *quick add* page on the home network, behind the app
+    lock and a pairing code; no entries from away from home, no cloud service.
 
 ## All features
 
@@ -754,7 +765,7 @@ March".
 
 - A scenario is a set of budget changes applied on top of the plan, never written into it.
 - The Overview wealth chart shows the plan and each scenario as separate lines.
-- **Decide:** how many scenarios to keep; whether a scenario can be adopted into the plan.
+- **Decided** (decision 18): any number of scenarios, each can be adopted into the plan.
 
 #### F16 · Budget from history
 
@@ -938,7 +949,7 @@ Dropbox.
 - The single-instance lock only works on one computer. Two computers editing at the same
   time can overwrite each other's files, so the app needs change detection and a merge
   strategy (per-record changes, which F28's change log enables).
-- **Decide:** "one computer at a time" with a warning (simple), or real merging (large).
+- **Decided** (decision 19): one computer at a time, with a warning and reload; no merging.
 
 #### F27 · Encryption and app lock
 
@@ -950,6 +961,8 @@ The CSV files are readable by anyone with access to the computer.
 - **Encryption at rest:** data files encrypted with a key derived from the password.
 - **Trade-off:** encrypted files can no longer be opened in Excel, and a forgotten password
   means lost data, so a recovery key is needed.
+- **Decided** (decision 20): the lock for everyone who sets a password; encryption at rest as an
+  opt-in, with a recovery key.
 
 #### F28 · Undo and change history
 
@@ -1050,8 +1063,7 @@ Record expenses on the phone where they happen.
   reachable on the home network. Needs the app lock (F27), because the server would then
   accept connections from other devices.
 - **Larger step:** a phone app that queues entries offline and syncs with the computer.
-- **Decide:** whether entries made away from home matter (then a sync service is needed,
-  which conflicts with local first).
+- **Decided** (decision 21): quick add on the home network only, behind the app lock.
 
 ## Reference
 
