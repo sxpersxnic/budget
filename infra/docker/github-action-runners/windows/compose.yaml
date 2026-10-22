@@ -1,0 +1,21 @@
+# Windows runner container, built and run on the PC (Docker in Windows-container mode).
+# runners.sh copies this folder there with a .env and starts one container per job with
+# `docker compose run`, passing a registration token (RUNNER_TOKEN) and a runner name
+# (RUNNER_NAME); see ../README.md.
+name: budget-runners-windows
+
+services:
+  runner:
+    build:
+      context: .
+      args:
+        # Must not be newer than the host: ltsc2022 or ltsc2025.
+        WINDOWS_TAG: ${WINDOWS_TAG:-ltsc2025}
+    image: budget-runner-windows:2.338.0
+    environment:
+      RUNNER_REPOSITORY: ${RUNNER_REPOSITORY:-sxpersxnic/budget}
+      # The workflow picks this runner through the WINDOWS_RUNNER repository variable.
+      RUNNER_LABELS: budget-windows
+    # Windows 10/11 run containers in Hyper-V isolation, which defaults to 1 GB of memory.
+    mem_limit: ${WINDOWS_MEMORY:-8g}
+    cpus: ${WINDOWS_CPUS:-4}

@@ -5,6 +5,9 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
 # Data folder for development (gitignored); override with `just data=/path/to/folder dev`.
 data := "data"
 
+# Self-hosted GitHub Actions runners, managed from the Mac (infra/docker/github-action-runners/README.md)
+runners := "infra/docker/github-action-runners/runners.sh"
+
 # List the recipes
 default:
     @just --list --unsorted
@@ -76,6 +79,41 @@ build:
 # Regenerate the app icons in packaging/assets/
 icons:
     uv run --group build python packaging/make_icons.py
+
+# Set up and start the self-hosted runners (platforms: linux windows macos; none = all three)
+[macos]
+runners-setup *platforms:
+    {{ runners }} setup {{ platforms }}
+
+# Start the self-hosted runners
+[macos]
+runners-start *platforms:
+    {{ runners }} start {{ platforms }}
+
+# Stop the self-hosted runners and remove them from GitHub
+[macos]
+runners-stop *platforms:
+    {{ runners }} stop {{ platforms }}
+
+# Show the self-hosted runners: agents, containers/VMs, GitHub's view, routing
+[macos]
+runners-status *platforms:
+    {{ runners }} status {{ platforms }}
+
+# Follow the self-hosted runners' logs
+[macos]
+runners-logs *platforms:
+    {{ runners }} logs {{ platforms }}
+
+# Send the workflow jobs to the self-hosted runners
+[macos]
+runners-enable *platforms:
+    {{ runners }} enable {{ platforms }}
+
+# Send the workflow jobs back to GitHub's runners
+[macos]
+runners-disable *platforms:
+    {{ runners }} disable {{ platforms }}
 
 # Remove build output and tool caches (keeps data/ and installers/)
 [unix]

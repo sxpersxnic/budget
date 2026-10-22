@@ -1,0 +1,20 @@
+# Linux runner container. runners.sh starts one per job with `docker compose run`, passing a
+# registration token (RUNNER_TOKEN) and a runner name (RUNNER_NAME); see ../README.md.
+name: budget-runners-linux
+
+services:
+  runner:
+    image: myoung34/github-runner:${LINUX_IMAGE_TAG:-2.338.0-ubuntu-jammy}
+    # amd64 to match GitHub's ubuntu runners and the x86_64 Linux installer;
+    # on Apple Silicon this runs under Rosetta (Docker Desktop: Settings → General).
+    platform: ${LINUX_PLATFORM:-linux/amd64}
+    environment:
+      RUNNER_SCOPE: repo
+      REPO_URL: https://github.com/${RUNNER_REPOSITORY:-sxpersxnic/budget}
+      # The workflows pick these runners through the LINUX_RUNNER repository variable.
+      LABELS: budget-linux
+      EPHEMERAL: "true"
+      RUN_AS_ROOT: "false"
+      # The runner removes itself after its job; runners.sh removes idle ones on stop.
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
+      UNSET_CONFIG_VARS: "true"
