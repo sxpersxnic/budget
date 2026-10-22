@@ -262,7 +262,7 @@ class Attachment:
     The file lies in `attachments/<folder>/<stored>` in the data folder; `name` is the name it had when
     it was added, only shown, never used as a path. A bill's file has `bill_id` and lies in the bill's
     folder; paying the bill sets `transaction_id`, so the file then belongs to the payment as well and
-    never moves (architecture §7, decision 21).
+    never moves (architecture §7, decision 22).
     """
 
     transaction_id: str  # empty while the bill it came with is open

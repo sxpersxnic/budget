@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12 and F11 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11 and F03 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments and F11 split transactions done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions and F03 QR bills done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03, F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -132,6 +132,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
     and budgets count each line in its own category. Built (architecture §4.3, decision 21).
 15. ☑ **F03:** decided — the app tracks open bills: a scanned QR bill waits in a Bills list with
     its due date until *Mark Paid* books the expenditure; the PDF stays as an attachment.
+    Built (architecture §7, decision 22).
 16. ☑ **F12:** decided — attachments are copied into the data folder
     (`attachments/<transaction id>/`), so backups and restore include them; one file at most 20 MB.
     Built (architecture §7, decision 20).
@@ -144,7 +145,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
 | --- | --- | --- | --- | --- | --- | --- |
 | F01 | ☑ Done | CSV import of transactions | Data in | M | Local | – |
 | F02 | ☑ Done | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
-| F03 | ☐ Open | Swiss QR-bill scanning | Data in | M | Local | – |
+| F03 | ☑ Done | Swiss QR-bill scanning | Data in | M | Local | – |
 | F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
 | F05 | ☑ Done | Recurring transactions | Data in | M | Local | – |
 | F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
@@ -419,7 +420,36 @@ camt.052 intraday reports, files holding several accounts (refused with a messag
 
 #### F03 · Swiss QR-bill scanning
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built (decision 15):** **Bills** in the sidebar (after Recurring, route `/bills`, icon `o_request_quote`) with a
+badge counting the open bills that are overdue or due within 7 days. A drop zone, "Drop QR bills (PDF or photo)",
+takes PDFs (every page, up to 20, is rendered with PDFium and searched; a document without a code is read once
+more at double resolution) and photos (JPEG, PNG, WebP; EXIF orientation applied); the QR codes are found with
+ZXing, all on the computer. Every code that is a QR bill is read and checked like a bank would
+(`domain/qrbill.py`, SIX Implementation Guidelines 2.3, payload version 0200): IBAN check digits (CH and LI only),
+QR-IBAN only with a QR reference and the reverse, QR reference (27 digits, mod 10 recursive), creditor reference
+(ISO 11649), currency CHF or EUR, amount format and range (an empty amount is filled in when paying; 0.00 is a
+notice and refused), structured (S) and combined (K) addresses with their field lengths, the 140- and
+997-character limits and the EPD trailer. Each valid bill becomes a record in `bills.csv` (creditor, address,
+IBAN, amount, currency, reference type and reference, message, bill information, due date, status
+open/paid/dismissed, the paying transaction, added); the due date is read from Swico bill information
+(`//S1/…/11/<invoice date>/…/40/0:30` = invoice date plus the net term) and can be set or cleared per bill.
+A bill already in the list (same IBAN, reference and amount, whatever its status; without a reference also the
+same message and bill information) is refused with "This bill is already in the list"; a file without one says
+"No QR bill found in this file", a broken code names its fault ("The creditor’s IBAN … is invalid"). The file
+is kept as an attachment of the bill (`attachments/<bill id>/`, decision 22). The **Open** list is sorted by due
+date (overdue in red, due within a week in orange, bills without a date last) and shows creditor, amount,
+due date, message and reference and a link to the file; **Mark Paid…** opens the transaction sheet ("Pay
+Bill") prefilled with the creditor as payee (a known payee keeps its spelling: "Swisscom (Schweiz) AG" finds
+the payee of that name, a new one is cleaned like a bank text), the amount and currency, the message and the
+formatted reference as note and today's date; the category is suggested with its reason (F07) and the bill's
+file is listed under Attachments; **Mark Paid** saves the expenditure and marks the bill paid in one undo
+step, and the file then belongs to the transaction. Dismiss (paid elsewhere, not owed), Reopen, the due date
+and Delete are undoable too; *Paid and Dismissed* is collapsed below, with *Show Payment* for a paid bill.
+Deleting the payment opens the bill again. Not built: HEIC photos (Pillow needs a plugin; the message asks for
+JPEG or PNG), the camera, reminders outside the app (F31), and matching a bill with a payment already
+imported from the bank (it is booked as a new expenditure).
 
 Every Swiss invoice carries a QR code with the amount, currency, creditor and reference.
 
@@ -573,7 +603,7 @@ there, which teaches the alias. The form's payee field suggests known payees (re
 new name as typed. Transactions has a Payee column, search and filter. The **Payees** page lists every payee
 with its number of transactions and what was spent and received, and renames, merges (several → one name; their
 transactions, templates, series and aliases move) and deletes unused payees, each as one undo step. Not built:
-QR-bill creditors (with F03), a "top merchants" report, and payees on transfers. Category suggestions per payee
+a "top merchants" report, and payees on transfers (QR-bill creditors became payees with F03). Category suggestions per payee
 came with F07.
 
 A payee or merchant field, normalized ("MIGROS ZUERICH HB 1234" → "Migros").
@@ -669,8 +699,9 @@ attachment records. Removing an attachment or deleting its transaction can be un
 at a later start, once no undo can bring it back (architecture §7, decision 20). Backups contain the
 files, a restore brings them back, and the copies made before an update or a restore keep them too. The
 Transactions list has a paper-clip column with the number of files, and its search finds attachment
-names. Not built: attaching from the Transactions list, sync, previews of office files, OCR (F04) and QR
-bills (F03), which will hand their file to the form's waiting list.
+names. Not built: attaching from the Transactions list, sync, previews of office files and OCR (F04). Since
+F03 a QR bill keeps its file as an attachment of the bill, which belongs to the payment once the bill is paid
+(decision 22).
 
 Keep receipts, invoices and contracts with the transaction.
 
@@ -1115,6 +1146,7 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | F29 · Multi-language support | ☑ Done | English, German, French and Italian, including the COICOP names. |
 | F12 · Attachments | ☑ Done | Receipts and invoices with their transaction, in the data folder and in backups; details under F12. |
 | Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. F11 added a category and tags per line; gives F04 a place for receipt lines. |
+| F03 · Swiss QR-bill scanning | ☑ Done | QR bills from PDFs and photos into a Bills list with due dates, paid through the transaction sheet; details under F03. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
 | CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
 

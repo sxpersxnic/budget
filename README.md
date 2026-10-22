@@ -144,9 +144,10 @@ The app opens in its own window and keeps all data in your user folder:
   file. The app also keeps its own copies under **Automatic Backups**: one before each update and
   one before each restore, the ten most recent. Each can be restored with **Restore…**. A restore
   first copies the current records to the backups folder, so it can be undone the same way.
-- **Attachments:** files you attach to a transaction are copied into the data folder
-  (`attachments/`), so the backup and the automatic copies include them. A removed attachment's file
-  stays there as long as the removal can still be undone, and is deleted at a later start.
+- **Attachments:** files you attach to a transaction, and the PDFs and photos of QR bills, are
+  copied into the data folder (`attachments/`), so the backup and the automatic copies include them.
+  A removed attachment's file stays there as long as the removal can still be undone, and is deleted
+  at a later start.
 - **Undo:** after saving or deleting, the confirmation at the bottom offers **Undo** for a few
   seconds. **Settings → Data → Change History** lists the last changes, each with **Undo**. An
   undo is refused when the records were changed again afterwards, so it never overwrites later
@@ -238,6 +239,16 @@ The app opens in its own window and keeps all data in your user folder:
    due it is listed for one-click booking (change the amount first if it varies, or skip it);
    turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
    series from a transaction you already entered.
+   **Bills** (sidebar): drop the PDF of a Swiss QR bill, or a photo of its QR code (JPEG or PNG), onto
+   the box, or click it to choose files. The app reads the QR code on your computer (nothing is sent
+   anywhere) and lists the bill under **Open** with the creditor, amount, reference and due date (read
+   from the bill when it states one; set or change it with the calendar button). The sidebar counts the
+   bills that are overdue or due within a week. When you have paid a bill, click **Mark Paid…**: the
+   transaction sheet opens filled in with the creditor as payee, the amount, the message and reference
+   as note, and a suggested category; check it, choose the account and click **Mark Paid**. The bill's
+   PDF goes with the payment as an attachment. **Dismiss** a bill you don't pay here (for example one
+   paid by eBill); paid and dismissed bills are kept under **Paid and Dismissed**. The same bill
+   dropped twice is refused; deleting its payment puts a bill back on the open list.
 7. **Categories** (sidebar): look up a COICOP category by code, name or what it includes; the ⓘ
    beside a name shows what the category includes, also includes and excludes. The ones you used
    show what you spent in them this year.
@@ -367,3 +378,16 @@ types, tests and coverage before each push.
   <https://unstats.un.org/unsd/classifications/Econ> (retrieved on 2026-10-21). The English text is
   the UN's; the German, French and Italian translations are the app's own and unofficial, as
   the app says beside them.
+- **QR bills:** read according to SIX, *Swiss Implementation Guidelines for the QR-bill*, version 2.3.
+
+### Libraries for QR bills
+
+| Library | Used for | Licence |
+| --- | --- | --- |
+| [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) with [PDFium](https://pdfium.googlesource.com/pdfium/) | rendering PDF pages to find the QR code | Apache-2.0 or BSD-3-Clause; PDFium BSD-3-Clause, its bundled libraries under their own licences (listed in the package) |
+| [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp) | finding and decoding QR codes | Apache-2.0 |
+| [Pillow](https://python-pillow.org) | opening photos (already used through reportlab) | MIT-CMU |
+| [segno](https://github.com/heuer/segno), [qrbill](https://github.com/claudep/swiss-qr-bill) | tests only: QR codes and QR-bill payloads for the test files | BSD-3-Clause, MIT |
+
+All of them come as wheels with their native code for macOS (arm64 and x86_64), Windows and Linux, so
+`uv sync` needs no compiler.
