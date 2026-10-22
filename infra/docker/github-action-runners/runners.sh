@@ -112,9 +112,10 @@ on_host() {
 }
 
 # PowerShell on the PC; encoded, so neither the SSH command line nor PowerShell mangle quotes and braces.
+# Progress output would come back as CLIXML on stderr.
 remote_ps() {
   on_host windows powershell -NoLogo -NoProfile -NonInteractive -EncodedCommand \
-    "$(printf '%s' "$1" | iconv -f UTF-8 -t UTF-16LE | base64 | tr -d '\n')"
+    "$(printf '%s' "\$ProgressPreference = 'SilentlyContinue'; $1" | iconv -f UTF-8 -t UTF-16LE | base64 | tr -d '\n')"
 }
 
 compose() {
@@ -157,24 +158,42 @@ setup_linux() {
 setup_windows() {
   local os tmp
   on_host windows hostname >/dev/null || die "Cannot reach $WINDOWS_SSH_HOST over SSH (key-based login needed)"
-  # Docker Desktop must run in Windows-container mode; switch it if it runs Linux containers.
+  # Brings Docker Desktop up in Windows-container mode and prints the engine, or what is missing.
+  # Anything started over SSH ends with the SSH session, so Docker Desktop is started through a
+  # one-off scheduled task in the signed-in user's session; that also needs someone signed in.
   os=$(remote_ps "$(cat <<'PS'
-$cli = 'C:\Program Files\Docker\Docker\DockerCli.exe'
-$os = docker version --format '{{.Server.Os}}' 2>$null
-if ($os -eq 'linux' -and (Test-Path $cli)) {
-    & $cli -SwitchWindowsEngine
-    foreach ($i in 1..30) {
-        Start-Sleep 2
-        $os = docker version --format '{{.Server.Os}}' 2>$null
-        if ($os -eq 'windows') { break }
-    }
+function Engine { cmd /c "docker version --format {{.Server.Os}} 2>nul" }
+function Wait-Engine($os) { foreach ($i in 1..60) { if ((Engine) -eq $os) { return }; Start-Sleep 2 } }
+if ((Get-WindowsOptionalFeature -Online -FeatureName Containers).State -ne 'Enabled') {
+    Enable-WindowsOptionalFeature -Online -FeatureName Containers -All -NoRestart | Out-Null
+    'restart'; exit
 }
-$os
+if (-not (Get-Process 'Docker Desktop' -ErrorAction SilentlyContinue | Where-Object SessionId -ne 0)) {
+    if (-not (quser 2>$null | Select-String $env:USERNAME)) { 'signed-out'; exit }
+    $task = 'Start Docker Desktop (budget runners)'
+    $user = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+    Register-ScheduledTask -TaskName $task -Force `
+        -Action (New-ScheduledTaskAction -Execute 'C:\Program Files\Docker\Docker\Docker Desktop.exe') `
+        -Principal (New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive) | Out-Null
+    Start-ScheduledTask -TaskName $task
+    Start-Sleep 5
+    Unregister-ScheduledTask -TaskName $task -Confirm:$false
+    Wait-Engine 'linux'
+}
+if ((Engine) -ne 'windows') {
+    cmd /c "docker desktop engine use windows 2>&1" | Out-Null
+    Wait-Engine 'windows'
+}
+Engine
 PS
 )" | tr -d '\r')
-  [[ "$os" == windows ]] || die "Docker on $WINDOWS_SSH_HOST is not running Windows containers ('${os:-not running}').
-On the PC: start Docker Desktop, turn on 'Start Docker Desktop when you sign in', and switch to
-Windows containers (tray icon; Windows asks to enable Hyper-V and Containers, then restart). Then run setup again."
+  case $os in
+    windows) ;;
+    restart) die "Enabled the Windows feature Containers on $WINDOWS_SSH_HOST. Restart the PC
+(ssh $WINDOWS_SSH_HOST shutdown /r /t 0), sign in there (Docker Desktop starts at sign-in), then run setup again." ;;
+    signed-out) die "Nobody is signed in on $WINDOWS_SSH_HOST, so Docker Desktop cannot start: sign in there, then run setup again." ;;
+    *) die "Docker on $WINDOWS_SSH_HOST did not switch to Windows containers ('${os:-not running}'); check Docker Desktop there." ;;
+  esac
 
   log "Copying the image files to $WINDOWS_SSH_HOST:$WINDOWS_DIR"
   remote_ps "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue '$WINDOWS_DIR'; New-Item -ItemType Directory '$WINDOWS_DIR' | Out-Null"

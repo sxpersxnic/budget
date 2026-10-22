@@ -37,9 +37,12 @@ Rerun `just runners-setup <platform>` after changing `.env`, `windows/` or `linu
 - **Mac**: Docker Desktop running, with Rosetta turned on (Settings → General) for the amd64
   Linux containers; Homebrew (setup installs Tart); `gh` logged in for `runners-enable`; about
   30 GB free for the macOS image.
-- **PC** (`WINDOWS_SSH_HOST`, default `pc-01`): SSH login with a key, Docker Desktop starting at
-  sign-in. Setup switches it to Windows containers; the first switch asks on the PC to enable
-  Hyper-V and Containers and restart.
+- **PC** (`WINDOWS_SSH_HOST`, default `pc-01`): SSH login with a key, Hyper-V enabled, Docker
+  Desktop starting at sign-in, and someone signed in. Setup enables the Windows feature
+  *Containers* if needed (then restart the PC and sign in), starts Docker Desktop if it is not
+  running and switches it to Windows containers. Programs started over SSH end with the SSH
+  session, so setup starts Docker Desktop through a one-off scheduled task in the signed-in
+  session instead of `docker desktop start`.
 
 ## Settings
 
