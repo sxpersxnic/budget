@@ -1,8 +1,8 @@
 # escape=`
 # Windows runner for the Installers workflow's Windows build: the GitHub runner, PowerShell 7
 # (the workflow's default shell), Git and Inno Setup 6. uv and Python come from the workflow.
-# Needs a Windows host with Docker in Windows-container mode; see ../README.md.
-ARG WINDOWS_TAG=ltsc2022
+# Needs a Windows host with Docker in Windows-container mode; see ../README.md and ../runners.sh.
+ARG WINDOWS_TAG=ltsc2025
 FROM mcr.microsoft.com/windows/servercore:${WINDOWS_TAG}
 
 SHELL ["powershell", "-NoLogo", "-NoProfile", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]

@@ -1,109 +1,79 @@
 # Self-hosted GitHub Actions runners
 
 Runners for when GitHub's hosted minutes run out. PyInstaller cannot cross-compile, so each
-installer needs a runner on its own operating system:
+installer needs a runner on its own operating system. The Mac manages all three:
 
-| Folder | Runs on | Jobs | Repository variable | Label |
-| --- | --- | --- | --- | --- |
-| [`linux/`](linux) | Docker on any machine | CI; Installers: Linux build, Release | `LINUX_RUNNER` | `budget-linux` |
-| [`windows/`](windows) | Docker in Windows-container mode on a Windows PC | Installers: Windows build | `WINDOWS_RUNNER` | `budget-windows` |
-| [`macos/`](macos) | [Tart](https://tart.run) VMs on an Apple Silicon Mac | Installers: macOS build | `MACOS_RUNNER` | `budget-macos` |
+| Platform | Runs on | Jobs | Repository variable |
+| --- | --- | --- | --- |
+| `linux` | Docker on the Mac ([`linux/compose.yaml`](linux/compose.yaml)) | CI; Installers: Linux build, Release | `LINUX_RUNNER` |
+| `windows` | Docker in Windows-container mode on the PC, over SSH ([`windows/`](windows)) | Installers: Windows build | `WINDOWS_RUNNER` |
+| `macos` | [Tart](https://tart.run) VMs on the Mac | Installers: macOS build | `MACOS_RUNNER` |
 
-A job whose variable is unset runs on GitHub's runner as before, so the three can be set up
-independently. Docker can only run Linux containers on a Mac, Windows containers need a Windows
-kernel, and macOS may only be virtualised on Apple hardware, hence three different hosts.
+Every job runs in a fresh container or VM that is deleted afterwards. The access token stays
+on the Mac: [`runners.sh`](runners.sh) fetches a registration token for each job (good for one
+registration, expires after an hour) and hands only that to the container or VM.
 
-Every runner is ephemeral: it takes one job, then registers anew.
+## Commands
 
-## Token
+All on the Mac, from the repository root. Each takes platforms (`linux windows macos`); none
+means all three.
 
-All three use a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new)
-to fetch short-lived registration tokens; jobs never see it.
+| Command | |
+| --- | --- |
+| `just runners-setup` | Check prerequisites, build images and the VM template, start the runners, offer to enable them |
+| `just runners-start` / `runners-stop` | Start (launchd agents) / stop and remove from GitHub |
+| `just runners-status` | Agents, containers and VMs, the runners GitHub sees, routing |
+| `just runners-logs` | Follow the logs (`~/Library/Logs/com.budget.runner.<platform>.log`) |
+| `just runners-enable` / `runners-disable` | Send the workflow jobs to these runners / back to GitHub's |
 
-- Repository access: *Only select repositories* → `sxpersxnic/budget`
-- Repository permissions: *Administration: Read and write* (Metadata: Read is added automatically)
+Rerun `just runners-setup <platform>` after changing `.env`, `windows/` or `linux/compose.yaml`.
 
-Put it in each folder's `.env` (copy `.env.example`). When it expires, runners can no longer
-register: put a new one in and restart them.
+## Before the first setup
 
-## Linux
+- **Token**: a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new)
+  with repository access *Only select repositories* → `sxpersxnic/budget` and repository
+  permission *Administration: Read and write*. Setup asks for it and stores it in `.env`
+  (git-ignored, only on the Mac). When it expires, put a new one there.
+- **Mac**: Docker Desktop running, with Rosetta turned on (Settings → General) for the amd64
+  Linux containers; Homebrew (setup installs Tart); `gh` logged in for `runners-enable`; about
+  30 GB free for the macOS image.
+- **PC** (`WINDOWS_SSH_HOST`, default `pc-01`): SSH login with a key, Docker Desktop starting at
+  sign-in. Setup switches it to Windows containers; the first switch asks on the PC to enable
+  Hyper-V and Containers and restart.
 
-```sh
-cd linux
-cp .env.example .env    # set RUNNER_ACCESS_TOKEN
-docker compose up -d
-docker compose logs -f  # "Listening for Jobs"
-gh variable set LINUX_RUNNER --body budget-linux
-```
+## Settings
 
-Two runners from [`myoung34/github-runner`](https://github.com/myoung34/docker-github-actions-runner)
-(Ubuntu 22.04, whose glibc the Linux installer is built against). They run as `linux/amd64`
-like GitHub's runners; on Apple Silicon turn on Rosetta in Docker Desktop first.
+[`.env.example`](.env.example) lists them: number of runners per platform, images, VM and
+container sizes. Setup copies the `WINDOWS_*` settings to the PC without the token.
 
-- A container exits after its job and restarts with a new registration. It keeps its files,
-  so the uv cache stays warm; `docker compose up -d --force-recreate` starts from scratch.
-- `docker compose down` deregisters the runners.
+- Linux: [`myoung34/github-runner`](https://github.com/myoung34/docker-github-actions-runner) on
+  Ubuntu 22.04, whose glibc the Linux installer is built against.
+- Windows: Windows Server Core with the GitHub runner, PowerShell 7, Git and Inno Setup 6, every
+  download pinned and checked against its SHA-256 (build arguments in the
+  [`Dockerfile`](windows/Dockerfile)). `WINDOWS_TAG` must not be newer than the PC's Windows.
+- macOS: a [Cirrus Labs image](https://github.com/cirruslabs/macos-image-templates) with the
+  Tart guest agent; each job clones the template VM (an APFS copy: seconds, no extra space). At
+  most two macOS VMs run at a time. Tart is free for personal use ([licence](https://tart.run/licensing/)).
 
-## Windows
+## Operation
 
-On a Windows 10/11 Pro or Windows Server machine with Docker Desktop switched to Windows
-containers (or Docker Engine on Windows Server), in a clone of this repository:
-
-```powershell
-cd infra\docker\github-action-runners\windows
-copy .env.example .env    # set RUNNER_ACCESS_TOKEN
-docker compose up -d --build
-docker compose logs -f
-gh variable set WINDOWS_RUNNER --body budget-windows
-```
-
-The image (Windows Server Core) brings the GitHub runner, PowerShell 7, Git and Inno Setup 6;
-every download is pinned and checked against its SHA-256. Versions are build arguments in the
-[`Dockerfile`](windows/Dockerfile). `WINDOWS_TAG` must not be newer than the host.
-
-- Windows 10/11 run containers in Hyper-V isolation, which starts with 1 GB of memory:
-  `RUNNER_MEMORY` and `RUNNER_CPUS` in `.env` size the container.
-- A stopped runner stays listed as offline until GitHub removes it (ephemeral runners after a
-  day); the restarted container replaces its own registration.
-
-## macOS
-
-On this Mac (Apple Silicon):
-
-```sh
-brew install cirruslabs/cli/tart
-cd macos
-cp .env.example .env    # set RUNNER_ACCESS_TOKEN
-./runner.sh prepare     # pulls the macOS image (~25 GB) and installs the runner into a template VM
-./runner.sh install     # launchd agent: starts at login, log in ~/Library/Logs/com.budget.macos-runner.log
-gh variable set MACOS_RUNNER --body budget-macos
-```
-
-Each job gets a fresh clone of the template VM (an APFS copy, so it takes seconds and no extra
-space), which is deleted afterwards. The VMs are
-[Cirrus Labs images](https://github.com/cirruslabs/macos-image-templates) with Homebrew and the
-Tart guest agent that `runner.sh` uses to run commands inside them.
-
-- `./runner.sh start` runs in the foreground instead; `./runner.sh uninstall` removes the agent.
-- Rerun `prepare` to pick up a newer image or runner version (`.env`).
-- The Mac must be awake and logged in for jobs to start; it stays awake while a VM runs.
-- Tart is free for personal use; see its [licence](https://tart.run/licensing/).
-
-## Switching back
-
-`gh variable delete LINUX_RUNNER` (or `WINDOWS_RUNNER`, `MACOS_RUNNER`) sends the jobs back to
-GitHub's runners. Jobs for a variable that is set wait until a matching runner is online, so
-delete the variable before stopping its runners for a longer time.
+- The Mac stays awake while runners are started (`caffeinate`), and must be logged in. The
+  Windows runner also depends on it: the Mac starts the PC's containers.
+- Jobs for an enabled platform wait until its runner is online: `just runners-disable` before
+  stopping runners for a longer time.
+- `runners-stop` stops running jobs too.
+- If `runners-logs windows` shows SSH failures while `ssh pc-01` works in a terminal, the key
+  is probably only unlocked there: add it to the macOS keychain (`ssh-add --apple-use-keychain`).
 
 ## Security
 
 The repository is public. Pull requests from forks always run on GitHub's runners (see
 `runs-on` in `ci.yml`); the Installers workflow runs only on pushes to `main`, tags and manual
-runs. Outside code therefore never reaches these machines. Additionally, require approval for
-fork pull request workflows (Settings → Actions → General).
+runs, so outside code never reaches these machines. Additionally, require approval for fork
+pull request workflows (Settings → Actions → General).
 
-- Linux: jobs run as the image's `runner` user, which has passwordless `sudo` inside the
-  container (the Linux build installs Qt libraries with `apt-get`). The Docker socket is not
-  mounted.
-- Windows: jobs run as the container's administrator, isolated from the host by the container.
-- macOS: jobs run as `admin` inside a VM that is thrown away after the job.
+A job can read everything in its container or VM, so nothing long-lived is in there: the
+registration token is spent by the time the job runs, and the container or VM is deleted
+afterwards. Jobs run as the image's `runner` user with `sudo` inside the Linux container (the
+Linux build installs Qt libraries with `apt-get`), as administrator in the Windows container,
+and as `admin` in the macOS VM. The Docker socket is not mounted.
