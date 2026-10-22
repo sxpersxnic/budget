@@ -536,6 +536,9 @@ def delete(ctx: Context, ids: list[str]) -> int:
     items = [i.id for i in ctx.store.transaction_items.all() if i.transaction_id in ids_set]
     count = ctx.store.transactions.delete(list(ids_set))
     ctx.store.transaction_items.delete(items)  # a transaction's product list goes with it
+    from budget_app.services import bills  # noqa: PLC0415 - bills books its payments through this module
+
+    bills.release(ctx, ids_set)  # a bill whose payment is deleted is open again (F03)
     attachments.remove_for(ctx, ids_set)  # and its attachments (their files stay while Undo can restore them)
     return count
 

@@ -2,7 +2,8 @@
 
 Editing a transaction, files are attached and removed at once, each with its own Undo. A new
 transaction keeps the chosen files in memory and stores them together with it, in the same undoable
-step; closing the form without saving drops them.
+step; closing the form without saving drops them. Paying a QR bill (F03), the bill's file is listed as
+well: it is the bill's already and goes with the transaction when it is saved.
 
 Files reach the page only through `/attachment/<id>`: it serves the file of an existing attachment
 record, by that record's id, from the path the service builds out of plain ids, with the content
@@ -68,10 +69,12 @@ class AttachmentList:
 
     `tx_id` is the transaction being edited, or "" for a new one (files wait for `store`).
     `on_change` runs after a file was attached or removed at once (to refresh the list behind the sheet).
+    `bill_id`: a new transaction that pays this QR bill shows the bill's files too (F03).
     """
 
-    def __init__(self, ctx: Context, tx_id: str = "", on_change: Callable[[], object] | None = None):
+    def __init__(self, ctx: Context, tx_id: str = "", on_change: Callable[[], object] | None = None, bill_id: str = ""):
         self.ctx, self.tx_id, self._on_change = ctx, tx_id, on_change
+        self.bill_id = "" if tx_id else bill_id
         self._pending: list[tuple[str, bytes]] = []  # new transaction: (name, content) until it is saved
         self._preview_id = ""
         with ui.column().classes("w-full gap-1") as self._root:
@@ -179,6 +182,8 @@ class AttachmentList:
     # ------------------------------------------------------------------ view
     def refresh(self) -> None:
         stored = attachments_svc.list_for(self.ctx, self.tx_id) if self.tx_id else []
+        from_bill = attachments_svc.list_for_bill(self.ctx, self.bill_id) if self.bill_id else []
+        stored += [a for a in from_bill if not a.transaction_id]
         n = len(stored) + len(self._pending)
         self._summary.set_text(tn("{n} file", "{n} files", n) if n else "")
         self._list.clear()
@@ -199,7 +204,8 @@ class AttachmentList:
                     ui.icon(ICONS.get(kind, "o_draft"), size="22px")
             with ui.column().classes("gap-0 min-w-0 attach-name"):
                 name = ui.label(att.name).classes("ellipsis")
-                caption = f"{attachments_svc.size_label(att.size)} · {i18n.date_label(att.added)}"
+                when = t("Attached when you save") if self.bill_id else i18n.date_label(att.added)
+                caption = f"{attachments_svc.size_label(att.size)} · {when}"
                 ui.label(caption if present else t("The file is missing")).classes("caption")
             if kind in ("image", "pdf") and present:
                 name.classes("cursor-pointer").on("click", lambda att=att: self._toggle_preview(att))
@@ -215,9 +221,10 @@ class AttachmentList:
                 ui.button(icon="o_download", on_click=lambda att=att: self._save_copy(att)).props(
                     "flat round dense size=sm"
                 ).classes("text-primary").tooltip(t("Save a Copy…"))
-                ui.button(icon="o_delete", on_click=lambda att=att: self._remove(att)).props(
-                    "flat round dense size=sm"
-                ).classes("text-3").tooltip(t("Remove"))
+                if not self.bill_id:  # the bill's file stays the bill's until it is paid
+                    ui.button(icon="o_delete", on_click=lambda att=att: self._remove(att)).props(
+                        "flat round dense size=sm"
+                    ).classes("text-3").tooltip(t("Remove"))
 
     def _pending_row(self, index: int, name: str, data: bytes) -> None:
         ft = files.file_type(name, data)

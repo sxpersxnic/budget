@@ -85,6 +85,7 @@ TABLE_NAMES = {
     "trades": N_("Trade"),
     "prices": N_("Price"),
     "tags": N_("Tag"),
+    "bills": N_("Bill"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 
@@ -105,6 +106,8 @@ def describe_change(ctx: Context, change) -> str:
         what = f"{raw.get('match', '')} · {raw.get('category', '')}"
     elif change.table == "trades":
         what = f"{raw.get('date', '')} · {raw.get('kind', '')} · {raw.get('quantity', '')} × {raw.get('price', '')}"
+    elif change.table == "bills":
+        what = f"{raw.get('creditor', '')} · {raw.get('amount', '')} {raw.get('currency', '')}"
     elif change.table == "prices":
         what = f"{raw.get('date', '')} · {raw.get('price', '')}"
     else:

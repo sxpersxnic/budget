@@ -335,6 +335,14 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
   .item-split { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* QR bills (F03) */
+.bill-drop { padding: 22px 12px; font-size: 14px; flex-direction: column; text-align: center; }
+.bill-drop .q-icon { font-size: 28px; }
+.due-late { color: var(--negative); }
+.due-soon { color: var(--warning); }
+.bill-amount { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 500; }
+.closed-bills .nicegui-expansion-content { padding: 0; gap: 0; align-items: stretch; }
+
 /* attachments in the transaction form (F12) */
 .attach-drop { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
   padding: 10px 12px; border: 1px dashed var(--separator-strong); border-radius: 10px; cursor: pointer;

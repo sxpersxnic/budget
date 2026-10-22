@@ -17,6 +17,7 @@ from nicegui.events import KeyEventArguments
 from budget_app import config, i18n
 from budget_app.domain import months
 from budget_app.i18n import N_, t
+from budget_app.services import bills as bills_svc
 from budget_app.services import recurring as recurring_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
@@ -31,6 +32,7 @@ NAV = [
     ("/budget", N_("Budget"), "o_donut_large"),
     ("/transactions", N_("Transactions"), "o_receipt_long"),
     ("/recurring", N_("Recurring"), "o_event_repeat"),
+    ("/bills", N_("Bills"), "o_request_quote"),
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
     ("/categories", N_("Categories"), "o_account_tree"),
     ("/payees", N_("Payees"), "o_storefront"),
@@ -48,7 +50,12 @@ NAV_PARENT = {
 }
 
 _data_listeners: weakref.WeakKeyDictionary[Client, Callable[[], object]] = weakref.WeakKeyDictionary()
-_due_badges: weakref.WeakKeyDictionary[Client, ui.badge] = weakref.WeakKeyDictionary()
+# per page: the sidebar badges by route (due recurring transactions, bills due soon)
+_due_badges: weakref.WeakKeyDictionary[Client, dict[str, ui.badge]] = weakref.WeakKeyDictionary()
+BADGES = {
+    "/recurring": N_("Due recurring transactions"),
+    "/bills": N_("Bills due within a week or overdue"),
+}
 
 
 def fmt(value: float | None, currency: str = "") -> str:
@@ -108,13 +115,14 @@ def data_changed() -> None:
 
 
 def refresh_due_badge() -> None:
-    """Show the number of due recurring transactions beside "Recurring" in the sidebar."""
-    badge = _due_badges.get(ui.context.client)
-    if badge is None:
-        return
-    n = recurring_svc.due_count(get_ctx(), date.today())
-    badge.set_text(str(n))
-    badge.set_visibility(n > 0)
+    """Show the number of due recurring transactions beside "Recurring" and of the open bills due within a week
+    or overdue beside "Bills" (F03) in the sidebar."""
+    badges = _due_badges.get(ui.context.client, {})
+    counts = {"/recurring": recurring_svc.due_count, "/bills": bills_svc.due_count}
+    for target, badge in badges.items():
+        n = counts[target](get_ctx(), date.today())
+        badge.set_text(str(n))
+        badge.set_visibility(n > 0)
 
 
 # ------------------------------------------------------------------ frame
@@ -126,11 +134,11 @@ def _nav_item(target: str, label: str, icon: str, active: bool) -> None:
     ):
         ui.icon(icon)
         ui.label(t(label))
-        if target == "/recurring":
+        if target in BADGES:
             ui.space()
             badge = ui.badge().props("rounded").classes("nav-badge")
-            badge.tooltip(t("Due recurring transactions"))
-            _due_badges[ui.context.client] = badge
+            badge.tooltip(t(BADGES[target]))
+            _due_badges.setdefault(ui.context.client, {})[target] = badge
             refresh_due_badge()
 
 

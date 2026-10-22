@@ -1,7 +1,10 @@
 """The transaction form, used by the 'Add transaction' page and the edit dialog.
 
 A new expenditure or income with a payee and no category shows the suggested category (F07) under the category
-field, filled in only when clicked; editing one offers "Always Categorize Like This…", which creates a rule."""
+field, filled in only when clicked; editing one offers "Always Categorize Like This…", which creates a rule.
+
+Paying a QR bill (F03) opens the form prefilled from the bill (`bill_id`): the bill's file is listed under
+Attachments, and saving marks the bill paid in the same undoable step."""
 
 from __future__ import annotations
 
@@ -29,6 +32,7 @@ from budget_app.domain.models import (
 )
 from budget_app.i18n import N_, t, tc
 from budget_app.services import accounts as acc_svc
+from budget_app.services import bills as bills_svc
 from budget_app.services import categorize
 from budget_app.services import items as items_svc
 from budget_app.services import payees as payee_svc
@@ -79,8 +83,10 @@ class TransactionForm:
         prefill: TransactionInput | None = None,
         items_from: str = "",
         on_duplicate: Callable[[Transaction], None] | None = None,
+        bill_id: str = "",
     ):
         self.ctx = ctx
+        self._bill_id = bill_id  # F03: saving pays this bill
         self.editing = editing
         self.on_saved = on_saved
         self.on_cancel = on_cancel
@@ -263,7 +269,9 @@ class TransactionForm:
                 .classes("w-full")
             )
             # F12: files kept with the transaction; a new one stores them when it is saved
-            self.attachments = AttachmentList(self.ctx, self.editing.id if self.editing else "", data_changed)
+            self.attachments = AttachmentList(
+                self.ctx, self.editing.id if self.editing else "", data_changed, bill_id=self._bill_id
+            )
             with ui.row().classes("w-full items-center gap-2 no-wrap pt-1"):
                 self.status = ui.label().classes("caption")
                 ui.space()
@@ -274,9 +282,10 @@ class TransactionForm:
                     ).classes("text-primary")
                 if self.on_cancel:
                     ui.button(t("Cancel"), on_click=self.on_cancel).props("flat").classes("text-primary")
-                self.save_btn = ui.button(
-                    t("Save Changes") if self.editing else t("Add Transaction"), on_click=self._save
-                ).props("unelevated")
+                save_label = t("Save Changes") if self.editing else t("Add Transaction")
+                self.save_btn = ui.button(t("Mark Paid") if self._bill_id else save_label, on_click=self._save).props(
+                    "unelevated"
+                )
             ui.keyboard(on_key=self._shortcut, ignore=[])
 
     def _category_aids(self, kind: str) -> None:
@@ -671,16 +680,20 @@ class TransactionForm:
                 item.category, item.tags = "", []
         try:
             items_svc.validate(item_inputs)  # before saving, so a bad item cannot leave half a change
+            if self._bill_id:
+                bills_svc.check_payment(self.ctx, self._bill_id, inp.type)  # still open, and paid by an expenditure
             if inp.type == TX_EXPENDITURE:
                 items_svc.check_split(item_inputs, inp.amount, inp.category, inp.currency)
             with self.ctx.store.history.action(N_("Save a transaction")):  # one step to undo, items included
                 tx = tx_svc.save(self.ctx, inp, self.editing.id if self.editing else "")
                 items_svc.replace(self.ctx, tx.id, item_inputs)
                 self.attachments.store(tx.id)
+                if self._bill_id:  # F03: the bill is paid, its file goes with the transaction
+                    bills_svc.paid_with(self.ctx, self._bill_id, tx)
         except Exception as exc:  # validation and FX errors
             error(str(exc))
             return
-        undoable(t("Changes saved") if self.editing else t("Transaction added"))
+        undoable(t("Bill paid") if self._bill_id else t("Changes saved") if self.editing else t("Transaction added"))
         if self.on_saved:
             self.on_saved(tx)
         if not self.editing:
@@ -733,8 +746,10 @@ def open_transaction_sheet(
     editing: Transaction | None = None,
     prefill: TransactionInput | None = None,
     items_from: str = "",
+    bill_id: str = "",
 ) -> None:
-    """The transaction form as a modal sheet, so a transaction can be added from any page."""
+    """The transaction form as a modal sheet, so a transaction can be added from any page; with `bill_id`, the
+    payment of that QR bill (F03)."""
     if editing is not None and editing.invest_id:  # booked on the Investments page (F21): edit it there
         from budget_app.ui.pages.investments import open_source  # noqa: PLC0415 - the page imports this module
 
@@ -752,7 +767,8 @@ def open_transaction_sheet(
         dlg.close()
         open_transaction_sheet(ctx, on_saved, prefill=tx_svc.duplicate_input(ctx, tx, date.today()), items_from=tx.id)
 
-    with sheet(t("Edit Transaction") if editing else t("New Transaction"), width="34rem") as dlg:
+    title = t("Pay Bill") if bill_id else t("Edit Transaction") if editing else t("New Transaction")
+    with sheet(title, width="34rem") as dlg:
         TransactionForm(
             ctx,
             editing=editing,
@@ -761,4 +777,5 @@ def open_transaction_sheet(
             prefill=prefill,
             items_from=items_from,
             on_duplicate=duplicate,
+            bill_id=bill_id,
         )

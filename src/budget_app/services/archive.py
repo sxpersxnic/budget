@@ -1,7 +1,7 @@
 """Full backup of the data folder as one ZIP file, and restoring it (F25).
 
 A backup holds the user's records (`storage.backup.data_files`: the CSV tables, settings and import
-profiles), the files of their attachments (F12) under `attachments/<transaction id>/<stored name>`,
+profiles), the files of their attachments (F12) under `attachments/<transaction or bill id>/<stored name>`,
 and a small manifest. The ECB rates are left out; they are downloaded again.
 
 Restoring checks the archive completely before touching anything: only plain file names (and
@@ -63,7 +63,7 @@ def _attachments(ctx: Context) -> list[tuple[str, Path]]:
     for a in ctx.store.attachments.all():
         p = attachments_svc.path(ctx, a)
         if p is not None and p.is_file():
-            out.append((f"{backup.ATTACHMENTS}/{a.transaction_id}/{a.stored}", p))
+            out.append((f"{backup.ATTACHMENTS}/{a.folder}/{a.stored}", p))
     return sorted(out)
 
 
@@ -108,7 +108,8 @@ def _attachment_ok(info: zipfile.ZipInfo) -> bool:
 def read(data: bytes) -> dict[str, bytes]:
     """The record and attachment files in a backup ZIP, checked for shape and size. Raises ValidationError.
 
-    Records are keyed by their file name, attachments by `attachments/<transaction id>/<stored name>`.
+    Records are keyed by their file name, attachments by `attachments/<folder>/<stored name>` (the folder is
+    the transaction's id, or the bill's for a QR bill's file, F03).
     """
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
@@ -172,12 +173,9 @@ def check(files: dict[str, bytes]) -> None:
         except (CorruptDataError, ValueError, TypeError) as exc:
             raise ValidationError(t("The backup can’t be read: {error}", error=exc)) from exc
         for a in store.attachments.all():
-            ext = att_files.extension(a.stored)
-            if not (att_files.is_id(a.transaction_id) and att_files.is_stored_name(a.stored)) or (
-                ext not in att_files.BY_EXTENSION
-            ):
+            if not attachments_svc.ids_ok(a) or att_files.extension(a.stored) not in att_files.BY_EXTENSION:
                 raise ValidationError(
-                    t("The backup can’t be read: {error}", error=f"attachments.csv: {a.transaction_id}/{a.stored}")
+                    t("The backup can’t be read: {error}", error=f"attachments.csv: {a.folder}/{a.stored}")
                 )
 
 
@@ -209,7 +207,7 @@ def restore(ctx: Context, files: dict[str, bytes], now: datetime | None = None) 
         tmp.replace(data_dir / name)
     ctx.store = Store(data_dir)
     for a in ctx.store.attachments.all():
-        stored = files.get(f"{backup.ATTACHMENTS}/{a.transaction_id}/{a.stored}")
+        stored = files.get(f"{backup.ATTACHMENTS}/{a.folder}/{a.stored}")
         target = attachments_svc.path(ctx, a)
         if stored is not None and target is not None:
             attachments_svc.write_file(target, stored)

@@ -257,19 +257,60 @@ class TransactionItem:
 
 @dataclass
 class Attachment:
-    """A file kept with a transaction (F12): a receipt, an invoice, a contract.
+    """A file kept with a transaction (F12): a receipt, an invoice, a contract; or with a QR bill (F03).
 
-    The file lies in `attachments/<transaction_id>/<stored>` in the data folder; `name` is the name
-    it had when it was added, only shown, never used as a path.
+    The file lies in `attachments/<folder>/<stored>` in the data folder; `name` is the name it had when
+    it was added, only shown, never used as a path. A bill's file has `bill_id` and lies in the bill's
+    folder; paying the bill sets `transaction_id`, so the file then belongs to the payment as well and
+    never moves (architecture §7, decision 21).
     """
 
-    transaction_id: str
+    transaction_id: str  # empty while the bill it came with is open
     name: str
     stored: str  # "<id>.<extension>" (domain.attachments.stored_name)
     size: int = 0  # bytes
     content_type: str = ""
     added: dt.date = field(default_factory=dt.date.today)
+    bill_id: str = ""  # F03: the bill the file came with; older files have no such column
     id: str = field(default_factory=new_id)
+
+    @property
+    def folder(self) -> str:
+        """The folder under `attachments/` the file lies in: the bill's, else the transaction's."""
+        return self.bill_id or self.transaction_id
+
+
+BILL_OPEN = "open"
+BILL_PAID = "paid"
+BILL_DISMISSED = "dismissed"
+
+
+@dataclass
+class Bill:
+    """A scanned Swiss QR bill (F03, decision 15): open until it is paid (an expenditure is booked) or dismissed.
+
+    Its file is an `Attachment` with this bill's id. `amount` 0 means the bill leaves the amount to the payer;
+    `due` is 'YYYY-MM-DD' (from the bill information, or set by the user) or empty.
+    """
+
+    creditor: str
+    iban: str
+    currency: str
+    amount: float = 0.0
+    creditor_address: str = ""  # one line: "Rue du Lac 1268, 2501 Biel, CH"
+    reference_type: str = ""  # QRR, SCOR or NON
+    reference: str = ""
+    message: str = ""
+    bill_info: str = ""
+    due: str = ""
+    status: str = BILL_OPEN
+    transaction_id: str = ""  # the expenditure that paid it
+    added: dt.date = field(default_factory=dt.date.today)
+    id: str = field(default_factory=new_id)
+
+    @property
+    def due_date(self) -> dt.date | None:
+        return dt.date.fromisoformat(self.due) if self.due else None
 
 
 @dataclass

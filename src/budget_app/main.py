@@ -23,6 +23,7 @@ from budget_app.ui.layout import book_recurring, refresh_rates
 from budget_app.ui.pages import (
     add_budget,
     add_transaction,
+    bills,
     budget_entries,
     budget_overview,
     categories,
@@ -46,6 +47,7 @@ PAGES = {
     "/add-transaction": add_transaction.page,
     "/transactions": transactions.page,
     "/recurring": recurring.page,
+    "/bills": bills.page,
     "/import": import_transactions.page,
     "/add-budget": add_budget.page,
     "/budget-entries": budget_entries.page,

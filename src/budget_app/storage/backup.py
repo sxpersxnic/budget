@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 MARKER = ".app_version"  # version that last opened this data folder
 BACKUP_DIR = "backups"
 KEEP = 10  # backups to keep (update and before-restore ones); older ones are removed
-ATTACHMENTS = "attachments"  # attachments/<transaction id>/<stored name> (F12)
+ATTACHMENTS = "attachments"  # attachments/<transaction or bill id>/<stored name> (F12, F03)
 BACKUP_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}_(.+_to_.+|before-restore)$")
 
 

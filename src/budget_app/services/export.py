@@ -293,5 +293,6 @@ def everything_json(ctx: Context) -> bytes:
         "trades": table(sorted(store.trades.all(), key=lambda x: (x.date, x.seq))),
         "prices": table(sorted(store.prices.all(), key=lambda x: (x.date, x.holding_id))),
         "tags": table(sorted(store.tags.all(), key=lambda g: (g.name.lower(), g.id))),
+        "bills": table(sorted(store.bills.all(), key=lambda b: (b.added, b.id))),  # F03
     }
     return json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8")

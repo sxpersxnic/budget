@@ -8,6 +8,11 @@ one undoable action. The file stays on disk, so Undo brings the record back with
 (at every start) deletes the files that no record names and that no action in the change history
 could bring back; the history keeps the newest 500 actions, so a file is deleted for good once its
 removal can no longer be undone.
+
+**Bills (F03).** A scanned QR bill keeps its file as an attachment with the bill's id (`bill_id`), in the
+bill's folder `attachments/<bill id>/`, before any transaction exists. Paying the bill sets the record's
+`transaction_id`: the file then belongs to the payment too, and stays where it is, so undoing the payment
+needs nothing but the record. Deleting the payment gives the file back to the bill (`remove_for`).
 """
 
 from __future__ import annotations
@@ -21,7 +26,7 @@ from pathlib import Path
 
 from budget_app.domain import attachments as files
 from budget_app.domain.attachments import FileType
-from budget_app.domain.models import Attachment, new_id
+from budget_app.domain.models import Attachment
 from budget_app.i18n import N_, t
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
@@ -64,16 +69,21 @@ def add(ctx: Context, tx_id: str, name: str, data: bytes) -> Attachment:
     """Copy a file into the data folder and attach it to the transaction."""
     if ctx.store.transactions.get(tx_id) is None or not files.is_id(tx_id):
         raise ValidationError(t("Transaction not found"))
-    ft = check(name, data)
-    att_id = new_id()
-    att = Attachment(
-        transaction_id=tx_id,
-        name=files.display_name(name),
-        stored=files.stored_name(att_id, ft.extension),
-        size=len(data),
-        content_type=ft.content_type,
-        id=att_id,
-    )
+    return _store(ctx, Attachment(transaction_id=tx_id, name=name, stored=""), data)
+
+
+@recorded(N_("Attach a file"))
+def add_to_bill(ctx: Context, bill_id: str, name: str, data: bytes) -> Attachment:
+    """Copy a bill's file into the data folder (F03), inside the scan's action."""
+    if ctx.store.bills.get(bill_id) is None or not files.is_id(bill_id):
+        raise ValidationError(t("This bill is no longer in the list"))
+    return _store(ctx, Attachment(transaction_id="", bill_id=bill_id, name=name, stored=""), data)
+
+
+def _store(ctx: Context, att: Attachment, data: bytes) -> Attachment:
+    ft = check(att.name, data)
+    att.name, att.size, att.content_type = files.display_name(att.name), len(data), ft.content_type
+    att.stored = files.stored_name(att.id, ft.extension)
     target = path(ctx, att)
     if target is None:  # the attachments folder is a link to somewhere else
         raise ValidationError(t("Transaction not found"))
@@ -104,9 +114,26 @@ def remove(ctx: Context, attachment_id: str) -> Attachment:
 
 @recorded(N_("Remove attachments"))
 def remove_for(ctx: Context, tx_ids: set[str] | list[str]) -> int:
-    """Remove the attachments of transactions that are deleted (inside their deletion's action)."""
+    """Remove the attachments of transactions that are deleted (inside their deletion's action).
+
+    The file of a bill that still exists goes back to the bill instead (it is open again, `bills.release`).
+    """
     ids = set(tx_ids)
-    return ctx.store.attachments.delete([a.id for a in ctx.store.attachments.all() if a.transaction_id in ids])
+    mine = [a for a in ctx.store.attachments.all() if a.transaction_id and a.transaction_id in ids]
+    kept = [a for a in mine if a.bill_id and ctx.store.bills.get(a.bill_id) is not None]
+    for att in kept:
+        back = ctx.store.attachments.get(att.id)
+        if back is not None:
+            back.transaction_id = ""
+            ctx.store.attachments.update(back)
+    return ctx.store.attachments.delete([a.id for a in mine if a not in kept])
+
+
+def remove_for_bills(ctx: Context, bill_ids: set[str]) -> int:
+    """Remove the files of deleted bills that no transaction holds (inside the deletion's action)."""
+    return ctx.store.attachments.delete(
+        [a.id for a in ctx.store.attachments.all() if a.bill_id in bill_ids and not a.transaction_id]
+    )
 
 
 def get(ctx: Context, attachment_id: str) -> Attachment | None:
@@ -115,21 +142,35 @@ def get(ctx: Context, attachment_id: str) -> Attachment | None:
 
 def list_for(ctx: Context, tx_id: str) -> list[Attachment]:
     """A transaction's attachments, oldest first (in the order they were added)."""
-    rows = [a for a in ctx.store.attachments.all() if a.transaction_id == tx_id]
+    rows = [a for a in ctx.store.attachments.all() if tx_id and a.transaction_id == tx_id]
+    return sorted(rows, key=lambda a: a.added)
+
+
+def list_for_bill(ctx: Context, bill_id: str) -> list[Attachment]:
+    """The files a bill came with (F03), whether it is paid or not."""
+    rows = [a for a in ctx.store.attachments.all() if bill_id and a.bill_id == bill_id]
     return sorted(rows, key=lambda a: a.added)
 
 
 def counts(ctx: Context) -> Counter[str]:
     """Number of attachments per transaction id, for the Transactions list."""
-    return Counter(a.transaction_id for a in ctx.store.attachments.all())
+    return Counter(a.transaction_id for a in ctx.store.attachments.all() if a.transaction_id)
 
 
 def names_by_transaction(ctx: Context) -> dict[str, str]:
     """The file names of each transaction's attachments, for searching transactions by them."""
     out: dict[str, list[str]] = {}
     for a in ctx.store.attachments.all():
-        out.setdefault(a.transaction_id, []).append(a.name)
+        if a.transaction_id:
+            out.setdefault(a.transaction_id, []).append(a.name)
     return {k: " ".join(v) for k, v in out.items()}
+
+
+def ids_ok(att: Attachment) -> bool:
+    """Whether a record names its folder and file by plain ids, as the app writes them: its transaction's and
+    its bill's id (either may be empty, not both) and `<id>.<ext>`."""
+    owners = [x for x in (att.transaction_id, att.bill_id) if x]
+    return bool(owners) and all(files.is_id(x) for x in owners) and files.is_stored_name(att.stored)
 
 
 def path(ctx: Context, att: Attachment) -> Path | None:
@@ -138,10 +179,10 @@ def path(ctx: Context, att: Attachment) -> Path | None:
     The path is built from the record's ids alone, and only when both are plain names, so no record
     (edited by hand, or from a backup) can point outside the attachments folder.
     """
-    if not (files.is_id(att.transaction_id) and files.is_stored_name(att.stored)):
+    if not ids_ok(att):
         return None
     root = folder(ctx)
-    target = root / att.transaction_id / att.stored
+    target = root / att.folder / att.stored
     if target.resolve().parent.parent != root.resolve():  # a folder linked elsewhere
         return None
     return target
@@ -215,15 +256,15 @@ def system_open(target: Path) -> None:
 
 # ---------------------------------------------------------------------- files nobody can bring back
 def _wanted(ctx: Context) -> set[tuple[str, str]]:
-    """(transaction id, stored name) of every live record and of every record an undo could restore."""
-    wanted = {(a.transaction_id, a.stored) for a in ctx.store.attachments.all()}
+    """(folder, stored name) of every live record and of every record an undo could restore."""
+    wanted = {(a.folder, a.stored) for a in ctx.store.attachments.all()}
     for act in ctx.store.history.actions():
         for change in act.changes:
             if change.table != TABLE:
                 continue
             for raw in (change.before, change.after):
                 if raw:
-                    wanted.add((raw.get("transaction_id", ""), raw.get("stored", "")))
+                    wanted.add((raw.get("bill_id") or raw.get("transaction_id", ""), raw.get("stored", "")))
     return wanted
 
 
