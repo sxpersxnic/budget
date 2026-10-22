@@ -185,7 +185,14 @@ The app opens in its own window and keeps all data in your user folder:
    *Partly paid for others* when part of a payment was for someone else. Record their
    repayment later as income with *Repays an advance payment*. Under **Items** you can list
    what you bought (for example a grocery receipt) with quantity and price; the Transactions
-   search then also finds a purchase by item name. Under **Attachments** you can keep the receipt,
+   search then also finds a purchase by item name. To **split** an expenditure across categories
+   (food, detergent and a present on one receipt), click the split button beside a line and give it
+   its own category, and tags if you like; the line below the list shows what stays in the
+   transaction's category ("Rest in 01.1 Food: 23.40"). Reports, budgets, charts and tag totals then
+   count each line in its own category; a share paid for others is taken proportionally from every
+   part. Lines with their own category can't add up to more than the amount; a negative line (a
+   discount) lowers its category. Only expenditure is split. The Transactions list shows a split
+   as "01.1 Food + 2 more", and its search finds the lines' categories. Under **Attachments** you can keep the receipt,
    invoice or contract with the transaction: drop files onto the box or click it to choose them
    (PDF, photos including iPhone HEIC, Word, Excel, OpenDocument, text or CSV, up to 20 MB each).
    Click a photo's or PDF's name to preview it; **Open** shows it in your usual viewer, **Save a
@@ -223,7 +230,8 @@ The app opens in its own window and keeps all data in your user folder:
    To tidy up several transactions at once, select them in the list and choose **Edit**: change
    their category, payee, account, tags (add or remove) or note (replace, append or clear) in one step,
    which one **Undo**
-   reverts. Rows a change doesn't fit (a transfer has no category) keep what they have.
+   reverts. Rows a change doesn't fit (a transfer has no category) keep what they have; a split
+   transaction changes only the category of its rest, its lines keep theirs.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
 6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is

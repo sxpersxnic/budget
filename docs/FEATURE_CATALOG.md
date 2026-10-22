@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10 and F12 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12 and F11 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments and F11 split transactions done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11, F12 (done), F03, F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03, F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -129,7 +129,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
     quantity and price take over. Built (architecture §4.6).
 14. ☑ **F11:** decided on 2026-10-22 — a split is a category per item line: the Items list gets an
     optional category per line, lines without one keep the transaction's category, and reports
-    and budgets count each line in its own category.
+    and budgets count each line in its own category. Built (architecture §4.3, decision 21).
 15. ☑ **F03:** decided — the app tracks open bills: a scanned QR bill waits in a Bills list with
     its due date until *Mark Paid* books the expenditure; the PDF stays as an attachment.
 16. ☑ **F12:** decided — attachments are copied into the data folder
@@ -152,7 +152,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
 | F08 | ☑ Done | Simpler category picker | Organizing | S | Local | – |
 | F09 | ☑ Done | Payees | Organizing | M | Local | – |
 | F10 | ☑ Done | Tags | Organizing | M | Local | – |
-| F11 | ☐ Open | Split transactions | Organizing | M | Local | – |
+| F11 | ☑ Done | Split transactions | Organizing | M | Local | – |
 | F12 | ☑ Done | Attachments | Organizing | M | Local | – |
 | F13 | ☑ Done | Bulk edit | Organizing | S | Local | – |
 | F14 | ☐ Open | Savings goals | Planning | M | Local | – |
@@ -605,8 +605,8 @@ spending counts the own share of tagged expenditure (the part paid for others is
 tagged income other than repayments counts as received; a tag's budget compares only that spending within its
 period, income does not reduce it. Deleting a tag in use is allowed: it is taken off every transaction, template
 and series in one undoable action, and the confirmation says how many transactions lose it. The German word is
-*Schlagwort* ("Tag" means day), French *étiquette*, Italian *etichetta*. Not built: tags per item line (comes with
-F11, which plugs into `tags.tagged_amounts`), budgets per tag and month, and the tax summary's use of tags (F20).
+*Schlagwort* ("Tag" means day), French *étiquette*, Italian *etichetta*. Tags per item line came with F11 (a line's
+tag counts that line's part). Not built: budgets per tag and month, and the tax summary's use of tags (F20).
 
 Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
@@ -616,7 +616,30 @@ Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
 #### F11 · Split transactions
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built (decision 14):** a split is a category per item line. In the transaction form each item line of an
+expenditure has a split button that opens a row below it with the category picker (F08) and a tag field (F10) for
+that line; lines without a category keep the transaction's. Below the list, "Rest in 01.1 Food: 23.40 CHF" shows
+what stays in the transaction's category, live. `transaction_items.csv` got `category` and `tags` columns (older
+files load unchanged). **How the amount is counted** (`domain.splits`, the one place every consumer uses): each
+line with its own category (or tags) counts its total there, in CHF at the transaction's own rate rounded to the
+cent; the rest (lines without a category, deposits, rounding, anything not itemised) stays in the transaction's
+category and takes the rounding, so the parts add up to the amount and to `amount_chf` exactly. Lines with their
+own category may not add up to more than the amount (Save refuses it with the totals); a negative line is a
+discount on its category and raises the rest by as much. **Advances:** every part gives the same share
+(advance / amount) to *Advance payments*, so the advance, its repayments and their settlement are unchanged.
+**Counted per part:** the monthly statement and its export, budget vs. actual, the expenditure tree, the
+*Income and Expenditure* chart series and their exports, the projection's "higher of recorded and budget", the
+COICOP page's spending this year, and tag totals, budgets and the *Spending by Tag* chart (a line's tags count
+that line, on top of the transaction's). Net income, account balances and the reconciliation use the whole
+transaction and never change (tested). **Transactions** shows a split as "01.1 Food + 2 more"; the search finds
+its lines' categories, and the tag column and filter include its lines' tags. Deleting or merging a tag rewrites
+the lines too. **Bulk edit** changes only the rest's category (the hint says how many rows are split). Income,
+transfers, exchanges and revaluations are not split: the form hides the split buttons for income and says that
+lines with a category lose it when saved. Undo covers the lines (they are saved in the transaction's action).
+Not built: a drill-down from a Budget category to its transactions (the page has none yet); recurring series
+and templates have no items, so *Make Recurring…* of a split transaction books unsplit occurrences.
 
 One payment, several categories: a supermarket receipt with food, household goods and a
 gift.
@@ -673,7 +696,8 @@ how many rows change, and ⌘↩ / Ctrl+Enter saves. Each changed row goes throu
 a single edit (advance payments and repayments included); if one fails, nothing is saved and the
 failing rows are listed by date and amount. The whole edit is one undo step (*Edit several
 transactions*); booked rows keep their recurring series, valuation, items and import reference.
-Tags came with F10: *Add Tags* and *Remove Tags*.
+Tags came with F10: *Add Tags* and *Remove Tags*. With F11, a split transaction changes only the category
+of its rest; its lines keep theirs.
 
 Select many transactions → change category, account, tag or note in one step. The selection
 bar on the Transactions page already exists; this adds an *Edit* sheet for several rows.
@@ -1090,7 +1114,7 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | F01 · CSV import of transactions | ☑ Done | Details below. |
 | F29 · Multi-language support | ☑ Done | English, German, French and Italian, including the COICOP names. |
 | F12 · Attachments | ☑ Done | Receipts and invoices with their transaction, in the data folder and in backups; details under F12. |
-| Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. Covers part of F11 and gives F04 a place for receipt lines. |
+| Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. F11 added a category and tags per line; gives F04 a place for receipt lines. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
 | CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
 
