@@ -30,6 +30,7 @@ in the [`installers/`](installers/README.md) folder.
 - [First steps](#first-steps)
 - [Building the installers](#building-the-installers)
 - [Run from source (developers)](#run-from-source-developers)
+- [Sources](#sources)
 
 ## Install on macOS
 
@@ -185,6 +186,8 @@ The app opens in its own window and keeps all data in your user folder:
    usual ones as **templates** (bookmark button), or **Duplicate** an existing transaction.
    The category field shows everyday names ("Groceries · 01.1") and your recently used
    categories first, and its search also knows shops and brands: type "Migros", "SBB" or "Netflix".
+   It also finds a category by what it includes ("quinoa" finds 01.1.1.1 Cereals); hover over a
+   category, or tap its ⓘ on a touch screen, to see what it includes and excludes.
    Expenditures and income have a **Payee** (who you paid, or who paid you): pick one of the
    suggestions (your recent payees come first) or type a new name. Once the payee is known, the
    app suggests a category below the category field, with the reason ("Used 14 times for this
@@ -213,7 +216,8 @@ The app opens in its own window and keeps all data in your user folder:
    due it is listed for one-click booking (change the amount first if it varies, or skip it);
    turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
    series from a transaction you already entered.
-7. **Categories** (sidebar): look up a COICOP category by code or name; the ones you used
+7. **Categories** (sidebar): look up a COICOP category by code, name or what it includes; the ⓘ
+   beside a name shows what the category includes, also includes and excludes. The ones you used
    show what you spent in them this year.
    **Payees** (sidebar) lists everyone you paid or who paid you, with the number of transactions and
    the amounts. Rename a payee, merge several into one (tick them, then **Merge…**) or delete one you
@@ -311,6 +315,20 @@ Tests in `tests/ui/` drive the real pages in NiceGUI's simulated client, without
 The git hooks ([lefthook.yml](lefthook.yml)) check lint and formatting before each commit, and
 types, tests and coverage before each push.
 
+- The COICOP notes (`src/budget_app/resources/coicop_notes.json`) are rebuilt from the UN workbook
+  with `scripts/coicop_notes.py` (usage in the script); see [Sources](#sources).
 - The specification is in [docs/Description_Budgeting_App.md](docs/Description_Budgeting_App.md).
 - The implementation (data model, formulas, decisions) is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Code layout: `src/budget_app/{domain,storage,services,ui}`.
+
+## Sources
+
+- **Exchange rates:** euro foreign exchange reference rates of the European Central Bank.
+- **COICOP 2018 codes and names:** Eurostat SDMX codelist `ESTAT/COICOP18`; the German, French
+  and Italian names are the app's own translations.
+- **COICOP notes** (what each category includes, also includes and excludes): United Nations
+  Statistics Division, *Classification of Individual Consumption According to Purpose (COICOP)
+  2018*, Statistical Papers Series M No. 99, from its "Final structure (Excel)" at
+  <https://unstats.un.org/unsd/classifications/Econ> (retrieved on 2026-10-21). The English text is
+  the UN's; the German translation is the app's own and unofficial, as the app says beside it.
+  French and Italian show the English text until they are translated.
