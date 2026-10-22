@@ -123,10 +123,10 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
     still get their short name.
 12. ☑ **F21:** decided — dividends are entered gross with their withholding tax (35 % prefilled
     for CHF holdings); the net is credited, the tax is booked as Taxes, and a yearly sum of
-    reclaimable tax is shown.
+    reclaimable tax is shown. Built (architecture §4.6, decision 18).
 13. ☑ **F21:** decided — an account with history can become a securities or crypto account: its
     balances stay as history up to the conversion month, then holdings with an opening
-    quantity and price take over.
+    quantity and price take over. Built (architecture §4.6).
 14. ☑ **F11:** decided on 2026-10-22 — a split is a category per item line: the Items list gets an
     optional category per line, lines without one keep the transaction's category, and reports
     and budgets count each line in its own category.
@@ -705,34 +705,58 @@ Cantonal rules differ, so the app lists amounts and leaves the judgment to the u
 
 #### F21 · Investments and asset classes
 
-**Status:** ☑ Done (2026-10-21)
+**Status:** ☑ Done (2026-10-21; dividends with withholding tax and conversions, decisions 12 and 13, on 2026-10-22)
 
-**As built** (decision 9; architecture §7, decision 17):
+**As built** (decisions 9, 12 and 13; architecture §4.6, §7 decisions 17 and 18):
 
 - **Asset classes:** every account has one (`accounts.csv` → `asset_class`): cash (the default,
   also for files written before and for advance-payment accounts), securities, pillar 2, pillar 3a,
   real estate, crypto, other. It is set in the account sheet in Settings. Securities and crypto
-  accounts are valued from their holdings; an account becomes one only while it has no transactions
-  or balances, and stays one while it has holdings. The Overview shows wealth at the end of last
+  accounts are valued from their holdings; an account without transactions or balances becomes one
+  right away, and stays one while it has holdings. The Overview shows wealth at the end of last
   month by class (a split bar with amounts and shares) once any account is not cash, and the chart
   *Wealth by Asset Class* stacks it month by month. Pillar 2/3a, real estate and other keep their
   recorded month-end balances.
+- **Converting an account with history** (decision 13): choosing Securities or Crypto for an account
+  with transactions or balances opens a conversion sheet – the conversion month (this month by
+  default) and the opening holdings (name, optional ISIN/symbol, quantity, price; rows added and
+  removed), with the last recorded balance, the opening value and the difference shown live. The
+  account keeps its recorded balances up to the month before (`accounts.csv` → `invest_from`); those
+  from the conversion month on are replaced, and its value comes from the holdings, which start as
+  *opening* trades on the first day of that month (no money moves; their value counts as money put
+  in, so no gain). The difference between the last recorded balance and the opening value is booked
+  as one linked *Capital gains on investment* revaluation, so the conversion month reconciles to 0
+  (tested in CHF and EUR). Refused while a transaction is dated in or after that month or a recurring
+  series uses the account. Transactions and balances before the month stay editable; trades and
+  prices before it are refused. An opening holding can be edited (quantity, price) or deleted; the
+  revaluation follows. One undo step. Converting back stays refused while holdings exist, with a
+  message that says to delete them on the Investments page first.
 - **Holdings, trades, prices:** `holdings.csv` (account, name, ISIN or symbol), `trades.csv` (buy,
-  sell, dividend with date, quantity, price, fee, amount, cash account, note) and `prices.csv` (one
-  price per holding and day). Every change rebooks the holding's linked transactions in date order
+  sell, dividend, opening with date, quantity, price, fee, amount, tax, cash account, note) and
+  `prices.csv` (one price per holding and day). Every change rebooks the holding's linked transactions in date order
   (`invest_id` points at the trade or price): a buy or sale is a transfer of quantity × price
   between the cash account (same currency, else refused) and the investment account, a fee an
-  expenditure in 12.2.9.9 *Other financial services n.e.c.*, a dividend income in *Dividends*
-  (added when missing), and each price — a trade's price counts as one — a *Capital gains on
+  expenditure in 12.2.9.9 *Other financial services n.e.c.*, a dividend its gross as income in
+  *Dividends* (added when missing) and its withholding tax as an expenditure in *Taxes*, both from
+  the same cash account, and each price — a trade's price counts as one — a *Capital gains on
   investment* revaluation of quantity × the price change, rounded so the booked value is exactly
   round(quantity × latest price, 2). A sale of more than is held, or an edit or delete that would
   leave one, is refused; dates in the future are refused.
 - **Month-end balance:** computed from the holdings (Σ quantity × latest price on or before the
   month end), not typed in and not stored; the reconciliation comes out at 0 (tested, also for a
   foreign-currency depot in another view currency).
-- **Performance:** per holding and in total: value, money put in (buys − sales), dividends, fees,
-  gain = value − money put in + dividends − fees and its percentage of the money put in; the
-  holding sheet splits it into realized and unrealized (average cost).
+- **Dividends** (decision 12): the sheet asks for the gross dividend, the withholding tax (35 % of the
+  gross prefilled in CHF accounts, 0 in other currencies, editable; it follows the gross until typed
+  in) and the cash account, and shows the net that account receives. `trades.csv` gained a `tax`
+  column; older dividends load with tax 0 (their amount is the gross) and re-book correctly when
+  edited.
+- **Reclaimable withholding tax:** the Investments page lists *Reclaimable withholding tax {year}*
+  for this year and the two before (the tax on dividends in CHF accounts), and the holding sheet shows
+  the tax and the net in each dividend's history line (foreign tax as *foreign withholding tax*).
+- **Performance:** per holding and in total: value, money put in (opening value + buys − sales),
+  net dividends, fees, gain = value − money put in + net dividends − fees and its percentage of the
+  money put in; the holding sheet shows the withholding tax apart and splits the gain into realized
+  and unrealized (average cost).
 - **Investments page** (`/investments`, sidebar after Payees): holdings by account with quantity,
   last price and date, value, gain and %, totals; *Buy*, *Sell*, *Dividend*, *Update Price* and
   *Paste Prices…* (tab, semicolon or comma separated, header line skipped, Swiss and other number
@@ -740,8 +764,8 @@ Cantonal rules differ, so the app lists amounts and leaves the judgment to the u
   price, rename, delete with everything it booked). The booked rows appear in Transactions; opening
   one opens its trade or price, deleting or bulk-editing it there is refused. Every save is one
   undoable step.
-- Not built: online prices (decision 9), withholding tax on dividends as its own field (enter the
-  amount received), transaction-level lots (the average cost method is used).
+- Not built: online prices (decision 9), transaction-level lots (the average cost method is used),
+  editing a conversion's month afterwards (undo it and convert again).
 
 The proposal:
 

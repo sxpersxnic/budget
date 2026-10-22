@@ -43,7 +43,7 @@ storage/    typed CSV tables + settings JSON
 | `domain/payees.py` | F09. Payee names from bank texts, deterministic and offline: `clean_words` drops dates, times, card, reference, terminal and phone numbers, IBANs and postal codes, the booking words around the merchant (UBS, PostFinance, ZKB, Raiffeisen, Revolut, TWINT; German, French, Italian, English: "Einkauf", "Kauf/Dienstleistung vom", "Paiement à", "Card payment to" …) and payment services in front of it (`TWINT *`, `SumUp *`, `PAYPAL *`); `normalize` names a brand from `resources/payees.json` (longest pattern first; banks and payment services only when nothing else matches) or keeps the rest without the location (a legal form at the end stays, spelled AG, GmbH, SA, Sàrl, Sagl …; decision 11), title-cased when the bank wrote capitals (acronyms such as SBB stay); `alias_key` is the folded cleaned text (location kept) a bank text is remembered by; `key` folds a name for comparing (case, accents and punctuation ignored). |
 | `domain/rules.py` | F07. Which categorization rule applies: `match_key` (folded text, single spaces), `by_priority` (longest text first, then the newest), `first_match` / `best` (the first rule of the type whose text occurs in the payee or the bank text / note). |
 | `domain/models.py` | Dataclasses `Account`, `IncomeCategory`, `Transaction`, `AccountEntry`, `BudgetEntry`, `Recurring`, `Payee`, `Rule`, `Holding`, `Trade`, `Price`, `Settings`; the asset classes (`ASSET_CLASSES`, `HOLDING_CLASSES`) and trade kinds. |
-| `domain/investments.py` | F21, pure. A holding's trades and prices as `Event`s in the order they count (`events`: by date, a day's trades in entry order before its typed or pasted price), `replay` (per event the quantity before and after, the previous and new price, the money moved and the revaluation, and the booked value round(quantity × price, 2)), `oversold`, `value_on`, `price_date`, `performance` (`Performance`: value, bought, sold, dividends, fees, average cost, realized; money put in, gain, %, unrealized; `scaled` and `+` for totals), and the price-list helpers `date_format`, `parse_day`, `parse_number`. |
+| `domain/investments.py` | F21, pure. A holding's trades and prices as `Event`s in the order they count (`events`: by date, a day's opening holding first, then its trades in entry order, then its typed or pasted price), `replay` (per event the quantity before and after, the previous and new price, the money moved and the revaluation, and the booked value round(quantity × price, 2)), `oversold`, `value_on`, `price_date`, `performance` (`Performance`: value, opening value, bought, sold, net dividends, withholding tax, fees, average cost, realized; money put in, gain, %, unrealized; `scaled` and `+` for totals), `default_withholding` (35 % in CHF), and the price-list helpers `date_format`, `parse_day`, `parse_number`. |
 | `storage/csv_store.py` | Generic `CsvTable[T]`: in-memory records, atomic rewrite (temp file, fsync, rename) on every change. Unknown columns are kept and written back. |
 | `storage/store.py` | `Store` bundling all tables and settings. Unknown settings keys are kept. |
 | `services/items.py` | Product lists of transactions: validation (blank lines ignored, half-filled lines rejected), replace, totals, counts and names for the Transactions list. |
@@ -57,7 +57,7 @@ storage/    typed CSV tables + settings JSON
 | `services/budget.py` | Budget series expansion, overwrite, horizon change and "Forever" extension. |
 | `services/recurring.py` | Recurring transactions (F05): series, their schedule (`occurrence`, `next_after`), the due occurrences, `book` / `skip` / `book_all` through `transactions.save`, and `book_automatic` for series that book without asking. |
 | `services/wealth.py` | Account balances (a securities or crypto account's from its holdings, F21), wealth, wealth by asset class (`by_class`), projected wealth, wealth time series. |
-| `services/investments.py` | F21. Holdings (add, rename, delete with everything they booked), trades (`TradeInput`, `validate_trade`, `save_trade`, `delete_trade`) and prices (`save_price`, one per holding and day; `delete_price`; `price_effect` previews one), price lists (`read_price_list` reads, `save_prices` saves), each one undoable action. `_book` books a holding's linked transactions again from all its trades and prices after every change (§4.6). `value_entry` is a securities or crypto account's month-end balance, `account_value`, `performance`, `history`, `source` (the trade or price of a booked row). |
+| `services/investments.py` | F21. Holdings (add, rename, delete with everything they booked), trades (`TradeInput`, `validate_trade`, `save_trade`, `delete_trade`) and prices (`save_price`, one per holding and day; `delete_price`; `price_effect` previews one), price lists (`read_price_list` reads, `save_prices` saves), each one undoable action. `_book` books a holding's linked transactions again from all its trades and prices after every change (§4.6). `value_entry` is a securities or crypto account's month-end balance, `account_value`, `performance`, `history`, `source` (the trade or price of a booked row, or the converted account), `reclaimable_tax` (withholding tax on CHF dividends per year). Conversions (decision 13): `needs_conversion`, `check_conversion` (rules and preview), `convert_account` (one undoable action), `book_conversion` (the opening difference as a linked revaluation). |
 | `services/aggregates.py` | Sums of transactions and budget entries per category and month; `projected_net` (the higher of recorded and budget per category). Shared by reports and the wealth projection. |
 | `services/reports.py` | Monthly statement (expenditure tree, income, budget vs. actual, reconciliation, opening balances), chart series. |
 | `services/export.py` | Statement as Excel/PDF; chart data and list views as CSV/Excel; every record as one JSON document (`format: budget-app/export`, `version: 1`), not meant to be imported back. |
@@ -82,7 +82,7 @@ ECB date of the rate used** (`fx_date`).
 
 | File | Columns |
 | --- | --- |
-| `accounts.csv` | `name, currency, kind (regular/advance), created, asset_class, id` – `asset_class` (F21): `cash`, `securities`, `pillar2`, `pillar3a`, `real_estate`, `crypto` or `other`; files written before it have no such column, which reads as `cash`. Advance-payment accounts are always `cash`. |
+| `accounts.csv` | `name, currency, kind (regular/advance), created, asset_class, invest_from, id` – `asset_class` (F21): `cash`, `securities`, `pillar2`, `pillar3a`, `real_estate`, `crypto` or `other`; files written before it have no such column, which reads as `cash`. Advance-payment accounts are always `cash`. `invest_from` (decision 13): the month (`YYYY-MM`) an account with history became a securities or crypto account; empty for accounts that were one from the start, and in older files. |
 | `income_categories.csv` | `name, id` |
 | `transactions.csv` | `date, type, amount, currency, amount_chf, fx_date, category, from_account, to_account, to_amount, to_currency, is_advance, advance_amount, advance_account, debtor, settles_id, comment, import_ref, linked_id, recurring_id, payee, id` – `recurring_id` names the recurring transaction that booked the row (F05; empty in files written before it); `payee` is the name of a payee in `payees.csv` (F09; expenditure and income only, empty in older files); `invest_id` is the id of the trade or price in `trades.csv` / `prices.csv` that booked the row (F21; empty otherwise) |
 | `transaction_items.csv` | `transaction_id, name, quantity, unit_price, position, id` – optional product list of a transaction (e.g. a receipt), in the transaction's currency. Deleted with its transaction. |
@@ -93,7 +93,7 @@ ECB date of the rate used** (`fx_date`).
 | `budget_entries.csv` | `month, type, category, amount, currency, amount_chf, fx_date, series_id, recur_months, forever, comment, generated_until, id` – one row per budgeted month |
 | `recurring.csv` | `type, amount, currency, start, next_due, category, from_account, to_account, comment, recur_months, end, auto, payee, id` – one row per recurring transaction (F05): the template (expenditure, income or transfer), the first date, the rhythm in months, the optional last date (`end`, empty for none), `auto` (book without asking) and `next_due`, the first occurrence not yet booked or skipped |
 | `holdings.csv` | `account_id, name, symbol, id` – a security or coin in a securities or crypto account (F21), in the account's currency; `symbol` is an optional ISIN, ticker or symbol. |
-| `trades.csv` | `holding_id, date, kind, quantity, price, fee, amount, cash_account, comment, seq, id` – `kind` is `buy`, `sell` or `dividend`; quantity and price have up to 6 decimals (0 for a dividend), `fee` and the dividend `amount` 2; `cash_account` is the regular account paid from or to, in the holding's currency; `seq` is the order of entry (trades of one day count in it). |
+| `trades.csv` | `holding_id, date, kind, quantity, price, fee, amount, tax, cash_account, comment, seq, id` – `kind` is `buy`, `sell`, `dividend` or `opening` (the holding a converted account starts with, decision 13); quantity and price have up to 6 decimals (0 for a dividend), `fee`, the dividend's gross `amount` and its withholding `tax` 2 (decision 12; files without the column read as tax 0, so an older dividend's amount is its gross); `cash_account` is the regular account paid from or to, in the holding's currency (empty for an opening holding); `seq` is the order of entry (trades of one day count in it). |
 | `prices.csv` | `holding_id, date, price, id` – a price typed in or pasted (F21), one per holding and day. |
 | `settings.json` | `budget_horizon, display_currency, last_fx_download` |
 | `ecb/eurofxref-hist.csv` | Latest ECB file (replaced daily) |
@@ -126,11 +126,13 @@ ECB date of the rate used** (`fx_date`).
     form takes the change as a signed difference or as old and new values.
 
 **Rows booked by investments (F21)** carry `invest_id`: transfers, fees (expenditure), dividends
-(income) and *Capital gains on investment* revaluations made from a trade or price (§4.6). They are
-never saved, edited or deleted on their own: `transactions.validate` and `delete` refuse them, bulk
-edit leaves them out, and the transaction editor opens their trade or price instead. Securities and
-crypto accounts take no other transactions (`transactions._account` refuses them) and no recorded
-balances (`wealth.upsert_entry` refuses them).
+(income) with their withholding tax (expenditure in `TAX`), and *Capital gains on investment*
+revaluations made from a trade or price (§4.6); the revaluation of a conversion (decision 13) carries
+the account's id. They are never saved, edited or deleted on their own: `transactions.validate` and
+`delete` refuse them, bulk edit leaves them out, and the transaction editor opens their trade or price
+instead (or explains the conversion). Securities and crypto accounts take no other transactions
+(`transactions._account` refuses them) and no recorded balances (`wealth.upsert_entry` refuses them) –
+a converted account still does for dates and months before its conversion month (`Account.holds_in`).
 
 **Advance payments.** An advanced expenditure is stored as **one row**:
 
@@ -180,6 +182,10 @@ holidays. Dates before the start of the file use its first rate.
   price on (opening 0 in that month). It never needs an entry, and the first recorded month counts
   its first trade or price; the projection still starts after the last month with a *recorded*
   balance, so trades and price updates don't move it.
+- A **converted** account (decision 13, `invest_from` set) keeps its recorded balances for the months
+  before its conversion month (`Account.holds_in(month)` is false there, so `balance_entry` carries its
+  entries forward as for any account); from the conversion month on it is valued from its holdings.
+  `AccountRow.valued` tells the pages which way a row was valued that month.
 - **By asset class** (`wealth.by_class`): Wealth(M) summed per account's asset class.
 - **Current wealth** is Wealth(previous month). It is shown on the Overview and the Budget
   overview whatever month is selected.
@@ -287,9 +293,15 @@ holidays. Dates before the start of the file use its first rate.
 
   which is quantity × (new price − previous price) up to the cent, without rounding errors piling up
   over many events. A fee is an expenditure from the cash account in COICOP 12.2.9.9 (*Other
-  financial services n.e.c.*); a dividend is income to the cash account in the income category
-  *Dividends* (found by name in any language, else added in the interface language; a renamed one
-  stays in use for that dividend).
+  financial services n.e.c.*); a dividend is income of its **gross** amount to the cash account in the
+  income category *Dividends* (found by name in any language, else added in the interface language; a
+  renamed one stays in use for that dividend), and its **withholding tax** an expenditure in *Taxes*
+  (`TAX`) from the same account, both linked to the trade: the account changes by the net (decision 12,
+  §7 decision 18). The sheet prefills the tax with 35 % of the gross in CHF accounts (Swiss withholding
+  tax) and 0 otherwise, until it is typed in; an edited dividend keeps its tax.
+- **Reclaimable withholding tax** (`investments.reclaimable_tax`): the tax on dividends of holdings in CHF
+  accounts, summed per calendar year; the page lists this year and the two before, the holding sheet
+  shows it in each dividend's history line (foreign tax is shown as such and not summed).
 - **Rebooking:** every change to a holding's trades or prices (add, edit, delete, paste, rename,
   back-dated or not) replays all of them in order and changes only the linked rows that differ
   (`investments._book`): rows keep their ids, and their CHF valuation while amount, currency and date
@@ -298,11 +310,29 @@ holidays. Dates before the start of the file use its first rate.
 - **Checks:** the cash account is a regular, non-investment account in the holding's currency
   ("exchange the money first"); no sale may sell more than is held at that point, including after
   an edit, a delete or a move to another holding; dates may not be in the future.
-- **Performance** (`domain.investments.performance`): money put in = bought − sold; gain = value −
-  money put in + dividends − fees; % = gain / money put in (none when nothing is put in any more).
+- **Performance** (`domain.investments.performance`): money put in = opening value + bought − sold;
+  gain = value − money put in + net dividends (gross − withholding tax) − fees; % = gain / money put in
+  (none when nothing is put in any more). The withholding tax is shown apart.
   Realized = sales − the average cost of what was sold; unrealized = value − the average cost of
   what is held; realized + unrealized = value − money put in. Totals on the page convert each
   holding at the latest rate into the display currency.
+- **Converting an account with history** (decision 13, `investments.convert_account`, one recorded
+  action): the user picks the conversion month M (not in the future; default the current month) and the
+  opening holdings (name, ISIN/symbol, quantity, price). Refused while the account has a transaction dated
+  on or after the first day of M or an active recurring series. The account gets the class and
+  `invest_from = M`; its recorded balances from M on are deleted (the sheet says so), those before stay.
+  Each holding starts with an `opening` trade on the **first day of M** – chosen over the last day of
+  M−1 so the opening and its revaluation fall in M, and M−1 keeps reconciling from its recorded balance.
+  An opening moves its value into the holding like a buy but books no transfer (the money was in the
+  account already), and counts as money put in, so it creates no gain. The difference
+  `Σ round(quantity × price, 2) − last balance recorded before M` (0 without one) is booked as one
+  *Capital gains on investment* revaluation on the first day of M with `invest_id` = the account's id
+  (`investments.book_conversion`); it is rebooked whenever an opening holding changes or a balance before
+  M is recorded. Reconciliation of M: opening = the recorded balance of M−1, flows = that revaluation +
+  the holdings' bookings, closing = the holdings' value, so the unexplained part is 0 (tested in CHF and
+  in a EUR account in several view currencies). Trades and prices before the first day of M are refused.
+  Changing back to another class is refused while holdings exist (with their trades and prices); without
+  them it clears `invest_from` and removes the revaluation, and the recorded balances carry forward again.
 - **Price lists:** one line per price, cells split by tab, else semicolon, else comma; date, holding
   and price (the last cell); the date format most lines use (ISO, `dd.mm.yyyy`, `dd.mm.yy`,
   `dd/mm/yyyy`, `yyyymmdd`); a first line that isn't a date is a header. A price may be written
@@ -488,9 +518,20 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     month-end balance is computed from the holdings rather than written as entries: nothing can fall
     out of step, undo needs nothing extra, and its reconciliation is 0 by construction. It takes no
     other transactions or balances; an account becomes one only while empty, so existing balances
-    and manual revaluations are never reinterpreted. Recorded balances still drive the projection's
-    start, so a price update doesn't shift it. Other classes (pillar 2, 3a, real estate, other)
-    stay valued by recorded balances; the class only groups them.
+    and manual revaluations are never reinterpreted; an account with history becomes one through a
+    conversion (decision 13) that leaves its past as it was and starts from opening holdings. Recorded
+    balances still drive the projection's start, so a price update doesn't shift it. Other classes
+    (pillar 2, 3a, real estate, other) stay valued by recorded balances; the class only groups them.
+18. **A dividend books gross income and its withholding tax as Taxes** (F21, decision 12). The
+    alternative – booking only the net as income – was weighed and rejected: the gross is what a Swiss
+    tax return declares and what a dividend budget usually plans, and the withholding tax is a real tax
+    that is later credited against the income tax. With gross income and a tax expenditure, *Net income*
+    and the reconciliation are unchanged (income − tax = what the account received); *Taxes* shows the
+    withholding tax, so a month with dividends can look over a taxes budget and the projection's
+    "higher of recorded and budget" may count it for that month. The reclaimed tax comes back as a lower
+    tax bill (or a refund booked as income) the following year. Performance counts net dividends, the
+    money actually received; the reclaimable sum is shown apart. Only holdings in CHF accounts count as
+    reclaimable (a simplification: a foreign share held in CHF would carry foreign tax).
 
 ## 8. Testing
 

@@ -230,16 +230,22 @@ The app opens in its own window and keeps all data in your user folder:
    Once an account has an asset class other than cash, the Overview shows your wealth **by asset
    class**, and *Add Chart → Wealth by Asset Class* shows it month by month.
 9. **Investments** (sidebar, optional): give an account the asset class *Securities* or *Crypto*
-   in **Settings** (edit the account; only an account without transactions or balances can become
-   one), then add its holdings (name, optional ISIN or symbol) on the Investments page. Record
+   in **Settings** (edit the account), then add its holdings (name, optional ISIN or symbol) on the
+   Investments page. An account that already has transactions or balances is **converted**: choose
+   the conversion month and the holdings it starts with (quantity and price on the first day of that
+   month); its balances before that month stay as they were, and the difference to the last one is
+   booked as *Capital gains on investment*, so the month still reconciles. Record
    **Buy**, **Sell** and **Dividend** with the cash account the money comes from or goes to (in the
    holding's currency), and enter prices with **Update Price** or **Paste Prices…** (one line per
    price: date, holding name/ISIN/symbol and price, as copied from your bank's or broker's price
-   list; nothing is fetched online). The app books the transfers, fees (category 12.2.9.9),
-   dividends (income category *Dividends*) and every price change (*Capital gains on investment*)
-   for you, so a securities or crypto account is always worth quantity × the latest price and needs
-   no balances recorded. Each holding shows its value and gain (value − money put in + dividends −
-   fees); click it for its history, where trades and prices can be edited or deleted. Pillar 2,
+   list; nothing is fetched online). A dividend is entered gross with its withholding tax (35 %
+   prefilled in CHF accounts, editable); the cash account receives the net. The app books the
+   transfers, fees (category 12.2.9.9), dividends (gross in the income category *Dividends*, the
+   withholding tax under *Taxes*) and every price change (*Capital gains on investment*) for you, so
+   a securities or crypto account is always worth quantity × the latest price and needs no balances
+   recorded. Each holding shows its value and gain (value − money put in + net dividends − fees);
+   click it for its history, where trades and prices can be edited or deleted. The page also sums
+   the Swiss withholding tax you can reclaim with your tax return, per year. Pillar 2,
    pillar 3a, real estate and other assets keep their recorded month-end balances.
 
 ## Building the installers
