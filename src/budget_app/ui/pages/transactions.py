@@ -7,7 +7,7 @@ from datetime import date
 from nicegui import ui
 
 from budget_app.domain import tags as tag_codec
-from budget_app.domain.coicop import get_coicop
+from budget_app.domain.coicop import ADV, get_coicop
 from budget_app.domain.models import (
     REVALUATION_KINDS,
     TX_EXCHANGE,
@@ -20,6 +20,7 @@ from budget_app.domain.models import (
 )
 from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
+from budget_app.services import aggregates
 from budget_app.services import attachments as att_svc
 from budget_app.services import items as items_svc
 from budget_app.services import payees as payee_svc
@@ -27,7 +28,7 @@ from budget_app.services import recurring as rec_svc
 from budget_app.services import rules as rules_svc
 from budget_app.services import tags as tag_svc
 from budget_app.services import transactions as tx_svc
-from budget_app.services.context import ValidationError
+from budget_app.services.context import Context, ValidationError
 from budget_app.services.reports import ADV_REPAY_NAME
 from budget_app.ui.layout import date_input, error, frame, on_data_changed, parse_date, undoable
 from budget_app.ui.pages.add_budget import recurrence_label
@@ -70,6 +71,21 @@ def _columns() -> list[dict]:
     ]
 
 
+def _label(code: str) -> str:
+    return get_coicop().label(code)
+
+
+def split_columns(ctx: Context, tx: Transaction, lines: dict[str, list]) -> tuple[list[str], list[str]]:
+    """The categories a split expenditure counts in, its own first (none when it isn't split), and the tags of its
+    lines (F11)."""
+    own = lines.get(tx.id)
+    if tx.type != TX_EXPENDITURE or not own:
+        return [], []
+    codes = [p.category for p in aggregates.transaction_parts(ctx, tx, own) if p.category != ADV]
+    codes = list(dict.fromkeys([tx.category, *codes] if tx.category in codes else codes))
+    return (codes if len(codes) > 1 else []), [i for line in own for i in tag_codec.split(line.tags)]
+
+
 def _type_label(tx_type: str) -> str:
     return t(TX_TYPES[tx_type]) if tx_type in TX_TYPES else tx_type
 
@@ -84,8 +100,15 @@ def _row(
     repeats: dict[str, str] | None = None,
     tags: dict[str, Tag] | None = None,
     attachments: tuple[dict[str, int], dict[str, str]] = ({}, {}),
+    split: tuple[list[str], list[str]] = ([], []),
 ) -> dict:
-    if tx.type == TX_EXPENDITURE:
+    """`split`: the categories a split expenditure counts in (F11), the transaction's first, and its lines' tags."""
+    split_codes, line_tags = split
+    if tx.type == TX_EXPENDITURE and len(split_codes) > 1:  # "01.1 Food… + 2 more"; the search finds them all
+        category = tn(
+            "{category} + {n} more", "{category} + {n} more", len(split_codes) - 1, category=_label(split_codes[0])
+        )
+    elif tx.type == TX_EXPENDITURE:
         category = get_coicop().label(tx.category)
     elif tx.type == TX_INCOME:
         category = t(ADV_REPAY_NAME) if tx.is_advance else income_cats.get(tx.category, "")
@@ -101,9 +124,8 @@ def _row(
     to = accs.get(tx.to_account, "")
     if tx.type == TX_EXCHANGE:  # what the bank credited, spread included (F44)
         to += f" (+{received if received is not None else tx.to_amount:.2f} {tx.to_currency})"
-    own_tags = sorted(
-        (tags[i] for i in tag_codec.split(tx.tags) if tags and i in tags), key=lambda g: tag_codec.key(g.name)
-    )
+    tag_ids = dict.fromkeys([*tag_codec.split(tx.tags), *line_tags])  # the transaction's and its lines' (F11)
+    own_tags = sorted((tags[i] for i in tag_ids if tags and i in tags), key=lambda g: tag_codec.key(g.name))
     tag_names = ", ".join(g.name for g in own_tags)
     return {
         "id": tx.id,
@@ -128,6 +150,7 @@ def _row(
             [
                 tx.payee,
                 category,
+                *(_label(c) for c in split_codes[1:]),  # every category of a split (F11)
                 accs.get(tx.from_account, ""),
                 to,
                 tx.debtor,
@@ -225,6 +248,7 @@ def page(tag: str = "") -> None:
             item_counts, item_names = items_svc.counts(ctx), items_svc.names_by_transaction(ctx)
             repeats = {r.id: recurrence_label(r.recur_months) for r in ctx.store.recurring.all()}
             attached = (att_svc.counts(ctx), att_svc.names_by_transaction(ctx))
+            lines = aggregates.split_lines(ctx)  # F11
             rows = []
             for tx in ctx.store.transactions.all():
                 if (start and tx.date < start) or (end and tx.date > end):
@@ -237,10 +261,11 @@ def page(tag: str = "") -> None:
                     continue
                 if payee.value and tx.payee != payee.value:
                     continue
-                if wanted and wanted.isdisjoint(tag_codec.split(tx.tags)):
+                split = split_columns(ctx, tx, lines)
+                if wanted and wanted.isdisjoint([*tag_codec.split(tx.tags), *split[1]]):
                     continue
                 received = tx_svc.received_amount(ctx, tx) if tx.type == TX_EXCHANGE else None
-                r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats, tags, attached)
+                r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats, tags, attached, split)
                 if acc.value and acc.value not in r["_accounts"]:
                     continue
                 if q and q not in r["_search"]:

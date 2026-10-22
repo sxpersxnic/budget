@@ -11,6 +11,7 @@ from budget_app.domain import tags as tag_codec
 from budget_app.domain.fx import FxError
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME
 from budget_app.i18n import t, tn
+from budget_app.services import aggregates
 from budget_app.services import bulk as bulk_svc
 from budget_app.services.bulk import BulkChanges, BulkEditError
 from budget_app.services.context import Context, ValidationError
@@ -83,6 +84,15 @@ class BulkEditSheet:
                         "{n} of {total} rows are not expenditure and keep their category",
                         k,
                         total=self.n,
+                    )
+                )
+            lines = aggregates.split_lines(self.ctx)
+            if split := sum(1 for tx in expenditure if aggregates.is_split(self.ctx, tx, lines.get(tx.id, []))):
+                _hint(  # F11: the items keep their own categories
+                    tn(
+                        "{n} row is split by its items: only the rest in its own category changes",
+                        "{n} rows are split by their items: only the rest in their own category changes",
+                        split,
                     )
                 )
         if income:

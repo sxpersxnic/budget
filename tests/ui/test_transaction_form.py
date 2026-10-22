@@ -362,7 +362,7 @@ async def test_a_half_filled_item_blocks_saving(user: User, ctx, setup) -> None:
     # a blank line is ignored, a removed line is gone
     click(user, button(user, "Add Item"))
     name, _, _ = item_rows(user)[0]
-    remove = next(c for c in name.parent_slot.children if isinstance(c, ui.button))
+    remove = next(c for c in name.parent_slot.children if isinstance(c, ui.button) and c.props["icon"] == "close")
     click(user, remove)
     assert len(item_rows(user)) == 1
     click(user, save_button(user))

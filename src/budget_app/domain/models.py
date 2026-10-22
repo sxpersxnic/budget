@@ -234,13 +234,20 @@ class Template:
 
 @dataclass
 class TransactionItem:
-    """One line of a transaction's product list (e.g. a receipt), in the transaction's currency."""
+    """One line of a transaction's product list (e.g. a receipt), in the transaction's currency.
+
+    A line of an expenditure may have its own `category` and `tags` (F11, decision 14): it is then a split
+    line, and reports count its total in that category (`domain.splits`). Files written before F11 have
+    neither column: every line keeps the transaction's category.
+    """
 
     transaction_id: str
     name: str
     quantity: float = 1.0
     unit_price: float = 0.0  # negative for discounts
     position: int = 0  # order within the list
+    category: str = ""  # F11: a COICOP code or TAX; empty: the transaction's category
+    tags: str = ""  # F11: ids of `Tag`s, separated by "|", counted for this line on top of the transaction's
     id: str = field(default_factory=new_id)
 
     @property

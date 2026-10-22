@@ -6,14 +6,14 @@ a tags column without writing anything (a new name stays pending, `domain.tags.P
 transaction never adds a tag; `store` creates the pending tags when the record is saved, the way payees are only
 added when a transaction is stored (F09).
 
-Deleting a tag takes it off every transaction, template and series, in the same undoable step; merging moves the
-others' records to the tag kept. Renaming changes `tags.csv` only.
+Deleting a tag takes it off every transaction, item line, template and series, in the same undoable step; merging
+moves the others' records to the tag kept. Renaming changes `tags.csv` only.
 
 **Totals and budgets** count money from `tagged_amounts`: the own share of tagged expenditure as *spent* (the part
 paid for others is an advance, which comes back) and tagged income other than repayments as *received*. Transfers,
 exchanges and revaluations carry tags but move no money in or out. A tag's budget compares its *spent* within the
 budget's period (open ends allowed) with the budget, converted at the latest rate like budget entries; income does
-not reduce it. Split lines (F11) will add a second source to `tagged_amounts`, tagged per item line.
+not reduce it. A split line (F11) counts its part for its own tags as well as for the transaction's.
 """
 
 from __future__ import annotations
@@ -27,9 +27,10 @@ from typing import Any, ClassVar, Protocol
 
 from budget_app.domain.coicop import ADV
 from budget_app.domain.models import TAG_COLOURS, TAG_DEFAULT_COLOUR, TX_EXPENDITURE, TX_INCOME, Tag, Transaction
+from budget_app.domain.splits import Line
 from budget_app.domain.tags import PENDING, clean_name, join, key, split
 from budget_app.i18n import N_, t
-from budget_app.services.aggregates import expenditure_parts, tx_value
+from budget_app.services.aggregates import part_value, split_lines, transaction_parts, tx_value
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
 from budget_app.storage.csv_store import CsvTable
@@ -166,7 +167,7 @@ class _Tagged(Protocol):
     tags: str
 
 
-def _rewrite_in[T: _Tagged](table: CsvTable[T], replace: dict[str, str]) -> int:
+def _rewrite_in[T: _Tagged](table: CsvTable[T], replace: dict[str, str]) -> list[T]:
     """Replace tag ids by others (or drop them, for "") in every record of `table`; returns the records changed."""
     changed = []
     for rec in table.all():
@@ -179,15 +180,17 @@ def _rewrite_in[T: _Tagged](table: CsvTable[T], replace: dict[str, str]) -> int:
             changed.append(copy)
     if changed:
         table.update_many(changed)
-    return len(changed)
+    return changed
 
 
 def _rewrite(ctx: Context, replace: dict[str, str]) -> int:
-    """Rewrite the tags of every transaction, template and series; returns the transactions changed."""
-    n = _rewrite_in(ctx.store.transactions, replace)
+    """Rewrite the tags of every transaction, item line (F11), template and series; returns the number of
+    transactions changed, on themselves or on one of their lines."""
+    changed = {tx.id for tx in _rewrite_in(ctx.store.transactions, replace)}
+    changed |= {item.transaction_id for item in _rewrite_in(ctx.store.transaction_items, replace)}
     _rewrite_in(ctx.store.templates, replace)
     _rewrite_in(ctx.store.recurring, replace)
-    return n
+    return len(changed)
 
 
 @recorded(N_("Merge tags"))
@@ -254,25 +257,39 @@ class TaggedAmount:
     transaction_id: str
 
 
-def transaction_amounts(ctx: Context, tx: Transaction, view_cur: str) -> list[tuple[str, float]]:
-    """(kind, value) a transaction counts for its tags: the own share of an expenditure, income other than a
-    repayment; nothing for transfers, exchanges and revaluations."""
+def transaction_amounts(
+    ctx: Context, tx: Transaction, view_cur: str, lines: list[Line] | None = None
+) -> list[tuple[str, str, float]]:
+    """(tag id, kind, value) a transaction counts for its tags: the own share of an expenditure, per part (a split
+    line counts for its own tags and the transaction's, F11), income other than a repayment for the transaction's
+    tags; nothing for transfers, exchanges and revaluations."""
     if tx.type == TX_EXPENDITURE:
-        own = sum(v for code, v in expenditure_parts(ctx, tx, view_cur) if code != ADV)
-        return [(SPENT, own)] if own else []
+        out = []
+        for part in transaction_parts(ctx, tx, lines):
+            value = part_value(ctx, tx, part, view_cur)
+            if part.category != ADV and value:
+                out += [(tag_id, SPENT, value) for tag_id in part.tag_ids]
+        return out
     if tx.type == TX_INCOME and not tx.is_advance:
-        return [(RECEIVED, tx_value(ctx, tx, view_cur))]
+        value = tx_value(ctx, tx, view_cur)
+        return [(tag_id, RECEIVED, value) for tag_id in split(tx.tags)]
     return []
 
 
+def transaction_tags(tx: Transaction, lines: list[Line] | None = None) -> list[str]:
+    """Every tag id a transaction carries: its own, then those of its split lines (expenditure only, F11)."""
+    line_tags = [i for line in lines or [] for i in split(line.tags)] if tx.type == TX_EXPENDITURE else []
+    return split(join([*split(tx.tags), *line_tags]))
+
+
 def _from_transactions(ctx: Context, view_cur: str) -> Iterator[TaggedAmount]:
+    lines = split_lines(ctx)
     for tx in ctx.store.transactions.all():
-        ids = split(tx.tags)
-        if not ids:
+        own = lines.get(tx.id, [])
+        if not tx.tags and not own:
             continue
-        for kind, value in transaction_amounts(ctx, tx, view_cur):
-            for tag_id in ids:
-                yield TaggedAmount(tag_id, tx.date, kind, value, tx.id)
+        for tag_id, kind, value in transaction_amounts(ctx, tx, view_cur, own):
+            yield TaggedAmount(tag_id, tx.date, kind, value, tx.id)
 
 
 def _within(d: date, start: date | None, end: date | None) -> bool:
@@ -284,8 +301,8 @@ def tagged_amounts(
 ) -> Iterator[TaggedAmount]:
     """Every amount that counts for a tag, dated within `start` and `end` (each optional).
 
-    A transaction with two tags counts fully for each. The only source today is the transaction's tags; split
-    lines (F11) will add their own, so that a line tagged differently from its transaction counts there instead.
+    A transaction with two tags counts fully for each. A split line's tags (F11) count that line's part on top
+    of the transaction's tags, so a tag on one line of a receipt counts only that line.
     """
     for amount in _from_transactions(ctx, view_cur):
         if _within(amount.date, start, end):
@@ -301,11 +318,13 @@ class TagTotal:
 
 
 def totals(ctx: Context, view_cur: str, start: date | None = None, end: date | None = None) -> dict[str, TagTotal]:
-    """Per tag id: how many transactions carry it, and what was spent and received, within the period."""
+    """Per tag id: how many transactions carry it (on the transaction or on one of its lines), and what was spent
+    and received, within the period."""
     out: dict[str, TagTotal] = defaultdict(TagTotal)
+    lines = split_lines(ctx)
     for tx in ctx.store.transactions.all():
-        if tx.tags and _within(tx.date, start, end):
-            for tag_id in split(tx.tags):
+        if (tx.tags or tx.id in lines) and _within(tx.date, start, end):
+            for tag_id in transaction_tags(tx, lines.get(tx.id)):
                 total = out[tag_id]
                 total.count += 1
                 total.last = tx.date if total.last is None or tx.date > total.last else total.last

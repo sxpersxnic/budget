@@ -202,6 +202,29 @@ def seed(ctx: Context) -> None:
             spend(day(9), 38, "09.4", account=euro.id, currency="EUR", comment="Uffizi", tags=trip)
             spend(day(10), 92.80, "11.1", account=euro.id, currency="EUR", payee="Osteria Nove", tags=trip)
             spend(day(12), 186.40, "07.3", comment="Train home", payee="SBB", tags=trip)
+        if k == 1:  # F11: one supermarket receipt split by its lines; the gift carries a tag of its own
+            gift = tag_svc.add(ctx, "Gifts", "pink")
+            book(
+                TransactionInput(
+                    date=day(14),
+                    type=TX_EXPENDITURE,
+                    amount=96.85,
+                    currency="CHF",
+                    category="01.1",
+                    from_account=bank.id,
+                    comment="Migros, with presents",
+                    payee="Migros",
+                ),
+                [
+                    ItemInput("Bread", 1, 3.20),
+                    ItemInput("Cheese", 2, 6.90),
+                    ItemInput("Apples", 1, 4.50),
+                    ItemInput("Detergent", 1, 12.95, "05.6.1.1"),
+                    ItemInput("Toilet paper", 1, 8.40, "05.6.1.1"),
+                    ItemInput("Board game", 1, 34.90, "09.2.1", [gift.id]),
+                    ItemInput("Birthday card", 1, 4.90, "09.2.1", [gift.id]),
+                ],
+            )
         if k in (2, 1):  # the bathroom
             redo = (renovation.id,)
             spend(day(7), rng.uniform(900, 1300), "04.3.1", comment="Tools and tiles", payee="Jumbo", tags=redo)

@@ -251,6 +251,9 @@ class TransactionForm:
                     amount=lambda: self.amount.value,
                     currency=lambda: self.currency.value or "",
                     use_total=self._use_items_total,
+                    ctx=self.ctx,  # F11: a line of an expenditure can have its own category and tags
+                    category=lambda: self.exp_category.value or "",
+                    splittable=lambda: self.type.value == TX_EXPENDITURE,
                 )
 
             self.tags = tag_select(self.ctx, init.tags, on_change=ch)  # F10, every type
@@ -663,8 +666,13 @@ class TransactionForm:
         inp = self.read()
         # transfers and exchanges have no product list; switching to one drops an existing list
         item_inputs = self.items.read() if inp.type in (TX_EXPENDITURE, TX_INCOME) else []
+        if inp.type != TX_EXPENDITURE:  # only expenditure is split by its items (F11)
+            for item in item_inputs:
+                item.category, item.tags = "", []
         try:
             items_svc.validate(item_inputs)  # before saving, so a bad item cannot leave half a change
+            if inp.type == TX_EXPENDITURE:
+                items_svc.check_split(item_inputs, inp.amount, inp.category, inp.currency)
             with self.ctx.store.history.action(N_("Save a transaction")):  # one step to undo, items included
                 tx = tx_svc.save(self.ctx, inp, self.editing.id if self.editing else "")
                 items_svc.replace(self.ctx, tx.id, item_inputs)
