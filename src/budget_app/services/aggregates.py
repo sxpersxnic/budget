@@ -1,6 +1,10 @@
 """Sums of transactions and budget entries per category, month and account, in a view currency.
 
 Shared by the monthly statement (reports.py) and the wealth projection (wealth.py).
+
+Every sum of expenditure by category or tag goes through `transaction_parts`: a split transaction (F11) counts
+each item line with a category of its own there, the rest in its own category (`domain.splits`). Net totals,
+account flows and the reconciliation use whole transactions (`tx_value`), which the parts add up to.
 """
 
 from __future__ import annotations
@@ -9,7 +13,7 @@ from collections import defaultdict
 from datetime import date
 
 from budget_app.config import BASE_CURRENCY
-from budget_app.domain import months
+from budget_app.domain import months, splits
 from budget_app.domain.coicop import ADV, TAX, get_coicop
 from budget_app.domain.models import (
     BUDGET_EXPENDITURE,
@@ -34,16 +38,49 @@ def tx_value(ctx: Context, tx: Transaction, view_cur: str) -> float:
     return ctx.convert_on(tx.amount_chf, BASE_CURRENCY, view_cur, tx.fx_date)
 
 
-def expenditure_parts(ctx: Context, tx: Transaction, view_cur: str) -> list[tuple[str, float]]:
-    """(category, amount) parts of an expenditure: own share to its category, advance share to ADV."""
-    total = tx_value(ctx, tx, view_cur)
-    if tx.is_advance and tx.advance_amount > 0 and tx.amount > 0:
-        adv = total * tx.advance_amount / tx.amount
-        parts = [(ADV, adv)]
-        if total - adv > 0.0049:
-            parts.insert(0, (tx.category, total - adv))
-        return parts
-    return [(tx.category, total)]
+# ------------------------------------------------------------------ parts of a transaction (F11)
+def split_lines(ctx: Context) -> dict[str, list[splits.Line]]:
+    """The item lines that may split their transaction (a category or tags of their own), per transaction id."""
+    out: dict[str, list[splits.Line]] = defaultdict(list)
+    for item in sorted(ctx.store.transaction_items.all(), key=lambda i: i.position):
+        if item.category or item.tags:
+            out[item.transaction_id].append(splits.Line(item.total, item.category, item.tags))
+    return dict(out)
+
+
+def transaction_parts(ctx: Context, tx: Transaction, lines: list[splits.Line] | None = None) -> list[splits.Part]:
+    """The parts a transaction counts in: (category, amount, amount_chf, tags), adding up to it exactly.
+
+    Only expenditure is split (by its item lines, decision 14, and its advance share); everything else is one
+    part. `lines` are the transaction's entry of `split_lines`, looked up when not given; callers that walk many
+    transactions pass them, so the items are read once.
+    """
+    if tx.type != TX_EXPENDITURE:
+        return [splits.Part(tx.category, tx.amount, tx.amount_chf, tx.tags)]
+    if lines is None:
+        lines = split_lines(ctx).get(tx.id, [])
+    advance = tx.advance_amount if tx.is_advance else 0.0
+    return splits.parts(tx.amount, tx.amount_chf, tx.category, lines, advance, tx.tags)
+
+
+def part_value(ctx: Context, tx: Transaction, part: splits.Part, view_cur: str) -> float:
+    """A part in the view currency, converted the way the transaction is (`tx_value`)."""
+    if tx.currency == view_cur:
+        return part.amount
+    return ctx.convert_on(part.amount_chf, BASE_CURRENCY, view_cur, tx.fx_date)
+
+
+def expenditure_parts(
+    ctx: Context, tx: Transaction, view_cur: str, lines: list[splits.Line] | None = None
+) -> list[tuple[str, float]]:
+    """(category, amount) parts of an expenditure in the view currency: the rest in its own category, each split
+    line in its category, the advance share in ADV."""
+    return [(p.category, part_value(ctx, tx, p, view_cur)) for p in transaction_parts(ctx, tx, lines)]
+
+
+def is_split(ctx: Context, tx: Transaction, lines: list[splits.Line] | None = None) -> bool:
+    """Whether an expenditure counts in more than its own category (and ADV)."""
+    return any(p.category not in (tx.category, ADV) for p in transaction_parts(ctx, tx, lines))
 
 
 def income_key(tx: Transaction) -> str:
@@ -56,11 +93,12 @@ def _in_months(d: date, month_set: set[str]) -> bool:
 
 # ------------------------------------------------------------------ aggregates
 def actual_expenditure(ctx: Context, month_set: set[str], view_cur: str) -> dict[str, float]:
-    """Direct (not rolled up) actual expenditure per category code."""
+    """Direct (not rolled up) actual expenditure per category code; split transactions count per part (F11)."""
     out: dict[str, float] = defaultdict(float)
+    lines = split_lines(ctx)
     for tx in ctx.store.transactions.all():
         if tx.type == TX_EXPENDITURE and _in_months(tx.date, month_set):
-            for code, value in expenditure_parts(ctx, tx, view_cur):
+            for code, value in expenditure_parts(ctx, tx, view_cur, lines.get(tx.id, [])):
                 out[code] += value
     return dict(out)
 

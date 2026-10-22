@@ -11,6 +11,8 @@ from typing import Any
 from budget_app.domain.models import (
     Account,
     AccountEntry,
+    Attachment,
+    Bill,
     BudgetEntry,
     Holding,
     IncomeCategory,
@@ -19,6 +21,7 @@ from budget_app.domain.models import (
     Recurring,
     Rule,
     Settings,
+    Tag,
     Template,
     Trade,
     Transaction,
@@ -60,6 +63,7 @@ class Store:
         self.income_categories = CsvTable(data_dir / "income_categories.csv", IncomeCategory, h)
         self.transactions = CsvTable(data_dir / "transactions.csv", Transaction, h)
         self.transaction_items = CsvTable(data_dir / "transaction_items.csv", TransactionItem, h)
+        self.attachments = CsvTable(data_dir / "attachments.csv", Attachment, h)  # F12; files in attachments/
         self.account_entries = CsvTable(data_dir / "account_entries.csv", AccountEntry, h)
         self.budget = CsvTable(data_dir / "budget_entries.csv", BudgetEntry, h)
         self.templates = CsvTable(data_dir / "templates.csv", Template, h)
@@ -69,6 +73,8 @@ class Store:
         self.holdings = CsvTable(data_dir / "holdings.csv", Holding, h)  # F21
         self.trades = CsvTable(data_dir / "trades.csv", Trade, h)
         self.prices = CsvTable(data_dir / "prices.csv", Price, h)
+        self.tags = CsvTable(data_dir / "tags.csv", Tag, h)  # F10
+        self.bills = CsvTable(data_dir / "bills.csv", Bill, h)  # F03; their files are attachments
         self._settings = SettingsStore(data_dir / "settings.json")
 
     def tables(self) -> dict[str, CsvTable]:
@@ -78,6 +84,7 @@ class Store:
             self.income_categories,
             self.transactions,
             self.transaction_items,
+            self.attachments,
             self.account_entries,
             self.budget,
             self.templates,
@@ -87,6 +94,8 @@ class Store:
             self.holdings,
             self.trades,
             self.prices,
+            self.tags,
+            self.bills,
         ]
         return {t.name: t for t in tables}
 

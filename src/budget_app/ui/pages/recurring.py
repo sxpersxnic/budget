@@ -37,6 +37,7 @@ from budget_app.ui.widgets.selects import (
     payee_input,
     set_options,
 )
+from budget_app.ui.widgets.tags import tag_select
 
 ROW_ACTION = "flat dense round size=sm"
 
@@ -85,6 +86,7 @@ def open_recurring_sheet(
         ui.label(
             t("Due transactions are booked without asking when the app starts. Best for fixed amounts such as rent.")
         ).classes("caption -mt-3 px-1")
+        tags = tag_select(ctx, init.tags)  # F10
         comment = (
             ui.textarea(t("Note"), value=init.comment, placeholder=t("Optional"))
             .props("dense outlined autogrow rows=1")
@@ -115,6 +117,7 @@ def open_recurring_sheet(
             end=parse_date(end.value),
             auto=bool(auto.value),
             payee=(payee.value or "") if kind in (TX_EXPENDITURE, TX_INCOME) else "",
+            tags=list(tags.value or []),
         )
 
     def changed() -> None:

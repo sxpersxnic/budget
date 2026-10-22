@@ -34,7 +34,7 @@ in the [`installers/`](installers/README.md) folder.
 
 ## Install on macOS
 
-Requirements: macOS 11 (Big Sur) or later. The installer must match your Mac: an installer
+Requirements: macOS 14 (Sonoma) or later. The installer must match your Mac: an installer
 built on an Apple Silicon Mac (`…-macOS-arm64.dmg`) runs on Apple Silicon Macs.
 
 1. Download **`Budget-<version>-macOS-arm64.dmg`** from the
@@ -137,12 +137,17 @@ The app opens in its own window and keeps all data in your user folder:
 | Windows | `%APPDATA%\Budget` (type it into the Explorer address bar) |
 | Linux | `~/.local/share/budget` (or `$XDG_DATA_HOME/budget`) |
 
-- **Backup:** **Settings → Data → Back Up Now…** saves all your records as one ZIP file
-  (`Budget-backup-<date>.zip`). Keep it somewhere safe, for example on another drive.
+- **Backup:** **Settings → Data → Back Up Now…** saves all your records, with the files attached
+  to transactions, as one ZIP file (`Budget-backup-<date>.zip`). Keep it somewhere safe, for example
+  on another drive.
 - **Restore:** **Settings → Data → Choose Backup…** replaces all records with those of a backup
   file. The app also keeps its own copies under **Automatic Backups**: one before each update and
   one before each restore, the ten most recent. Each can be restored with **Restore…**. A restore
   first copies the current records to the backups folder, so it can be undone the same way.
+- **Attachments:** files you attach to a transaction, and the PDFs and photos of QR bills, are
+  copied into the data folder (`attachments/`), so the backup and the automatic copies include them.
+  A removed attachment's file stays there as long as the removal can still be undone, and is deleted
+  at a later start.
 - **Undo:** after saving or deleting, the confirmation at the bottom offers **Undo** for a few
   seconds. **Settings → Data → Change History** lists the last changes, each with **Undo**. An
   undo is refused when the records were changed again afterwards, so it never overwrites later
@@ -181,7 +186,20 @@ The app opens in its own window and keeps all data in your user folder:
    *Partly paid for others* when part of a payment was for someone else. Record their
    repayment later as income with *Repays an advance payment*. Under **Items** you can list
    what you bought (for example a grocery receipt) with quantity and price; the Transactions
-   search then also finds a purchase by item name. Shortcuts: type a sum such as `12.50+8.30`
+   search then also finds a purchase by item name. To **split** an expenditure across categories
+   (food, detergent and a present on one receipt), click the split button beside a line and give it
+   its own category, and tags if you like; the line below the list shows what stays in the
+   transaction's category ("Rest in 01.1 Food: 23.40"). Reports, budgets, charts and tag totals then
+   count each line in its own category; a share paid for others is taken proportionally from every
+   part. Lines with their own category can't add up to more than the amount; a negative line (a
+   discount) lowers its category. Only expenditure is split. The Transactions list shows a split
+   as "01.1 Food + 2 more", and its search finds the lines' categories. Under **Attachments** you can keep the receipt,
+   invoice or contract with the transaction: drop files onto the box or click it to choose them
+   (PDF, photos including iPhone HEIC, Word, Excel, OpenDocument, text or CSV, up to 20 MB each).
+   Click a photo's or PDF's name to preview it; **Open** shows it in your usual viewer, **Save a
+   Copy…** saves it elsewhere. In a new transaction the files are stored when you save it. The
+   Transactions list shows a paper clip with the number of files, and its search also finds file
+   names. Shortcuts: type a sum such as `12.50+8.30`
    into an amount, press **N** for a new transaction and **⌘↩** (Ctrl+Enter) to save, save the
    usual ones as **templates** (bookmark button), or **Duplicate** an existing transaction.
    The category field shows everyday names ("Groceries · 01.1") and your recently used
@@ -192,6 +210,9 @@ The app opens in its own window and keeps all data in your user folder:
    suggestions (your recent payees come first) or type a new name. Once the payee is known, the
    app suggests a category below the category field, with the reason ("Used 14 times for this
    payee"); click **Use …** to take it, or choose another one.
+   **Tags** label transactions across categories ("Holiday Italy", "Renovation"): pick existing
+   ones or type a new name and press Enter; it becomes a tag when you save. A transaction can have
+   several.
 4. **Transactions → Import…** (optional): bring in a CSV export from your e-banking
    instead of typing. Choose the account, check the detected columns, give the new rows a
    category and import. The column settings can be saved per bank; transactions already
@@ -208,14 +229,26 @@ The app opens in its own window and keeps all data in your user folder:
    **Always Categorize Like This…** (also in the edit sheet): adjust the text it looks for ("migros")
    and save the rule. Taking a suggestion never creates a rule on its own.
    To tidy up several transactions at once, select them in the list and choose **Edit**: change
-   their category, payee, account or note (replace, append or clear) in one step, which one **Undo**
-   reverts. Rows a change doesn't fit (a transfer has no category) keep what they have.
+   their category, payee, account, tags (add or remove) or note (replace, append or clear) in one step,
+   which one **Undo**
+   reverts. Rows a change doesn't fit (a transfer has no category) keep what they have; a split
+   transaction changes only the category of its rest, its lines keep theirs.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets.
 6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is
    due it is listed for one-click booking (change the amount first if it varies, or skip it);
    turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
    series from a transaction you already entered.
+   **Bills** (sidebar): drop the PDF of a Swiss QR bill, or a photo of its QR code (JPEG or PNG), onto
+   the box, or click it to choose files. The app reads the QR code on your computer (nothing is sent
+   anywhere) and lists the bill under **Open** with the creditor, amount, reference and due date (read
+   from the bill when it states one; set or change it with the calendar button). The sidebar counts the
+   bills that are overdue or due within a week. When you have paid a bill, click **Mark Paid…**: the
+   transaction sheet opens filled in with the creditor as payee, the amount, the message and reference
+   as note, and a suggested category; check it, choose the account and click **Mark Paid**. The bill's
+   PDF goes with the payment as an attachment. **Dismiss** a bill you don't pay here (for example one
+   paid by eBill); paid and dismissed bills are kept under **Paid and Dismissed**. The same bill
+   dropped twice is refused; deleting its payment puts a bill back on the open list.
 7. **Categories** (sidebar): look up a COICOP category by code, name or what it includes; the ⓘ
    beside a name shows what the category includes, also includes and excludes. The ones you used
    show what you spent in them this year.
@@ -225,6 +258,13 @@ The app opens in its own window and keeps all data in your user folder:
    search for a payee or choose one under **Filters**. **Payees → Rules…** (or **Settings → Rules…**)
    lists your categorization rules, to add, change or delete them. When several rules match, the one
    with the longest text wins.
+   **Tags** (sidebar) lists your tags with their number of transactions and what was spent and
+   received. Click a tag to see its transactions. Give a tag a **budget** (piggy bank button: an
+   amount, optionally a period such as the dates of a holiday) and a bar shows the tagged spending
+   against it; the part paid for others and income don't count. Rename or recolour a tag, merge
+   several, or delete one (it is taken off its transactions; **Undo** brings it back). On
+   **Transactions**, filter by tag under **Filters** or search for a tag name, and *Add Chart →
+   Spending by Tag* on the Overview compares the tags over a period.
 8. **Overview / Budget:** compare actual against budget, check the projected wealth, build
    charts, and export statements as Excel or PDF (share button on the Budget page).
    Once an account has an asset class other than cash, the Overview shows your wealth **by asset
@@ -338,3 +378,16 @@ types, tests and coverage before each push.
   <https://unstats.un.org/unsd/classifications/Econ> (retrieved on 2026-10-21). The English text is
   the UN's; the German, French and Italian translations are the app's own and unofficial, as
   the app says beside them.
+- **QR bills:** read according to SIX, *Swiss Implementation Guidelines for the QR-bill*, version 2.3.
+
+### Libraries for QR bills
+
+| Library | Used for | Licence |
+| --- | --- | --- |
+| [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) with [PDFium](https://pdfium.googlesource.com/pdfium/) | rendering PDF pages to find the QR code | Apache-2.0 or BSD-3-Clause; PDFium BSD-3-Clause, its bundled libraries under their own licences (listed in the package) |
+| [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp) | finding and decoding QR codes | Apache-2.0 |
+| [Pillow](https://python-pillow.org) | opening photos (already used through reportlab) | MIT-CMU |
+| [segno](https://github.com/heuer/segno), [qrbill](https://github.com/claudep/swiss-qr-bill) | tests only: QR codes and QR-bill payloads for the test files | BSD-3-Clause, MIT |
+
+All of them come as wheels with their native code for macOS (arm64 and x86_64), Windows and Linux, so
+`uv sync` needs no compiler.

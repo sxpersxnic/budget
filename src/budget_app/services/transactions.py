@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date
 
 from budget_app import i18n
+from budget_app.domain import tags as tag_codec
 from budget_app.domain.coicop import TAX, get_coicop
 from budget_app.domain.models import (
     ACCOUNT_ADVANCE,
@@ -23,7 +24,9 @@ from budget_app.domain.models import (
 )
 from budget_app.i18n import N_, t
 from budget_app.services import accounts as acc_svc
+from budget_app.services import attachments
 from budget_app.services import payees as payee_svc
+from budget_app.services import tags as tag_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
 
@@ -68,6 +71,7 @@ class TransactionInput:
     import_ref: str = ""  # non-empty for imported transactions: identifies the source row
     recurring_id: str = ""  # booked from a recurring transaction (F05)
     payee: str = ""  # expenditure and income (F09); a new name adds a payee
+    tags: list[str] = field(default_factory=list)  # F10: tag ids, or names of new tags (added when stored)
 
 
 @dataclass
@@ -281,6 +285,7 @@ def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Tra
         comment=inp.comment.strip(),
         import_ref=inp.import_ref,
         recurring_id=inp.recurring_id,
+        tags=tag_svc.encode(ctx, inp.tags),  # new tags stay pending until stored
     )
     if inp.type in payee_svc.PAYEE_TYPES:
         tx.payee = payee_svc.spelling(ctx, inp.payee)  # added to the payees only when stored
@@ -369,6 +374,8 @@ def _store_exchange_split(ctx: Context, tx: Transaction, old: Transaction | None
     store = ctx.store.transactions
     if tx.payee:
         tx.payee = payee_svc.ensure(ctx, tx.payee)
+    if tx.tags:
+        tx.tags = tag_svc.store(ctx, tx.tags)
     linked = store.get(tx.linked_id) if tx.linked_id else None
     if tx.type != TX_EXCHANGE:
         if linked is not None:  # no longer an exchange: its spread booking goes
@@ -421,6 +428,8 @@ def save_many(ctx: Context, inputs: list[TransactionInput]) -> list[Transaction]
     for tx in built:  # in order, so "MIGROS" and "Migros" in one file become one payee
         if tx.payee:
             tx.payee = payee_svc.ensure(ctx, tx.payee)
+        if tx.tags:
+            tx.tags = tag_svc.store(ctx, tx.tags)
     return ctx.store.transactions.add_many(built)
 
 
@@ -485,6 +494,7 @@ def to_input(tx: Transaction) -> TransactionInput:
         import_ref=tx.import_ref,
         recurring_id=tx.recurring_id,
         payee=tx.payee,
+        tags=tag_codec.split(tx.tags),
     )
     if tx.type == TX_EXPENDITURE and tx.is_advance:
         inp.advance_mode, inp.advance_value = "amount", tx.advance_amount
@@ -526,6 +536,10 @@ def delete(ctx: Context, ids: list[str]) -> int:
     items = [i.id for i in ctx.store.transaction_items.all() if i.transaction_id in ids_set]
     count = ctx.store.transactions.delete(list(ids_set))
     ctx.store.transaction_items.delete(items)  # a transaction's product list goes with it
+    from budget_app.services import bills  # noqa: PLC0415 - bills books its payments through this module
+
+    bills.release(ctx, ids_set)  # a bill whose payment is deleted is open again (F03)
+    attachments.remove_for(ctx, ids_set)  # and its attachments (their files stay while Undo can restore them)
     return count
 
 

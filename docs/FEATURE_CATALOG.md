@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 open |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11 and F03 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Next: step 25. Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions and F03 QR bills done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ☐ Open | The rest, roughly by value per effort: F11, F12, F03, F10, F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -129,13 +129,15 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
     quantity and price take over. Built (architecture §4.6).
 14. ☑ **F11:** decided on 2026-10-22 — a split is a category per item line: the Items list gets an
     optional category per line, lines without one keep the transaction's category, and reports
-    and budgets count each line in its own category.
+    and budgets count each line in its own category. Built (architecture §4.3, decision 21).
 15. ☑ **F03:** decided — the app tracks open bills: a scanned QR bill waits in a Bills list with
     its due date until *Mark Paid* books the expenditure; the PDF stays as an attachment.
+    Built (architecture §7, decision 22).
 16. ☑ **F12:** decided — attachments are copied into the data folder
     (`attachments/<transaction id>/`), so backups and restore include them; one file at most 20 MB.
+    Built (architecture §7, decision 20).
 17. ☑ **F10:** decided — the first version has tags with filter, totals and chart, and a budget per
-    tag (amount, optional period) with actual against budget.
+    tag (amount, optional period) with actual against budget. Built (see F10).
 
 ## All features
 
@@ -143,16 +145,16 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
 | --- | --- | --- | --- | --- | --- | --- |
 | F01 | ☑ Done | CSV import of transactions | Data in | M | Local | – |
 | F02 | ☑ Done | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
-| F03 | ☐ Open | Swiss QR-bill scanning | Data in | M | Local | – |
+| F03 | ☑ Done | Swiss QR-bill scanning | Data in | M | Local | – |
 | F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
 | F05 | ☑ Done | Recurring transactions | Data in | M | Local | – |
 | F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
 | F07 | ☑ Done | Automatic categorization | Organizing | M–L | Local | F09 |
 | F08 | ☑ Done | Simpler category picker | Organizing | S | Local | – |
 | F09 | ☑ Done | Payees | Organizing | M | Local | – |
-| F10 | ☐ Open | Tags | Organizing | M | Local | – |
-| F11 | ☐ Open | Split transactions | Organizing | M | Local | – |
-| F12 | ☐ Open | Attachments | Organizing | M | Local | – |
+| F10 | ☑ Done | Tags | Organizing | M | Local | – |
+| F11 | ☑ Done | Split transactions | Organizing | M | Local | – |
+| F12 | ☑ Done | Attachments | Organizing | M | Local | – |
 | F13 | ☑ Done | Bulk edit | Organizing | S | Local | – |
 | F14 | ☐ Open | Savings goals | Planning | M | Local | – |
 | F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
@@ -418,7 +420,36 @@ camt.052 intraday reports, files holding several accounts (refused with a messag
 
 #### F03 · Swiss QR-bill scanning
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built (decision 15):** **Bills** in the sidebar (after Recurring, route `/bills`, icon `o_request_quote`) with a
+badge counting the open bills that are overdue or due within 7 days. A drop zone, "Drop QR bills (PDF or photo)",
+takes PDFs (every page, up to 20, is rendered with PDFium and searched; a document without a code is read once
+more at double resolution) and photos (JPEG, PNG, WebP; EXIF orientation applied); the QR codes are found with
+ZXing, all on the computer. Every code that is a QR bill is read and checked like a bank would
+(`domain/qrbill.py`, SIX Implementation Guidelines 2.3, payload version 0200): IBAN check digits (CH and LI only),
+QR-IBAN only with a QR reference and the reverse, QR reference (27 digits, mod 10 recursive), creditor reference
+(ISO 11649), currency CHF or EUR, amount format and range (an empty amount is filled in when paying; 0.00 is a
+notice and refused), structured (S) and combined (K) addresses with their field lengths, the 140- and
+997-character limits and the EPD trailer. Each valid bill becomes a record in `bills.csv` (creditor, address,
+IBAN, amount, currency, reference type and reference, message, bill information, due date, status
+open/paid/dismissed, the paying transaction, added); the due date is read from Swico bill information
+(`//S1/…/11/<invoice date>/…/40/0:30` = invoice date plus the net term) and can be set or cleared per bill.
+A bill already in the list (same IBAN, reference and amount, whatever its status; without a reference also the
+same message and bill information) is refused with "This bill is already in the list"; a file without one says
+"No QR bill found in this file", a broken code names its fault ("The creditor’s IBAN … is invalid"). The file
+is kept as an attachment of the bill (`attachments/<bill id>/`, decision 22). The **Open** list is sorted by due
+date (overdue in red, due within a week in orange, bills without a date last) and shows creditor, amount,
+due date, message and reference and a link to the file; **Mark Paid…** opens the transaction sheet ("Pay
+Bill") prefilled with the creditor as payee (a known payee keeps its spelling: "Swisscom (Schweiz) AG" finds
+the payee of that name, a new one is cleaned like a bank text), the amount and currency, the message and the
+formatted reference as note and today's date; the category is suggested with its reason (F07) and the bill's
+file is listed under Attachments; **Mark Paid** saves the expenditure and marks the bill paid in one undo
+step, and the file then belongs to the transaction. Dismiss (paid elsewhere, not owed), Reopen, the due date
+and Delete are undoable too; *Paid and Dismissed* is collapsed below, with *Show Payment* for a paid bill.
+Deleting the payment opens the bill again. Not built: HEIC photos (Pillow needs a plugin; the message asks for
+JPEG or PNG), the camera, reminders outside the app (F31), and matching a bill with a payment already
+imported from the bank (it is booked as a new expenditure).
 
 Every Swiss invoice carries a QR code with the amount, currency, creditor and reference.
 
@@ -572,7 +603,7 @@ there, which teaches the alias. The form's payee field suggests known payees (re
 new name as typed. Transactions has a Payee column, search and filter. The **Payees** page lists every payee
 with its number of transactions and what was spent and received, and renames, merges (several → one name; their
 transactions, templates, series and aliases move) and deletes unused payees, each as one undo step. Not built:
-QR-bill creditors (with F03), a "top merchants" report, and payees on transfers. Category suggestions per payee
+a "top merchants" report, and payees on transfers (QR-bill creditors became payees with F03). Category suggestions per payee
 came with F07.
 
 A payee or merchant field, normalized ("MIGROS ZUERICH HB 1234" → "Migros").
@@ -583,7 +614,29 @@ A payee or merchant field, normalized ("MIGROS ZUERICH HB 1234" → "Migros").
 
 #### F10 · Tags
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built (decision 17):** `tags.csv` holds each tag with a colour from a fixed palette of nine (grey, red,
+orange, yellow, green, teal, blue, purple, pink; shades for light and dark mode) and an optional budget (amount,
+currency, optional start and end date). Transactions, templates and recurring series store the **ids** of their
+tags in a `tags` column, separated by `|`, so a rename touches one row; older files load without tags. The
+transaction form has a **Tags** field for every type (a spread booking follows its exchange and stays untagged), a
+chip input with suggestions: existing tags are picked (typing a tag's name in any case picks it), a new name shows
+as a dashed chip and becomes a tag only when the transaction is saved, in the same undo step. The recurring sheet,
+templates, *Duplicate*, *Make Recurring…* and booked occurrences carry the tags; bulk edit (F13) has **Add Tags**
+and **Remove Tags**. **Transactions** shows the tags as coloured chips (an AG Grid cell renderer; export and
+sorting use the names), filters by tag (any of the chosen) and finds tag names in the search. The **Tags** page
+(`/tags`, sidebar after Payees) lists each tag with its number of transactions, what was spent and received, and
+with a budget a bar "540.00 of 2'500.00 CHF · 1'960.00 CHF left · 1 Jul 2026 – 31 Jul 2026" (red when over); a
+click on a tag opens Transactions filtered by it (`?tag=<id>`); it adds tags, edits name and colour, merges,
+deletes and sets budgets, each one undoable step. The Overview has a **Spending by Tag** chart (one bar per tag in
+its colour, between two months; PNG, PDF, CSV and Excel like the other charts). **Decided while building:**
+spending counts the own share of tagged expenditure (the part paid for others is an advance that comes back), and
+tagged income other than repayments counts as received; a tag's budget compares only that spending within its
+period, income does not reduce it. Deleting a tag in use is allowed: it is taken off every transaction, template
+and series in one undoable action, and the confirmation says how many transactions lose it. The German word is
+*Schlagwort* ("Tag" means day), French *étiquette*, Italian *etichetta*. Tags per item line came with F11 (a line's
+tag counts that line's part). Not built: budgets per tag and month, and the tax summary's use of tags (F20).
 
 Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
@@ -593,7 +646,30 @@ Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
 #### F11 · Split transactions
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built (decision 14):** a split is a category per item line. In the transaction form each item line of an
+expenditure has a split button that opens a row below it with the category picker (F08) and a tag field (F10) for
+that line; lines without a category keep the transaction's. Below the list, "Rest in 01.1 Food: 23.40 CHF" shows
+what stays in the transaction's category, live. `transaction_items.csv` got `category` and `tags` columns (older
+files load unchanged). **How the amount is counted** (`domain.splits`, the one place every consumer uses): each
+line with its own category (or tags) counts its total there, in CHF at the transaction's own rate rounded to the
+cent; the rest (lines without a category, deposits, rounding, anything not itemised) stays in the transaction's
+category and takes the rounding, so the parts add up to the amount and to `amount_chf` exactly. Lines with their
+own category may not add up to more than the amount (Save refuses it with the totals); a negative line is a
+discount on its category and raises the rest by as much. **Advances:** every part gives the same share
+(advance / amount) to *Advance payments*, so the advance, its repayments and their settlement are unchanged.
+**Counted per part:** the monthly statement and its export, budget vs. actual, the expenditure tree, the
+*Income and Expenditure* chart series and their exports, the projection's "higher of recorded and budget", the
+COICOP page's spending this year, and tag totals, budgets and the *Spending by Tag* chart (a line's tags count
+that line, on top of the transaction's). Net income, account balances and the reconciliation use the whole
+transaction and never change (tested). **Transactions** shows a split as "01.1 Food + 2 more"; the search finds
+its lines' categories, and the tag column and filter include its lines' tags. Deleting or merging a tag rewrites
+the lines too. **Bulk edit** changes only the rest's category (the hint says how many rows are split). Income,
+transfers, exchanges and revaluations are not split: the form hides the split buttons for income and says that
+lines with a category lose it when saved. Undo covers the lines (they are saved in the transaction's action).
+Not built: a drill-down from a Budget category to its transactions (the page has none yet); recurring series
+and templates have no items, so *Make Recurring…* of a split transaction books unsplit occurrences.
 
 One payment, several categories: a supermarket receipt with food, household goods and a
 gift.
@@ -605,7 +681,27 @@ gift.
 
 #### F12 · Attachments
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built:** every transaction type has an *Attachments* section in its form, under the note: a drop
+zone (drag files onto it, or click to choose several), then one row per file with a thumbnail (photos)
+or an icon, the name, size and date added, and *Open*, *Save a Copy…* and *Remove*. Clicking the name of
+a photo or PDF shows it below the list (the PDF in the window's own viewer). In the edit sheet a file is
+attached, or removed, at once, each with an Undo toast; a new transaction keeps the chosen files ("Attached
+when you save") and stores them with it, in the same undo step, so a receipt can go with the expenditure
+it belongs to. Accepted: PDF, photos (JPEG, PNG, HEIC, WebP), Word, Excel and OpenDocument files, text and
+CSV, at most 20 MB each and checked by content as well as by extension (no HTML, SVG, scripts or old
+binary Office files); the same check runs again before a file is opened, served or restored from a
+backup, so a crafted backup can't place a program that *Open* would run. Files are copied to `attachments/<transaction id>/<attachment id>.<ext>` in the data
+folder, never under the user's name; `attachments.csv` keeps the name. *Open* uses the system's viewer in
+the app window and a link to `/attachment/<id>` in a browser; that route serves only files of existing
+attachment records. Removing an attachment or deleting its transaction can be undone; the file is deleted
+at a later start, once no undo can bring it back (architecture §7, decision 20). Backups contain the
+files, a restore brings them back, and the copies made before an update or a restore keep them too. The
+Transactions list has a paper-clip column with the number of files, and its search finds attachment
+names. Not built: attaching from the Transactions list, sync, previews of office files and OCR (F04). Since
+F03 a QR bill keeps its file as an attachment of the bill, which belongs to the payment once the bill is paid
+(decision 22).
 
 Keep receipts, invoices and contracts with the transaction.
 
@@ -631,7 +727,8 @@ how many rows change, and ⌘↩ / Ctrl+Enter saves. Each changed row goes throu
 a single edit (advance payments and repayments included); if one fails, nothing is saved and the
 failing rows are listed by date and amount. The whole edit is one undo step (*Edit several
 transactions*); booked rows keep their recurring series, valuation, items and import reference.
-Not built: tags (F10).
+Tags came with F10: *Add Tags* and *Remove Tags*. With F11, a split transaction changes only the category
+of its rest; its lines keep theirs.
 
 Select many transactions → change category, account, tag or note in one step. The selection
 bar on the Transactions page already exists; this adds an *Edit* sheet for several rows.
@@ -1047,7 +1144,9 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | --- | --- | --- |
 | F01 · CSV import of transactions | ☑ Done | Details below. |
 | F29 · Multi-language support | ☑ Done | English, German, French and Italian, including the COICOP names. |
-| Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. Covers part of F11 and gives F04 a place for receipt lines. |
+| F12 · Attachments | ☑ Done | Receipts and invoices with their transaction, in the data folder and in backups; details under F12. |
+| Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. F11 added a category and tags per line; gives F04 a place for receipt lines. |
+| F03 · Swiss QR-bill scanning | ☑ Done | QR bills from PDFs and photos into a Bills list with due dates, paid through the transaction sheet; details under F03. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
 | CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
 

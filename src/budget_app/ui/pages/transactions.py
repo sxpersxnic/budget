@@ -6,7 +6,8 @@ from datetime import date
 
 from nicegui import ui
 
-from budget_app.domain.coicop import get_coicop
+from budget_app.domain import tags as tag_codec
+from budget_app.domain.coicop import ADV, get_coicop
 from budget_app.domain.models import (
     REVALUATION_KINDS,
     TX_EXCHANGE,
@@ -14,16 +15,20 @@ from budget_app.domain.models import (
     TX_INCOME,
     TX_REVALUATION,
     TX_TYPES,
+    Tag,
     Transaction,
 )
 from budget_app.i18n import t, tc, tn
 from budget_app.services import accounts as acc_svc
+from budget_app.services import aggregates
+from budget_app.services import attachments as att_svc
 from budget_app.services import items as items_svc
 from budget_app.services import payees as payee_svc
 from budget_app.services import recurring as rec_svc
 from budget_app.services import rules as rules_svc
+from budget_app.services import tags as tag_svc
 from budget_app.services import transactions as tx_svc
-from budget_app.services.context import ValidationError
+from budget_app.services.context import Context, ValidationError
 from budget_app.services.reports import ADV_REPAY_NAME
 from budget_app.ui.layout import date_input, error, frame, on_data_changed, parse_date, undoable
 from budget_app.ui.pages.add_budget import recurrence_label
@@ -32,7 +37,11 @@ from budget_app.ui.widgets.bulk_edit import open_bulk_edit_sheet
 from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
 from budget_app.ui.widgets.rule_sheet import always_like_this
 from budget_app.ui.widgets.selects import set_options
+from budget_app.ui.widgets.tags import CHIPS_RENDERER, TagSelect, grid_cells
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
+
+# the number of attachments beside a paper clip (a count from the server, so plain HTML is safe)
+CLIP = "p => p.value ? `<span class='clip-cell'><i class='material-icons'>attach_file</i>${p.value}</span>` : ''"
 
 
 def _columns() -> list[dict]:
@@ -40,8 +49,17 @@ def _columns() -> list[dict]:
         date_col("date", t("Date"), sort="desc", width=120),
         {"field": "payee", "headerName": t("Payee"), "width": 180},
         {"field": "category", "headerName": t("Category"), "width": 250},
+        {"field": "tags", "headerName": t("Tags"), "width": 170, ":cellRenderer": CHIPS_RENDERER},  # F10
         money_col("amount", t("Amount"), width=150),
         {"field": "items", "headerName": t("Items"), "width": 90, "type": "rightAligned", "cellClass": "muted"},
+        {  # F12: a paper clip with the number of files; the header shows the clip, exports the word
+            "field": "attachments",
+            "headerName": t("Attachments"),
+            "headerTooltip": t("Attachments"),
+            "headerClass": "clip-header",
+            "width": 64,
+            ":cellRenderer": CLIP,
+        },
         {"field": "from", "headerName": tc("account", "From"), "width": 160},
         {"field": "to", "headerName": tc("account", "To"), "width": 180},
         {"field": "type", "headerName": t("Type"), "width": 130, "cellClass": "muted"},
@@ -51,6 +69,21 @@ def _columns() -> list[dict]:
         {"field": "recurring", "headerName": t("Repeats"), "width": 140, "cellClass": "muted"},
         date_col("fx_date", t("Rate Date"), width=120, cellClass="muted"),
     ]
+
+
+def _label(code: str) -> str:
+    return get_coicop().label(code)
+
+
+def split_columns(ctx: Context, tx: Transaction, lines: dict[str, list]) -> tuple[list[str], list[str]]:
+    """The categories a split expenditure counts in, its own first (none when it isn't split), and the tags of its
+    lines (F11)."""
+    own = lines.get(tx.id)
+    if tx.type != TX_EXPENDITURE or not own:
+        return [], []
+    codes = [p.category for p in aggregates.transaction_parts(ctx, tx, own) if p.category != ADV]
+    codes = list(dict.fromkeys([tx.category, *codes] if tx.category in codes else codes))
+    return (codes if len(codes) > 1 else []), [i for line in own for i in tag_codec.split(line.tags)]
 
 
 def _type_label(tx_type: str) -> str:
@@ -65,8 +98,17 @@ def _row(
     item_names: dict,
     received: float | None = None,
     repeats: dict[str, str] | None = None,
+    tags: dict[str, Tag] | None = None,
+    attachments: tuple[dict[str, int], dict[str, str]] = ({}, {}),
+    split: tuple[list[str], list[str]] = ([], []),
 ) -> dict:
-    if tx.type == TX_EXPENDITURE:
+    """`split`: the categories a split expenditure counts in (F11), the transaction's first, and its lines' tags."""
+    split_codes, line_tags = split
+    if tx.type == TX_EXPENDITURE and len(split_codes) > 1:  # "01.1 Food… + 2 more"; the search finds them all
+        category = tn(
+            "{category} + {n} more", "{category} + {n} more", len(split_codes) - 1, category=_label(split_codes[0])
+        )
+    elif tx.type == TX_EXPENDITURE:
         category = get_coicop().label(tx.category)
     elif tx.type == TX_INCOME:
         category = t(ADV_REPAY_NAME) if tx.is_advance else income_cats.get(tx.category, "")
@@ -82,6 +124,9 @@ def _row(
     to = accs.get(tx.to_account, "")
     if tx.type == TX_EXCHANGE:  # what the bank credited, spread included (F44)
         to += f" (+{received if received is not None else tx.to_amount:.2f} {tx.to_currency})"
+    tag_ids = dict.fromkeys([*tag_codec.split(tx.tags), *line_tags])  # the transaction's and its lines' (F11)
+    own_tags = sorted((tags[i] for i in tag_ids if tags and i in tags), key=lambda g: tag_codec.key(g.name))
+    tag_names = ", ".join(g.name for g in own_tags)
     return {
         "id": tx.id,
         "date": tx.date.isoformat(),
@@ -97,17 +142,23 @@ def _row(
         "comment": tx.comment,
         "fx_date": tx.fx_date.isoformat(),
         "items": item_counts.get(tx.id) or None,
+        "attachments": attachments[0].get(tx.id) or None,
         "recurring": (repeats or {}).get(tx.recurring_id, "") if tx.recurring_id else "",
+        "tags": tag_names,  # sorting, the column filter and the export; the cell shows `_tags` as chips
+        "_tags": grid_cells(own_tags),
         "_search": " ".join(
             [
                 tx.payee,
                 category,
+                *(_label(c) for c in split_codes[1:]),  # every category of a split (F11)
                 accs.get(tx.from_account, ""),
                 to,
                 tx.debtor,
                 tx.comment,
                 str(tx.amount),
                 item_names.get(tx.id, ""),  # find a receipt by what was bought
+                tag_names,
+                attachments[1].get(tx.id, ""),  # or by the name of its file (F12)
             ]
         ).lower(),
         "_accounts": [tx.from_account, tx.to_account, tx.advance_account],
@@ -116,7 +167,8 @@ def _row(
     }
 
 
-def page() -> None:
+def page(tag: str = "") -> None:
+    """`tag` (a query parameter, from the Tags page) starts the list filtered by that tag."""
     with frame(t("Transactions"), "/transactions") as (ctx, actions):
         with actions:
             text = (
@@ -153,7 +205,9 @@ def page() -> None:
                 .props("dense outlined")
                 .classes("w-44")
             )
-        filters.set_visibility(False)
+            tag_filter = TagSelect(ctx, [tag] if tag else [], label=t("Tags"), allow_new=False)  # any of them
+            tag_filter.classes("w-64")
+        filters.set_visibility(bool(tag_filter.value))
         filter_btn.on_click(lambda: filters.set_visibility(not filters.visible))
         with ui.element("div").classes("selection-bar") as bar:
             selected_label = ui.label().classes("font-medium")
@@ -184,12 +238,17 @@ def page() -> None:
 
         def apply_filters() -> None:
             set_options(payee, [p.name for p in payee_svc.all_payees(ctx)])  # with payees added since
+            tag_filter.refresh_tags(ctx)  # and tags
+            wanted = set(tag_filter.value or [])
+            tags = tag_svc.by_id(ctx)
             start, end = parse_date(d_from.value), parse_date(d_to.value)
             q = (text.value or "").lower().strip()
             accs = {a.id: acc_svc.account_label(a) for a in ctx.store.accounts.all()}
             income_cats = {c.id: c.name for c in ctx.store.income_categories.all()}
             item_counts, item_names = items_svc.counts(ctx), items_svc.names_by_transaction(ctx)
             repeats = {r.id: recurrence_label(r.recur_months) for r in ctx.store.recurring.all()}
+            attached = (att_svc.counts(ctx), att_svc.names_by_transaction(ctx))
+            lines = aggregates.split_lines(ctx)  # F11
             rows = []
             for tx in ctx.store.transactions.all():
                 if (start and tx.date < start) or (end and tx.date > end):
@@ -202,8 +261,11 @@ def page() -> None:
                     continue
                 if payee.value and tx.payee != payee.value:
                     continue
+                split = split_columns(ctx, tx, lines)
+                if wanted and wanted.isdisjoint([*tag_codec.split(tx.tags), *split[1]]):
+                    continue
                 received = tx_svc.received_amount(ctx, tx) if tx.type == TX_EXCHANGE else None
-                r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats)
+                r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats, tags, attached, split)
                 if acc.value and acc.value not in r["_accounts"]:
                     continue
                 if q and q not in r["_search"]:
@@ -221,7 +283,7 @@ def page() -> None:
             )
             bar.set_visibility(False)
 
-        for el in (d_from, d_to, a_min, a_max, acc, payee, typ, text):
+        for el in (d_from, d_to, a_min, a_max, acc, payee, typ, tag_filter, text):
             el.on_value_change(apply_filters)
         apply_filters()
         on_data_changed(apply_filters)

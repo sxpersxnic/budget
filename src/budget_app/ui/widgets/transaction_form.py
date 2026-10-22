@@ -1,7 +1,10 @@
 """The transaction form, used by the 'Add transaction' page and the edit dialog.
 
 A new expenditure or income with a payee and no category shows the suggested category (F07) under the category
-field, filled in only when clicked; editing one offers "Always Categorize Like This…", which creates a rule."""
+field, filled in only when clicked; editing one offers "Always Categorize Like This…", which creates a rule.
+
+Paying a QR bill (F03) opens the form prefilled from the bill (`bill_id`): the bill's file is listed under
+Attachments, and saving marks the bill paid in the same undoable step."""
 
 from __future__ import annotations
 
@@ -29,6 +32,7 @@ from budget_app.domain.models import (
 )
 from budget_app.i18n import N_, t, tc
 from budget_app.services import accounts as acc_svc
+from budget_app.services import bills as bills_svc
 from budget_app.services import categorize
 from budget_app.services import items as items_svc
 from budget_app.services import payees as payee_svc
@@ -38,6 +42,7 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
 from budget_app.ui.layout import (
+    data_changed,
     date_input,
     error,
     fmt,
@@ -50,6 +55,7 @@ from budget_app.ui.layout import (
     undoable,
 )
 from budget_app.ui.widgets.amount import AmountInput
+from budget_app.ui.widgets.attachments import AttachmentList
 from budget_app.ui.widgets.item_list import ItemList
 from budget_app.ui.widgets.rule_sheet import always_like_this
 from budget_app.ui.widgets.selects import (
@@ -61,6 +67,7 @@ from budget_app.ui.widgets.selects import (
     payee_input,
     set_options,
 )
+from budget_app.ui.widgets.tags import tag_select
 
 log = logging.getLogger(__name__)
 AUTO_ADVANCE = "__auto__"
@@ -76,8 +83,10 @@ class TransactionForm:
         prefill: TransactionInput | None = None,
         items_from: str = "",
         on_duplicate: Callable[[Transaction], None] | None = None,
+        bill_id: str = "",
     ):
         self.ctx = ctx
+        self._bill_id = bill_id  # F03: saving pays this bill
         self.editing = editing
         self.on_saved = on_saved
         self.on_cancel = on_cancel
@@ -248,12 +257,20 @@ class TransactionForm:
                     amount=lambda: self.amount.value,
                     currency=lambda: self.currency.value or "",
                     use_total=self._use_items_total,
+                    ctx=self.ctx,  # F11: a line of an expenditure can have its own category and tags
+                    category=lambda: self.exp_category.value or "",
+                    splittable=lambda: self.type.value == TX_EXPENDITURE,
                 )
 
+            self.tags = tag_select(self.ctx, init.tags, on_change=ch)  # F10, every type
             self.comment = (
                 ui.textarea(t("Note"), value=init.comment, placeholder=t("Optional"), on_change=ch)  # rules read it
                 .props("dense outlined autogrow rows=1")
                 .classes("w-full")
+            )
+            # F12: files kept with the transaction; a new one stores them when it is saved
+            self.attachments = AttachmentList(
+                self.ctx, self.editing.id if self.editing else "", data_changed, bill_id=self._bill_id
             )
             with ui.row().classes("w-full items-center gap-2 no-wrap pt-1"):
                 self.status = ui.label().classes("caption")
@@ -265,9 +282,10 @@ class TransactionForm:
                     ).classes("text-primary")
                 if self.on_cancel:
                     ui.button(t("Cancel"), on_click=self.on_cancel).props("flat").classes("text-primary")
-                self.save_btn = ui.button(
-                    t("Save Changes") if self.editing else t("Add Transaction"), on_click=self._save
-                ).props("unelevated")
+                save_label = t("Save Changes") if self.editing else t("Add Transaction")
+                self.save_btn = ui.button(t("Mark Paid") if self._bill_id else save_label, on_click=self._save).props(
+                    "unelevated"
+                )
             ui.keyboard(on_key=self._shortcut, ignore=[])
 
     def _category_aids(self, kind: str) -> None:
@@ -342,6 +360,7 @@ class TransactionForm:
                 self.move_to.set_value(inp.to_account or None)
             self.comment.set_value(inp.comment)
             self.payee.set_value(inp.payee)
+            self.tags.set_value([i for i in inp.tags if i in self.tags.options])
         finally:
             self._busy = False
         self._changed()
@@ -617,6 +636,7 @@ class TransactionForm:
             currency=self.currency.value or "",
             comment=self.comment.value or "",
             payee=(self.payee.value or "") if kind in payee_svc.PAYEE_TYPES else "",
+            tags=list(self.tags.value or []),
         )
         if kind == TX_EXPENDITURE:
             inp.category = self.exp_category.value or ""
@@ -655,15 +675,25 @@ class TransactionForm:
         inp = self.read()
         # transfers and exchanges have no product list; switching to one drops an existing list
         item_inputs = self.items.read() if inp.type in (TX_EXPENDITURE, TX_INCOME) else []
+        if inp.type != TX_EXPENDITURE:  # only expenditure is split by its items (F11)
+            for item in item_inputs:
+                item.category, item.tags = "", []
         try:
             items_svc.validate(item_inputs)  # before saving, so a bad item cannot leave half a change
+            if self._bill_id:
+                bills_svc.check_payment(self.ctx, self._bill_id, inp.type)  # still open, and paid by an expenditure
+            if inp.type == TX_EXPENDITURE:
+                items_svc.check_split(item_inputs, inp.amount, inp.category, inp.currency)
             with self.ctx.store.history.action(N_("Save a transaction")):  # one step to undo, items included
                 tx = tx_svc.save(self.ctx, inp, self.editing.id if self.editing else "")
                 items_svc.replace(self.ctx, tx.id, item_inputs)
+                self.attachments.store(tx.id)
+                if self._bill_id:  # F03: the bill is paid, its file goes with the transaction
+                    bills_svc.paid_with(self.ctx, self._bill_id, tx)
         except Exception as exc:  # validation and FX errors
             error(str(exc))
             return
-        undoable(t("Changes saved") if self.editing else t("Transaction added"))
+        undoable(t("Bill paid") if self._bill_id else t("Changes saved") if self.editing else t("Transaction added"))
         if self.on_saved:
             self.on_saved(tx)
         if not self.editing:
@@ -697,9 +727,12 @@ class TransactionForm:
             self.comment.set_value("")
             self.payee.set_value("")
             self.payee.set_autocomplete(payee_svc.names(self.ctx))  # with the payee just saved
+            self.tags.set_value([])
+            self.tags.refresh_tags(self.ctx)  # with the tags just added
             self._suggester = categorize.Suggester(self.ctx)  # and with what it was categorized as
             self.exp_adv_account.set_value(None)
             self.items.clear()
+            self.attachments.clear()
         finally:
             self._busy = False
         self._touched = False
@@ -713,8 +746,10 @@ def open_transaction_sheet(
     editing: Transaction | None = None,
     prefill: TransactionInput | None = None,
     items_from: str = "",
+    bill_id: str = "",
 ) -> None:
-    """The transaction form as a modal sheet, so a transaction can be added from any page."""
+    """The transaction form as a modal sheet, so a transaction can be added from any page; with `bill_id`, the
+    payment of that QR bill (F03)."""
     if editing is not None and editing.invest_id:  # booked on the Investments page (F21): edit it there
         from budget_app.ui.pages.investments import open_source  # noqa: PLC0415 - the page imports this module
 
@@ -732,7 +767,8 @@ def open_transaction_sheet(
         dlg.close()
         open_transaction_sheet(ctx, on_saved, prefill=tx_svc.duplicate_input(ctx, tx, date.today()), items_from=tx.id)
 
-    with sheet(t("Edit Transaction") if editing else t("New Transaction"), width="34rem") as dlg:
+    title = t("Pay Bill") if bill_id else t("Edit Transaction") if editing else t("New Transaction")
+    with sheet(title, width="34rem") as dlg:
         TransactionForm(
             ctx,
             editing=editing,
@@ -741,4 +777,5 @@ def open_transaction_sheet(
             prefill=prefill,
             items_from=items_from,
             on_duplicate=duplicate,
+            bill_id=bill_id,
         )
