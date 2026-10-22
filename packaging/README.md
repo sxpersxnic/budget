@@ -138,7 +138,8 @@ needs no change: `pyinstaller-hooks-contrib` has hooks for `pypdfium2` and `pypd
 `libpdfium` and its `version.json`), and `zxingcpp` is a single extension module that the import analysis
 finds even though the app imports it only when a bill is scanned. Checked on macOS arm64 with a frozen
 probe that read a QR bill from a generated PDF and a PNG. PDFium's macOS library is built for macOS 13
-(`minos 13.0`); numpy's arm64 wheel already needs macOS 14, while `Info.plist` still declares 11.0.
+(`minos 13.0`) and numpy's arm64 wheel needs macOS 14, so `Info.plist` declares 14.0 as the minimum
+(it said 11.0 before, which the bundled numpy never ran on).
 
 ## Signing (optional)
 

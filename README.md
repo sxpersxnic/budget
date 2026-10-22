@@ -34,7 +34,7 @@ in the [`installers/`](installers/README.md) folder.
 
 ## Install on macOS
 
-Requirements: macOS 11 (Big Sur) or later. The installer must match your Mac: an installer
+Requirements: macOS 14 (Sonoma) or later. The installer must match your Mac: an installer
 built on an Apple Silicon Mac (`…-macOS-arm64.dmg`) runs on Apple Silicon Macs.
 
 1. Download **`Budget-<version>-macOS-arm64.dmg`** from the
