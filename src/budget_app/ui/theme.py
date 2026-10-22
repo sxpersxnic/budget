@@ -277,6 +277,10 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .meter { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; width: 100%; }
 .meter > div { height: 100%; border-radius: 3px; background: var(--accent); }
 .meter.over > div { background: var(--negative); }
+.meter.done > div { background: var(--positive); }
+/* savings goals (F14): the amounts beside a goal's name, and the Overview card's goals side by side when wide */
+.goal-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.goal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 14px 28px; width: 100%; }
 .meter.lg { height: 8px; border-radius: 4px; }
 
 /* ---------------------------------------------------------------- controls */

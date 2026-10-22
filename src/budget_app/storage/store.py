@@ -14,6 +14,7 @@ from budget_app.domain.models import (
     Attachment,
     Bill,
     BudgetEntry,
+    Goal,
     Holding,
     IncomeCategory,
     Payee,
@@ -75,6 +76,7 @@ class Store:
         self.prices = CsvTable(data_dir / "prices.csv", Price, h)
         self.tags = CsvTable(data_dir / "tags.csv", Tag, h)  # F10
         self.bills = CsvTable(data_dir / "bills.csv", Bill, h)  # F03; their files are attachments
+        self.goals = CsvTable(data_dir / "goals.csv", Goal, h)  # F14
         self._settings = SettingsStore(data_dir / "settings.json")
 
     def tables(self) -> dict[str, CsvTable]:
@@ -96,6 +98,7 @@ class Store:
             self.prices,
             self.tags,
             self.bills,
+            self.goals,
         ]
         return {t.name: t for t in tables}
 

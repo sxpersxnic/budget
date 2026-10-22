@@ -34,6 +34,7 @@ NAV = [
     ("/recurring", N_("Recurring"), "o_event_repeat"),
     ("/bills", N_("Bills"), "o_request_quote"),
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
+    ("/goals", N_("Goals"), "o_flag"),
     ("/categories", N_("Categories"), "o_account_tree"),
     ("/payees", N_("Payees"), "o_storefront"),
     ("/tags", N_("Tags"), "o_sell"),

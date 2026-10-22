@@ -86,6 +86,7 @@ TABLE_NAMES = {
     "prices": N_("Price"),
     "tags": N_("Tag"),
     "bills": N_("Bill"),
+    "goals": N_("Savings goal"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 

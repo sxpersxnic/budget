@@ -313,6 +313,41 @@ class Bill:
         return dt.date.fromisoformat(self.due) if self.due else None
 
 
+GOAL_AMOUNT = "amount"  # a target amount, such as "Holiday 4'000 CHF by June"
+GOAL_MONTHS = "months"  # N months of spending (an emergency fund): the target follows the recorded spending
+
+
+@dataclass
+class Goal:
+    """A savings goal (F14).
+
+    `kind` GOAL_AMOUNT aims at `target` in `currency`; GOAL_MONTHS at `months` × the average monthly spending of
+    the last 12 complete months, in `currency` (`services.goals.monthly_spending`). Progress is the balance of
+    `account_id` when linked, else `saved`, the amount saved so far typed in by hand. `target_date`
+    ('YYYY-MM-DD') is optional. `start` and `start_amount` are where the on-track line begins: the day the goal
+    was added (or linked to another account) and what it held then. `reserve` keeps the goal's money out of the
+    projected free wealth on the Overview.
+    """
+
+    name: str
+    currency: str
+    kind: str = GOAL_AMOUNT
+    target: float = 0.0
+    months: int = 0
+    target_date: str = ""
+    account_id: str = ""
+    saved: float = 0.0
+    reserve: bool = False
+    archived: bool = False
+    start: dt.date = field(default_factory=dt.date.today)
+    start_amount: float = 0.0
+    id: str = field(default_factory=new_id)
+
+    @property
+    def due(self) -> dt.date | None:
+        return dt.date.fromisoformat(self.target_date) if self.target_date else None
+
+
 @dataclass
 class AccountEntry:
     """Recorded balance of an account at the end of a month."""

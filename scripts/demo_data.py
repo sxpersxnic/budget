@@ -22,6 +22,7 @@ from budget_app.domain.models import (
     ASSET_CRYPTO,
     ASSET_PILLAR3A,
     ASSET_SECURITIES,
+    GOAL_MONTHS,
     REVAL_INVEST,
     TRADE_BUY,
     TRADE_DIVIDEND,
@@ -34,6 +35,7 @@ from budget_app.domain.models import (
 )
 from budget_app.services import accounts as acc_svc
 from budget_app.services import budget as budget_svc
+from budget_app.services import goals as goal_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services import items as items_svc
 from budget_app.services import tags as tag_svc
@@ -42,6 +44,7 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.budget import BudgetInput
 from budget_app.services.context import Context
+from budget_app.services.goals import GoalInput
 from budget_app.services.investments import TradeInput
 from budget_app.services.items import ItemInput
 from budget_app.services.transactions import TransactionInput
@@ -412,6 +415,22 @@ def seed(ctx: Context) -> None:
         ctx,
         "To savings",
         TransactionInput(type=TX_TRANSFER, amount=800, currency="CHF", from_account=bank.id, to_account=savings.id),
+    )
+
+    # F14: a holiday saved for by hand and reserved in the projection, and an emergency fund on the savings account
+    goal_svc.add(
+        ctx,
+        GoalInput(
+            name="Holiday Japan",
+            currency="CHF",
+            target=6000,
+            target_date=months.last_day(months.add_months(cm, 8)),
+            saved=1500,
+            reserve=True,
+        ),
+    )
+    goal_svc.add(
+        ctx, GoalInput(name="Emergency fund", currency="CHF", kind=GOAL_MONTHS, months=6, account_id=savings.id)
     )
 
 
