@@ -81,28 +81,31 @@ def test_the_files_are_sorted_and_formatted_like_the_translations(lang: str) -> 
     assert text == json.dumps(raw, ensure_ascii=False, indent=1) + "\n"
 
 
-def test_the_german_translation_is_complete() -> None:
-    raw = load("de")
-    assert not raw.get("_untranslated") and raw["_translation"] == {"language": "de", "unofficial": True}
-    english, german = entries(load("en")), entries(raw)
-    assert list(german) == list(english)
+@pytest.mark.parametrize("lang", ["de", "it"])
+def test_the_translation_is_complete(lang: str) -> None:
+    raw = load(lang)
+    assert not raw.get("_untranslated") and raw["_translation"] == {"language": lang, "unofficial": True}
+    english, ours = entries(load("en")), entries(raw)
+    assert list(ours) == list(english)
     for code, entry in english.items():
         for name, text in entry.items():
-            translated = german[code][name]
+            translated = ours[code][name]
             assert bool(translated) == bool(text), (code, name)
             if not text:
                 continue
-            lines, ours = text.split("\n"), translated.split("\n")
-            assert len(ours) == len(lines), (code, name)  # item by item
-            for item, item_de in zip(lines, ours, strict=True):
-                assert item_de.strip() == item_de and item_de, (code, name)
+            lines, items = text.split("\n"), translated.split("\n")
+            assert len(items) == len(lines), (code, name)  # item by item
+            for item, item_ours in zip(lines, items, strict=True):
+                assert item_ours.strip() == item_ours and item_ours, (code, name)
                 codes = re.findall(r"\d+(?:\.\d+)+", item)
-                assert re.findall(r"\d+(?:\.\d+)+", item_de) == codes, (code, item)  # references kept
-            assert "ß" not in translated  # Swiss German
+                assert re.findall(r"\d+(?:\.\d+)+", item_ours) == codes, (code, item)  # references kept
+            if lang == "de":
+                assert "ß" not in translated  # Swiss German
+    assert coicop.notes_translated(lang)
 
 
-@pytest.mark.parametrize("lang", ["fr", "it"])
-def test_french_and_italian_wait_for_their_translation(lang: str) -> None:
+@pytest.mark.parametrize("lang", ["fr"])
+def test_french_waits_for_its_translation(lang: str) -> None:
     """Until translated, the file is an English copy marked `_untranslated`; the app then shows English."""
     raw = load(lang)
     english = entries(load("en"))
@@ -148,6 +151,14 @@ def test_german_notes_are_marked_as_our_translation() -> None:
     assert cereals.includes[:3] == ("Weizen", "Reis, einschliesslich Parboiled-Reis", "Sorghum")
     assert cereals.excludes[0] == "Mehl (01.1.1.2)"
     assert coicop.notes_translated("de") and not coicop.notes_translated("en")
+
+
+def test_italian_notes_are_marked_as_our_translation() -> None:
+    cereals = coicop.notes("01.1.1.1", "it")
+    assert cereals is not None and cereals.translated
+    assert cereals.includes[:3] == ("frumento", "riso, compreso il riso parboiled", "sorgo")
+    assert cereals.excludes[0] == "farine di cereali (01.1.1.2)"
+    assert coicop.notes_payload("it")["notes"]["01.1.1.1"]["includes"][0] == "frumento"
 
 
 def test_an_untranslated_or_missing_language_shows_english(tmp_path: Path, monkeypatch) -> None:
@@ -206,6 +217,14 @@ def test_german_note_words_find_the_category(german) -> None:
     found = [o.code for o in ev.search(ev.category_options(), "hirse")]
     assert found == ["01.1.1.1"]
     assert [o.code for o in ev.search(ev.category_options(), "teff")] == ["01.1.1.1"]  # English notes still count
+
+
+def test_italian_note_words_find_the_category() -> None:
+    i18n.set_language("it")
+    try:
+        assert "01.1.1.1" in [o.code for o in ev.search(ev.category_options(), "miglio")]
+    finally:
+        i18n.set_language("en")
 
 
 def test_matches_by_name_come_before_matches_by_notes() -> None:

@@ -29,7 +29,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 2 · Accounts and reconciliation | ☑ Done | 3 of 3 steps |
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
-| 5 · COICOP data | ◐ Partly | step 17 built (F40 with English and German notes); the French and Italian translations of the notes are open; F39 dropped by decision 7 |
+| 5 · COICOP data | ◐ Partly | step 17 built (F40 with English, German and Italian notes); the French translation of the notes is open; F39 dropped by decision 7 |
 | After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 open |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
@@ -38,8 +38,8 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 ## Open now
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
-[Done](#done)); every decision is made. Milestone 5 (F40 notes) is built in English and German; the French
-and Italian translations of the notes follow. Next: the follow-ups of decisions 1 and 10–13, then step 25. Steps run in the order given; *Needs* lists what has to be done first, and decisions
+[Done](#done)); every decision is made. Milestone 5 (F40 notes) is built in English, German and Italian; the French
+translation of the notes follows. Next: the follow-ups of decisions 1 and 10–13, then step 25. Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -50,7 +50,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 
 | Step | Status | Task | Needs | Effort |
 | --- | --- | --- | --- | --- |
-| 17 | ◐ Partly | **F40 · COICOP notes in search and on hover**; also shown on the F37 page. Built with the UN's English notes and our German translation; French and Italian are open (the app shows English until then). | decision 7 (decided) | M |
+| 17 | ◐ Partly | **F40 · COICOP notes in search and on hover**; also shown on the F37 page. Built with the UN's English notes and our German and Italian translations; French is open (the app shows English until then). | decision 7 (decided) | M |
 | 18 | ☒ Dropped | **F39 · COICOP level 5.** | decision 7 (decided) | – |
 
 #### After issue 01
@@ -180,7 +180,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
 | F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 added the notes) |
 | F38 | ☑ Done | Exchange-rate chart | Insight | S | Local | – |
 | F39 | ☒ Dropped | COICOP level 5 | Organizing | M | Local | source data |
-| F40 | ◐ Partly | COICOP notes in search and on hover | Organizing | M | Local | French and Italian translations of the notes |
+| F40 | ◐ Partly | COICOP notes in search and on hover | Organizing | M | Local | French translation of the notes |
 | F41 | ☑ Done | Opening balance and change per account | Wealth | S | Local | – |
 | F42 | ☑ Done | Reconciliation line instead of *Unaccounted* | Insight | S | Local | – |
 | F43 | ☑ Done | Revaluation transactions | Wealth | M | Local | – |
@@ -269,17 +269,19 @@ ships all of them. A fifth level exists in national extensions; the UN's own str
 
 ### F40 · COICOP notes in search and on hover
 
-**Status:** ◐ Partly (2026-10-22: English and German; French and Italian translations of the notes open)
+**Status:** ◐ Partly (2026-10-22: English, German and Italian; French translation of the notes open)
 
 **As built.** The notes come from the UN Statistics Division's *Final structure (Excel)* of
 COICOP 2018 (Statistical Papers Series M No. 99), downloaded on 2026-10-21;
 `scripts/coicop_notes.py` turns it into `resources/coicop_notes.json` (one item per line) and can be
 re-run. 440 of the 602 categories have notes; the other 162 have none in the source (most
 divisions and groups, which the publication describes only in an introduction, and all of
-divisions 14 and 15). The source's 269 level-5 codes are not used (F39). The German translation
-(`coicop_notes_de.json`, 1'732 distinct items) is the app's own and marked *Unofficial
-translation*; `coicop_notes_fr.json` and `coicop_notes_it.json` are English copies marked
-`_untranslated` until translated, and the app shows English for them meanwhile.
+divisions 14 and 15). The source's 269 level-5 codes are not used (F39). The German and Italian
+translations (`coicop_notes_de.json`, `coicop_notes_it.json`, 1'732 distinct items each) are the
+app's own and marked *Unofficial translation*; the Italian one is in the Swiss (Ticino) usage and
+names categories as the app's Italian COICOP names do (e.g. *n.a.c.*, *ausili*, *in regime di
+ricovero*). `coicop_notes_fr.json` is an English copy marked `_untranslated` until translated,
+and the app shows English for it meanwhile.
 
 - **Search:** the picker (every category dropdown, the import page included) and the
   *Categories* page also find a category by the words of what it *includes* and *also includes*,
@@ -983,7 +985,7 @@ These come up in several features; deciding them once keeps the features consist
    [packaging/README.md](../packaging/README.md#releasing-an-update).
 4. **Languages** (F29): decided and built — English, German, French and Italian. Every new
    text needs all three translations; the tests enforce it. The COICOP notes (F40) are the
-   exception: German is done, French and Italian show the UN's English until translated.
+   exception: German and Italian are done, French shows the UN's English until translated.
 
 ## Done
 

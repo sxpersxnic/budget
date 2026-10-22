@@ -336,5 +336,5 @@ types, tests and coverage before each push.
   Statistics Division, *Classification of Individual Consumption According to Purpose (COICOP)
   2018*, Statistical Papers Series M No. 99, from its "Final structure (Excel)" at
   <https://unstats.un.org/unsd/classifications/Econ> (retrieved on 2026-10-21). The English text is
-  the UN's; the German translation is the app's own and unofficial, as the app says beside it.
-  French and Italian show the English text until they are translated.
+  the UN's; the German and Italian translations are the app's own and unofficial, as the app
+  says beside them. French shows the English text until it is translated.
