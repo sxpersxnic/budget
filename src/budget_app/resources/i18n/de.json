@@ -1113,5 +1113,6 @@
  "“{name}” is empty": "«{name}» ist leer",
  "“{name}” is larger than 20 MB": "«{name}» ist grösser als 20 MB",
  "“{name}” is not a valid .{ext} file": "«{name}» ist keine gültige .{ext}-Datei",
- "“{name}” is still in use and can’t be deleted": "«{name}» wird noch verwendet und kann nicht gelöscht werden"
+ "“{name}” is still in use and can’t be deleted": "«{name}» wird noch verwendet und kann nicht gelöscht werden",
+ "“{name}” isn’t opened: its content doesn’t match its type": "«{name}» wird nicht geöffnet: Der Inhalt passt nicht zum Dateityp"
 }

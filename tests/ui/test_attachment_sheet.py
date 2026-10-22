@@ -177,6 +177,12 @@ async def test_open_in_the_app_window_uses_the_system_viewer(user: User, ctx, se
     await user.should_see("The file of “lost.pdf” is missing from the data folder")
     assert len(opened) == 1
 
+    # a file that isn't what its name says (from a crafted backup, or put there by hand) is never opened
+    att_svc.path(ctx, att).write_bytes(b"#!/bin/sh\necho pwned\n")
+    click(user, first)
+    await user.should_see("“invoice.pdf” isn’t opened: its content doesn’t match its type")
+    assert len(opened) == 1
+
 
 async def test_save_a_copy(user: User, ctx, setup) -> None:
     tx = expense(ctx, setup)

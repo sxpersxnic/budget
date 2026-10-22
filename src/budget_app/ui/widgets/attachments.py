@@ -38,9 +38,11 @@ def serve(attachment_id: str, download: bool = False) -> Response:
     """The file of an attachment record; 404 for anything else."""
     ctx = get_ctx()
     att = attachments_svc.get(ctx, attachment_id)
-    target = attachments_svc.path(ctx, att) if att is not None else None
-    ft = files.BY_EXTENSION.get(files.extension(att.stored)) if att is not None else None
-    if att is None or target is None or ft is None or not target.is_file():
+    if att is None:
+        return Response(status_code=404)
+    try:
+        target, _, ft = attachments_svc.verified(ctx, att)  # an accepted type, by name and by content
+    except ValidationError:
         return Response(status_code=404)
     return FileResponse(
         target,
@@ -165,11 +167,10 @@ class AttachmentList:
 
     def _open(self, att: Attachment) -> None:
         """In the app window: the system's viewer (a browser session follows a link to the route instead)."""
-        target = attachments_svc.path(self.ctx, att)
-        if target is None or not target.is_file():
-            error(t("The file of “{name}” is missing from the data folder", name=att.name))
-            return
-        attachments_svc.system_open(target)
+        try:
+            attachments_svc.open_file(self.ctx, att)
+        except ValidationError as exc:
+            error(str(exc))
 
     def _toggle_preview(self, att: Attachment) -> None:
         self._preview_id = "" if self._preview_id == att.id else att.id

@@ -152,11 +152,36 @@ def exists(ctx: Context, att: Attachment) -> bool:
     return p is not None and p.is_file()
 
 
-def read(ctx: Context, att: Attachment) -> bytes:
+def _content(target: Path) -> bytes:
+    """A stored file's content, read up to one byte over the limit (anything longer is refused anyway)."""
+    with target.open("rb") as f:
+        return f.read(MAX_BYTES + 1)
+
+
+def verified(ctx: Context, att: Attachment) -> tuple[Path, bytes, FileType]:
+    """The attachment's file and content, after checking that it is of an accepted type by name and content.
+
+    Raises ValidationError when the file is missing, or when it isn't what its name says (a file that got
+    into the folder from a crafted backup or by hand): such a file is never opened, served or copied.
+    """
     p = path(ctx, att)
     if p is None or not p.is_file():
         raise ValidationError(t("The file of “{name}” is missing from the data folder", name=att.name))
-    return p.read_bytes()
+    data = _content(p)
+    ft = files.stored_type(att.stored, data)
+    if ft is None:
+        raise ValidationError(t("“{name}” isn’t opened: its content doesn’t match its type", name=att.name))
+    return p, data, ft
+
+
+def read(ctx: Context, att: Attachment) -> bytes:
+    return verified(ctx, att)[1]
+
+
+def open_file(ctx: Context, att: Attachment) -> None:
+    """Open an attachment with the system's viewer, once its file is known to be what its record says."""
+    target, _, _ = verified(ctx, att)
+    system_open(target)
 
 
 def kind(att: Attachment) -> str:
@@ -174,7 +199,13 @@ def size_label(size: int) -> str:
 
 
 def system_open(target: Path) -> None:
-    """Open a file with the system's default viewer (the app window; a browser gets it served instead)."""
+    """Open a file with the system's default viewer (the app window; a browser gets it served instead).
+
+    The system picks the program by the extension, and would run a program or script, so only a file of
+    an accepted type whose content matches it is handed over; anything else raises ValidationError.
+    """
+    if not target.is_file() or files.stored_type(target.name, _content(target)) is None:
+        raise ValidationError(t("“{name}” isn’t opened: its content doesn’t match its type", name=target.name))
     if sys.platform == "win32":
         os.startfile(target)  # type: ignore[attr-defined]  # noqa: S606 - a stored attachment
     else:

@@ -114,3 +114,20 @@ def is_id(text: str) -> bool:
 
 def is_stored_name(text: str) -> bool:
     return bool(_STORED.match(text or ""))
+
+
+def stored_type(stored: str, data: bytes) -> FileType | None:
+    """The type of a file on disk, by its stored name and content; None unless both say it is accepted.
+
+    Every place that trusts a stored file (opening it with the system viewer, serving it, restoring a
+    backup) checks this, so a file of another type that got into the folder, by a crafted backup or by
+    hand, is never run or shown as something it is not.
+    """
+    if not is_stored_name(stored):
+        return None
+    ext = stored.rsplit(".", 1)[1]
+    ft = BY_EXTENSION.get(ext)
+    if ft is None or len(data) > MAX_BYTES:
+        return None
+    _, looks_right = TYPES[ext]
+    return ft if looks_right(data) else None

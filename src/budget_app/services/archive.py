@@ -157,8 +157,13 @@ def _records(files: dict[str, bytes]) -> dict[str, bytes]:
 def check(files: dict[str, bytes]) -> None:
     """Load the files as a store in a scratch folder; raise ValidationError if any table is damaged.
 
-    Attachment records must name their files by plain ids, as the app writes them.
+    Attachment records must name their files by plain ids, as the app writes them, with an accepted
+    extension; every attachment file must be of an accepted type by its name and its content, so a
+    crafted backup can't place a program or script that *Open* would run.
     """
+    for name, content in files.items():
+        if "/" in name and att_files.stored_type(name.rsplit("/", 1)[1], content) is None:
+            raise ValidationError(t("The backup contains an unexpected file: {name}", name=name))
     with tempfile.TemporaryDirectory() as tmp:
         for name, content in _records(files).items():
             (Path(tmp) / name).write_bytes(content)
@@ -167,7 +172,10 @@ def check(files: dict[str, bytes]) -> None:
         except (CorruptDataError, ValueError, TypeError) as exc:
             raise ValidationError(t("The backup can’t be read: {error}", error=exc)) from exc
         for a in store.attachments.all():
-            if not (att_files.is_id(a.transaction_id) and att_files.is_stored_name(a.stored)):
+            ext = att_files.extension(a.stored)
+            if not (att_files.is_id(a.transaction_id) and att_files.is_stored_name(a.stored)) or (
+                ext not in att_files.BY_EXTENSION
+            ):
                 raise ValidationError(
                     t("The backup can’t be read: {error}", error=f"attachments.csv: {a.transaction_id}/{a.stored}")
                 )
