@@ -9,6 +9,10 @@ from typing import IO
 
 _handle: IO[str] | None = None  # kept open for the lifetime of the process
 
+# Windows locks are mandatory: other handles cannot read a locked byte. The lock sits past the
+# PID (Windows allows locking beyond the end of the file), so the PID stays readable.
+_WINDOWS_LOCK_OFFSET = 1 << 20
+
 
 class AlreadyRunningError(RuntimeError):
     pass
@@ -22,7 +26,7 @@ def acquire(data_dir: Path) -> None:
         if sys.platform == "win32":
             import msvcrt  # noqa: PLC0415 - platform specific
 
-            handle.seek(0)
+            handle.seek(_WINDOWS_LOCK_OFFSET)
             msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
         else:
             import fcntl  # noqa: PLC0415 - platform specific
