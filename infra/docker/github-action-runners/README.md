@@ -35,7 +35,7 @@ Rerun `just runners-setup <platform>` after changing `.env`, `windows/` or `linu
   permission *Administration: Read and write*. Setup asks for it and stores it in `.env`
   (git-ignored, only on the Mac). When it expires, put a new one there.
 - **Mac**: Docker Desktop running, with Rosetta turned on (Settings → General) for the amd64
-  Linux containers; Homebrew (setup installs Tart); `gh` logged in for `runners-enable`; about
+  Linux containers; `gh` logged in for `runners-enable`; about
   30 GB free for the macOS image.
 - **PC** (`WINDOWS_SSH_HOST`, default `pc-01`): SSH login with a key, Hyper-V enabled, Docker
   Desktop starting at sign-in, and someone signed in. Setup enables the Windows feature
@@ -56,7 +56,9 @@ container sizes. Setup copies the `WINDOWS_*` settings to the PC without the tok
   [`Dockerfile`](windows/Dockerfile)). `WINDOWS_TAG` must not be newer than the PC's Windows.
 - macOS: a [Cirrus Labs image](https://github.com/cirruslabs/macos-image-templates) with the
   Tart guest agent; each job clones the template VM (an APFS copy: seconds, no extra space). At
-  most two macOS VMs run at a time. Tart is free for personal use ([licence](https://tart.run/licensing/)).
+  most two macOS VMs run at a time. Setup installs Tart into `~/Applications/tart.app` from its
+  GitHub release, pinned with SHA-256 (the Homebrew tap is outdated). Tart is free for personal
+  use ([licence](https://tart.run/licensing/)).
 
 ## Operation
 
