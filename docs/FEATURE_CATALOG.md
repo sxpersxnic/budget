@@ -92,7 +92,7 @@ the Linux build.
 ### Decisions for the product owner
 
 Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each as recommended, decision 6 on 2026-10-20,
-decisions 1, 7 and 10–13 on 2026-10-21. All decisions are made; none is open.
+decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All decisions are made; none is open.
 
 1. ☑ **B08:** decided — the income and expenditure tables sit side by side on wide windows and
    stack on narrow ones. Built: side by side once each table gets about 750 px (windows from about 1,800 px;
@@ -127,6 +127,15 @@ decisions 1, 7 and 10–13 on 2026-10-21. All decisions are made; none is open.
 13. ☑ **F21:** decided — an account with history can become a securities or crypto account: its
     balances stay as history up to the conversion month, then holdings with an opening
     quantity and price take over.
+14. ☑ **F11:** decided on 2026-10-22 — a split is a category per item line: the Items list gets an
+    optional category per line, lines without one keep the transaction's category, and reports
+    and budgets count each line in its own category.
+15. ☑ **F03:** decided — the app tracks open bills: a scanned QR bill waits in a Bills list with
+    its due date until *Mark Paid* books the expenditure; the PDF stays as an attachment.
+16. ☑ **F12:** decided — attachments are copied into the data folder
+    (`attachments/<transaction id>/`), so backups and restore include them; one file at most 20 MB.
+17. ☑ **F10:** decided — the first version has tags with filter, totals and chart, and a budget per
+    tag (amount, optional period) with actual against budget.
 
 ## All features
 
