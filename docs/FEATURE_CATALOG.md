@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10 and F12 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11, F12, F03, F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11, F12 (done), F03, F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -134,6 +134,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
     its due date until *Mark Paid* books the expenditure; the PDF stays as an attachment.
 16. ☑ **F12:** decided — attachments are copied into the data folder
     (`attachments/<transaction id>/`), so backups and restore include them; one file at most 20 MB.
+    Built (architecture §7, decision 18).
 17. ☑ **F10:** decided — the first version has tags with filter, totals and chart, and a budget per
     tag (amount, optional period) with actual against budget. Built (see F10).
 
@@ -152,7 +153,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
 | F09 | ☑ Done | Payees | Organizing | M | Local | – |
 | F10 | ☑ Done | Tags | Organizing | M | Local | – |
 | F11 | ☐ Open | Split transactions | Organizing | M | Local | – |
-| F12 | ☐ Open | Attachments | Organizing | M | Local | – |
+| F12 | ☑ Done | Attachments | Organizing | M | Local | – |
 | F13 | ☑ Done | Bulk edit | Organizing | S | Local | – |
 | F14 | ☐ Open | Savings goals | Planning | M | Local | – |
 | F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
@@ -627,7 +628,26 @@ gift.
 
 #### F12 · Attachments
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built:** every transaction type has an *Attachments* section in its form, under the note: a drop
+zone (drag files onto it, or click to choose several), then one row per file with a thumbnail (photos)
+or an icon, the name, size and date added, and *Open*, *Save a Copy…* and *Remove*. Clicking the name of
+a photo or PDF shows it below the list (the PDF in the window's own viewer). In the edit sheet a file is
+attached, or removed, at once, each with an Undo toast; a new transaction keeps the chosen files ("Attached
+when you save") and stores them with it, in the same undo step, so a receipt can go with the expenditure
+it belongs to. Accepted: PDF, photos (JPEG, PNG, HEIC, WebP), Word, Excel and OpenDocument files, text and
+CSV, at most 20 MB each and checked by content as well as by extension (no HTML, SVG, scripts or old
+binary Office files); the same check runs again before a file is opened, served or restored from a
+backup, so a crafted backup can't place a program that *Open* would run. Files are copied to `attachments/<transaction id>/<attachment id>.<ext>` in the data
+folder, never under the user's name; `attachments.csv` keeps the name. *Open* uses the system's viewer in
+the app window and a link to `/attachment/<id>` in a browser; that route serves only files of existing
+attachment records. Removing an attachment or deleting its transaction can be undone; the file is deleted
+at a later start, once no undo can bring it back (architecture §7, decision 18). Backups contain the
+files, a restore brings them back, and the copies made before an update or a restore keep them too. The
+Transactions list has a paper-clip column with the number of files, and its search finds attachment
+names. Not built: attaching from the Transactions list, sync, previews of office files, OCR (F04) and QR
+bills (F03), which will hand their file to the form's waiting list.
 
 Keep receipts, invoices and contracts with the transaction.
 
@@ -1069,6 +1089,7 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | --- | --- | --- |
 | F01 · CSV import of transactions | ☑ Done | Details below. |
 | F29 · Multi-language support | ☑ Done | English, German, French and Italian, including the COICOP names. |
+| F12 · Attachments | ☑ Done | Receipts and invoices with their transaction, in the data folder and in backups; details under F12. |
 | Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. Covers part of F11 and gives F04 a place for receipt lines. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
 | CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |

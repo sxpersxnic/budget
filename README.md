@@ -137,12 +137,16 @@ The app opens in its own window and keeps all data in your user folder:
 | Windows | `%APPDATA%\Budget` (type it into the Explorer address bar) |
 | Linux | `~/.local/share/budget` (or `$XDG_DATA_HOME/budget`) |
 
-- **Backup:** **Settings → Data → Back Up Now…** saves all your records as one ZIP file
-  (`Budget-backup-<date>.zip`). Keep it somewhere safe, for example on another drive.
+- **Backup:** **Settings → Data → Back Up Now…** saves all your records, with the files attached
+  to transactions, as one ZIP file (`Budget-backup-<date>.zip`). Keep it somewhere safe, for example
+  on another drive.
 - **Restore:** **Settings → Data → Choose Backup…** replaces all records with those of a backup
   file. The app also keeps its own copies under **Automatic Backups**: one before each update and
   one before each restore, the ten most recent. Each can be restored with **Restore…**. A restore
   first copies the current records to the backups folder, so it can be undone the same way.
+- **Attachments:** files you attach to a transaction are copied into the data folder
+  (`attachments/`), so the backup and the automatic copies include them. A removed attachment's file
+  stays there as long as the removal can still be undone, and is deleted at a later start.
 - **Undo:** after saving or deleting, the confirmation at the bottom offers **Undo** for a few
   seconds. **Settings → Data → Change History** lists the last changes, each with **Undo**. An
   undo is refused when the records were changed again afterwards, so it never overwrites later
@@ -181,7 +185,13 @@ The app opens in its own window and keeps all data in your user folder:
    *Partly paid for others* when part of a payment was for someone else. Record their
    repayment later as income with *Repays an advance payment*. Under **Items** you can list
    what you bought (for example a grocery receipt) with quantity and price; the Transactions
-   search then also finds a purchase by item name. Shortcuts: type a sum such as `12.50+8.30`
+   search then also finds a purchase by item name. Under **Attachments** you can keep the receipt,
+   invoice or contract with the transaction: drop files onto the box or click it to choose them
+   (PDF, photos including iPhone HEIC, Word, Excel, OpenDocument, text or CSV, up to 20 MB each).
+   Click a photo's or PDF's name to preview it; **Open** shows it in your usual viewer, **Save a
+   Copy…** saves it elsewhere. In a new transaction the files are stored when you save it. The
+   Transactions list shows a paper clip with the number of files, and its search also finds file
+   names. Shortcuts: type a sum such as `12.50+8.30`
    into an amount, press **N** for a new transaction and **⌘↩** (Ctrl+Enter) to save, save the
    usual ones as **templates** (bookmark button), or **Duplicate** an existing transaction.
    The category field shows everyday names ("Groceries · 01.1") and your recently used
