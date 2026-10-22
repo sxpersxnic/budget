@@ -35,6 +35,7 @@ from budget_app.ui.pages import (
     settings,
     transactions,
 )
+from budget_app.ui.widgets import selects
 
 PAGES = {
     "/": overview.page,
@@ -60,6 +61,7 @@ def setup(data_dir: Path) -> None:
     theme.install()
     for path, builder in PAGES.items():
         ui.page(path, title="Budget")(builder)  # each page sets its translated title in layout.frame
+    selects.add_notes_route()
 
     async def refresh() -> None:
         await refresh_rates(ctx)

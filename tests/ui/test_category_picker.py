@@ -1,7 +1,8 @@
-"""The category picker (F08): everyday names, search words, recently used categories first.
+"""The category picker (F08): everyday names, search words, recently used categories first; COICOP notes (F40).
 
 The simulated client runs no JavaScript, so `offered` applies the browser's filter (`category_select.js`):
-every typed word must occur in the option's `search` text, which the page sends with each option.
+every typed word must occur in the option's `search` text or its `note_search` words, which the page sends
+with each option; matches by name come first.
 """
 
 from datetime import date
@@ -12,6 +13,7 @@ from nicegui.testing.user_interaction import UserInteraction
 
 from budget_app import i18n
 from budget_app.config import RESOURCES_DIR
+from budget_app.domain import coicop
 from budget_app.domain.coicop import TAX, fold
 from budget_app.services import transactions as tx_svc
 from budget_app.services.transactions import TransactionInput
@@ -37,9 +39,17 @@ def options(sel: CategorySelect) -> list[dict]:
 
 
 def offered(sel: CategorySelect, typed: str) -> list[str]:
-    """The codes the dropdown keeps when the user types `typed` (the browser filter, applied here)."""
+    """The codes the dropdown keeps when the user types `typed` (the browser filter, applied here): the options
+    whose `search` text has every word first, then those that need their `note_search` words (F40)."""
     words = fold(typed).split()
-    return [o["code"] for o in options(sel) if all(w in o.get("search", fold(o["label"])) for w in words)]
+    by_name, by_notes = [], []
+    for o in options(sel):
+        text, more = o.get("search", fold(o["label"])), o.get("note_search", "")
+        if all(w in text for w in words):
+            by_name.append(o["code"])
+        elif all(w in text or w in more for w in words):
+            by_notes.append(o["code"])
+    return by_name + by_notes
 
 
 def spend(ctx, setup, day: date, category: str) -> None:
@@ -134,6 +144,40 @@ async def test_the_import_page_uses_the_picker_with_income_categories(user: User
     assert sel.options[setup["salary"].id] == "Income · Salary"
 
 
+async def test_typing_what_a_category_includes_offers_it(user: User, setup) -> None:
+    """F40: the notes' words are searched after the names; what a category excludes is not."""
+    await user.open("/add-transaction")
+    sel = picker(user)
+    assert offered(sel, "teff") == ["01.1.1.1"]  # only in the UN's notes
+    bread = offered(sel, "bread")
+    assert bread[0] == "01.1.1.3" and len(bread) > 1  # the name first, then categories whose notes mention it
+    assert "07.3.6" in offered(sel, "funicular") and "07.3.1" not in offered(sel, "funicular")  # 07.3.1 excludes it
+    by_code = {o["code"]: o for o in options(sel)}
+    assert "teff" in by_code["01.1.1.1"]["note_search"] and "teff" not in by_code["01.1.1.1"]["search"]
+    assert "planting" not in by_code["01.1.1.1"]["note_search"]  # excludes: "seeds for planting"
+
+
+async def test_the_picker_loads_the_notes_once_for_hovering(user: User, setup) -> None:
+    await user.open("/add-transaction")
+    sel = picker(user)
+    assert sel.props["notes-url"] == f"/coicop-notes/en?v={coicop.notes_version('en')}"
+    assert sel.props["notes-labels"] == {
+        "includes": "Includes",
+        "also_includes": "Also includes",
+        "excludes": "Excludes",
+        "unofficial": "Unofficial translation",
+        "show": "Show what this category includes",
+    }
+    response = await user.http_client.get(sel.props["notes-url"])
+    assert response.status_code == 200 and "immutable" in response.headers["cache-control"]
+    data = response.json()
+    assert data["translated"] is False and data["notes"]["01.1.1.1"]["includes"][0] == "wheat"
+    german = (await user.http_client.get("/coicop-notes/de")).json()
+    assert german["translated"] is True and german["notes"]["01.1.1.1"]["includes"][0] == "Weizen"
+    unknown = (await user.http_client.get("/coicop-notes/xx")).json()
+    assert unknown == data  # an unknown language gets English
+
+
 async def test_german_names_when_the_language_is_german(user: User, setup) -> None:
     i18n.set_language("de")
     try:
@@ -146,6 +190,9 @@ async def test_german_names_when_the_language_is_german(user: User, setup) -> No
         assert by_code[TAX]["label"] == "Steuern"
         assert sel.props["recent-title"] == "Kürzlich verwendet"
         assert offered(sel, "lebensmittel")[0] == "01.1"
-        assert offered(sel, "Öffentlicher Verkehr") == ["07.3"]
+        assert offered(sel, "Öffentlicher Verkehr")[0] == "07.3"
+        assert offered(sel, "hirse") == ["01.1.1.1"]  # the German notes
+        assert sel.props["notes-url"].startswith("/coicop-notes/de?v=")
+        assert sel.props["notes-labels"]["unofficial"] == "Inoffizielle Übersetzung"
     finally:
         i18n.set_language("en")

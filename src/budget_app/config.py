@@ -15,6 +15,7 @@ ECB_CSV_NAME = "eurofxref-hist.csv"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RESOURCES_DIR = Path(__file__).resolve().parent / "resources"
 COICOP_FILE = RESOURCES_DIR / "coicop2018.csv"
+NOTES_FILE = RESOURCES_DIR / "coicop_notes.json"  # F40: the UN's notes in English; translations beside it
 
 
 def app_version() -> str:

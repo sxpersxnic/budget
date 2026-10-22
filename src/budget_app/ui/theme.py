@@ -240,6 +240,22 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .cat-node .spent { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;
   color: var(--label-2); }
 @media (max-width: 640px) { .cat-node .caption { display: none; } }
+/* COICOP notes (F40): in the picker's tooltip, inside a picker option (touch) and below a tree row */
+.cat-item { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+.cat-node .notes-btn { align-self: center; margin: -4px 0; color: var(--label-3); }
+.cat-node .notes-btn[aria-expanded=true] { color: var(--accent); }
+.cat-notes { font-size: 12.5px; line-height: 1.4; color: var(--label-2); white-space: normal; }
+.cat-notes__part + .cat-notes__part { margin-top: 6px; }
+.cat-notes__head { font-weight: 600; color: var(--label); font-size: 12px; }
+.cat-notes ul { margin: 2px 0 0; padding-left: 16px; }
+.cat-notes li { margin: 1px 0; }
+.cat-notes__foot { margin-top: 6px; font-size: 11px; color: var(--label-3); font-style: italic; }
+.cat-item > .cat-notes { padding: 4px 6px 8px 0; max-width: 72ch; }
+.q-item .cat-notes { margin-top: 6px; }
+.cat-notes-tip.q-tooltip { background: var(--surface-raised); color: var(--label); padding: 10px 12px;
+  border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.18), 0 0 0 0.5px var(--separator);
+  max-height: 70vh; overflow: hidden; }
+.cat-notes-tip .cat-notes { margin-top: 0; }
 .reval-row { grid-template-columns: minmax(0, 1fr) 9rem; }
 /* change history (F28): the details toggle reads like a caption, not a list item */
 .history-details .q-item { min-height: 22px; padding: 2px 0; font-size: 12px; color: var(--label-2);

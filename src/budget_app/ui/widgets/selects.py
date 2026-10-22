@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from nicegui import ui
+from fastapi.responses import JSONResponse
+from nicegui import app, ui
 
+from budget_app import i18n
 from budget_app.config import RESOURCES_DIR
-from budget_app.domain.coicop import fold
+from budget_app.domain.coicop import fold, notes_payload, notes_version
 from budget_app.domain.everyday import CategoryOption, category_options
 from budget_app.domain.models import ACCOUNT_REGULAR
 from budget_app.i18n import t
@@ -14,13 +16,31 @@ from budget_app.services import payees as payee_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context
 
+NOTES_ROUTE = "/coicop-notes/{lang}"
+
+
+def add_notes_route() -> None:
+    """Serve the COICOP notes per language as JSON (F40). The picker loads them once, when it first opens, and
+    shows them on hover without asking the server again; the URL carries a version, so browsers may cache it."""
+
+    @app.get(NOTES_ROUTE)
+    def coicop_notes(lang: str) -> JSONResponse:
+        payload = notes_payload(lang if lang in i18n.LANGUAGES else i18n.DEFAULT)
+        return JSONResponse(payload, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
+def notes_url(lang: str) -> str:
+    return NOTES_ROUTE.format(lang=lang) + f"?v={notes_version(lang)}"
+
 
 class CategorySelect(ui.select, component=RESOURCES_DIR / "category_select.js"):
     """The category picker (F08): a searchable select whose value is a COICOP code (or TAX).
 
     Its search also matches everyday names, search words and official names: every option carries its folded
     `search` text, which `category_select.js` compares in the browser (NiceGUI's own filter only sees the
-    label). `extra` adds options without COICOP details, such as income categories on the import page."""
+    label), and the words of what its COICOP notes include (`note_search`, F40), whose matches come after
+    those by name. Hovering an option shows its notes, loaded once from `notes-url`. `extra` adds options
+    without COICOP details, such as income categories on the import page."""
 
     def __init__(
         self,
@@ -33,7 +53,15 @@ class CategorySelect(ui.select, component=RESOURCES_DIR / "category_select.js"):
     ) -> None:
         extra = extra or {}
         self._details: dict[str, dict] = {
-            o.code: {"caption": o.caption, "level": o.level, "recent": o.recent, "search": o.search} for o in options
+            o.code: {
+                "code": o.code,
+                "caption": o.caption,
+                "level": o.level,
+                "recent": o.recent,
+                "search": o.search,
+                "note_search": o.note_search,
+            }
+            for o in options
         }
         self._details |= {key: {"search": fold(text)} for key, text in extra.items()}
         super().__init__(
@@ -43,7 +71,16 @@ class CategorySelect(ui.select, component=RESOURCES_DIR / "category_select.js"):
             with_input=True,
             on_change=on_change,
         )
+        lang = i18n.language()
         self._props["recent-title"] = t("Recently used")
+        self._props["notes-url"] = notes_url(lang)
+        self._props["notes-labels"] = {
+            "includes": t("Includes"),
+            "also_includes": t("Also includes"),
+            "excludes": t("Excludes"),
+            "unofficial": t("Unofficial translation"),  # shown when the loaded notes say they are translated
+            "show": t("Show what this category includes"),
+        }
 
     def _update_options(self) -> None:
         super()._update_options()
