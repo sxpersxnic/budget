@@ -97,7 +97,9 @@ bundled. Desktop installations have the system libraries it needs; on a minimal 
 
 Your installed version is shown at the bottom of the app's sidebar, for example
 *Budget 0.1.0*. Newer installers are on the
-[releases page](https://github.com/sxpersxnic/budget/releases).
+[releases page](https://github.com/sxpersxnic/budget/releases). To be told about them, turn on
+**Settings → Updates → Check for Updates**: the sidebar then shows *Budget 0.2.0 is available*
+with a link to the release when there is a newer one (see the privacy note below).
 
 **Your data is kept.** Updating replaces only the program. Your records live in the
 [data folder](#your-data-backups-and-uninstalling), which neither installer touches. As an extra
@@ -166,7 +168,10 @@ The app opens in its own window and keeps all data in your user folder:
 
   The data folder is kept on purpose. Delete it by hand if you want to remove your data too.
 - **Internet:** only needed for the daily exchange-rate download. Offline, the app uses the
-  last downloaded rates.
+  last downloaded rates. If you turn on **Settings → Updates → Check for Updates** (off by default),
+  the app also asks GitHub once a day for the number of the newest release and links to it in the
+  sidebar when it is newer; it never downloads or installs anything, and the request carries
+  nothing about you or your data.
 - **Privacy:** the app only accepts connections from your own computer. Nothing is uploaded.
 - **One window at a time:** opening the app a second time while it is running does nothing.
   Switch to the window that is already open.
