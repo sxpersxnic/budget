@@ -469,3 +469,5 @@ class Settings:
     display_currency: str = "CHF"
     last_fx_download: str = ""
     language: str = ""  # "" = follow the system; otherwise a key of i18n.LANGUAGES
+    onboarding_done: bool = False  # F30: the welcome screen was passed (or the folder already had records)
+    sample_data: bool = False  # F30: the folder holds the sample set, which Settings can remove again

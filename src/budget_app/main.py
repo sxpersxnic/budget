@@ -39,6 +39,7 @@ from budget_app.ui.pages import (
     tags,
     tax,
     transactions,
+    welcome,
 )
 from budget_app.ui.widgets import attachments as attachments_ui
 from budget_app.ui.widgets import selects
@@ -62,6 +63,7 @@ PAGES = {
     "/rules": rules.page,
     "/settings": settings.page,
     "/history": history.page,
+    "/welcome": welcome.page,  # F30: the first-start screen; the Overview opens it while nothing is recorded
 }
 
 

@@ -186,6 +186,8 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
         latest = ctx.fx.latest_date()
         with ui.column().classes("gap-0 px-2 pt-3"):
             ui.label(f"Budget {config.app_version()}").classes("nav-footer")
+            if ctx.store.settings.sample_data:  # F30: the folder holds the sample set
+                ui.label(t("Sample data")).classes("nav-footer")
             ui.label(
                 t("ECB rates of {date}", date=i18n.date_label(latest)) if latest else t("No exchange rates yet")
             ).classes("nav-footer")

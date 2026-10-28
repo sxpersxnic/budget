@@ -72,6 +72,7 @@ def demo(ctx, setup):
 async def user(ctx, caplog: pytest.LogCaptureFixture) -> AsyncGenerator[User]:
     """A simulated user on the app's pages; fails the test if a page logged an error."""
     ctx.store.settings.budget_horizon = months.add_months(months.current_month(), 12)
+    ctx.store.settings.onboarding_done = True  # the welcome screen (F30) is tested on its own
     context_module._ctx = ctx
     try:
         async with user_simulation(main_file=MAIN) as u:
