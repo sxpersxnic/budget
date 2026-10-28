@@ -410,7 +410,7 @@ def categorise(rows: list[importer.ImportRow], salary: str) -> None:
 def test_import_marks_duplicates_and_remembers_the_account(ctx, setup):
     chf = setup["chf"].id
     st = camt.read_statement("september.xml", CAMT053)
-    assert camt.remembered_account(ctx.store.data_dir, IBAN) == ""
+    assert camt.remembered_account(ctx.store, IBAN) == ""
     rows = importer.analyse(ctx, st.fresh_rows(), chf)
     assert [r.import_ref for r in rows] == [r.import_ref for r in st.rows]  # analyse keeps the bank's reference
     categorise(rows, setup["salary"].id)
@@ -423,7 +423,7 @@ def test_import_marks_duplicates_and_remembers_the_account(ctx, setup):
         chf,
     )
     assert (saved[1].type, saved[1].to_account, saved[1].comment) == (TX_INCOME, chf, st.rows[1].text)
-    assert camt.remembered_account(ctx.store.data_dir, IBAN) == chf
+    assert camt.remembered_account(ctx.store, IBAN) == chf
     assert json.loads((ctx.store.data_dir / camt.ACCOUNTS_FILE).read_text()) == {IBAN: chf}
 
     # the same file again: everything is already imported, categories are suggested
@@ -449,7 +449,7 @@ def test_a_statement_in_another_currency_is_refused(ctx, setup):
     with pytest.raises(ValidationError, match="The statement is in CHF"):
         camt.commit(ctx, st, rows, setup["eur"].id)
     assert ctx.store.transactions.all() == []
-    assert camt.remembered_account(ctx.store.data_dir, IBAN) == ""
+    assert camt.remembered_account(ctx.store, IBAN) == ""
 
 
 def test_an_account_without_iban_is_not_remembered(ctx, setup):
@@ -458,9 +458,9 @@ def test_an_account_without_iban_is_not_remembered(ctx, setup):
     categorise(rows, setup["salary"].id)
     camt.commit(ctx, st, rows, setup["chf"].id)
     assert not (ctx.store.data_dir / camt.ACCOUNTS_FILE).exists()
-    assert camt.remembered_account(ctx.store.data_dir, "") == ""
+    assert camt.remembered_account(ctx.store, "") == ""
     (ctx.store.data_dir / camt.ACCOUNTS_FILE).write_text("[]")  # not a mapping: ignored
-    assert camt.remembered_account(ctx.store.data_dir, IBAN) == ""
+    assert camt.remembered_account(ctx.store, IBAN) == ""
 
 
 def test_entries_from_a_csv_import_or_typed_by_hand_are_possible_duplicates(ctx, setup):

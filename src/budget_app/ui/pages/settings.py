@@ -1,4 +1,4 @@
-"""Settings: budget horizon, display currency, accounts, advance accounts, income categories, data."""
+"""Settings: budget horizon, display currency, accounts, advance accounts, income categories, security, data."""
 
 from __future__ import annotations
 
@@ -12,14 +12,25 @@ from budget_app.domain import months
 from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR, ASSET_CASH, ASSET_CLASSES, HOLDING_CLASSES
 from budget_app.i18n import t, tn
 from budget_app.services import accounts as acc_svc
-from budget_app.services import archive
+from budget_app.services import archive, security
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, fmt, frame, month_options, save_file, sheet, sheet_buttons, success, undoable
+from budget_app.ui.layout import (
+    error,
+    fmt,
+    frame,
+    lock_now,
+    month_options,
+    save_file,
+    sheet,
+    sheet_buttons,
+    success,
+    undoable,
+)
 from budget_app.ui.pages.investments import open_conversion_sheet
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select
@@ -274,6 +285,161 @@ def _restore(ctx: Context, files: dict[str, bytes], source: str) -> None:
     )
 
 
+# ------------------------------------------------------------------ security (F27)
+def _password_field(label: str) -> ui.input:
+    return ui.input(label, password=True, password_toggle_button=True).props("dense outlined").classes("w-full")
+
+
+def _recovery_sheet(key: str, title: str, refresh) -> None:
+    """Show a recovery key once; it is not stored anywhere."""
+    with sheet(title, width="26rem") as dlg:
+        ui.label(
+            t(
+                "Write this recovery key down and keep it apart from the computer. It is the only other way to open "
+                "your records if you forget the password, and it is not shown again."
+            )
+        ).classes("footnote")
+        ui.label(key).classes("recovery-key w-full")
+        with ui.row().classes("w-full items-center gap-2"):
+            ui.button(t("Copy"), icon="o_content_copy", on_click=lambda: ui.clipboard.write(key)).props(
+                "flat dense no-caps"
+            ).classes("text-primary")
+            ui.space()
+            noted = ui.checkbox(t("I have written it down")).props("dense")
+            done = ui.button(t("Done"), on_click=lambda: (dlg.close(), refresh())).props("unelevated")
+            done.set_enabled(False)
+            noted.on_value_change(lambda e: done.set_enabled(bool(e.value)))
+
+
+def _password_sheet(ctx: Context, mode: str, refresh) -> None:
+    """set: turn the lock on · change · off: turn the lock off · encrypt · decrypt · recovery: a new recovery key."""
+    titles = {
+        "set": t("Set Password"),
+        "change": t("Change Password"),
+        "off": t("Turn the Lock Off"),
+        "encrypt": t("Encrypt Records"),
+        "decrypt": t("Turn Encryption Off"),
+        "recovery": t("New Recovery Key"),
+    }
+    notes = {
+        "set": t("The app asks for it before it opens. At least {n} characters.", n=security.MIN_PASSWORD),
+        "encrypt": t(
+            "The record files are rewritten so that only your password or a recovery key opens them. "
+            "This takes a moment and can be turned off again."
+        ),
+        "decrypt": t("The record files are written as plain CSV again."),
+        "off": t("The app opens without a password again."),
+    }
+    with sheet(titles[mode], width="26rem") as dlg:
+        if mode in notes:
+            ui.label(notes[mode]).classes("footnote")
+        asks_current, asks_new = mode != "set", mode in ("set", "change")
+        current = _password_field(t("Current password") if mode == "change" else t("Password"))
+        current.set_visibility(asks_current)
+        new = _password_field(t("New password"))
+        new.set_visibility(asks_new)
+        repeat = _password_field(t("Repeat the password"))
+        repeat.set_visibility(asks_new)
+        last = repeat if asks_new else current
+
+        def save() -> None:
+            try:
+                if mode == "set":
+                    nonce = security.set_password(new.value or "", repeat.value or "")
+                    dlg.close()
+                    ui.navigate.to(f"/unlock/{nonce}")  # this browser gets its session; the page returns here
+                    return
+                if mode == "change":
+                    security.change_password(current.value or "", new.value or "", repeat.value or "")
+                    success(t("Password changed"))
+                elif mode == "off":
+                    security.remove_password(current.value or "")
+                    success(t("The lock is off"))
+                elif mode == "encrypt":
+                    key = security.enable_encryption(current.value or "")
+                    dlg.close()
+                    _recovery_sheet(key, t("Your Recovery Key"), refresh)
+                    return
+                elif mode == "decrypt":
+                    security.disable_encryption(current.value or "")
+                    success(t("The records are plain files again"))
+                else:
+                    key = security.new_recovery_key(current.value or "")
+                    dlg.close()
+                    _recovery_sheet(key, t("Your New Recovery Key"), refresh)
+                    return
+            except ValidationError as exc:
+                error(str(exc))
+                return
+            dlg.close()
+            refresh()
+
+        sheet_buttons(dlg, titles[mode] if mode != "set" else t("Set Password"), save)
+        last.on("keydown.enter", save)
+
+
+def _security_group(ctx: Context) -> None:
+    @ui.refreshable
+    def body() -> None:
+        locked = security.required()
+        encrypted = security.encrypted()
+        with ui.element("div").classes("group"):
+            with ui.element("div").classes("group-row"):
+                with ui.column().classes("gap-0 flex-1 min-w-0"):
+                    ui.label(t("App Lock"))
+                    ui.label(
+                        t("On. The app asks for the password before it opens.")
+                        if locked
+                        else t("Asks for a password before the app opens.")
+                    ).classes("caption")
+                if locked:
+                    ui.button(t("Change…"), on_click=lambda: _password_sheet(ctx, "change", body.refresh)).props(
+                        "flat dense no-caps"
+                    ).classes("text-primary")
+                    ui.button(t("Turn Off…"), on_click=lambda: _password_sheet(ctx, "off", body.refresh)).props(
+                        "flat dense no-caps"
+                    ).classes("text-primary")
+                else:
+                    ui.button(t("Set Password…"), on_click=lambda: _password_sheet(ctx, "set", body.refresh)).props(
+                        "flat dense no-caps"
+                    ).classes("text-primary")
+            if locked:
+                with ui.element("div").classes("group-row"):
+                    with ui.column().classes("gap-0 flex-1 min-w-0"):
+                        ui.label(t("Encrypt Records"))
+                        ui.label(
+                            t(
+                                "On. The records on disk open only with your password or the recovery key; "
+                                "a backup from Back Up Now is written in plain text."
+                            )
+                            if encrypted
+                            else t(
+                                "The records on disk can then be read only with your password or a recovery key. "
+                                "Attachment files stay as they are."
+                            )
+                        ).classes("caption")
+                    if encrypted:
+                        ui.button(
+                            t("New Recovery Key…"), on_click=lambda: _password_sheet(ctx, "recovery", body.refresh)
+                        ).props("flat dense no-caps").classes("text-primary")
+                        ui.button(t("Turn Off…"), on_click=lambda: _password_sheet(ctx, "decrypt", body.refresh)).props(
+                            "flat dense no-caps"
+                        ).classes("text-primary")
+                    else:
+                        ui.button(t("Turn On…"), on_click=lambda: _password_sheet(ctx, "encrypt", body.refresh)).props(
+                            "flat dense no-caps"
+                        ).classes("text-primary")
+                with ui.element("div").classes("group-row"):
+                    with ui.column().classes("gap-0 flex-1 min-w-0"):
+                        ui.label(t("Lock Now"))
+                        ui.label(t("Asks for the password again, here and on paired phones.")).classes("caption")
+                    ui.button(t("Lock Now"), on_click=lock_now).props("flat dense no-caps").classes("text-primary")
+
+    with ui.column().classes("w-full gap-0"):
+        ui.label(t("Security")).classes("group-header")
+        body()
+
+
 def _data_group(ctx: Context) -> None:
     async def export_json() -> None:
         await save_file(export_svc.everything_json(ctx), f"budget-export_{date.today().isoformat()}.json")
@@ -442,4 +608,5 @@ def page() -> None:
         _accounts_group(ctx, ACCOUNT_REGULAR, t("Accounts"))
         _accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"))
         _income_group(ctx)
+        _security_group(ctx)
         _data_group(ctx)

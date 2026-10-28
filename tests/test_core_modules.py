@@ -409,7 +409,9 @@ async def test_setup_registers_pages_and_refreshes_rates(tmp_path, monkeypatch, 
     ctx = context_module.get_ctx()
     assert ctx.store.data_dir == tmp_path
     assert i18n.language() == "de"
-    assert dict(pages) == main_module.PAGES
+    # every page is registered behind the app lock's guard (F27), plus the lock page itself
+    assert [path for path, _ in pages] == [*main_module.PAGES, *main_module.OPEN_PAGES]
+    assert all(builder.__name__ == "page" for _, builder in pages)
     assert timers == [(1800, False)]
     [refresh] = startup
     await refresh()

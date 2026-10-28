@@ -31,8 +31,9 @@ from budget_app.domain import attachments as att_files
 from budget_app.i18n import t
 from budget_app.services import attachments as attachments_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.storage import backup
+from budget_app.storage import backup, encryption
 from budget_app.storage.csv_store import CorruptDataError
+from budget_app.storage.encryption import PLAIN, Codec
 from budget_app.storage.store import Store
 
 FORMAT = "budget-app/backup"
@@ -68,7 +69,11 @@ def _attachments(ctx: Context) -> list[tuple[str, Path]]:
 
 
 def create(ctx: Context) -> bytes:
-    """The data folder's records and attachments as a ZIP, with a manifest naming the format and app version."""
+    """The data folder's records and attachments as a ZIP, with a manifest naming the format and app version.
+
+    The records are written as plain text even when they are encrypted at rest (F27): the backup is a file
+    the user puts somewhere safe by choice, and it stays restorable without the password or the key.
+    """
     files = backup.data_files(ctx.store.data_dir)
     attached = _attachments(ctx)
     total = sum(f.stat().st_size for f in files) + sum(p.stat().st_size for _, p in attached)
@@ -86,7 +91,7 @@ def create(ctx: Context) -> bytes:
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(MANIFEST, json.dumps(manifest, indent=2))
         for f in files:
-            zf.write(f, f.name)
+            zf.writestr(f.name, encryption.read_text(f, ctx.store.codec))
         for name, p in attached:  # photos and PDFs are compressed already
             zf.write(p, name, compress_type=zipfile.ZIP_STORED)
     return buf.getvalue()
@@ -97,7 +102,7 @@ def _record_ok(info: zipfile.ZipInfo) -> bool:
     name = info.filename
     if info.is_dir() or "/" in name or "\\" in name or name.startswith(".") or ".." in name:
         return False
-    return name.endswith((".csv", ".json"))
+    return name.endswith((".csv", ".json")) and name not in backup.NOT_RECORDS
 
 
 def _attachment_ok(info: zipfile.ZipInfo) -> bool:
@@ -155,8 +160,10 @@ def _records(files: dict[str, bytes]) -> dict[str, bytes]:
     return {n: c for n, c in files.items() if "/" not in n}
 
 
-def check(files: dict[str, bytes]) -> None:
+def check(files: dict[str, bytes], codec: Codec = PLAIN) -> None:
     """Load the files as a store in a scratch folder; raise ValidationError if any table is damaged.
+
+    `codec` reads records encrypted at rest (the app's own copies in `backups/`, F27); a plain file reads either way.
 
     Attachment records must name their files by plain ids, as the app writes them, with an accepted
     extension; every attachment file must be of an accepted type by its name and its content, so a
@@ -169,8 +176,8 @@ def check(files: dict[str, bytes]) -> None:
         for name, content in _records(files).items():
             (Path(tmp) / name).write_bytes(content)
         try:
-            store = Store(Path(tmp))
-        except (CorruptDataError, ValueError, TypeError) as exc:
+            store = Store(Path(tmp), Codec(codec.key))
+        except (CorruptDataError, ValueError, TypeError, encryption.EncryptedError, encryption.WrongKeyError) as exc:
             raise ValidationError(t("The backup can’t be read: {error}", error=exc)) from exc
         for a in store.attachments.all():
             if not attachments_svc.ids_ok(a) or att_files.extension(a.stored) not in att_files.BY_EXTENSION:
@@ -185,7 +192,8 @@ def restore(ctx: Context, files: dict[str, bytes], now: datetime | None = None) 
     Returns the folder holding a copy of the replaced files. The current attachments move there too;
     of the backup's attachment files, those its records name are written back.
     """
-    check(files)
+    codec = ctx.store.codec
+    check(files, codec)
     records = _records(files)
     data_dir = ctx.store.data_dir
     stamp = (now or datetime.now()).strftime("%Y-%m-%d_%H%M%S")
@@ -205,7 +213,8 @@ def restore(ctx: Context, files: dict[str, bytes], now: datetime | None = None) 
         tmp = data_dir / f".{name}.restore"
         tmp.write_bytes(content)
         tmp.replace(data_dir / name)
-    ctx.store = Store(data_dir)
+    encryption.reencode(data_dir, codec)  # a plain backup is encrypted again when the records are (F27)
+    ctx.store = Store(data_dir, codec)
     for a in ctx.store.attachments.all():
         stored = files.get(f"{backup.ATTACHMENTS}/{a.folder}/{a.stored}")
         target = attachments_svc.path(ctx, a)

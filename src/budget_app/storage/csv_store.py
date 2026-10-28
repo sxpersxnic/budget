@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import csv
 import dataclasses
-import os
+import io
 import threading
 import typing
 from collections.abc import Iterable
@@ -13,6 +13,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, ClassVar, Protocol
 
+from budget_app.storage.encryption import PLAIN, Codec, read_text, write_text
 from budget_app.storage.history import ADD, DELETE, UPDATE, Change, History
 
 
@@ -59,12 +60,15 @@ class CsvTable[T: Record]:
 
     Columns this version does not know (written by a newer version) are kept and written back
     unchanged, so opening the data with an older version never drops them.
+
+    `codec` encodes the file for the disk (plain text, or encrypted at rest, F27).
     """
 
-    def __init__(self, path: Path, cls: type[T], history: History | None = None):
+    def __init__(self, path: Path, cls: type[T], history: History | None = None, codec: Codec = PLAIN):
         self.path = path
         self.cls = cls
         self.history = history  # records every change, for undo (F28)
+        self.codec = codec
         self.name = path.stem
         self._fields = [f.name for f in dataclasses.fields(cls)]
         self._types = typing.get_type_hints(cls)
@@ -111,33 +115,28 @@ class CsvTable[T: Record]:
         if not self.path.exists():
             self._save()
             return
-        with self.path.open(newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            self._extra_fields = [c for c in reader.fieldnames or [] if c and c not in self._fields]
-            for raw in reader:
-                try:
-                    kwargs = {k: _from_str(raw[k], self._types[k]) for k in self._fields if k in raw}
-                    obj = self.cls(**kwargs)
-                except (TypeError, ValueError) as exc:
-                    raise CorruptDataError(f"{self.path} line {reader.line_num}: {exc}") from exc
-                self._rows[obj.id] = obj
-                if self._extra_fields:
-                    self._extras[obj.id] = {c: raw.get(c) or "" for c in self._extra_fields}
+        reader = csv.DictReader(io.StringIO(read_text(self.path, self.codec), newline=""))
+        self._extra_fields = [c for c in reader.fieldnames or [] if c and c not in self._fields]
+        for raw in reader:
+            try:
+                kwargs = {k: _from_str(raw[k], self._types[k]) for k in self._fields if k in raw}
+                obj = self.cls(**kwargs)
+            except (TypeError, ValueError) as exc:
+                raise CorruptDataError(f"{self.path} line {reader.line_num}: {exc}") from exc
+            self._rows[obj.id] = obj
+            if self._extra_fields:
+                self._extras[obj.id] = {c: raw.get(c) or "" for c in self._extra_fields}
 
     def _save(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".csv.tmp")
-        with tmp.open("w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(self._fields + self._extra_fields)
-            for obj in self._rows.values():
-                extra = self._extras.get(obj.id, {})
-                writer.writerow(
-                    [_to_str(getattr(obj, k)) for k in self._fields] + [extra.get(c, "") for c in self._extra_fields]
-                )
-            f.flush()
-            os.fsync(f.fileno())  # never replace the old file with a partially written one
-        tmp.replace(self.path)
+        buf = io.StringIO(newline="")
+        writer = csv.writer(buf)
+        writer.writerow(self._fields + self._extra_fields)
+        for obj in self._rows.values():
+            extra = self._extras.get(obj.id, {})
+            writer.writerow(
+                [_to_str(getattr(obj, k)) for k in self._fields] + [extra.get(c, "") for c in self._extra_fields]
+            )
+        write_text(self.path, buf.getvalue(), self.codec)  # fsynced, then renamed into place
 
     # ------------------------------------------------------------------ API
     def all(self) -> list[T]:

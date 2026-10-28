@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, Response
 from nicegui import app, events, ui
 
@@ -24,6 +24,7 @@ from budget_app.domain import attachments as files
 from budget_app.domain.models import Attachment
 from budget_app.i18n import t, tn
 from budget_app.services import attachments as attachments_svc
+from budget_app.services import security
 from budget_app.services.context import Context, ValidationError, get_ctx
 from budget_app.ui.layout import error, save_file, undoable
 
@@ -55,9 +56,16 @@ def serve(attachment_id: str, download: bool = False) -> Response:
     )
 
 
+def _route(attachment_id: str, request: Request, download: bool = False) -> Response:
+    """The route: behind the app lock like the pages (F27); a phone session (F35) sees no files."""
+    if not security.allowed(request):
+        return Response(status_code=404)
+    return serve(attachment_id, download)
+
+
 def register(api: FastAPI) -> None:
     """Add the file route to the app (once, at startup)."""
-    api.add_api_route(ROUTE, serve, methods=["GET"], include_in_schema=False)
+    api.add_api_route(ROUTE, _route, methods=["GET"], include_in_schema=False)
 
 
 def _native() -> bool:

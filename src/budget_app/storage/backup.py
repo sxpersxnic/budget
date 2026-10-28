@@ -23,11 +23,18 @@ BACKUP_DIR = "backups"
 KEEP = 10  # backups to keep (update and before-restore ones); older ones are removed
 ATTACHMENTS = "attachments"  # attachments/<transaction or bill id>/<stored name> (F12, F03)
 BACKUP_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}_(.+_to_.+|before-restore)$")
+# Not records: the app lock's key material (F27) and the profile registry (F34) stay where they are and are
+# never backed up, restored or encrypted.
+NOT_RECORDS = {"security.json", "profiles.json"}
 
 
 def data_files(data_dir: Path) -> list[Path]:
     """The user's records: the CSV tables, settings and import profiles (the ECB file can be downloaded again)."""
-    return sorted(p for p in [*data_dir.glob("*.csv"), *data_dir.glob("*.json")] if p.is_file())
+    return sorted(
+        p
+        for p in [*data_dir.glob("*.csv"), *data_dir.glob("*.json")]
+        if p.is_file() and p.name not in NOT_RECORDS and not p.name.startswith(".")
+    )
 
 
 def attachment_files(data_dir: Path) -> list[Path]:

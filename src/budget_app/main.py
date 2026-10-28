@@ -6,17 +6,24 @@ Installed builds (PyInstaller) open in a native window by default and store data
 from __future__ import annotations
 
 import argparse
+import inspect
 import logging
 import multiprocessing
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
-from nicegui import app, native, ui
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import RedirectResponse
+from nicegui import app, background_tasks, native, ui
 
 from budget_app import config, i18n
 from budget_app.services import attachments as attachments_svc
-from budget_app.services.context import init_context
+from budget_app.services import context as context_module
+from budget_app.services import security
+from budget_app.services.context import Context, get_ctx, init_context
 from budget_app.storage import lock as instance_lock
 from budget_app.ui import theme
 from budget_app.ui.layout import book_recurring, refresh_rates
@@ -31,6 +38,7 @@ from budget_app.ui.pages import (
     history,
     import_transactions,
     investments,
+    lock,
     overview,
     payees,
     recurring,
@@ -63,22 +71,93 @@ PAGES = {
     "/settings": settings.page,
     "/history": history.page,
 }
+# Pages outside the lock (F27): the lock page itself.
+OPEN_PAGES = {
+    "/lock": lock.page,
+}
+UNLOCK_ROUTE = "/unlock/{nonce}"
+
+
+def _guarded(path: str, builder: Callable[..., None]) -> Callable[..., RedirectResponse | None]:
+    """The page behind the app lock: without a session the request is redirected before anything is built.
+
+    The wrapper keeps the builder's parameters (NiceGUI fills them from the query string) and asks for the
+    request on top; the page asked for, query included, is where the unlock leads back to.
+    """
+    params = list(inspect.signature(builder).parameters.values())
+    takes_request = any(p.name == "request" for p in params)
+    if not takes_request:
+        params.append(inspect.Parameter("request", inspect.Parameter.KEYWORD_ONLY, annotation=Request))
+
+    def page(**kwargs: Any) -> RedirectResponse | None:
+        request: Request = kwargs["request"] if takes_request else kwargs.pop("request")
+        wanted = f"{path}?{request.url.query}" if request.url.query else path
+        target = security.redirect_for(request, wanted)
+        if target is not None:
+            return RedirectResponse(target)
+        builder(**kwargs)
+        return None
+
+    page.__signature__ = inspect.Signature(params)  # type: ignore[attr-defined]
+    page.__name__ = builder.__name__
+    return page
+
+
+def register_pages() -> None:
+    """Every page of the app (each sets its translated title in layout.frame)."""
+    for path, builder in PAGES.items():
+        ui.page(path, title="Budget")(_guarded(path, builder))
+    for path, builder in OPEN_PAGES.items():
+        ui.page(path, title="Budget")(builder)
+
+
+def _unlock_route(nonce: str) -> Response:
+    """Turn the nonce the lock page got into the session cookie, then go on to the page that was asked for."""
+    granted = security.consume(nonce)
+    if granted is None:
+        return RedirectResponse("/lock", status_code=303)
+    token, target = granted
+    response = RedirectResponse(target, status_code=303)
+    response.set_cookie(security.COOKIE, token, httponly=True, samesite="strict", path="/")
+    return response
+
+
+def register_routes(api: FastAPI) -> None:
+    attachments_ui.register(api)  # serves attachment files to the page, by record id
+    api.add_api_route(UNLOCK_ROUTE, _unlock_route, methods=["GET"], include_in_schema=False)
+    selects.add_notes_route()
+
+
+def open_data(data_dir: Path) -> Context:
+    """Open the data folder: the store (through the codec when it is encrypted, F27), then what a start does."""
+    ctx = init_context(data_dir, security.codec())
+    attachments_svc.cleanup(ctx)  # files whose removal can no longer be undone (F12)
+    i18n.set_language(ctx.store.settings.language)
+    return ctx
+
+
+async def refresh() -> None:
+    """Rates and automatic bookings; nothing while an encrypted folder waits for its password."""
+    if not context_module.is_open():
+        return
+    ctx = get_ctx()
+    await refresh_rates(ctx)
+    book_recurring(ctx)  # at the rates of the day
+
+
+def _open_after_unlock(data_dir: Path) -> None:
+    open_data(data_dir)
+    background_tasks.create(refresh(), name="refresh after unlock")
 
 
 def setup(data_dir: Path) -> None:
-    ctx = init_context(data_dir)
-    attachments_svc.cleanup(ctx)  # files whose removal can no longer be undone (F12)
-    i18n.set_language(ctx.store.settings.language)
+    security.configure(data_dir)
+    security.opener = _open_after_unlock
     theme.install()
-    attachments_ui.register(app)  # serves attachment files to the page, by record id
-    for path, builder in PAGES.items():
-        ui.page(path, title="Budget")(builder)  # each page sets its translated title in layout.frame
-    selects.add_notes_route()
-
-    async def refresh() -> None:
-        await refresh_rates(ctx)
-        book_recurring(ctx)  # at the rates of the day
-
+    register_routes(app)
+    register_pages()
+    if security.can_open_without_password():
+        open_data(data_dir)
     app.on_startup(refresh)
     app.timer(30 * 60, refresh, immediate=False)  # keeps rates current, and books what falls due overnight
 

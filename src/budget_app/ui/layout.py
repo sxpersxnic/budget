@@ -19,6 +19,7 @@ from budget_app.domain import months
 from budget_app.i18n import N_, t
 from budget_app.services import bills as bills_svc
 from budget_app.services import recurring as recurring_svc
+from budget_app.services import security
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
 from budget_app.services.context import Context, ValidationError, get_ctx
@@ -150,6 +151,12 @@ def _new_transaction() -> None:
     open_transaction_sheet(get_ctx(), on_saved=data_changed)
 
 
+def lock_now() -> None:
+    """Lock the app (F27): every browser and phone has to pass the lock again."""
+    security.lock()
+    ui.navigate.to("/lock")
+
+
 def _page_shortcut(e: KeyEventArguments) -> None:
     """N opens a new transaction on every page (F06)."""
     mods = e.modifiers
@@ -184,11 +191,16 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
         ui.space()
         _nav_item(*SETTINGS, SETTINGS[0] == current)
         latest = ctx.fx.latest_date()
-        with ui.column().classes("gap-0 px-2 pt-3"):
-            ui.label(f"Budget {config.app_version()}").classes("nav-footer")
-            ui.label(
-                t("ECB rates of {date}", date=i18n.date_label(latest)) if latest else t("No exchange rates yet")
-            ).classes("nav-footer")
+        with ui.row().classes("items-end no-wrap px-2 pt-3 gap-1"):
+            with ui.column().classes("gap-0 flex-1 min-w-0"):
+                ui.label(f"Budget {config.app_version()}").classes("nav-footer")
+                ui.label(
+                    t("ECB rates of {date}", date=i18n.date_label(latest)) if latest else t("No exchange rates yet")
+                ).classes("nav-footer")
+            if security.required():  # F27: lock now, from every page
+                ui.button(icon="o_lock", on_click=lock_now).props("flat round dense size=sm").classes(
+                    "text-primary"
+                ).tooltip(t("Lock Now"))
     with ui.header().classes("mobile-bar lg:hidden px-2 py-1 items-center gap-1"):
         ui.button(icon="menu", on_click=drawer.toggle).props("flat round dense").classes("text-primary")
         ui.label(title).classes("font-semibold text-[15px]")

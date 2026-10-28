@@ -180,6 +180,17 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .notable-row .n-amount { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .notable-warn { color: var(--warning); }
 
+/* the lock page (F27) and the phone pages (F35): one card, no sidebar */
+.lock-page { width: 100%; min-height: 100vh; justify-content: center; padding: 24px 16px; }
+.lock-card { width: 100%; max-width: 22rem; background: var(--surface); border-radius: 14px; padding: 24px 22px;
+  box-shadow: var(--shadow); }
+body.body--dark .lock-card { border: 0.5px solid var(--separator); }
+.mono, .mono .q-field__native { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.04em; }
+.recovery-key { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 17px; font-weight: 600;
+  letter-spacing: 0.06em; text-align: center; padding: 10px 12px; border-radius: 10px; background: var(--fill-2);
+  user-select: all; word-break: break-all; }
+
 /* callout */
 .callout { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border-radius: 10px;
   background: var(--warning-fill); color: var(--label); font-size: 13px; }

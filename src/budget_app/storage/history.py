@@ -18,7 +18,6 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import json
-import os
 import threading
 import uuid
 from collections.abc import Iterator, Mapping
@@ -26,6 +25,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
+
+from budget_app.storage.encryption import PLAIN, Codec, read_text, write_text
 
 KEEP = 500
 ADD, UPDATE, DELETE = "add", "update", "delete"
@@ -72,16 +73,17 @@ _open: contextvars.ContextVar[Action | None] = contextvars.ContextVar("budget_hi
 
 
 class History:
-    def __init__(self, path: Path, keep: int = KEEP):
+    def __init__(self, path: Path, keep: int = KEEP, codec: Codec = PLAIN):
         self.path = path
         self.keep = keep
+        self.codec = codec  # plain text, or encrypted at rest (F27)
         self._lock = threading.RLock()
         self._actions: list[Action] = []  # oldest first
         # each action as written, so a save serializes only new or changed actions; one large import
         # would otherwise make every later save slow
         self._lines: dict[str, str] = {}
         if path.exists():
-            for line in path.read_text(encoding="utf-8").splitlines():
+            for line in read_text(path, codec).splitlines():
                 if line.strip():
                     act = _action_from(json.loads(line))
                     self._actions.append(act)
@@ -125,15 +127,10 @@ class History:
             self._save()
 
     def _save(self) -> None:
-        tmp = self.path.with_suffix(".jsonl.tmp")
-        with tmp.open("w", encoding="utf-8") as f:
-            for act in self._actions:
-                if act.id not in self._lines:
-                    self._lines[act.id] = json.dumps(asdict(act), ensure_ascii=False)
-                f.write(self._lines[act.id] + "\n")
-            f.flush()
-            os.fsync(f.fileno())
-        tmp.replace(self.path)
+        for act in self._actions:
+            if act.id not in self._lines:
+                self._lines[act.id] = json.dumps(asdict(act), ensure_ascii=False)
+        write_text(self.path, "".join(self._lines[act.id] + "\n" for act in self._actions), self.codec)
 
     # ------------------------------------------------------------------ reading
     def actions(self, limit: int | None = None) -> list[Action]:
