@@ -23,6 +23,7 @@ from budget_app.ui.layout import (
     error,
     fmt,
     frame,
+    named,
     on_data_changed,
     parse_date,
     segmented,
@@ -262,15 +263,24 @@ def page() -> None:
                     ui.label(plan_line(st)).classes("caption " + TONE.get(st.progress.status, ""))
                     ui.label(source_line(ctx, goal)).classes("caption")
                 with ui.row().classes("row-actions gap-0 no-wrap"):
-                    ui.button(icon="o_edit", on_click=lambda: open_goal_sheet(ctx, refresh, goal)).props(
-                        ROW_ACTION
-                    ).classes("text-primary").tooltip(t("Edit"))
-                    ui.button(icon="o_archive", on_click=lambda: archive(goal)).props(ROW_ACTION).classes(
-                        "text-primary"
-                    ).tooltip(t("Archive"))
-                    ui.button(icon="o_delete", on_click=lambda: delete(goal)).props(ROW_ACTION).classes(
-                        "text-negative"
-                    ).tooltip(t("Delete"))
+                    named(
+                        ui.button(icon="o_edit", on_click=lambda: open_goal_sheet(ctx, refresh, goal))
+                        .props(ROW_ACTION)
+                        .classes("text-primary"),
+                        t("Edit"),
+                    )
+                    named(
+                        ui.button(icon="o_archive", on_click=lambda: archive(goal))
+                        .props(ROW_ACTION)
+                        .classes("text-primary"),
+                        t("Archive"),
+                    )
+                    named(
+                        ui.button(icon="o_delete", on_click=lambda: delete(goal))
+                        .props(ROW_ACTION)
+                        .classes("text-negative"),
+                        t("Delete"),
+                    )
 
         @ui.refreshable
         def archived_list() -> None:
@@ -288,9 +298,12 @@ def page() -> None:
                             ui.button(t("Restore"), on_click=lambda g=st.goal: restore(g)).props(
                                 "flat dense no-caps"
                             ).classes("text-primary")
-                            ui.button(icon="o_delete", on_click=lambda g=st.goal: delete(g)).props(ROW_ACTION).classes(
-                                "text-negative"
-                            ).tooltip(t("Delete"))
+                            named(
+                                ui.button(icon="o_delete", on_click=lambda g=st.goal: delete(g))
+                                .props(ROW_ACTION)
+                                .classes("text-negative"),
+                                t("Delete"),
+                            )
 
         def refresh() -> None:
             goal_list.refresh()

@@ -19,6 +19,7 @@ from budget_app.ui.layout import (
     error,
     fmt,
     frame,
+    named,
     on_data_changed,
     parse_date,
     refresh_due_badge,
@@ -274,13 +275,21 @@ def page() -> None:
                                 if series.comment:
                                     ui.label(series.comment).classes("caption truncate")
                             with ui.row().classes("row-actions gap-0 no-wrap"):
-                                ui.button(
-                                    icon="o_edit",
-                                    on_click=lambda s=series: open_recurring_sheet(ctx, refresh, editing=s),
-                                ).props(ROW_ACTION).classes("text-primary").tooltip(t("Edit"))
-                                ui.button(icon="o_delete", on_click=lambda s=series: delete(s)).props(
-                                    ROW_ACTION
-                                ).classes("text-negative").tooltip(t("Delete"))
+                                named(
+                                    ui.button(
+                                        icon="o_edit",
+                                        on_click=lambda s=series: open_recurring_sheet(ctx, refresh, editing=s),
+                                    )
+                                    .props(ROW_ACTION)
+                                    .classes("text-primary"),
+                                    t("Edit"),
+                                )
+                                named(
+                                    ui.button(icon="o_delete", on_click=lambda s=series: delete(s))
+                                    .props(ROW_ACTION)
+                                    .classes("text-negative"),
+                                    t("Delete"),
+                                )
                     with ui.element("div").classes("group-row"):
                         ui.button(
                             t("Add Recurring Transaction…"), on_click=lambda: open_recurring_sheet(ctx, refresh)

@@ -19,7 +19,18 @@ from budget_app.services import investments as inv_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, fmt, frame, month_options, save_file, sheet, sheet_buttons, success, undoable
+from budget_app.ui.layout import (
+    error,
+    fmt,
+    frame,
+    month_options,
+    named,
+    save_file,
+    sheet,
+    sheet_buttons,
+    success,
+    undoable,
+)
 from budget_app.ui.pages.investments import open_conversion_sheet
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select
@@ -147,9 +158,12 @@ def _accounts_group(ctx: Context, kind: str, title: str) -> None:
                             ).classes("caption")
                     ui.label(acc.currency).classes("text-2 text-[13px]")
                     with ui.row().classes("row-actions gap-0 no-wrap"):
-                        ui.button(
-                            icon="o_edit", on_click=lambda a=acc: _account_sheet(ctx, kind, body.refresh, a)
-                        ).props(ROW_ACTION).classes("text-primary").tooltip(t("Edit"))
+                        named(
+                            ui.button(icon="o_edit", on_click=lambda a=acc: _account_sheet(ctx, kind, body.refresh, a))
+                            .props(ROW_ACTION)
+                            .classes("text-primary"),
+                            t("Edit"),
+                        )
 
                         def delete(a=acc):
                             def do():
@@ -169,8 +183,9 @@ def _accounts_group(ctx: Context, kind: str, title: str) -> None:
                                 ),
                             )
 
-                        ui.button(icon="o_delete", on_click=delete).props(ROW_ACTION).classes("text-negative").tooltip(
-                            t("Delete")
+                        named(
+                            ui.button(icon="o_delete", on_click=delete).props(ROW_ACTION).classes("text-negative"),
+                            t("Delete"),
                         )
             with ui.element("div").classes("group-row"):
                 ui.button(
@@ -211,9 +226,12 @@ def _income_group(ctx: Context) -> None:
                 with ui.element("div").classes("group-row"):
                     ui.label(cat.name).classes("flex-1 truncate")
                     with ui.row().classes("row-actions gap-0 no-wrap"):
-                        ui.button(icon="o_edit", on_click=lambda c=cat: _category_sheet(ctx, body.refresh, c)).props(
-                            ROW_ACTION
-                        ).classes("text-primary").tooltip(t("Rename"))
+                        named(
+                            ui.button(icon="o_edit", on_click=lambda c=cat: _category_sheet(ctx, body.refresh, c))
+                            .props(ROW_ACTION)
+                            .classes("text-primary"),
+                            t("Rename"),
+                        )
 
                         def delete(c=cat):
                             def do():
@@ -231,8 +249,9 @@ def _income_group(ctx: Context) -> None:
                                 detail=t("Categories that are in use can’t be deleted."),
                             )
 
-                        ui.button(icon="o_delete", on_click=delete).props(ROW_ACTION).classes("text-negative").tooltip(
-                            t("Delete")
+                        named(
+                            ui.button(icon="o_delete", on_click=delete).props(ROW_ACTION).classes("text-negative"),
+                            t("Delete"),
                         )
             with ui.element("div").classes("group-row"):
                 ui.button(t("Add Category…"), on_click=lambda: _category_sheet(ctx, body.refresh)).props(

@@ -26,6 +26,7 @@ from budget_app.ui.layout import (
     metric,
     money_html,
     month_options,
+    named,
     on_data_changed,
     save_file,
     segmented,
@@ -77,7 +78,7 @@ class ChartCard:
                     ui.label(t(CHART_HINTS[kind])).classes("caption")
                 ui.space()
                 with (
-                    ui.button(icon="more_horiz").props("flat round dense").classes("text-primary"),
+                    named(ui.button(icon="more_horiz").props("flat round dense").classes("text-primary"), t("Export")),
                     ui.menu().props("auto-close"),
                 ):
                     ui.menu_item(t("Save Image…"), on_click=lambda: self.save_image("png"))

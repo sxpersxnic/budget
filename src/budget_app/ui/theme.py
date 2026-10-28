@@ -39,22 +39,24 @@ CSS = r"""
   --surface-raised: #ffffff;
   --sidebar: rgba(236, 236, 240, 0.72);
   --label: #1d1d1f;
-  --label-2: #6e6e73;
-  --label-3: #a1a1a6;
+  --label-2: #5f5f64;
+  --label-3: #707075;
   --separator: rgba(60, 60, 67, 0.12);
   --separator-strong: rgba(60, 60, 67, 0.22);
   --fill: rgba(120, 120, 128, 0.12);
   --fill-2: rgba(120, 120, 128, 0.07);
-  --accent: #0071e3;
+  --accent: #0066cc;
+  --accent-strong: #0066cc;
   --accent-fill: rgba(0, 113, 227, 0.12);
-  --positive: #248a3d;
+  --positive: #1f7a35;
   --negative: #d70015;
+  --negative-strong: #d70015;
   --warning: #b25000;
   --warning-fill: rgba(255, 149, 0, 0.14);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --q-primary: #0071e3;
+  --q-primary: #0066cc;
   --q-negative: #d70015;
-  --q-positive: #248a3d;
+  --q-positive: #1f7a35;
 }
 body.body--dark {
   --bg: #000000;
@@ -62,21 +64,23 @@ body.body--dark {
   --surface-raised: #2c2c2e;
   --sidebar: rgba(28, 28, 30, 0.78);
   --label: #f5f5f7;
-  --label-2: #a1a1a6;
-  --label-3: #6e6e73;
+  --label-2: #aeaeb2;
+  --label-3: #98989d;
   --separator: rgba(84, 84, 88, 0.45);
   --separator-strong: rgba(84, 84, 88, 0.75);
   --fill: rgba(120, 120, 128, 0.24);
   --fill-2: rgba(120, 120, 128, 0.14);
-  --accent: #0a84ff;
+  --accent: #409cff;
+  --accent-strong: #0068d1;
   --accent-fill: rgba(10, 132, 255, 0.2);
   --positive: #30d158;
-  --negative: #ff453a;
+  --negative: #ff6961;
+  --negative-strong: #d70015;
   --warning: #ff9f0a;
   --warning-fill: rgba(255, 159, 10, 0.16);
   --shadow: none;
-  --q-primary: #0a84ff;
-  --q-negative: #ff453a;
+  --q-primary: #409cff;
+  --q-negative: #ff6961;
   --q-positive: #30d158;
   --q-dark: #1c1c1e;
   --q-dark-page: #000000;
@@ -94,6 +98,22 @@ body { background: var(--bg) !important; color: var(--label); -webkit-font-smoot
 .caption { font-size: 12px; color: var(--label-2); line-height: 1.35; }
 .footnote { font-size: 13px; color: var(--label-2); line-height: 1.4; }
 
+/* ---------------------------------------------------------------- keyboard (F32) */
+:focus-visible, .q-btn:focus-visible, .nav-item:focus-visible { outline: 2px solid var(--accent) !important;
+  outline-offset: 2px; }
+.q-btn:focus-visible .q-focus-helper { display: none; }
+.skip-link { position: fixed; left: 12px; top: -48px; z-index: 7000; padding: 8px 14px; border-radius: 8px;
+  background: var(--surface-raised); color: var(--accent); font-weight: 600; text-decoration: none;
+  box-shadow: var(--shadow); transition: top .15s; }
+.skip-link:focus { top: 12px; }
+.page:focus { outline: none; }
+.shortcuts { display: grid; grid-template-columns: max-content 1fr; gap: 10px 16px; align-items: center;
+  padding: 4px 0 12px; font-size: 14px; }
+.shortcuts .keys { white-space: nowrap; }
+kbd { display: inline-block; min-width: 22px; padding: 1px 6px; margin-right: 3px; border-radius: 5px;
+  border: 0.5px solid var(--separator-strong); background: var(--fill-2); color: var(--label);
+  font: 500 12px/1.5 var(--font); text-align: center; }
+
 /* ---------------------------------------------------------------- sidebar */
 .sidebar.q-drawer { background: var(--sidebar) !important; backdrop-filter: saturate(180%) blur(20px);
   border-right: 0.5px solid var(--separator) !important; }
@@ -106,6 +126,8 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 .nav-item .q-icon { color: var(--accent); font-size: 19px; }
 .nav-badge { font-size: 11px; font-weight: 600; min-height: 17px; padding: 0 6px; }
 .nav-footer { font-size: 11px; color: var(--label-3); line-height: 1.4; }
+.footer-link.q-btn { padding: 0; min-height: 0; margin-top: 4px; font-weight: 400; color: var(--label-3); }
+.footer-link.q-btn:hover { color: var(--accent); }
 .mobile-bar { background: color-mix(in srgb, var(--bg) 82%, transparent) !important; color: var(--label) !important;
   backdrop-filter: saturate(180%) blur(20px); border-bottom: 0.5px solid var(--separator); }
 
@@ -305,6 +327,9 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
   border-radius: 8px !important; }
 .q-btn:before { box-shadow: none !important; }
 .q-btn.bg-primary { box-shadow: none !important; }
+/* filled buttons: white text keeps 4.5:1 in both appearances (F32) */
+.bg-primary { background: var(--accent-strong) !important; }
+.bg-negative { background: var(--negative-strong) !important; }
 .q-btn--dense { border-radius: 7px !important; }
 .q-btn--round { border-radius: 50% !important; }
 .q-field--outlined .q-field__control { border-radius: 8px !important; background: var(--surface); }
@@ -446,7 +471,7 @@ input[type=number] { -moz-appearance: textfield; }
 """
 
 
-ACCENT = "#0071e3"
+ACCENT = "#0066cc"
 
 
 def tag_css() -> str:
@@ -480,7 +505,7 @@ def install() -> None:
 
 def apply_colors() -> None:
     """Quasar brand colours for the current page; dark-mode variants come from the CSS above."""
-    ui.colors(primary=ACCENT, secondary="#6e6e73", accent=ACCENT, positive="#248a3d", negative="#d70015")
+    ui.colors(primary=ACCENT, secondary="#5f5f64", accent=ACCENT, positive="#1f7a35", negative="#d70015")
 
 
 def chart_layout(fig, currency: str):

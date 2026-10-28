@@ -20,7 +20,7 @@ from budget_app.i18n import t, tc, tn
 from budget_app.services import attachments as attachments_svc
 from budget_app.services import bills as bills_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, fmt, frame, on_data_changed, refresh_due_badge, undoable
+from budget_app.ui.layout import error, fmt, frame, named, on_data_changed, refresh_due_badge, undoable
 from budget_app.ui.widgets import attachments as att_ui
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
@@ -159,23 +159,32 @@ def page() -> None:
                     ui.button(t("Mark Paid…"), on_click=lambda: pay(bill)).props("flat dense no-caps").classes(
                         "text-primary"
                     )
-                    with ui.button(icon="o_event").props(ROW_ACTION).classes("text-primary") as when:
-                        when.tooltip(t("Set the due date"))
-                        with ui.menu() as menu:
-                            picker = ui.date(value=bill.due or None).props("flat minimal first-day-of-week=1")
-                            with ui.row().classes("w-full justify-end gap-1 px-2 pb-2"):
-                                ui.button(t("No Due Date"), on_click=lambda: set_due(bill, None, menu)).props(
-                                    "flat dense no-caps"
-                                ).classes("text-2")
-                                ui.button(t("Set"), on_click=lambda: set_due(bill, picker.value or None, menu)).props(
-                                    "flat dense no-caps"
-                                ).classes("text-primary")
-                    ui.button(icon="o_do_not_disturb_on", on_click=lambda: dismiss(bill)).props(ROW_ACTION).classes(
-                        "text-2"
-                    ).tooltip(t("Dismiss"))
-                    ui.button(icon="o_delete", on_click=lambda: delete(bill)).props(ROW_ACTION).classes(
-                        "text-negative"
-                    ).tooltip(t("Delete"))
+                    with (
+                        named(
+                            ui.button(icon="o_event").props(ROW_ACTION).classes("text-primary"), t("Set the due date")
+                        ),
+                        ui.menu() as menu,
+                    ):
+                        picker = ui.date(value=bill.due or None).props("flat minimal first-day-of-week=1")
+                        with ui.row().classes("w-full justify-end gap-1 px-2 pb-2"):
+                            ui.button(t("No Due Date"), on_click=lambda: set_due(bill, None, menu)).props(
+                                "flat dense no-caps"
+                            ).classes("text-2")
+                            ui.button(t("Set"), on_click=lambda: set_due(bill, picker.value or None, menu)).props(
+                                "flat dense no-caps"
+                            ).classes("text-primary")
+                    named(
+                        ui.button(icon="o_do_not_disturb_on", on_click=lambda: dismiss(bill))
+                        .props(ROW_ACTION)
+                        .classes("text-2"),
+                        t("Dismiss"),
+                    )
+                    named(
+                        ui.button(icon="o_delete", on_click=lambda: delete(bill))
+                        .props(ROW_ACTION)
+                        .classes("text-negative"),
+                        t("Delete"),
+                    )
 
         @ui.refreshable
         def closed_list() -> None:
@@ -211,9 +220,12 @@ def page() -> None:
                         ui.button(t("Reopen"), on_click=lambda: reopen(bill)).props("flat dense no-caps").classes(
                             "text-primary"
                         )
-                    ui.button(icon="o_delete", on_click=lambda: delete(bill)).props(ROW_ACTION).classes(
-                        "text-negative"
-                    ).tooltip(t("Delete"))
+                    named(
+                        ui.button(icon="o_delete", on_click=lambda: delete(bill))
+                        .props(ROW_ACTION)
+                        .classes("text-negative"),
+                        t("Delete"),
+                    )
 
         def refresh() -> None:
             open_list.refresh()

@@ -20,7 +20,7 @@ from budget_app.services import tax as tax_svc
 from budget_app.services import tax_export
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.tax import CURRENCY, Entry, SectionSummary
-from budget_app.ui.layout import error, fmt, frame, on_data_changed, save_file, sheet, sheet_buttons, undoable
+from budget_app.ui.layout import error, fmt, frame, named, on_data_changed, save_file, sheet, sheet_buttons, undoable
 from budget_app.ui.widgets import attachments as att_ui
 from budget_app.ui.widgets.tags import TagSelect, chip
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
@@ -119,9 +119,12 @@ def _row(ctx: Context, entry: Entry, refresh: Callable[[], None]) -> None:
                 ui.label(t("tax withheld {amount}", amount=fmt(entry.tax))).classes("caption whitespace-nowrap")
         tx = ctx.store.transactions.get(entry.transaction_id) if entry.transaction_id else None
         if tx is not None:
-            ui.button(
-                icon="o_open_in_new", on_click=lambda tx=tx: open_transaction_sheet(ctx, refresh, editing=tx)
-            ).props(ROW_ACTION).classes("text-primary row-actions").tooltip(t("Show the transaction"))
+            named(
+                ui.button(icon="o_open_in_new", on_click=lambda tx=tx: open_transaction_sheet(ctx, refresh, editing=tx))
+                .props(ROW_ACTION)
+                .classes("text-primary row-actions"),
+                t("Show the transaction"),
+            )
 
 
 # ------------------------------------------------------------------ the page
@@ -161,7 +164,7 @@ def page() -> None:
                 "flat no-caps"
             ).classes("text-primary")
             with (
-                ui.button(icon="ios_share").props("flat round").classes("text-primary").tooltip(t("Export")),
+                named(ui.button(icon="ios_share").props("flat round").classes("text-primary"), t("Export")),
                 ui.menu().props("auto-close"),
             ):
                 ui.menu_item(t("Export as PDF…"), on_click=lambda: export("pdf"))

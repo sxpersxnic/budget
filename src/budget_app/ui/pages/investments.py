@@ -38,6 +38,7 @@ from budget_app.ui.layout import (
     frame,
     metric,
     month_options,
+    named,
     on_data_changed,
     parse_date,
     segmented,
@@ -598,19 +599,36 @@ def open_holding_sheet(ctx: Context, holding_id: str, on_change: Refresh = None)
                             ).tooltip(t("Capital gain or loss booked with it"))
                         with ui.row().classes("row-actions gap-0 no-wrap"):
                             if trade is not None:
-                                ui.button(
-                                    icon="o_edit", on_click=lambda tr=trade: open_trade_sheet(ctx, changed, editing=tr)
-                                ).props(ROW_ACTION).classes("text-primary").tooltip(t("Edit"))
-                                ui.button(icon="o_delete", on_click=lambda tr=trade: delete_trade(tr)).props(
-                                    ROW_ACTION
-                                ).classes("text-negative").tooltip(t("Delete"))
+                                named(
+                                    ui.button(
+                                        icon="o_edit",
+                                        on_click=lambda tr=trade: open_trade_sheet(ctx, changed, editing=tr),
+                                    )
+                                    .props(ROW_ACTION)
+                                    .classes("text-primary"),
+                                    t("Edit"),
+                                )
+                                named(
+                                    ui.button(icon="o_delete", on_click=lambda tr=trade: delete_trade(tr))
+                                    .props(ROW_ACTION)
+                                    .classes("text-negative"),
+                                    t("Delete"),
+                                )
                             elif (p := prices.get(step.event.id)) is not None:
-                                ui.button(
-                                    icon="o_edit", on_click=lambda p=p: open_price_sheet(ctx, changed, editing=p)
-                                ).props(ROW_ACTION).classes("text-primary").tooltip(t("Edit"))
-                                ui.button(icon="o_delete", on_click=lambda p=p: delete_price(p)).props(
-                                    ROW_ACTION
-                                ).classes("text-negative").tooltip(t("Delete"))
+                                named(
+                                    ui.button(
+                                        icon="o_edit", on_click=lambda p=p: open_price_sheet(ctx, changed, editing=p)
+                                    )
+                                    .props(ROW_ACTION)
+                                    .classes("text-primary"),
+                                    t("Edit"),
+                                )
+                                named(
+                                    ui.button(icon="o_delete", on_click=lambda p=p: delete_price(p))
+                                    .props(ROW_ACTION)
+                                    .classes("text-negative"),
+                                    t("Delete"),
+                                )
             with ui.row().classes("w-full items-center gap-2 pt-1"):
                 ui.button(t("Edit Holding…"), on_click=lambda: open_holding_form(ctx, changed, editing=h)).props(
                     "flat dense no-caps"
@@ -729,9 +747,12 @@ def open_conversion_sheet(ctx: Context, account_id: str, asset_class: str, on_do
                         price.classes("flex-1 min-w-[6rem]")
                         for el, attr in ((name, "name"), (symbol, "symbol"), (quantity, "quantity"), (price, "price")):
                             el.on_value_change(lambda e, r=row, a=attr: keep(r, a, e.value))
-                        ui.button(icon="o_delete", on_click=lambda n=n: remove(n)).props(ROW_ACTION).classes(
-                            "text-negative self-center"
-                        ).tooltip(t("Remove"))
+                        named(
+                            ui.button(icon="o_delete", on_click=lambda n=n: remove(n))
+                            .props(ROW_ACTION)
+                            .classes("text-negative self-center"),
+                            t("Remove"),
+                        )
 
         holdings_list()
         ui.button(t("Add Holding"), icon="add", on_click=lambda: add()).props("flat dense no-caps").classes(  # noqa: PLW0108 - defined below

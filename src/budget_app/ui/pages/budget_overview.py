@@ -37,6 +37,7 @@ from budget_app.ui.layout import (
     money_html,
     month_options,
     month_stepper,
+    named,
     on_data_changed,
     save_file,
     segmented,
@@ -327,7 +328,7 @@ def page(month: str = "", category: str = "") -> None:
                 on_change=lambda e: (state.update(currency=e.value), content.refresh()),
             )
             with (
-                ui.button(icon="ios_share").props("flat round").classes("text-primary").tooltip(t("Export statement")),
+                named(ui.button(icon="ios_share").props("flat round").classes("text-primary"), t("Export statement")),
                 ui.menu().props("auto-close"),
             ):
                 ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))
@@ -575,12 +576,17 @@ def page(month: str = "", category: str = "") -> None:
                     over = diff is not None and (diff > EPS if is_exp else diff < -EPS)
                     ui.label(fmt_signed(diff)).classes("r c-diff " + ("text-neg" if over else "text-2"))
                 if editable:
-                    ui.button(
-                        icon="o_edit",
-                        on_click=lambda: budget_edit_dialog(
-                            ctx, rep.month, type_, line.key, line.label, content.refresh
-                        ),
-                    ).props("flat dense round size=sm").classes("edit").tooltip(t("Edit budget"))
+                    named(
+                        ui.button(
+                            icon="o_edit",
+                            on_click=lambda: budget_edit_dialog(
+                                ctx, rep.month, type_, line.key, line.label, content.refresh
+                            ),
+                        )
+                        .props("flat dense round size=sm")
+                        .classes("edit"),
+                        t("Edit budget"),
+                    )
                 else:
                     ui.element("div")
             if children:
@@ -685,11 +691,14 @@ def page(month: str = "", category: str = "") -> None:
                                     "num " + ("text-neg" if (gap or 0) < -EPS else "text-2")
                                 )
                                 if gap is not None and abs(gap) > EPS and not r.valued:
-                                    ui.button(
-                                        icon="o_post_add",
-                                        on_click=lambda r=r: book_revaluation(rep, r),
-                                    ).props("flat dense round size=sm").classes("text-primary").tooltip(
-                                        t("Book as revaluation…")
+                                    named(
+                                        ui.button(
+                                            icon="o_post_add",
+                                            on_click=lambda r=r: book_revaluation(rep, r),
+                                        )
+                                        .props("flat dense round size=sm")
+                                        .classes("text-primary"),
+                                        t("Book as revaluation…"),
                                     )
                             ui.label(fmt(r.amount_view, cur)).classes("c-view num text-2")
                             if (r.needs_entry or r.has_entry) and not r.valued:
