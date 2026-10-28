@@ -89,8 +89,8 @@ storage/    typed CSV tables + settings JSON
 | `services/importer.py` | CSV import: encoding, separator and header detection, column mapping and bank profiles, duplicate marking, category suggestions (`categorize`, marked on the row with their reason; `clear_suggestions`), saving in one write. |
 | `services/camt.py` | camt.053 / camt.054 statements (any version) read into the importer's rows; the account remembered per IBAN. |
 | `services/import_balances.py` | Month-end balances from a bank file (F36): the order of a CSV balance column (newest or oldest first) and the balance after each month's last booking, or a camt closing balance; compared with recorded balances and saved with `wealth.upsert_entry`. |
-| `ui/theme.py` | Design tokens (light and dark), Quasar and AG Grid overrides, chart styling. See `docs/DESIGN_REVIEW.md`. |
-| `ui/layout.py` | Sidebar frame, sheets (dialogs), segmented control, month stepper, metrics, formatting (`1'234.50 CHF`), date picker. |
+| `ui/theme.py` | Design tokens (light and dark), Quasar and AG Grid overrides, chart styling. See `docs/DESIGN_REVIEW.md`. Text tokens keep WCAG AA contrast on every surface in both appearances, checked by `tests/test_contrast.py` (F32). |
+| `ui/layout.py` | Sidebar frame, sheets (dialogs), segmented control, month stepper, metrics, formatting (`1'234.50 CHF`), date picker. Keyboard (F32): `SHORTCUTS` (the list the shortcuts sheet shows), the page keys of `frame()`, Ctrl/⌘ Enter in `sheet_buttons`, `open_shortcuts()`, and `named()`, which gives an icon-only button its tooltip and `aria-label`. |
 | `ui/widgets/` | Searchable selects, the payee field (`selects.PayeeInput`: a `ui.input` with the component `resources/payee_input.js`, a Quasar select used as text autocomplete, so the typed text is the value and the known payees, recently used first, are suggested while typing, matched anywhere and ignoring case and accents), transaction form (page, add sheet and edit sheet), AG Grid helpers. `selects.CategorySelect` is the category picker (F08): a `ui.select` subclass whose component `resources/category_select.js` (NiceGUI's `select.js` with another filter and option template) filters on each option's pre-folded `search` text in the browser, so typing is instant and needs no round trip; options show the official name as a second line and a history icon when recently used. F40: the filter also accepts the option's `note_search` words and lists those matches after the matches by name (the test helper `offered()` in `tests/ui/test_category_picker.py` mirrors it); the component loads the notes once per page from `notes-url` (`/coicop-notes/<lang>?v=<hash>`, served by `selects.add_notes_route()`, cached immutably) when the picker first opens, shared by every picker on the page, and shows an option's notes in a `q-tooltip` on hover (after 350 ms) or when the arrow keys reach it; on touch screens (`$q.platform.has.touch`) an info button in the option opens them inside the option instead, and stops its tap from selecting. Used by the transaction form, both budget forms, the Budget Plan edit sheet, the bulk edit sheet and the import page (with the income categories as extra options). The value stays the COICOP code (or `TAX`). `bulk_edit.BulkEditSheet` is the bulk edit sheet (F13): one method per field, re-planned with `bulk.plan` on every change. `rule_sheet.open_rule_sheet` adds or edits a categorization rule (F07), `always_like_this` opens it from a transaction. |
 | `ui/widgets/tags.py` | F10. `TagSelect`: a multiple `ui.select` whose chosen tags are chips in their colour (Quasar slots `selected-item` and `option`), a name typed with Enter added as it is (a new tag once saved; a typed name of an existing tag picks it, ignoring case); `chip`, `ColourPicker` (one swatch per palette colour) and `CHIPS_RENDERER`, the AG Grid cell renderer that builds the chips as elements from the row's `_tags`, so names are never HTML. |
 | `ui/widgets/notable.py` | F18. `notable_card(ctx, currency)`, the Overview's *Notable This Month* card: one link row per item (icon, title, reason, amount, chevron) to `link(item, month)`; `texts(item, notable)` words each kind. |
@@ -753,6 +753,19 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     become settings later), standard deviations (meaningless with six samples) and the previous month alone
     (too noisy). The Budget page's comparison reuses the budget and difference columns rather than adding
     columns, so the ledgers keep the widths decision 1 gave them.
+NEW-F32. **Keys are single letters outside fields; sheets keep theirs; contrast is a test, not a review** (F32).
+    Page keys (`N`, `/`, `←` `→`, `1`–`9`, `,`, `?`) take no modifier, so they never clash with the browser's or the
+    system's shortcuts, and `ui.keyboard` ignores them while the cursor is in a field; they also wait while a sheet
+    is open, so a digit never leaves a half-filled sheet. Pages switch by the digit of their place in the sidebar
+    rather than by mnemonic letters: the sidebar order is visible, survives translation (letters would differ per
+    language) and grows with new pages; places after the ninth are reached with Tab. A sheet's Ctrl/⌘ Enter is a
+    keydown handler on the sheet's own card that stops the event there, so a sheet opened from a form never also
+    triggers the form's document-wide shortcut (the template sheet used to save the transaction as well). Screen
+    reader names reuse the tooltip text (`layout.named`) so there is one string to translate. Contrast is checked
+    against WCAG AA for normal text (4.5:1) on all three surfaces in both appearances, computed from the tokens in
+    `theme.CSS`; where one colour cannot serve as both text on dark surfaces and the fill under white text (the dark
+    accent), filled buttons get their own token (`--accent-strong`, `--negative-strong`). Tag chip colours are
+    outside the check: their text sits on the tag's own shade and is decorative next to the name.
 
 ## 8. Testing
 
