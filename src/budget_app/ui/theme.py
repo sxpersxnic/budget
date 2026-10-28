@@ -392,6 +392,11 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
 .attach-preview { border-radius: 10px; overflow: hidden; background: var(--fill-2); }
 .attach-preview-image { width: 100%; max-height: 360px; }
 .attach-preview-pdf { width: 100%; height: 420px; border: 0; display: block; background: #fff; }
+/* the receipt sheet (F04): the receipt beside the form, below it on a phone */
+.receipt-side { width: 22rem; max-width: 100%; flex: 0 0 auto; position: sticky; top: 0; }
+@media (max-width: 640px) { .receipt-side { width: 100%; position: static; } }
+.receipt-image { width: 100%; max-height: 70vh; border-radius: 10px; background: var(--fill-2); }
+@media (max-width: 640px) { .receipt-image { max-height: 40vh; } }
 .clip-header .ag-header-cell-text { font-size: 0; }
 .clip-header .ag-header-cell-text::before { content: "attach_file"; font-family: "Material Icons"; font-size: 17px; }
 .clip-cell { display: inline-flex; align-items: center; gap: 2px; color: var(--label-2); }

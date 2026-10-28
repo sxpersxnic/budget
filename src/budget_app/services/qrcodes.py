@@ -41,7 +41,8 @@ def _decode(image: Image) -> list[str]:
     return out
 
 
-def _pdf_pages(name: str, data: bytes, scale: float) -> Iterator[Image]:
+def _pdf_pages(name: str, data: bytes, scale: float, pages: int = 0, grayscale: bool = True) -> Iterator[Image]:
+    """The first `pages` pages of a PDF as pictures (`MAX_PAGES` by default; receipts ask for fewer, F04)."""
     import pypdfium2 as pdfium  # noqa: PLC0415 - the PDF engine is loaded when a bill is scanned
 
     try:
@@ -49,23 +50,24 @@ def _pdf_pages(name: str, data: bytes, scale: float) -> Iterator[Image]:
     except pdfium.PdfiumError as exc:
         raise ValidationError(t("“{name}” can’t be read as a PDF", name=files.display_name(name))) from exc
     try:
-        for index in range(min(len(doc), MAX_PAGES)):
+        for index in range(min(len(doc), pages or MAX_PAGES)):
             page = doc[index]
             try:
-                yield page.render(scale=scale, grayscale=True).to_pil()
+                yield page.render(scale=scale, grayscale=grayscale).to_pil()
             finally:
                 page.close()
     finally:
         doc.close()
 
 
-def _photo(name: str, data: bytes) -> Image:
+def _photo(name: str, data: bytes, mode: str = "L") -> Image:
+    """A photo turned upright by its EXIF orientation, grayscale for the decoder (RGB for a receipt's preview, F04)."""
     from PIL import Image, ImageOps  # noqa: PLC0415 - loaded with the decoder
 
     try:
         with Image.open(io.BytesIO(data)) as img:
             upright: Any = ImageOps.exif_transpose(img)
-            return upright.convert("L")
+            return upright.convert(mode)
     except (OSError, ValueError, Image.DecompressionBombError) as exc:
         raise ValidationError(t("“{name}” can’t be read as a photo", name=files.display_name(name))) from exc
 

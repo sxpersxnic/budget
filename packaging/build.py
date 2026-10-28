@@ -95,6 +95,12 @@ def pyinstaller() -> Path:
         # the app reads its version from the package metadata (see budget_app.config.app_version)
         "--copy-metadata",
         "budget-app",
+        # receipt scanning (F04): RapidOCR loads its modules by name and reads its models and YAML files from the
+        # package folder, which the import analysis alone would not bundle (hooks exist for cv2 and onnxruntime)
+        "--collect-submodules",
+        "rapidocr",
+        "--collect-data",
+        "rapidocr",
         "--exclude-module",
         "tkinter",
     ]

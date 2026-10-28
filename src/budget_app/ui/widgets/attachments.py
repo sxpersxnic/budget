@@ -122,6 +122,12 @@ class AttachmentList:
         self._preview_id = ""
         self.refresh()
 
+    def add_pending(self, name: str, data: bytes) -> None:
+        """A file a new transaction starts with (a scanned receipt, F04), stored when it is saved."""
+        attachments_svc.check(name, data)
+        self._pending.append((files.display_name(name), data))
+        self.refresh()
+
     async def _uploaded(self, e: events.UploadEventArguments) -> None:
         data = await e.file.read()
         try:
