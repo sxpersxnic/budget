@@ -11,6 +11,10 @@ APP_NAME = "Budget"
 BASE_CURRENCY = "CHF"
 ECB_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip?0a220d633471964b427451aece0f2cbe"
 ECB_CSV_NAME = "eurofxref-hist.csv"
+# F33: the update check reads the newest release's tag here (only when the user turns the check on)
+GITHUB_REPO = "sxpersxnic/budget"
+RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases"
+RELEASES_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RESOURCES_DIR = Path(__file__).resolve().parent / "resources"

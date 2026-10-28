@@ -36,8 +36,8 @@ storage/    typed CSV tables + settings JSON
 
 | Module | Responsibility |
 | --- | --- |
-| `main.py` | CLI entry (`uv run budget`). Registers pages, refreshes ECB rates at startup and every 30 min, then books what automatic recurring transactions have due. |
-| `config.py` | Base currency `CHF`, ECB URL, data/resource paths (`BUDGET_DATA_DIR` env override). |
+| `main.py` | CLI entry (`uv run budget`). Registers pages, refreshes ECB rates at startup and every 30 min, then books what automatic recurring transactions have due, then runs the update check if the user turned it on (F33). |
+| `config.py` | Base currency `CHF`, ECB URL, the GitHub repository and its releases URLs (F33), data/resource paths (`BUDGET_DATA_DIR` env override). |
 | `domain/months.py` | `YYYY-MM` month arithmetic and the "month complete" rule. |
 | `domain/fx.py` | `FxRates` (parse ECB CSV, rate lookup with date fallback, cross-rate conversion, `history()` for the rate chart) and `FxService` (daily download, atomic file replacement). |
 | `domain/coicop.py` | COICOP tree (ancestors, children, labels) plus pseudo-categories `TAX` and `ADV`; `fold()` makes text case- and accent-insensitive for searching. F40: `notes(code, lang)` → `Notes` (tuples of items for `includes`, `also_includes`, `excludes`, and `translated`) or None, read on first use and cached; a language whose file is missing or marked `_untranslated` gets English, and so does a text the translation lacks. `note_words(code, lang)`: the folded words of includes and also includes, in the language and in English, each once (excludes is never searched). `match_words(query, primary, secondary)`: whether every word occurs in either, and whether in the first. `notes_payload(lang)` / `notes_version(lang)`: all notes for the browser and a short hash of them. |
@@ -78,6 +78,8 @@ storage/    typed CSV tables + settings JSON
 | `services/export.py` | Statement as Excel/PDF; chart data and list views as CSV/Excel; every record as one JSON document (`format: budget-app/export`, `version: 1`), not meant to be imported back. |
 | `services/archive.py` | Full backup of the data folder's records and attachment files as a ZIP (with a `budget-backup.json` manifest; version 2 when it holds attachments, else 1) and restoring one: plain CSV/JSON names and `attachments/<id>/<id>.<ext>` paths only, at most 100 record files, 20,000 attachments of 20 MB each and 2 GB in all, every table must load, every attachment record must name plain ids with an accepted extension and every attachment file must pass the content check before anything changes; the current files go to `backups/<timestamp>_before-restore/` first (the attachments moved there), then the store is reloaded and the attachment files its records name are written. `create` refuses a backup `read` would refuse. |
 | `services/undo.py` | `@recorded(label)` names a service function's action; `undo()` with readable errors; labels and one-line change descriptions for the history page (holdings, trades and prices included). |
+| `services/updates.py` | F33. `parse_version` / `is_newer` (`v0.2.0` against `app_version()`; a dev build is never behind), `fetch_latest` (GitHub's *latest release* API through httpx, 1 MB cap, only a `tag_name` of the form `v1.2.3` accepted; `UpdateError` otherwise), `release_url` (built from the checked tag), `check` (nothing while `update_check` is off; once a day unless `force`; stores `update_latest` and `update_checked`), `check_if_due` (the periodic one: a failure is logged), `forget` (off: the result goes too), `available` → `Release` when newer, `latest_version`. |
+| `services/demo.py` | F30. The sample set: `seed(ctx)` writes a year of example records through the services (CHF only without rates), `receipt` makes a PDF proof; `is_empty` (no table holds a record), `first_run` (not `onboarding_done` and empty), `finish_onboarding`, `load` (refuses a folder with records; seeds, clears the history, marks `sample_data`, reloads the store) and `remove` (record files, attachments and history go, settings stay, both flags reset). `scripts/demo_data.py` wraps it for `just demo`. |
 | `services/templates.py` | Transaction templates (F06): save, list, delete, apply to a form input; exchanges and revaluations are excluded. |
 | `services/payees.py` | Payees (F09): `resolve(raw)` (an alias or name in the table first, then `normalize`; never a second spelling of a stored payee), `ensure(name)` (the stored spelling, or a new payee), `learn(pairs)` (imports: the payee plus the text's alias, taken from any other payee), `names` (recently used first, for the form), `usage` (count, spent and received per payee), and `rename`, `merge`, `delete` (unused payees only), each one undoable action that rewrites transactions, templates and series together. |
 | `services/tags.py` | Tags (F10): `encode(entries)` (tag ids or names → a tags column, new names pending, nothing written), `store(column)` (creates the pending tags), `ensure`; `add`, `rename`, `recolour`, `merge` (records move to the tag kept), `delete` (the tag comes off every transaction, template, series and tax section), `set_budget`, each one undoable action; `tagged_amounts` (the money that counts per tag: own share of expenditure spent per part, so a split line's tags count that line (F11), income other than repayments received), `transaction_tags` (a transaction's tags and its lines'), `totals(view, start, end)` and `budget_status(tag)`. See §6, *Tags*. |
@@ -95,6 +97,7 @@ storage/    typed CSV tables + settings JSON
 | `ui/widgets/tags.py` | F10. `TagSelect`: a multiple `ui.select` whose chosen tags are chips in their colour (Quasar slots `selected-item` and `option`), a name typed with Enter added as it is (a new tag once saved; a typed name of an existing tag picks it, ignoring case); `chip`, `ColourPicker` (one swatch per palette colour) and `CHIPS_RENDERER`, the AG Grid cell renderer that builds the chips as elements from the row's `_tags`, so names are never HTML. |
 | `ui/widgets/notable.py` | F18. `notable_card(ctx, currency)`, the Overview's *Notable This Month* card: one link row per item (icon, title, reason, amount, chevron) to `link(item, month)`; `texts(item, notable)` words each kind. |
 | `ui/widgets/attachments.py` | F12. `AttachmentList`, the *Attachments* section of the transaction form (see §6), and the route `/attachment/{id}` (`register`, `serve`, `url`). |
+| `ui/pages/welcome.py` | F30. The first-start screen (`/welcome`), without the sidebar: language, display currency, data folder, *Open Settings* and *Load Sample Data* (`load_sample`, shared with Settings: runs `demo.load` in a worker thread with the button in its loading state, then opens the Budget page). |
 | `ui/pages/` | One module per page (see §6). |
 
 ## 3. Data model (`data/`)
@@ -122,7 +125,7 @@ ECB date of the rate used** (`fx_date`).
 | `goals.csv` | `name, currency, kind, target, months, target_date, account_id, saved, reserve, archived, start, start_amount, id` – one row per savings goal (F14). `kind` `amount` aims at `target`; `months` at `months` × the average monthly spending of the last 12 complete months, both in `currency`. `target_date` is `YYYY-MM-DD` or empty. With `account_id` the progress is that regular account's balance, else `saved` (typed in). `start` and `start_amount` are where the on-track line begins: the day the goal was added (or linked to another account, or given another currency) and what it held then. `reserve` (0/1) puts it into the free-wealth line; `archived` (0/1) takes it out of the lists, the Overview and the reserve. |
 | `tax_sections.csv` | `tags, id` – the tags linked to a section of the tax summary (F20): `id` is the section's key (`professional`, `pillar3a`, `insurance`, `medical`, `donations`, `childcare`, `debt_interest`, `withholding`, `securities`), `tags` tag ids separated by `\|`. A section without a row has no tags; deleting or merging a tag rewrites it like any record. |
 | `prices.csv` | `holding_id, date, price, id` – a price typed in or pasted (F21), one per holding and day. |
-| `settings.json` | `budget_horizon, display_currency, last_fx_download` |
+| `settings.json` | `budget_horizon, display_currency, last_fx_download, language, onboarding_done, sample_data, update_check, update_checked, update_latest` – `onboarding_done` and `sample_data` (F30): whether the welcome screen was passed, and whether the folder holds the sample set; `update_check` (F33, off by default), the day of the last check and the tag it answered with |
 | `attachments/<transaction or bill id>/<id>.<ext>` | The attachment files (F12; a QR bill's in the bill's folder, F03), named by the app, never by the user. |
 | `ecb/eurofxref-hist.csv` | Latest ECB file (replaced daily) |
 
@@ -416,6 +419,12 @@ At startup, and every 30 minutes while the app runs, `FxService.refresh_if_stale
 
 A lock prevents overlapping refreshes.
 
+**Update check (F33):** after each refresh, `updates.check_if_due` asks GitHub's releases API for the newest
+release's tag, but only when `settings.update_check` is on (off by default) and not yet done today. The answer
+is read in memory (1 MB cap), only a tag of the form `v1.2.3` is kept, and the link to the release page is built
+from it. Nothing is downloaded; a failure is logged and tried again at the next refresh. The sidebar links the
+release when it is newer than `config.app_version()`.
+
 If the download fails, the previous file stays in use and a warning banner is shown. The
 currency dropdowns list every currency the ECB quoted on its latest date, plus EUR and CHF.
 
@@ -439,7 +448,8 @@ currency dropdowns list every currency the ECB quoted on its latest date, plus E
 | `/budget-entries` | Budget Plan | Same list pattern as Transactions, with the same export. The edit sheet can apply changes to all later months of a series, or replan it with Until and Repeat. *Propose from History…* (F16, `ui/pages/budget_proposal.py`) opens a sheet: basis (3, 6, 12 months) and method (Average, Median) as segmented controls, Level, Round to, From and Until; a caption with the months counted; per group (Expenditure, Income) a list of rows, each with a checkbox named after the category, the months' values in whole francs (tooltip with the months), conflict, overlap and recurring notes, *Budget now* and the editable amount per month. Every input recalculates (`budget_history.propose`); amounts typed by hand survive a change of From or Until only. The footer is sticky: the sum of the ticked rows per month (or why nothing can be created) and *Create Budget for N Categories*; the toast "Created N budget entries" offers Undo. On narrow windows (Tailwind `max-sm`) a row stacks its amount under the category and hides an empty *Budget now*. |
 | `/goals` | Goals | F14. In the sidebar after Budget Plan (icon `o_flag`). One group sorted by target date (without one last): per goal its name, "1'250.00 of 4'000.00 CHF · 31 %", a bar (green once reached), the plan line ("562.50 CHF a month until 30 Jun 2027 · on track", *behind* and *Overdue since …* in red, *Reached* in green, "… to go · no target date") and where the progress comes from (account or by hand, the months of spending, *reserved in the projection*); edit, archive and delete per row; archived goals in a closed expansion with *Restore*. The sheet: name, *Amount* or *Months of Spending* (with the target worked out live), currency, optional target date, linked account (or *Saved So Far*) and *Reserve in the projection*. The Overview shows the first three goals not archived (still to reach first, by date) in a *Goals* card below the KPIs, with "Projected for {month}: … free after … reserved for goals" when a goal reserves; the card is left out without goals. |
 | `/categories` | Categories | F37. All 602 COICOP 2018 categories (four levels) as one Quasar tree (`ui.tree`), built once: code and name in the interface language, divisions bold, the number of subcategories, and what was spent in each this calendar year (display currency, every level summed up). The search box matches code, name (interface language and English) and, since F40, the note words, every word ignoring case and accents, like the picker: Python searches `search_index()` (`coicop.match_words`), sets the tree's `filter` prop to the matching codes between spaces and a `:filter-method` keeps those nodes in the browser (Quasar keeps the ancestors of every match); the ancestors are put into `expanded`, so typing changes two props instead of rebuilding rows, and the nodes carry no search text. Clearing the search restores what was open before. `TAX` and `ADV` are not COICOP and appear only in a note below the tree. F40: a node with notes has `has_notes`; its info button emits `notes`, and the page adds the notes (`notes_view`: headings with items, "Unofficial translation" for a translation) to that node, or removes them, so only open nodes carry notes. A footnote names the UN source. |
-| `/settings` | Settings | Grouped lists: interface language (system, English, Deutsch, Français, Italiano), plan horizon (Apply appears when changed), display and base currency, accounts (with the asset class in the account sheet and the caption, F21; a securities or crypto account shows its value in holdings), advance-payment accounts (with outstanding balances), income categories. Add, edit and rename open small sheets. *Data*: back up now (ZIP), restore from a backup file, export everything as JSON, the data folder's path; *Automatic Backups* lists the update and before-restore copies with a Restore action. |
+| `/settings` | Settings | Grouped lists: interface language (system, English, Deutsch, Français, Italiano), plan horizon (Apply appears when changed), display and base currency, accounts (with the asset class in the account sheet and the caption, F21; a securities or crypto account shows its value in holdings), advance-payment accounts (with outstanding balances), income categories. Add, edit and rename open small sheets. *Data*: back up now (ZIP), restore from a backup file, export everything as JSON, the data folder's path, and *Sample Data* (F30): *Load Sample Data* into an empty folder, or *Remove Sample Data…* (a confirmation; every record, attachment and the history go, the settings stay, back to the welcome screen) when the folder holds the set; the sidebar footer says *Sample data* meanwhile; *Automatic Backups* lists the update and before-restore copies with a Restore action. *Updates* (F33): the *Check for Updates* switch (off by default, its caption says what is asked and that nothing is downloaded), and *Newest Release*: off, not checked yet, or "Checked on …: the newest release is …" with the releases page or the release itself linked when newer, and *Check Now* while on; turning it on checks at once, turning it off forgets the result. |
+| `/welcome` | Welcome | F30. The first-start screen: the Overview opens it while no table holds a record and `onboarding_done` is not set (`demo.first_run`), so folders with records never see it; it stays reachable. No sidebar. The language (reloads the page), the display currency, the data folder with its path and how to change it (`--data-dir`, `BUDGET_DATA_DIR`), and two rows: *Open Settings* (sets `onboarding_done`) and *Load Sample Data* (disabled with a note while the folder has records; writes the set in a worker thread, then opens the Budget page). |
 | `/history` | Change History | The newest 200 actions with time, name, number of changes and the changes in detail; Undo per action (an undone action is marked, and undoing an undo redoes it). Reached from Settings → Data. Confirmation toasts after saving or deleting transactions, budget entries, balances and accounts carry an Undo button for that action. |
 
 Pages follow the system light/dark appearance (`ui.run(dark=None)`).
@@ -753,6 +763,34 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     become settings later), standard deviations (meaningless with six samples) and the previous month alone
     (too noisy). The Budget page's comparison reuses the budget and difference columns rather than adding
     columns, so the ledgers keep the widths decision 1 gave them.
+27. **The sample set is written into the data folder itself, only while it is empty, and removed as a whole**
+    (F30). Weighed: a second data folder for the demo (the catalog's first idea). The app has one store, one
+    single-instance lock, one backup marker and one FX file per folder, and `--data-dir` already opens any folder;
+    switching folders at run time is what profiles (F34) add, so the welcome screen stays out of their way and uses
+    `config.data_dir()` only to show where the data is. Loading goes through the services, so the set passes every
+    validation and exercises every feature; it runs in a worker thread with the button in its loading state. The
+    change history is cleared afterwards, since the sample records are no changes of the user's to undo, and the
+    store is reloaded. The folder is marked in `settings.json` (`sample_data`); removing deletes the record files,
+    the attachments and the history, keeps the settings (language, currency, horizon) and resets `onboarding_done`,
+    so the first-start screen comes back. That screen appears only while no table holds a record and it was never
+    passed, so a folder from an earlier version never shows it; it is a plain page without the sidebar, since the
+    places mean nothing before the first record, and it offers no folder picker: choosing folders belongs to
+    profiles. Without exchange rates the set is CHF only, so the first start works offline too.
+28. **The update check is off until the user turns it on, reads one version number and never downloads**
+    (F33). Cross-cutting decision 1 keeps everything local; the ECB rates are the one download the app makes, and
+    an update check is the same kind of read-only request, so it is offered the same way: as a connection the user
+    knows about, with the switch's caption saying what is sent (the request itself, with a plain user agent) and
+    what is not (nothing about the user or the data; nothing is downloaded or installed). Off by default rather
+    than on, because the installed app should make no connection the user didn't ask for; the README's privacy
+    note names it. GitHub's *latest release* API is read, not the releases HTML page, so the answer is small and
+    structured; it is capped at 1 MB, only a `tag_name` of the form `v1.2.3` is accepted, and the link is built
+    from that tag, never taken from the answer, so a changed answer can at most name a version. Once a day,
+    shared with the rate refresh; a failure is logged and retried at the next refresh, never shown, because a
+    missed check matters little. The result is kept in `settings.json`, so every page's sidebar can show it
+    without asking again; turning the switch off forgets it, so nothing the user didn't ask for stays on screen.
+    A dev build (`app_version()` not a version) is never behind. Weighed: showing release notes in the app (a
+    second, larger download) and offering the installer download (the installers are signed by nothing yet, and
+    the update steps differ per OS; the release page has both).
 
 ## 8. Testing
 
@@ -822,6 +860,17 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     folders and names, files that fail the check left out, the size limit; the page in the simulated client
     (sections, year, the sheet, opening a row and its proof, the three exports);
   - wealth with carry-forward, projected wealth (higher of recorded and budget) and the reconciliation;
+  - sample data (F30): the first-run flag (an empty folder, passed, a folder with records), loading (every table,
+    attachments, the empty history, the flags, CHF only without rates, refused on a folder with records), removing
+    (empty again, settings kept, flags reset, refused without the set); the welcome screen in the simulated client
+    (opened on the first start only, no sidebar, language and currency saved, both ways in, a failed load reported,
+    the Settings row loading and removing with its confirmation);
+  - update check (F33): version parsing and comparison (dev builds, short versions), the request through
+    `httpx.MockTransport` (never the network: the tag read, refused answers – 404, no JSON, a tag that isn't a
+    version, a list, bad UTF-8, over 1 MB – and a network failure), off by default makes no request, once a day,
+    the next day and *Check Now*, the result stored and shown, a current app with nothing to link, a failed check
+    keeping the last result and logged, turning off forgetting it; in the pages the switch and its note, turning
+    on checking at once, the sidebar link on every page, *Check Now*, a current app and a failed check;
   - trends (F18): changes and percentages, each threshold on both sides, the month before and a year before
     (split lines and income only in the compared month, another view currency), and *Notable this month*:
     nothing recorded, a short history, a quiet month, a category above its usual level and a small one that

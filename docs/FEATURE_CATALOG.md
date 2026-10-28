@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20 and F18 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18, F30 and F33 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22, F30 onboarding and demo data and F33 update check on 2026-10-28). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30 (done), F32, F31, F22, F23, F33 (done), F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -183,10 +183,10 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F27 | ☐ Open | Encryption and app lock | Security | L | Local | – |
 | F28 | ☑ Done | Undo and change history | Security | M | Local | – |
 | F29 | ☑ Done | Multi-language support | Experience | L | Local | – |
-| F30 | ☐ Open | Onboarding and demo data | Experience | M | Local | – |
+| F30 | ☑ Done | Onboarding and demo data | Experience | M | Local | – |
 | F31 | ☐ Open | Reminders and alerts | Experience | M | Local | – |
 | F32 | ☐ Open | Keyboard shortcuts and accessibility | Experience | M | Local | – |
-| F33 | ☐ Open | In-app update check | Experience | S | Optional | – |
+| F33 | ☑ Done | In-app update check | Experience | S | Optional | – |
 | F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
 | F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
 | F36 | ☑ Done | Closing balance from bank files | Data in | M | Local | F01 |
@@ -1109,7 +1109,27 @@ which already speaks English, German and French.
 
 #### F30 · Onboarding and demo data
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §7, decision 27): the sample set of `scripts/demo_data.py` moved into the package
+(`services/demo.py`), so the installed app can write it: six accounts (bank, savings, a EUR account, a securities
+depot, a crypto wallet and a pillar 3a account), a year of salary, rent, groceries with receipts, a holiday in
+Italy, a bathroom renovation, a split receipt, dividends and prices, month-end balances, budgets, templates, tags
+with budgets, goals and tax sections, dated relative to today and written through the services like typed-in
+records; the script is a thin wrapper that empties a folder and calls it (`just demo`). **Welcome screen**
+(`/welcome`, no sidebar): the Overview opens it while the data folder holds no record and it was not passed before
+(`settings.onboarding_done`), so a folder with records never sees it. It has the language (applied at once), the
+display currency, the data folder (its path and how to change it: `--data-dir` or `BUDGET_DATA_DIR`) and two
+ways in: **Open Settings** (accounts and income categories; the Budget page then records the balances) or **Load
+Sample Data**, which writes the set (a moment, in a worker thread) and opens the Budget page. The folder is marked
+(`settings.sample_data`): the sidebar footer says *Sample data*, and **Settings → Data → Sample Data** offers
+*Remove Sample Data…*, which deletes every record, attachment and the change history (language and currency stay)
+and brings the welcome screen back; the same row loads the set into an empty folder. Without exchange rates
+(offline on the first start) the set is CHF only. **Decided:** the sample data lives in the data folder itself,
+and only while the folder is empty, rather than in a second folder: the app has one store, one lock and one
+backup marker per folder, and switching folders is what profiles (F34) are for; a user with records tries the
+sample set with `--data-dir`. Not built: a step-by-step guide for accounts, balances and the horizon (Settings
+and the Budget page lead there), a folder picker.
 
 - A first-start guide: language, display currency, accounts with their current balance,
   income categories, plan horizon. It ends on the Budget page with something to see.
@@ -1138,7 +1158,22 @@ Shown when the app runs; reminders while it's closed would need a small backgrou
 
 #### F33 · In-app update check
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §7, decision 28): **off by default**. **Settings → Updates → Check for Updates** is
+a switch whose caption says what it does and what it never does: once a day, when on, the app reads the newest
+release's version number from GitHub's releases API for this repository (`services/updates.py`, the same kind of
+read-only request as the ECB rates, capped at 1 MB); nothing is downloaded or installed, and the request carries
+nothing about the user or the data. Turning it on checks at once; *Check Now* checks again; the row below says
+*Not checked yet* or "Checked on 28 Oct 2026: the newest release is 0.2.0" and links to the releases page. When
+the release is newer than the running app, the sidebar footer of every page and the Settings row link **Budget
+0.2.0 is available** to that release's page (installers and update steps), opened in the browser. The check runs
+with the rate refresh (startup, then every 30 minutes) but asks at most once a day; a failed request is logged and
+tried again at the next refresh, never shown. Turning the switch off forgets the result. Only a tag of the form
+`v1.2.3` is accepted and the link is built from it, never taken from the answer; a dev build is never "behind".
+**Decided:** the check stays off until the user turns it on (cross-cutting decision 1: nothing leaves the computer
+on its own), and the README's privacy note names it as the one optional connection besides the ECB rates. Not
+built: downloading or installing the update, release notes in the app.
 
 Once a day, read the latest version number from the GitHub repository (the same kind of
 read-only request as the ECB download). If it's newer, the sidebar shows "Budget 0.2.0 is
@@ -1259,6 +1294,8 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | F12 · Attachments | ☑ Done | Receipts and invoices with their transaction, in the data folder and in backups; details under F12. |
 | Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. F11 added a category and tags per line; gives F04 a place for receipt lines. |
 | F03 · Swiss QR-bill scanning | ☑ Done | QR bills from PDFs and photos into a Bills list with due dates, paid through the transaction sheet; details under F03. |
+| F30 · Onboarding and demo data | ☑ Done | A welcome screen on the first start (language, currency, data folder) and a year of sample data to load and remove; details under F30. |
+| F33 · In-app update check | ☑ Done | Off by default; when on, reads the newest release's version from GitHub once a day and links to it, never downloads; details under F33. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
 | CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
 

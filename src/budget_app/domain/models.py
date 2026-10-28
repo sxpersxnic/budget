@@ -469,3 +469,8 @@ class Settings:
     display_currency: str = "CHF"
     last_fx_download: str = ""
     language: str = ""  # "" = follow the system; otherwise a key of i18n.LANGUAGES
+    onboarding_done: bool = False  # F30: the welcome screen was passed (or the folder already had records)
+    sample_data: bool = False  # F30: the folder holds the sample set, which Settings can remove again
+    update_check: bool = False  # F33: ask GitHub for the newest release once a day; off until the user turns it on
+    update_checked: str = ""  # F33: the day of the last successful check (ISO date)
+    update_latest: str = ""  # F33: the tag it answered with ("v0.2.0")

@@ -12,12 +12,13 @@ from nicegui import ui
 from budget_app.domain import months
 from budget_app.domain.models import ASSET_CLASSES
 from budget_app.i18n import N_, t
+from budget_app.services import demo as demo_svc
 from budget_app.services import export as export_svc
 from budget_app.services import goals as goal_svc
 from budget_app.services import reports
 from budget_app.services import tags as tag_svc
 from budget_app.services import wealth as wealth_svc
-from budget_app.services.context import Context
+from budget_app.services.context import Context, get_ctx
 from budget_app.ui.layout import (
     data_month_range,
     error,
@@ -468,6 +469,9 @@ def class_breakdown(sums: dict[str, float], cur: str) -> None:
 
 
 def page() -> None:
+    if demo_svc.first_run(get_ctx()):  # F30: nothing recorded yet, and the welcome screen not passed
+        ui.navigate.to("/welcome")
+        return
     with frame(t("Overview"), "/") as (ctx, actions):
         currency = {"value": ctx.store.settings.display_currency}
         charts: list[ChartCard] = []
