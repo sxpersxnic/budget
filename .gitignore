@@ -14,4 +14,5 @@ __pycache__/
 htmlcov/
 .claude/worktrees/
 /demo-data/
-.envcoverage.xml
+.env
+coverage.xml
