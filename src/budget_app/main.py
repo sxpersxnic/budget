@@ -19,7 +19,7 @@ from budget_app.services import attachments as attachments_svc
 from budget_app.services.context import init_context
 from budget_app.storage import lock as instance_lock
 from budget_app.ui import theme
-from budget_app.ui.layout import book_recurring, refresh_rates
+from budget_app.ui.layout import book_recurring, check_updates, refresh_rates
 from budget_app.ui.pages import (
     add_budget,
     add_transaction,
@@ -80,6 +80,7 @@ def setup(data_dir: Path) -> None:
     async def refresh() -> None:
         await refresh_rates(ctx)
         book_recurring(ctx)  # at the rates of the day
+        await check_updates(ctx)  # F33: only when turned on, once a day
 
     app.on_startup(refresh)
     app.timer(30 * 60, refresh, immediate=False)  # keeps rates current, and books what falls due overnight

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import date
 
-from nicegui import events, ui
+from nicegui import events, run, ui
 
 from budget_app import i18n
-from budget_app.config import BASE_CURRENCY
+from budget_app.config import BASE_CURRENCY, RELEASES_URL
 from budget_app.domain import months
 from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR, ASSET_CASH, ASSET_CLASSES, HOLDING_CLASSES
 from budget_app.i18n import t, tn
@@ -18,6 +18,7 @@ from budget_app.services import demo as demo_svc
 from budget_app.services import export as export_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services import transactions as tx_svc
+from budget_app.services import updates as updates_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import error, fmt, frame, month_options, save_file, sheet, sheet_buttons, success, undoable
@@ -406,6 +407,75 @@ def _data_group(ctx: Context) -> None:
                     )
 
 
+def _updates_group(ctx: Context) -> None:
+    """F33: the update check, off by default; it says what it does and what it never does."""
+    settings = ctx.store.settings
+
+    @ui.refreshable
+    def status() -> None:
+        with ui.column().classes("gap-0 flex-1 min-w-0"):
+            ui.label(t("Newest Release"))
+            release = updates_svc.available(ctx)
+            if not settings.update_check:
+                text = t("Off: the app never asks on its own. The releases page lists the installers.")
+            elif not settings.update_checked:
+                text = t("Not checked yet.")
+            else:
+                text = t(
+                    "Checked on {date}: the newest release is {version}.",
+                    date=i18n.date_label(date.fromisoformat(settings.update_checked)),
+                    version=updates_svc.latest_version(ctx),
+                )
+            ui.label(text).classes("caption")
+            if release:
+                ui.link(t("Budget {version} is available", version=release.version), release.url, new_tab=True).classes(
+                    "caption text-primary"
+                )
+            else:
+                ui.link(t("Releases page"), RELEASES_URL, new_tab=True).classes("caption text-primary")
+        check_btn = ui.button(t("Check Now")).props("flat dense no-caps").classes("text-primary")
+        check_btn.on_click(lambda: check_now(check_btn))
+        check_btn.set_visibility(settings.update_check)
+
+    async def check_now(button: ui.button) -> None:
+        button.props(add="loading")
+        try:
+            await run.io_bound(updates_svc.check, ctx, None, True)
+        except updates_svc.UpdateError as exc:
+            error(t("Update check failed: {error}", error=exc))
+        status.refresh()
+
+    async def toggle(e) -> None:
+        if e.value:
+            settings.update_check = True
+            ctx.store.save_settings()
+            status.refresh()
+            try:
+                await run.io_bound(updates_svc.check, ctx, None, True)  # the user just asked for it
+            except updates_svc.UpdateError as exc:
+                error(t("Update check failed: {error}", error=exc))
+        else:
+            updates_svc.forget(ctx)
+        status.refresh()
+
+    with ui.column().classes("w-full gap-0"):
+        ui.label(t("Updates")).classes("group-header")
+        with ui.element("div").classes("group"):
+            with ui.element("div").classes("group-row"):
+                with ui.column().classes("gap-0 flex-1 min-w-0"):
+                    ui.label(t("Check for Updates"))
+                    ui.label(
+                        t(
+                            "Once a day, Budget asks GitHub for the number of the newest release. Nothing is "
+                            "downloaded or installed, and the request carries nothing about you or your data. Off by "
+                            "default; besides the ECB rates it is the only connection the app makes."
+                        )
+                    ).classes("caption")
+                ui.switch(value=settings.update_check, on_change=toggle).props("dense")
+            with ui.element("div").classes("group-row"):
+                status()
+
+
 def _backup_date(b: archive.SavedBackup) -> str:
     return f"{i18n.date_label(b.created.date())}, {b.created:%H:%M}"
 
@@ -486,3 +556,4 @@ def page() -> None:
         _accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"))
         _income_group(ctx)
         _data_group(ctx)
+        _updates_group(ctx)

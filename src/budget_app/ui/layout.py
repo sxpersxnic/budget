@@ -21,6 +21,7 @@ from budget_app.services import bills as bills_svc
 from budget_app.services import recurring as recurring_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
+from budget_app.services import updates as updates_svc
 from budget_app.services.context import Context, ValidationError, get_ctx
 from budget_app.ui import theme
 
@@ -93,6 +94,11 @@ async def refresh_rates(ctx: Context) -> None:
     changed = await run.io_bound(tx_svc.revalue_to_transaction_dates, ctx)
     if changed:
         log.info("Valued %d transactions at the rate of their date", changed)
+
+
+async def check_updates(ctx: Context) -> None:
+    """Ask for the newest release when the user has turned the check on and it wasn't done today (F33)."""
+    await run.io_bound(updates_svc.check_if_due, ctx)
 
 
 def book_recurring(ctx: Context) -> int:
@@ -191,6 +197,16 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
             ui.label(
                 t("ECB rates of {date}", date=i18n.date_label(latest)) if latest else t("No exchange rates yet")
             ).classes("nav-footer")
+            release = updates_svc.available(ctx)  # F33: only after a check the user turned on
+            if release:
+                ui.link(t("Budget {version} is available", version=release.version), release.url, new_tab=True).classes(
+                    "nav-footer text-primary"
+                ).tooltip(
+                    t(
+                        "Opens the release page with the installers and the update steps. "
+                        "Nothing is downloaded by the app."
+                    )
+                )
     with ui.header().classes("mobile-bar lg:hidden px-2 py-1 items-center gap-1"):
         ui.button(icon="menu", on_click=drawer.toggle).props("flat round dense").classes("text-primary")
         ui.label(title).classes("font-semibold text-[15px]")
