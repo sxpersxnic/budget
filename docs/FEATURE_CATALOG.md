@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20 and F18 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18 and F22 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F22 (done), F19, F30, F32, F31, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -175,7 +175,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F19 | ☐ Open | Year in review | Insight | M | Local | – |
 | F20 | ☑ Done | Swiss tax summary | Insight | M | Local | F10 |
 | F21 | ☑ Done | Investments and asset classes | Wealth | L | Local | – |
-| F22 | ☐ Open | Loans and mortgages | Wealth | M | Local | – |
+| F22 | ☑ Done | Loans and mortgages | Wealth | M | Local | – |
 | F23 | ☐ Open | Who owes what (shared expenses) | Wealth | M | Local | – |
 | F24 | ☑ Done | Export to CSV and JSON | Data out | S–M | Local | – |
 | F25 | ☑ Done | Full backup and restore | Data out | S | Local | – |
@@ -991,7 +991,33 @@ F21 would create them from price changes.
 
 #### F22 · Loans and mortgages
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §4.7, §7 decision NEW-F22): a loan is a **liability account** of the new asset class
+*Loans and mortgages* with a repayment schedule (`loans.csv`: principal and start date, interest rate per year,
+payment rhythm, first payment, repayment per payment, paying account, interest category, lender, optional *fixed
+until*, note). The account is added with the loan on the **Loans** page (`/loans`, sidebar after Investments) and
+can't be given that class in Settings. Its balance is **minus the outstanding debt**, computed from the loan's
+bookings (the principal, plus what left the account, minus what came in) like a securities account's value, never
+recorded; it counts against wealth, in *By Asset Class* (negative) and in the asset-class chart. A loan paid into
+one of your accounts starts with a principal of 0 and a transfer from the loan account. **Payments** are due every
+*n* months from the first payment on and are listed on top of the page like recurring transactions (F05): the
+interest on the outstanding debt before the due date (debt × rate × months ÷ 12, half up to the cent) and the
+repayment (the last one takes what is left), both editable, with *Book*, *Skip* and *Book All*; the sidebar counts
+them. Booking writes two ordinary transactions carrying `loan_id`: a transfer of the repayment from the paying
+account into the loan account and an expenditure of the interest in the loan's interest category (default
+**12.2.1**, the code the tax summary counts as debt interest, F20) with the lender as payee; they can be edited and
+deleted like any transaction, and a loan's month reconciles by construction (tested). Each loan shows its debt, a
+bar of the share repaid, its terms, the next payment, the month it is paid off (or *interest only*), *fixed until*
+and *term ended*; a click opens the planned payments (the next 12) and the booked ones (a click opens the
+transaction). A loan is deleted with its account once it has no transactions; a paid-off loan is shown as such.
+`renewals()` lists loans whose fixed term ends within 90 days, for F31. **Decided while building** (NEW-F22): the
+interest is simple interest per period on the debt before the due date (what Swiss banks quote), amounts are
+edited before booking rather than rebooked from the schedule, the projection stays as it is (amortization moves
+money between two accounts, interest is budgeted like any cost), no automatic booking, and the principal is the
+opening debt (its payout is not a transaction of the app). Not built: annuity loans with a fixed total payment
+(enter the repayment per payment instead), an interest schedule for the projection, rate changes dated in the
+future (edit the rate when it changes), a renewal reminder (F31 can use `renewals()`).
 
 Liabilities with interest rate and repayment plan; interest payments are categorized
 automatically. Projected wealth includes amortization; a mortgage renewal date can trigger

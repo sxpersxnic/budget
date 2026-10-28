@@ -325,6 +325,19 @@ The app opens in its own window and keeps all data in your user folder:
    click it for its history, where trades and prices can be edited or deleted. The page also sums
    the Swiss withholding tax you can reclaim with your tax return, per year. Pillar 2,
    pillar 3a, real estate and other assets keep their recorded month-end balances.
+   **Loans** (sidebar): add a mortgage or a loan with **New Loan**: the debt at the start, the interest
+   rate, how often you pay (every month, quarter, half year or year), the first payment, the repayment per
+   payment (leave it empty for an interest-only mortgage), the account you pay from and, if you like, the
+   lender and the date the fixed rate ends. The loan gets its own account of the asset class *Loans and
+   mortgages*; its balance is minus what you still owe, so your wealth is net of your debts and *By Asset
+   Class* shows the loans as a negative amount. When a payment is due it is listed at the top with the
+   interest on the outstanding debt and the repayment; check the amounts against your bank's statement,
+   change them if they differ, and **Book**: the repayment is a transfer into the loan account, the interest
+   an expenditure (category 12.2.1, which the tax summary counts as debt interest). Both are ordinary
+   transactions you can edit later. **Skip** a payment you recorded another way. Click a loan to see the
+   planned payments, when it will be paid off and what was booked. If the loan was paid into one of your
+   accounts, enter 0 as the debt at the start and record the payout as a transfer from the loan account.
+   Budget the interest like any other cost; the repayment doesn't change your wealth.
 10. **Tax Summary** (sidebar, once a year): the amounts for your tax declaration, last year by
     default, in CHF, in sections for professional expenses, pillar 3a payments, insurance premiums,
     medical and dental costs, donations, childcare, debt interest, the withholding tax to reclaim
