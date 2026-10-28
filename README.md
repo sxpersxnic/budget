@@ -144,8 +144,8 @@ The app opens in its own window and keeps all data in your user folder:
   file. The app also keeps its own copies under **Automatic Backups**: one before each update and
   one before each restore, the ten most recent. Each can be restored with **Restore…**. A restore
   first copies the current records to the backups folder, so it can be undone the same way.
-- **Attachments:** files you attach to a transaction, and the PDFs and photos of QR bills, are
-  copied into the data folder (`attachments/`), so the backup and the automatic copies include them.
+- **Attachments:** files you attach to a transaction, and the PDFs and photos of QR bills and
+  receipts, are copied into the data folder (`attachments/`), so the backup and the automatic copies include them.
   A removed attachment's file stays there as long as the removal can still be undone, and is deleted
   at a later start.
 - **Undo:** after saving or deleting, the confirmation at the bottom offers **Undo** for a few
@@ -233,6 +233,13 @@ The app opens in its own window and keeps all data in your user folder:
    which one **Undo**
    reverts. Rows a change doesn't fit (a transfer has no category) keep what they have; a split
    transaction changes only the category of its rest, its lines keep theirs.
+   **Transactions → Receipt…**: drop the photo or PDF of a till receipt (or click to choose it). The
+   app reads it on your computer – nothing is sent anywhere – and shows the receipt beside a new
+   expenditure filled in with the total, the date, the currency and the shop as payee, plus the item
+   lines when they add up to the total. Check them (reading a crumpled receipt is not perfect), choose
+   the category and account and click **Add Transaction**; the receipt is kept as an attachment. If
+   reading isn't available on your computer (Intel Macs), the sheet says so and you type the amount,
+   date and payee from the picture beside the form.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets. To start from what actually happened, choose **Propose from History…**:
    pick the last 3, 6 or 12 complete months, average or median, the COICOP level (division, group
@@ -378,6 +385,7 @@ details are in [packaging/README.md](packaging/README.md).
 ```bash
 uv sync
 uv run budget                 # opens http://127.0.0.1:8080 in the browser
+uv sync --extra ocr           # also the receipt reader (RapidOCR and ONNX Runtime, about 130 MB)
 ```
 
 | Option | Effect |
@@ -430,14 +438,18 @@ types, tests and coverage before each push.
   the app says beside them.
 - **QR bills:** read according to SIX, *Swiss Implementation Guidelines for the QR-bill*, version 2.3.
 
-### Libraries for QR bills
+### Libraries for QR bills and receipts
 
 | Library | Used for | Licence |
 | --- | --- | --- |
-| [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) with [PDFium](https://pdfium.googlesource.com/pdfium/) | rendering PDF pages to find the QR code | Apache-2.0 or BSD-3-Clause; PDFium BSD-3-Clause, its bundled libraries under their own licences (listed in the package) |
+| [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) with [PDFium](https://pdfium.googlesource.com/pdfium/) | rendering PDF pages to find the QR code, and receipt pages and their text | Apache-2.0 or BSD-3-Clause; PDFium BSD-3-Clause, its bundled libraries under their own licences (listed in the package) |
 | [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp) | finding and decoding QR codes | Apache-2.0 |
 | [Pillow](https://python-pillow.org) | opening photos (already used through reportlab) | MIT-CMU |
+| [RapidOCR](https://github.com/RapidAI/RapidOCR) with its PP-OCRv6 models (optional extra `ocr`) | reading till receipts on the computer (F04) | Apache-2.0; the models Apache-2.0 (`MODEL_LICENSES.md` in the package) |
+| [ONNX Runtime](https://onnxruntime.ai) (optional extra `ocr`) | running the OCR models | MIT |
+| [OpenCV](https://opencv.org) (`opencv-python-headless`, pulled in by RapidOCR) | image handling for the OCR models | Apache-2.0 |
 | [segno](https://github.com/heuer/segno), [qrbill](https://github.com/claudep/swiss-qr-bill) | tests only: QR codes and QR-bill payloads for the test files | BSD-3-Clause, MIT |
 
-All of them come as wheels with their native code for macOS (arm64 and x86_64), Windows and Linux, so
-`uv sync` needs no compiler.
+All of them come as wheels with their native code for macOS, Windows and Linux, so `uv sync` needs no
+compiler. ONNX Runtime has no wheel for Intel Macs on Python 3.13, so there the app runs without the receipt
+reader and the receipt sheet says so.

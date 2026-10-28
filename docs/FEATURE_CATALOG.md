@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20 and F18 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18 and F04 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22; F04 receipt scanning on 2026-10-28). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04 (done), F35 | – |
 
 ### Bugs
 
@@ -157,7 +157,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F01 | ☑ Done | CSV import of transactions | Data in | M | Local | – |
 | F02 | ☑ Done | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
 | F03 | ☑ Done | Swiss QR-bill scanning | Data in | M | Local | – |
-| F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
+| F04 | ☑ Done | Receipt scanning | Data in | L | Local | F12 |
 | F05 | ☑ Done | Recurring transactions | Data in | M | Local | – |
 | F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
 | F07 | ☑ Done | Automatic categorization | Organizing | M–L | Local | F09 |
@@ -474,7 +474,31 @@ Every Swiss invoice carries a QR code with the amount, currency, creditor and re
 
 #### F04 · Receipt scanning
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision NEW-F04):** **Receipt…** in the Transactions toolbar (before *Import…*) opens the *Receipt* sheet:
+a drop zone for one PDF or photo (JPEG, PNG, WebP; HEIC asks for JPEG or PNG), then the receipt on the left and a new
+expenditure on the right. The receipt is read **on the computer** by RapidOCR (PP-OCRv6 multilingual models, bundled
+in its wheel, so nothing is downloaded) on ONNX Runtime; the libraries are the optional extra `budget-app[ocr]`,
+included in the installers. A PDF with its own text (an e-receipt) is read from that text without the engine. From
+the rows that were read (`domain/receipts.py`) the app takes the **total** (the last row that says Total, Summe,
+Montant, Totale, Amount due, … and carries an amount; subtotal, VAT, change, card and payment rows don't count; without
+such a row the largest amount), the **date** (the first plausible one, day first or ISO, also glued to a time), the
+**currency** (CHF or EUR when named, else the display currency) and the **merchant** (the first row of words before
+the total that is not a date, phone number, address or the receipt's own bookkeeping), and offers them as amount,
+date, currency and payee (a known payee keeps its spelling, F09; the category is suggested as for any payee, F07).
+The rows between merchant and total that end in an amount become the **item lines** (F11) when they add up to the
+total, discounts as negative lines; otherwise no lines, so a misread line never makes a wrong split. A caption above
+the form says what was read ("Read from the receipt: Coop Pronto Zürich HB · 28 Oct 2026 · 11.45 CHF. Check it
+before you save.") or that nothing could be; the file waits under *Attachments* ("Attached when you save") and
+**Add Transaction** stores the expenditure, its lines and the file in one undo step. Reading takes one to two seconds
+(the engine loads once, about ten seconds, at the first receipt) in a worker thread with a "Reading the receipt…"
+line meanwhile; PDF pages are rendered in the event loop like QR bills. Without the engine (not installed, or an
+Intel Mac, for which ONNX Runtime has no Python 3.13 wheel) the sheet says so and the user types amount, date and
+payee from the picture beside the form. Not built: online reading (decision 1: never), the camera, HEIC photos, VAT
+and payment method, learning a merchant's layout, and reading several receipts at once. The engine's reading of
+umlauts is imperfect ("Zørich" for "Zürich" in a test picture): the merchant is a proposal the user checks, and a
+known payee's spelling wins.
 
 Photograph or drop a till receipt; the app reads merchant, date, total and, ideally, the
 lines.
@@ -1183,7 +1207,8 @@ Record expenses on the phone where they happen.
 These come up in several features; deciding them once keeps the features consistent.
 
 1. **AI and online services** (F04, F07, F21, F33): decided on 2026-10-21 — **never for now**;
-   everything stays local, and features that need a service stay in the backlog until revisited.
+   everything stays local, and features that need a service stay in the backlog until revisited. F04 reads
+   receipts with a local OCR engine (RapidOCR) instead.
 2. **Exchange rate of transactions** (F01, F02, F03, F05, B03): decided — every transaction
    uses the ECB rate of its date (the last earlier rate on weekends and holidays); account
    balances use the last rate of the month; budget entries use the latest rate. Changed by
@@ -1259,6 +1284,7 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | F12 · Attachments | ☑ Done | Receipts and invoices with their transaction, in the data folder and in backups; details under F12. |
 | Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. F11 added a category and tags per line; gives F04 a place for receipt lines. |
 | F03 · Swiss QR-bill scanning | ☑ Done | QR bills from PDFs and photos into a Bills list with due dates, paid through the transaction sheet; details under F03. |
+| F04 · Receipt scanning | ☑ Done | A till receipt's PDF or photo read on the computer (RapidOCR) into a prefilled expenditure with its lines and the file attached; details under F04. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
 | CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
 

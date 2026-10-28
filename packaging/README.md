@@ -144,6 +144,21 @@ probe that read a QR bill from a generated PDF and a PNG. PDFium's macOS library
 (`minos 13.0`) and numpy's arm64 wheel needs macOS 14, so `Info.plist` declares 14.0 as the minimum
 (it said 11.0 before, which the bundled numpy never ran on).
 
+**Receipt reader (F04).** `rapidocr` (a pure-Python wheel of 27 MB that carries its PP-OCRv6 models) and
+`onnxruntime` (21 MB on macOS arm64, 15 MB on Windows, 24 MB on Linux; cp313 wheels for macOS 14 arm64, Windows x64 and
+arm64, manylinux 2.28 x86_64 and aarch64, **none for macOS x86_64**, so the dependency carries a marker and Intel Macs
+run without the reader) are the optional extra `ocr` and part of the `build` group, so the installers include them;
+RapidOCR pulls in `opencv-python-headless` (35–60 MB, abi3 wheels for every target), `shapely`, `pyclipper`, `PyYAML`,
+`omegaconf`, `requests`, `tqdm` and `colorlog`. `pyinstaller-hooks-contrib` has hooks for `cv2`, `onnxruntime` and
+`shapely`; RapidOCR imports its engine module by name and reads `config.yaml`, `default_models.yaml` and `models/*.onnx`
+from its package folder, so `build.py` passes `--collect-submodules rapidocr --collect-data rapidocr`. Expect the
+installed app to grow by about 130 MB and the compressed DMG and Setup by roughly 60–70 MB, which puts them past
+GitHub's 100 MB file limit for `installers/`: either publish them as release assets only, like the Linux package, or
+build without the extra (drop the two packages from the `build` group) and ship the reader separately. The frozen
+build with the reader has not been tried yet (the first build should open the Receipt sheet and drop a photo; the
+app must say "Read from the receipt: …", never download anything, and the log must not show
+"The OCR engine could not be loaded").
+
 ## Signing (optional)
 
 - **macOS:** the build is ad-hoc signed by default. Users confirm the first launch once with
