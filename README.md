@@ -173,6 +173,13 @@ The app opens in its own window and keeps all data in your user folder:
 
 ## First steps
 
+On the first start the app shows a **welcome screen**: choose the language and the display currency,
+see where your data is kept, and either open Settings for your own data or **Load Sample Data**, a
+year of example records (accounts, a holiday, a renovation, investments, budgets, goals) to explore
+every page with. While the sample data is loaded the sidebar says so; **Settings → Data → Remove
+Sample Data…** empties the folder again (your language and currency stay) and the welcome screen
+comes back. Sample data only goes into an empty data folder.
+
 1. **Settings:**
    - Choose the language (English, Deutsch, Français or Italiano; by default it follows your
      system).
