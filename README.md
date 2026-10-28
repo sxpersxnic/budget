@@ -346,6 +346,7 @@ just setup        # dev dependencies and git hooks
 just dev          # desktop window that restarts when a file in src/ changes
 just dev-web      # the same in the browser, http://127.0.0.1:8080
 just check        # lint, formatting, type check, tests and coverage
+just ci           # the same as the CI job, with a locked install and coverage.xml
 just build        # installer for this OS (see Building the installers)
 ```
 
