@@ -19,6 +19,9 @@ dependencies = [
 [project.optional-dependencies]
 # Linux: pywebview's Qt backend comes as wheels (the GTK one needs system packages)
 native = ["pywebview>=5.0", "pywebview[qt]>=5.3; sys_platform == 'linux'"]
+# Receipt scanning (F04): RapidOCR with its bundled PP-OCR models, run by ONNX Runtime; wheels only, nothing is
+# downloaded. ONNX Runtime has no macOS x86_64 wheel for Python 3.13 any more, so Intel Macs get the manual flow.
+ocr = ["rapidocr>=3.10", "onnxruntime>=1.24; sys_platform != 'darwin' or platform_machine == 'arm64'"]
 
 [project.scripts]
 budget = "budget_app.main:run"
@@ -35,8 +38,15 @@ dev = [
     "ruff>=0.17.1",
     "segno>=1.6.6",
 ]
-# installer builds (see packaging/README.md)
-build = ["pyinstaller>=6.10", "pywebview>=5.3", "pywebview[qt]>=5.3; sys_platform == 'linux'", "pillow>=10"]
+# installer builds (see packaging/README.md); the OCR engine goes into the installers too
+build = [
+    "pyinstaller>=6.10",
+    "pywebview>=5.3",
+    "pywebview[qt]>=5.3; sys_platform == 'linux'",
+    "pillow>=10",
+    "rapidocr>=3.10",
+    "onnxruntime>=1.24; sys_platform != 'darwin' or platform_machine == 'arm64'",
+]
 
 [build-system]
 requires = ["hatchling"]

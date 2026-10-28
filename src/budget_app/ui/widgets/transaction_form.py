@@ -4,7 +4,8 @@ A new expenditure or income with a payee and no category shows the suggested cat
 field, filled in only when clicked; editing one offers "Always Categorize Like This…", which creates a rule.
 
 Paying a QR bill (F03) opens the form prefilled from the bill (`bill_id`): the bill's file is listed under
-Attachments, and saving marks the bill paid in the same undoable step."""
+Attachments, and saving marks the bill paid in the same undoable step. A scanned receipt (F04) opens it with what
+was read (`prefill`), its lines (`items`) and the file waiting under Attachments (`files`)."""
 
 from __future__ import annotations
 
@@ -40,6 +41,7 @@ from budget_app.services import rules as rules_svc
 from budget_app.services import templates as templates_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
+from budget_app.services.items import ItemInput
 from budget_app.services.transactions import TransactionInput
 from budget_app.ui.layout import (
     data_changed,
@@ -84,9 +86,13 @@ class TransactionForm:
         items_from: str = "",
         on_duplicate: Callable[[Transaction], None] | None = None,
         bill_id: str = "",
+        items: list[ItemInput] | None = None,
+        files: list[tuple[str, bytes]] | None = None,
     ):
         self.ctx = ctx
         self._bill_id = bill_id  # F03: saving pays this bill
+        self._start_items = items or []  # F04: a new transaction's lines, as read from a receipt
+        self._start_files = files or []  # F04: (name, content) attached when it is saved
         self.editing = editing
         self.on_saved = on_saved
         self.on_cancel = on_cancel
@@ -261,6 +267,8 @@ class TransactionForm:
                     category=lambda: self.exp_category.value or "",
                     splittable=lambda: self.type.value == TX_EXPENDITURE,
                 )
+                for item in self._start_items:
+                    self.items.add(item.name, item.quantity, item.unit_price, focus=False)
 
             self.tags = tag_select(self.ctx, init.tags, on_change=ch)  # F10, every type
             self.comment = (
@@ -272,6 +280,8 @@ class TransactionForm:
             self.attachments = AttachmentList(
                 self.ctx, self.editing.id if self.editing else "", data_changed, bill_id=self._bill_id
             )
+            for name, data in self._start_files:
+                self.attachments.add_pending(name, data)
             with ui.row().classes("w-full items-center gap-2 no-wrap pt-1"):
                 self.status = ui.label().classes("caption")
                 ui.space()
