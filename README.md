@@ -168,6 +168,14 @@ The app opens in its own window and keeps all data in your user folder:
 - **Internet:** only needed for the daily exchange-rate download. Offline, the app uses the
   last downloaded rates.
 - **Privacy:** the app only accepts connections from your own computer. Nothing is uploaded.
+- **App lock:** **Settings → Security → Set Password…** makes the app ask for a password before it
+  opens (and again after **Lock Now**, the padlock at the bottom of the sidebar). Without more, your
+  files stay plain CSV; if you forget the password, quit the app and delete `security.json` from the
+  data folder. **Encrypt Records → Turn On…** rewrites the record files so that only your password
+  opens them, and shows a **recovery key** once: write it down and keep it apart from the computer.
+  It is the only other way in if you forget the password; without either, the records are lost.
+  Attached files (receipts, bills) are not encrypted. A backup from **Back Up Now…** is written in
+  plain text, so it restores without the password; keep it somewhere safe.
 - **One window at a time:** opening the app a second time while it is running does nothing.
   Switch to the window that is already open.
 
@@ -413,6 +421,8 @@ types, tests and coverage before each push.
 
 - The COICOP notes (`src/budget_app/resources/coicop_notes.json`) are rebuilt from the UN workbook
   with `scripts/coicop_notes.py` (usage in the script); see [Sources](#sources).
+- Encryption at rest (F27) uses the [cryptography](https://cryptography.io) package (scrypt and Fernet);
+  the app implements no cryptographic primitive of its own.
 - The specification is in [docs/Description_Budgeting_App.md](docs/Description_Budgeting_App.md).
 - The implementation (data model, formulas, decisions) is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Code layout: `src/budget_app/{domain,storage,services,ui}`.

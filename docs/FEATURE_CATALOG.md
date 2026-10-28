@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F27 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -146,7 +146,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
     detected and reloaded; no merging.
 20. ☑ **F27:** decided — an app lock (password, or Touch ID / Windows Hello where available)
     before the app opens, and encryption at rest as an opt-in on top, with a recovery key; without
-    the opt-in the files stay readable CSV.
+    the opt-in the files stay readable CSV. Built with a password (architecture §7, decision NEW-F27).
 21. ☑ **F35:** decided — a phone-friendly *quick add* page on the home network, behind the app
     lock and a pairing code; no entries from away from home, no cloud service.
 
@@ -180,7 +180,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F24 | ☑ Done | Export to CSV and JSON | Data out | S–M | Local | – |
 | F25 | ☑ Done | Full backup and restore | Data out | S | Local | – |
 | F26 | ☐ Open | Sync through a cloud folder | Data out | L | Optional | F28 |
-| F27 | ☐ Open | Encryption and app lock | Security | L | Local | – |
+| F27 | ☑ Done | Encryption and app lock | Security | L | Local | – |
 | F28 | ☑ Done | Undo and change history | Security | M | Local | – |
 | F29 | ☑ Done | Multi-language support | Experience | L | Local | – |
 | F30 | ☐ Open | Onboarding and demo data | Experience | M | Local | – |
@@ -1053,7 +1053,30 @@ Dropbox.
 
 #### F27 · Encryption and app lock
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision 20):** **Settings → Security.** *App Lock · Set Password…* (at least 8 characters, typed twice)
+turns the lock on: from then on every page, and the attachment file route, answers with the lock page until the
+password is typed; the browser that set the password is let in at once. The lock page asks for the password only;
+a wrong one is reported, and from the fourth wrong try on the answer waits 1, 2, 4 … up to 30 seconds. A session
+lasts until *Lock Now* (the padlock at the bottom of the sidebar, or the Security row) or until the app is
+started again; nothing about it is written to disk. *Change…* and *Turn Off…* ask for the current password.
+**Encrypt Records · Turn On…** (only with the lock on) asks for the password, rewrites every record file – the
+CSV tables, `settings.json`, the import memory files and `history.jsonl`, in the data folder and in the app's own
+copies under `backups/` – as an opaque file (a marker line and a Fernet token, `cryptography`), and shows the
+**recovery key** once: 32 letters and digits in groups of four, with *Copy* and a checkbox before *Done*. The
+files are encrypted with one random data key, which is wrapped with a key stretched from the password (scrypt)
+and again with one stretched from the recovery key; `security.json` holds the salts, a verifier and the two
+wrapped keys, never a secret. Changing the password rewraps the key; the files are not rewritten. *Forgot your
+password?* on the lock page takes the recovery key and a new password (without encryption it explains that
+deleting `security.json` removes the lock, since the files are readable anyway). *New Recovery Key…* retires the
+old one; *Turn Off…* decrypts the files again, and the lock can be turned off only after that. A folder whose
+records are encrypted opens its store only after the unlock; rates and automatic bookings follow then. *Back Up
+Now* writes the records in plain text (the caption says so), so a backup stays restorable without the password;
+restoring into an encrypted folder encrypts the restored files; a backup that carries a `security.json` is
+refused. Not built: Touch ID / Windows Hello (no vetted library for all three systems in the lockfile), an
+idle timeout, encryption of attachment files and of the ECB rates (attachments are served and opened as files;
+the rates are public), and a lock per profile window (the lock is per data folder; F34 switches folders).
 
 The CSV files are readable by anyone with access to the computer.
 

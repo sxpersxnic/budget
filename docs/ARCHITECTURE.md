@@ -36,7 +36,7 @@ storage/    typed CSV tables + settings JSON
 
 | Module | Responsibility |
 | --- | --- |
-| `main.py` | CLI entry (`uv run budget`). Registers pages, refreshes ECB rates at startup and every 30 min, then books what automatic recurring transactions have due. |
+| `main.py` | CLI entry (`uv run budget`). `register_pages` puts every page behind the app lock's guard (F27) and adds the lock page; `register_routes` adds the attachment, unlock and notes routes; `open_data` opens the folder (at startup, or after the unlock when it is encrypted); `refresh` loads ECB rates at startup and every 30 min, then books what automatic recurring transactions have due. |
 | `config.py` | Base currency `CHF`, ECB URL, data/resource paths (`BUDGET_DATA_DIR` env override). |
 | `domain/months.py` | `YYYY-MM` month arithmetic and the "month complete" rule. |
 | `domain/fx.py` | `FxRates` (parse ECB CSV, rate lookup with date fallback, cross-rate conversion, `history()` for the rate chart) and `FxService` (daily download, atomic file replacement). |
@@ -62,8 +62,11 @@ storage/    typed CSV tables + settings JSON
 | `services/bills.py` | F03 (decision 15). `read` (the valid bills of a file and the reasons for refused codes; a notice of 0.00 is refused), `scan` (adds new bills with the file as attachment; refuses a file without a usable or new bill), `from_payload`, `bill_key` (duplicates), `open_bills` (by due date, undated last), `closed_bills`, `due` / `due_count` (overdue or due within 7 days, the sidebar badge), `payee` (`payees.resolve` of the creditor), `note`, `payment_input` (the sheet's prefill), `suggestion` (F07), `mark_paid`, `check_payment` / `paid_with` (the sheet's way), `release` (a deleted payment opens its bill again), `dismiss`, `reopen`, `set_due`, `delete`, `payment`; every write one undoable action. |
 | `storage/backup.py` | On the first start of a new app version, copies the data files to `<data>/backups/` before the store loads them, and hard-links the attachment files there (copies where links fail; they never change once written). The version that last opened the folder is in `<data>/.app_version`. |
 | `storage/lock.py` | Single-instance lock on `<data>/.lock`, so two processes cannot overwrite each other's files. |
+| `storage/encryption.py` | F27. `Codec`: the record files' form on disk, plain text or (with a Fernet key) a marker line and a Fernet token; `read_text` / `write_text` (whole file, fsync, rename) used by every table, the settings, the history and the import memory files; `reencode(folder, codec, write)` rewrites a folder's record files in another form. A codec with a key reads plain files too. |
+| `storage/vault.py` | F27. `Vault`: `<data>/security.json` – the password's salt, scrypt parameters and verifier; while encryption is on, the data key wrapped with the password's and with the recovery key's stretched key; the phone-companion flag (F35). `set_password`, `verify`, `change_password`, `remove_password`, `enable_encryption` (returns the data key and the recovery key), `unlock`, `unlock_with_recovery`, `reset_password`, `new_recovery_key`, `disable_encryption`. Primitives from `cryptography` only. |
 | `storage/history.py` | Change history and undo (F28): every table write records the record before and after (as written to the CSV file); changes made together form one *action* (`history.action(label)`, nested ones join the outer). Undo reverts an action in reverse order after checking every record still looks as the action left it. Kept in `history.jsonl` (the newest 500 actions), not part of backups. |
-| `services/context.py` | `Context` (store + FX), conversion helpers, budget horizon, `ValidationError`. |
+| `services/context.py` | `Context` (store + FX), conversion helpers, budget horizon, `ValidationError`. `init_context(data_dir, codec)` opens a folder (also after the unlock of an encrypted one); `is_open()`, `close_context()`. |
+| `services/security.py` | F27, F35. The process-wide lock state: the open folder's `Vault`, its `Codec` (the key once unlocked) and the sessions, random tokens in the `budget_session` cookie, kind `desktop` (password) or `phone` (pairing code), kept in memory only. `allowed` / `redirect_for` for the page guard; `unlock` and `recover` (wrong answers slowed from the fourth on), handed over as one-time nonces that the `/unlock/<nonce>` route turns into the cookie; `lock`; the Settings actions (`set_password`, `change_password`, `remove_password`, `enable_encryption`, `disable_encryption`, `new_recovery_key`), which re-encode the data folder and its `backups/` copies; `opener` opens the store after the unlock of an encrypted folder. |
 | `services/accounts.py` | Accounts (with their asset class, F21), advance-payment accounts and income categories, with their deletion rules. |
 | `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement; deleting releases the QR bills a deleted transaction paid (F03); `recent_categories()` (the last ten distinct expenditure categories, for the category picker). An edit is `prepare_edit` (validate and build the new record, nothing saved) then `store_edit` (save it, keeping an exchange's spread booking in step); `save` does both. |
 | `services/bulk.py` | Bulk edit (F13): `BulkChanges` (expenditure category, income category, payee, account, tags to add and to remove (F10), note mode and text; `None` or an empty list leaves a field as it is), which field applies to which row (`takes_*`, `is_spread`), `plan()` (every selected row as form input with the changes applied, checked with `prepare_edit`; rows the changes leave as they are drop out, also when the built record equals the stored one) and `bulk_edit()`, all or nothing (`BulkEditError` names the failing rows by date and amount) as one recorded action. Adding a field means one attribute, one `takes_*` rule and one line in `apply()`. |
@@ -94,7 +97,7 @@ storage/    typed CSV tables + settings JSON
 | `ui/widgets/` | Searchable selects, the payee field (`selects.PayeeInput`: a `ui.input` with the component `resources/payee_input.js`, a Quasar select used as text autocomplete, so the typed text is the value and the known payees, recently used first, are suggested while typing, matched anywhere and ignoring case and accents), transaction form (page, add sheet and edit sheet), AG Grid helpers. `selects.CategorySelect` is the category picker (F08): a `ui.select` subclass whose component `resources/category_select.js` (NiceGUI's `select.js` with another filter and option template) filters on each option's pre-folded `search` text in the browser, so typing is instant and needs no round trip; options show the official name as a second line and a history icon when recently used. F40: the filter also accepts the option's `note_search` words and lists those matches after the matches by name (the test helper `offered()` in `tests/ui/test_category_picker.py` mirrors it); the component loads the notes once per page from `notes-url` (`/coicop-notes/<lang>?v=<hash>`, served by `selects.add_notes_route()`, cached immutably) when the picker first opens, shared by every picker on the page, and shows an option's notes in a `q-tooltip` on hover (after 350 ms) or when the arrow keys reach it; on touch screens (`$q.platform.has.touch`) an info button in the option opens them inside the option instead, and stops its tap from selecting. Used by the transaction form, both budget forms, the Budget Plan edit sheet, the bulk edit sheet and the import page (with the income categories as extra options). The value stays the COICOP code (or `TAX`). `bulk_edit.BulkEditSheet` is the bulk edit sheet (F13): one method per field, re-planned with `bulk.plan` on every change. `rule_sheet.open_rule_sheet` adds or edits a categorization rule (F07), `always_like_this` opens it from a transaction. |
 | `ui/widgets/tags.py` | F10. `TagSelect`: a multiple `ui.select` whose chosen tags are chips in their colour (Quasar slots `selected-item` and `option`), a name typed with Enter added as it is (a new tag once saved; a typed name of an existing tag picks it, ignoring case); `chip`, `ColourPicker` (one swatch per palette colour) and `CHIPS_RENDERER`, the AG Grid cell renderer that builds the chips as elements from the row's `_tags`, so names are never HTML. |
 | `ui/widgets/notable.py` | F18. `notable_card(ctx, currency)`, the Overview's *Notable This Month* card: one link row per item (icon, title, reason, amount, chevron) to `link(item, month)`; `texts(item, notable)` words each kind. |
-| `ui/widgets/attachments.py` | F12. `AttachmentList`, the *Attachments* section of the transaction form (see §6), and the route `/attachment/{id}` (`register`, `serve`, `url`). |
+| `ui/widgets/attachments.py` | F12. `AttachmentList`, the *Attachments* section of the transaction form (see §6), and the route `/attachment/{id}` (`register`, `serve`, `url`), behind the app lock (F27). |
 | `ui/pages/` | One module per page (see §6). |
 
 ## 3. Data model (`data/`)
@@ -122,7 +125,8 @@ ECB date of the rate used** (`fx_date`).
 | `goals.csv` | `name, currency, kind, target, months, target_date, account_id, saved, reserve, archived, start, start_amount, id` – one row per savings goal (F14). `kind` `amount` aims at `target`; `months` at `months` × the average monthly spending of the last 12 complete months, both in `currency`. `target_date` is `YYYY-MM-DD` or empty. With `account_id` the progress is that regular account's balance, else `saved` (typed in). `start` and `start_amount` are where the on-track line begins: the day the goal was added (or linked to another account, or given another currency) and what it held then. `reserve` (0/1) puts it into the free-wealth line; `archived` (0/1) takes it out of the lists, the Overview and the reserve. |
 | `tax_sections.csv` | `tags, id` – the tags linked to a section of the tax summary (F20): `id` is the section's key (`professional`, `pillar3a`, `insurance`, `medical`, `donations`, `childcare`, `debt_interest`, `withholding`, `securities`), `tags` tag ids separated by `\|`. A section without a row has no tags; deleting or merging a tag rewrites it like any record. |
 | `prices.csv` | `holding_id, date, price, id` – a price typed in or pasted (F21), one per holding and day. |
-| `settings.json` | `budget_horizon, display_currency, last_fx_download` |
+| `settings.json` | `budget_horizon, display_currency, last_fx_download, language` |
+| `security.json` | F27, plain JSON, never backed up or encrypted: `version`; `password` (`salt`, `n`, `r`, `p`, `verifier`); while encryption is on, `encryption.password.wrapped` and `encryption.recovery` (`salt`, `n`, `r`, `p`, `verifier`, `wrapped`); `phone.enabled` (F35). Absent while the lock is off. With encryption on, every other record file (the tables, `settings.json`, `history.jsonl`, `import_*.json`, also in `backups/`) is `BUDGET-ENCRYPTED-1\n` followed by a Fernet token. |
 | `attachments/<transaction or bill id>/<id>.<ext>` | The attachment files (F12; a QR bill's in the bill's folder, F03), named by the app, never by the user. |
 | `ecb/eurofxref-hist.csv` | Latest ECB file (replaced daily) |
 
@@ -754,6 +758,32 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     (too noisy). The Budget page's comparison reuses the budget and difference columns rather than adding
     columns, so the ledgers keep the widths decision 1 gave them.
 
+27. **decision NEW-F27 · The lock is a password; encryption is a key the password and a recovery key wrap** (F27,
+    decision 20). The lock is a session cookie granted after the password, not a check on the process: the server
+    also answers phones once F35 is on, so each browser proves itself, and every start of the app locks again
+    because sessions live in memory only. The guard runs before a page is built (`main._guarded` returns a
+    redirect), since a page's HTML carries the records; the attachment route checks the same session. Pages set
+    no cookie after they are sent, hence the one-time nonce and the `/unlock/<nonce>` route. The password is
+    stretched with scrypt (`cryptography`; parameters stored per entry so they can be raised) into a verifier
+    that is stored and a wrapping key that is not. Encryption uses one random data key, so changing the password
+    rewraps a few bytes instead of rewriting the folder, and the recovery key (160 bits, base32 in groups of
+    four, shown once) is a second wrapping of the same key: no secret is ever written in the clear, and a
+    forgotten password without the recovery key means the records are gone, which Settings says. Fernet (AES-CBC
+    with HMAC, IV and timestamp in the token) was chosen over a hand-assembled AES-GCM because it is the
+    library's own "recipe" layer; nothing cryptographic is implemented in this app. Files keep their names and
+    gain a marker line, so backups, restore, the version copies and the file list code are unchanged; the codec
+    reads plain files even with a key, so a folder may be mixed while encryption is turned on or off, right after
+    a restore, or after a crash in between, and `reencode` finishes the job. *Back Up Now* writes plain text on
+    purpose: a backup is for a disk that died, when the `security.json` is gone with it, and it must restore
+    without anything but itself; the Settings caption says so. The app's own copies in `backups/` are inside the
+    data folder and are encrypted or decrypted with it, so a `before-restore` copy stays restorable. A backup
+    is refused if it carries `security.json`, so a crafted archive cannot replace the key material. An
+    encrypted folder cannot be read at startup, so the store opens after the unlock (`security.opener`), and
+    the rate refresh and automatic bookings follow then. Wrong passwords are answered more slowly from the fourth
+    try (1, 2, 4 … 30 s, process-wide): the lock also faces the home network once F35 is on. Touch ID and Windows
+    Hello were left out: no vetted library covers all three systems from the lockfile. Attachment files are not
+    encrypted; they are served and opened as files, and the README says so.
+
 ## 8. Testing
 
 - `uv run pytest` runs the unit tests (`tests/`) for:
@@ -837,6 +867,17 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     unexplained difference or projection (CHF, EUR, USD views), advances shared proportionally with repayment,
     settlement and the edit lock unchanged, tags deleted and merged on lines, bulk edit changing only the rest,
     and undo of a transaction with its lines;
+  - app lock and encryption (F27): the codec (plain and encrypted round trips, a tampered file, the wrong key,
+    reading plain files with a key, re-encoding a folder's record files and nothing else), the vault (short and
+    repeated passwords, wrong ones, change and removal, recovery keys and their normalization, one data key
+    behind password and recovery key, reset, a retired recovery key, turning encryption off), an encrypted store
+    and its JSON files, backups that stay plain and restore into an encrypted folder, the app's own copies read
+    through the key, a backup carrying `security.json` refused, sessions through one-time nonces, safe next
+    paths, slowed wrong attempts, stale nonces, re-encoding the folder and its copies, the store opening after
+    the unlock, the attachment route behind the lock; in the simulated client the lock page (redirect, wrong and
+    right password, the cookie holding across pages, Lock Now, the recovery key) and the Security group in
+    Settings (set, change and turn off the password, encryption on with the recovery key shown once, a new
+    recovery key, off again);
   - investments (F21): the booked value staying at quantity × price after buys, sales between two
     prices, back-dated trades and prices, edits, moves and deletes (also 40 random events with
     random edits and deletes), oversold sales refused, fees, dividends and their category, one undo
