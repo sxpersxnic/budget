@@ -26,7 +26,8 @@ class BudgetInput:
     comment: str = ""
 
 
-def _validate_category(ctx: Context, type_: str, category: str) -> None:
+def validate_category(ctx: Context, type_: str, category: str) -> None:
+    """A budgetable category of the type: a COICOP code or Taxes, or an income category that exists."""
     if type_ == BUDGET_EXPENDITURE:
         if category == ADV or (category != TAX and get_coicop().get(category) is None):
             raise ValidationError(t("Select an expenditure category"))
@@ -64,7 +65,7 @@ def validate(ctx: Context, inp: BudgetInput) -> list[str]:
         raise ValidationError(t("Amount must be a positive number"))
     if not inp.currency:
         raise ValidationError(t("Currency is required"))
-    _validate_category(ctx, inp.type, inp.category)
+    validate_category(ctx, inp.type, inp.category)
     return plan_months(ctx, inp)
 
 
@@ -118,7 +119,7 @@ def update_entry(
     if amount is None or amount <= 0:
         raise ValidationError(t("Amount must be a positive number"))
     if category is not None:
-        _validate_category(ctx, entry.type, category)
+        validate_category(ctx, entry.type, category)
         entry.category = category
     entry.amount = round(float(amount), 2)
     entry.currency = currency or entry.currency

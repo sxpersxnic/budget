@@ -21,6 +21,8 @@ from budget_app.domain.models import (
     Price,
     Recurring,
     Rule,
+    Scenario,
+    ScenarioChange,
     Settings,
     Tag,
     TaxSection,
@@ -78,6 +80,8 @@ class Store:
         self.tags = CsvTable(data_dir / "tags.csv", Tag, h)  # F10
         self.bills = CsvTable(data_dir / "bills.csv", Bill, h)  # F03; their files are attachments
         self.goals = CsvTable(data_dir / "goals.csv", Goal, h)  # F14
+        self.scenarios = CsvTable(data_dir / "scenarios.csv", Scenario, h)  # F15
+        self.scenario_changes = CsvTable(data_dir / "scenario_changes.csv", ScenarioChange, h)
         self.tax_sections = CsvTable(data_dir / "tax_sections.csv", TaxSection, h)  # F20: tags per section
         self._settings = SettingsStore(data_dir / "settings.json")
 
@@ -101,6 +105,8 @@ class Store:
             self.tags,
             self.bills,
             self.goals,
+            self.scenarios,
+            self.scenario_changes,
             self.tax_sections,
         ]
         return {t.name: t for t in tables}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date
 
@@ -14,6 +15,9 @@ from budget_app.services import investments as inv_svc
 from budget_app.services.aggregates import projected_net
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
+
+# a month's expected net: `aggregates.projected_net` for the plan; a what-if scenario (F15) passes its own
+NetFn = Callable[[Context, str, str], float]
 
 
 @dataclass
@@ -173,11 +177,12 @@ def _projection_start(ctx: Context, view_cur: str) -> tuple[str | None, float]:
     return months.add_months(last, 1), wealth(ctx, last, view_cur)
 
 
-def projected_wealth(ctx: Context, month: str, view_cur: str) -> float:
+def projected_wealth(ctx: Context, month: str, view_cur: str, net: NetFn = projected_net) -> float:
     """Wealth of the last recorded month plus the expected net of every month after it up to `month`.
 
     A month's expected net takes, per category, the higher of recorded and budgeted amounts
-    (`aggregates.projected_net`); this holds for months that are over but have no balances yet too.
+    (`aggregates.projected_net`); this holds for months that are over but have no balances yet too. A scenario
+    (F15) passes its own `net`, which lays its changes over the plan's budgets.
     """
     last = last_recorded_month(ctx)
     if last is not None and month <= last:
@@ -185,7 +190,7 @@ def projected_wealth(ctx: Context, month: str, view_cur: str) -> float:
     start, base = _projection_start(ctx, view_cur)
     if start is None or start > month:
         return base
-    return base + sum(projected_net(ctx, m, view_cur) for m in months.month_range(start, month))
+    return base + sum(net(ctx, m, view_cur) for m in months.month_range(start, month))
 
 
 def current_wealth(ctx: Context, view_cur: str, today: date | None = None) -> float:
@@ -194,9 +199,10 @@ def current_wealth(ctx: Context, view_cur: str, today: date | None = None) -> fl
 
 
 def wealth_series(
-    ctx: Context, view_cur: str, end: str | None = None, today: date | None = None
+    ctx: Context, view_cur: str, end: str | None = None, today: date | None = None, net: NetFn = projected_net
 ) -> list[tuple[str, float, bool]]:
-    """(month, wealth, is_projection) from the first recorded month to `end` (default: horizon)."""
+    """(month, wealth, is_projection) from the first recorded month to `end` (default: horizon); the projection
+    with the plan's budgets, or with a scenario's `net` (F15)."""
     end = end or ctx.horizon()
     last = last_recorded_month(ctx)
     out: list[tuple[str, float, bool]] = []
@@ -208,6 +214,6 @@ def wealth_series(
         start = min(start or months.current_month(today), months.current_month(today))
     if start is not None:
         for m in months.month_range(start, end):
-            running += projected_net(ctx, m, view_cur)
+            running += net(ctx, m, view_cur)
             out.append((m, running, True))
     return out
