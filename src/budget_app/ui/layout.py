@@ -39,7 +39,9 @@ NAV = [
     ("/payees", N_("Payees"), "o_storefront"),
     ("/tags", N_("Tags"), "o_sell"),
     ("/investments", N_("Investments"), "o_show_chart"),
-    ("/tax", N_("Tax Summary"), "o_account_balance"),  # F20: once a year, so last; it draws on all the others
+    # the two yearly pages close the list: both draw on all the others and are opened a few times a year
+    ("/review", N_("Year in Review"), "o_auto_stories"),  # F19
+    ("/tax", N_("Tax Summary"), "o_account_balance"),  # F20: once a year, so last
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")
 # Routes that are not in the sidebar highlight their parent.
