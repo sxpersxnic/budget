@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20 and F18 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18 and F19 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22, F19 year in review on 2026-10-28). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19 (done), F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -172,7 +172,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F16 | ☑ Done | Budget from history | Planning | S | Local | – |
 | F17 | ☐ Open | Subscription and recurring-spend detection | Insight | M | Local | F09 |
 | F18 | ☑ Done | Trends and unusual spending | Insight | M | Local | – |
-| F19 | ☐ Open | Year in review | Insight | M | Local | – |
+| F19 | ☑ Done | Year in review | Insight | M | Local | – |
 | F20 | ☑ Done | Swiss tax summary | Insight | M | Local | F10 |
 | F21 | ☑ Done | Investments and asset classes | Wealth | L | Local | – |
 | F22 | ☐ Open | Loans and mortgages | Wealth | M | Local | – |
@@ -870,7 +870,27 @@ category's months (the *Income and Expenditure* chart shows that).
 
 #### F19 · Year in review
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §7, decision NEW-F19): a **Year in Review** page (`/review`, in the sidebar before Tax
+Summary: the two yearly pages close the list) with a year picker (last year by default when it has data, else
+the latest year with data; this year is always offered as *so far*), the display currency and a share menu. A
+past year is January to December; the current year is reviewed *so far*, January to the current month, and
+compared with the same months of the year before. The metric strip shows income, expenditure, **saved** (the
+hero, with the savings rate and the year before's) and wealth at the end of the last complete month (with the
+change since the end of the year before, and the year before's change); every amount has the year before's
+below it. Then a bar chart of income and expenditure per month, *Spending by Category* (the statement's
+top-level rows: divisions, Taxes, Advance payments, each with the year before, its share of the year's spending
+and the change as ▲/▼ and a percentage, red when spending rose, the amount in the tooltip; *new* and ▼ 100 %
+for what only one year had), *Income* per category (red when it fell), and the five *Biggest Expenses* (the own
+share of a payment, F11; a button opens the transaction). The figures are the monthly statements added up
+(`aggregates`, per part: a split line in its own category, the share paid for others under *Advance payments*
+and its repayments as income), so the year agrees with the Budget page month by month; wealth is the recorded
+month-end wealth, nothing is projected. **Save as PDF…** renders the review with the chart as the browser draws
+it (the Overview's chart export, `toImage`; the PDF does without when that fails) and the tables; **Export as
+Excel…** gives one sheet per part (Summary, Months, Expenditure, Income, Biggest Expenses). Both are
+formula-safe and in the interface language. Not built: a comparison with the budget of the year, revaluations
+as a line of their own (they are in the wealth change), and a review per tag or account.
 
 A yearly report: income, spending by category, savings rate, wealth change, biggest
 expenses, comparison with the previous year. On screen and as a PDF, built on the existing
