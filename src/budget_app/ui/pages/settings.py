@@ -9,13 +9,21 @@ from nicegui import events, ui
 from budget_app import i18n
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months
-from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR, ASSET_CASH, ASSET_CLASSES, HOLDING_CLASSES
+from budget_app.domain.models import (
+    ACCOUNT_ADVANCE,
+    ACCOUNT_REGULAR,
+    ASSET_CASH,
+    ASSET_CLASSES,
+    ASSET_LOAN,
+    HOLDING_CLASSES,
+)
 from budget_app.i18n import t, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import archive
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
 from budget_app.services import investments as inv_svc
+from budget_app.services import loans as loan_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
@@ -47,20 +55,26 @@ def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
             ui.label(t("Every transaction on this account will be in this currency.")).classes("caption -mt-2")
         asset_class = None
         if not advance:  # F21: what the account holds; advance-payment accounts are cash
+            is_loan = acc is not None and acc.is_loan  # F22: a loan's account keeps its class; the loan owns it
+            classes = {k: t(v) for k, v in ASSET_CLASSES.items() if (k == ASSET_LOAN) == is_loan}
             asset_class = (
                 ui.select(
-                    {k: t(v) for k, v in ASSET_CLASSES.items()},
-                    value=acc.asset_class if acc and acc.asset_class in ASSET_CLASSES else ASSET_CASH,
+                    classes,
+                    value=acc.asset_class if acc and acc.asset_class in classes else ASSET_CASH,
                     label=t("Asset class"),
                 )
                 .props("dense outlined options-dense")
                 .classes("w-full")
             )
+            if is_loan:
+                asset_class.disable()
             class_note = ui.label().classes("caption -mt-2")
 
             def explain() -> None:
                 fresh = ctx.store.accounts.get(acc.id) if acc else None
-                if fresh is not None and fresh.invest_from and asset_class.value in HOLDING_CLASSES:
+                if asset_class.value == ASSET_LOAN:
+                    text = t("The outstanding debt of its loan on the Loans page; no balances to record.")
+                elif fresh is not None and fresh.invest_from and asset_class.value in HOLDING_CLASSES:
                     text = t(
                         "Valued from its holdings from {month} on; the balances recorded before stay as its history.",
                         month=months.label(fresh.invest_from),
@@ -122,6 +136,13 @@ def _accounts_group(ctx: Context, kind: str, title: str) -> None:
                                     amount=fmt(inv_svc.account_value(ctx, acc.id), acc.currency),
                                 )
                             ).classes("caption")
+                        elif kind == ACCOUNT_REGULAR and acc.is_loan:  # F22
+                            loan = loan_svc.of_account(ctx, acc.id)
+                            owed = t(
+                                "{amount} outstanding",
+                                amount=fmt(loan_svc.debt(ctx, loan) if loan else 0, acc.currency),
+                            )
+                            ui.label(f"{t(ASSET_CLASSES[ASSET_LOAN])} · {owed}").classes("caption")
                         elif kind == ACCOUNT_REGULAR:
                             last = wealth_svc.balance_entry(ctx, acc.id, "9999-12")
                             balance = (
