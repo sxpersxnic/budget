@@ -254,6 +254,15 @@ The app opens in its own window and keeps all data in your user folder:
    date, then the full target). The projection itself doesn't change. **Archive** a goal you reached
    and spent (it leaves the lists and the reserve; **Restore** brings it back), or delete it. The
    Overview shows your first three goals in a **Goals** card.
+   **Scenarios** (sidebar): try a future without touching the plan. A scenario is a name and a list
+   of **changes**: "Salary 4'960 CHF every month from January", "Car purchase 18'500 CHF in April",
+   or 0 to drop a budget from some months. In the scenario the budget of that category *is* that
+   amount in those months; everything else stays as planned, and what you have already recorded
+   still counts. Each scenario shows where it ends against the plan ("Projected for Dec 2027:
+   48'200 CHF · −9'600 CHF against the plan"), and with *On the Overview* turned on the wealth
+   chart draws it as a dashed line beside the plan, so you can compare several futures. When you
+   decide, **Adopt into Plan…** writes the changes into your budget (replacing the plan's budget for
+   those categories and months) and removes the scenario; one Undo takes it back.
 6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is
    due it is listed for one-click booking (change the amount first if it varies, or skip it);
    turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
