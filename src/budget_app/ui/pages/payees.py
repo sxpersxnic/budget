@@ -13,7 +13,7 @@ from budget_app.i18n import t, tn
 from budget_app.services import payees as payee_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.payees import Usage
-from budget_app.ui.layout import error, fmt, frame, on_data_changed, sheet, sheet_buttons, undoable
+from budget_app.ui.layout import error, fmt, frame, named, on_data_changed, sheet, sheet_buttons, undoable
 from budget_app.ui.widgets.grid import confirm
 
 ROW_ACTION = "flat dense round size=sm"
@@ -166,13 +166,19 @@ def page() -> None:
                     ui.label(payee.name).classes("truncate")
                     ui.label(caption(use, currency)).classes("caption")
                 with ui.row().classes("row-actions gap-0 no-wrap"):
-                    ui.button(icon="o_edit", on_click=lambda p=payee: open_rename_sheet(ctx, p, refresh)).props(
-                        ROW_ACTION
-                    ).classes("text-primary").tooltip(t("Rename"))
+                    named(
+                        ui.button(icon="o_edit", on_click=lambda p=payee: open_rename_sheet(ctx, p, refresh))
+                        .props(ROW_ACTION)
+                        .classes("text-primary"),
+                        t("Rename"),
+                    )
                     if not payee_svc.in_use(ctx, payee):
-                        ui.button(icon="o_delete", on_click=lambda p=payee: delete(p)).props(ROW_ACTION).classes(
-                            "text-negative"
-                        ).tooltip(t("Delete"))
+                        named(
+                            ui.button(icon="o_delete", on_click=lambda p=payee: delete(p))
+                            .props(ROW_ACTION)
+                            .classes("text-negative"),
+                            t("Delete"),
+                        )
 
         def refresh() -> None:
             payee_list.refresh()

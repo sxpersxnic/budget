@@ -49,6 +49,7 @@ from budget_app.ui.layout import (
     error,
     fmt,
     fmt_signed,
+    named,
     parse_date,
     segmented,
     sheet,
@@ -329,7 +330,7 @@ class TransactionForm:
     def _templates_menu(self) -> None:
         """Start from a saved template, or save the current fields as one (F06)."""
         button = ui.button(icon="o_bookmarks").props("flat round dense").classes("text-primary")
-        with button.tooltip(t("Templates")), ui.menu().props("auto-close") as menu:
+        with named(button, t("Templates")), ui.menu().props("auto-close") as menu:
             self._template_menu = menu
             self._fill_templates_menu()
 
@@ -344,7 +345,7 @@ class TransactionForm:
                 ):
                     ui.label(tp.name).classes("flex-1")
                     # .stop: deleting must not also apply the template underneath
-                    ui.button(icon="close").props("flat round dense size=xs").classes("text-2").tooltip(t("Delete")).on(
+                    named(ui.button(icon="close").props("flat round dense size=xs").classes("text-2"), t("Delete")).on(
                         "click.stop", lambda tp=tp: self._delete_template(tp)
                     )
             if templates:

@@ -23,7 +23,7 @@ from budget_app.services import review as review_svc
 from budget_app.services import review_export
 from budget_app.services.context import Context
 from budget_app.services.review import Figure, YearReview
-from budget_app.ui.layout import error, fmt, fmt_signed, frame, metric, money_html, on_data_changed, save_file
+from budget_app.ui.layout import error, fmt, fmt_signed, frame, metric, money_html, named, on_data_changed, save_file
 from budget_app.ui.theme import POSITIVE, SERIES, chart_layout, figure_dict
 from budget_app.ui.widgets.selects import currency_select
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
@@ -145,9 +145,12 @@ def _biggest(ctx: Context, review: YearReview, refresh) -> None:
                     ui.label(fmt(item.amount, review.currency)).classes("num font-medium whitespace-nowrap")
                     tx = ctx.store.transactions.get(item.transaction_id)
                     if tx is not None:
-                        ui.button(icon="o_open_in_new", on_click=lambda tx=tx: show(tx)).props(ROW_ACTION).classes(
-                            "text-primary row-actions"
-                        ).tooltip(t("Show the transaction"))
+                        named(
+                            ui.button(icon="o_open_in_new", on_click=lambda tx=tx: show(tx))
+                            .props(ROW_ACTION)
+                            .classes("text-primary row-actions"),
+                            t("Show the transaction"),
+                        )
 
 
 # ------------------------------------------------------------------ the page
@@ -199,7 +202,7 @@ def page() -> None:
             ).props("dense outlined options-dense").classes("w-28")
             currency_select(ctx, state["currency"], on_change=set_currency)
             with (
-                ui.button(icon="ios_share").props("flat round").classes("text-primary").tooltip(t("Export")),
+                named(ui.button(icon="ios_share").props("flat round").classes("text-primary"), t("Export")),
                 ui.menu().props("auto-close"),
             ):
                 ui.menu_item(t("Save as PDF…"), on_click=lambda: export("pdf"))

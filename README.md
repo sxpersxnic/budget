@@ -217,6 +217,10 @@ comes back. Sample data only goes into an empty data folder.
    names. Shortcuts: type a sum such as `12.50+8.30`
    into an amount, press **N** for a new transaction and **⌘↩** (Ctrl+Enter) to save, save the
    usual ones as **templates** (bookmark button), or **Duplicate** an existing transaction.
+   Outside a field, **/** jumps to the page's search, **←** **→** change the month, **1**–**9** open the places
+   in the sidebar and **,** opens Settings; press **?** (or **Keyboard Shortcuts** at the foot of the sidebar)
+   to see them all. In any sheet, **⌘↩** (Ctrl+Enter) saves and **Esc** closes it. Every button has a name for
+   screen readers, and text keeps a contrast of at least 4.5:1 in light and dark mode.
    The category field shows everyday names ("Groceries · 01.1") and your recently used
    categories first, and its search also knows shops and brands: type "Migros", "SBB" or "Netflix".
    It also finds a category by what it includes ("quinoa" finds 01.1.1.1 Cereals); hover over a

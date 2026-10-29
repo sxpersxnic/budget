@@ -21,6 +21,7 @@ from budget_app.ui.layout import (
     error,
     fmt,
     frame,
+    named,
     on_data_changed,
     parse_date,
     sheet,
@@ -261,15 +262,24 @@ def page() -> None:
                         budget_meter(status)
                         ui.label(budget_line(status)).classes("caption" + (" text-neg" if status.over else ""))
                 with ui.row().classes("row-actions gap-0 no-wrap"):
-                    ui.button(icon="o_edit", on_click=lambda g=tag: open_tag_sheet(ctx, refresh, g)).props(
-                        ROW_ACTION
-                    ).classes("text-primary").tooltip(t("Edit"))
-                    ui.button(icon="o_savings", on_click=lambda g=tag: open_budget_sheet(ctx, g, refresh)).props(
-                        ROW_ACTION
-                    ).classes("text-primary").tooltip(t("Budget"))
-                    ui.button(icon="o_delete", on_click=lambda g=tag, n=total: delete(g, n)).props(ROW_ACTION).classes(
-                        "text-negative"
-                    ).tooltip(t("Delete"))
+                    named(
+                        ui.button(icon="o_edit", on_click=lambda g=tag: open_tag_sheet(ctx, refresh, g))
+                        .props(ROW_ACTION)
+                        .classes("text-primary"),
+                        t("Edit"),
+                    )
+                    named(
+                        ui.button(icon="o_savings", on_click=lambda g=tag: open_budget_sheet(ctx, g, refresh))
+                        .props(ROW_ACTION)
+                        .classes("text-primary"),
+                        t("Budget"),
+                    )
+                    named(
+                        ui.button(icon="o_delete", on_click=lambda g=tag, n=total: delete(g, n))
+                        .props(ROW_ACTION)
+                        .classes("text-negative"),
+                        t("Delete"),
+                    )
 
         def refresh() -> None:
             tag_list.refresh()

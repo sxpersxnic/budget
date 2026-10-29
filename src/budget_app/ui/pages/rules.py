@@ -12,7 +12,7 @@ from budget_app.i18n import t, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import rules as rules_svc
 from budget_app.services.context import Context
-from budget_app.ui.layout import frame, on_data_changed, undoable
+from budget_app.ui.layout import frame, named, on_data_changed, undoable
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.rule_sheet import open_rule_sheet
 
@@ -70,12 +70,18 @@ def page() -> None:
                     ui.label(t("Contains “{match}”", match=rule.match)).classes("truncate")
                     ui.label(caption(ctx, rule)).classes("caption")
                 with ui.row().classes("row-actions gap-0 no-wrap"):
-                    ui.button(icon="o_edit", on_click=lambda r=rule: open_rule_sheet(ctx, refresh, editing=r)).props(
-                        ROW_ACTION
-                    ).classes("text-primary").tooltip(t("Edit"))
-                    ui.button(icon="o_delete", on_click=lambda r=rule: delete(r)).props(ROW_ACTION).classes(
-                        "text-negative"
-                    ).tooltip(t("Delete"))
+                    named(
+                        ui.button(icon="o_edit", on_click=lambda r=rule: open_rule_sheet(ctx, refresh, editing=r))
+                        .props(ROW_ACTION)
+                        .classes("text-primary"),
+                        t("Edit"),
+                    )
+                    named(
+                        ui.button(icon="o_delete", on_click=lambda r=rule: delete(r))
+                        .props(ROW_ACTION)
+                        .classes("text-negative"),
+                        t("Delete"),
+                    )
 
         def refresh() -> None:
             rule_list.refresh()

@@ -17,7 +17,7 @@ from budget_app.i18n import t, tn
 from budget_app.services import subscriptions as sub_svc
 from budget_app.services.context import ValidationError
 from budget_app.services.subscriptions import Subscription
-from budget_app.ui.layout import error, fmt, frame, on_data_changed, undoable
+from budget_app.ui.layout import error, fmt, frame, named, on_data_changed, undoable
 from budget_app.ui.pages.add_budget import recurrence_label
 from budget_app.ui.pages.recurring import open_recurring_sheet
 
@@ -117,9 +117,12 @@ def page() -> None:
                                 ui.button(t("Make Recurring…"), on_click=lambda s=sub: make_recurring(s)).props(
                                     "flat dense no-caps"
                                 ).classes("text-primary")
-                                ui.button(icon="o_visibility_off", on_click=lambda s=sub: ignore(s)).props(
-                                    f'{ROW_ACTION} aria-label="{t("Ignore")}"'
-                                ).classes("text-2").tooltip(t("Ignore"))
+                                named(
+                                    ui.button(icon="o_visibility_off", on_click=lambda s=sub: ignore(s))
+                                    .props(ROW_ACTION)
+                                    .classes("text-2"),
+                                    t("Ignore"),
+                                )
 
         @ui.refreshable
         def series_list() -> None:

@@ -11,7 +11,7 @@ from nicegui import ui
 from budget_app import i18n
 from budget_app.i18n import t
 from budget_app.services import export as export_svc
-from budget_app.ui.layout import error, save_file, sheet
+from budget_app.ui.layout import error, named, save_file, sheet
 
 # Amounts keep the Swiss format in every language.
 NUMBER = "toLocaleString('de-CH', {minimumFractionDigits: 2, maximumFractionDigits: 2}).replace('-', '−')"
@@ -231,7 +231,7 @@ def export_menu(name: str, title: str, columns: Callable[[], list[dict]], rows: 
         await save_file(data, f"{name}_{date.today().isoformat()}.{kind}")
 
     with (
-        ui.button(icon="ios_share").props("flat round").classes("text-primary").tooltip(t("Export the list")),
+        named(ui.button(icon="ios_share").props("flat round").classes("text-primary"), t("Export the list")),
         ui.menu().props("auto-close"),
     ):
         ui.menu_item(t("Export as CSV…"), on_click=lambda: export("csv"))

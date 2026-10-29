@@ -25,7 +25,7 @@ from budget_app.domain.models import Attachment
 from budget_app.i18n import t, tn
 from budget_app.services import attachments as attachments_svc
 from budget_app.services.context import Context, ValidationError, get_ctx
-from budget_app.ui.layout import error, save_file, undoable
+from budget_app.ui.layout import error, named, save_file, undoable
 
 ROUTE = "/attachment/{attachment_id}"
 ICONS = {"pdf": "o_picture_as_pdf", "image": "o_image", "office": "o_description", "text": "o_article"}
@@ -218,19 +218,28 @@ class AttachmentList:
                 name.tooltip(t("Show or hide the preview"))
             with ui.row().classes("gap-0 no-wrap"):
                 if _native():
-                    ui.button(icon="o_open_in_new", on_click=lambda att=att: self._open(att)).props(
-                        "flat round dense size=sm"
-                    ).classes("text-primary").tooltip(t("Open"))
+                    named(
+                        ui.button(icon="o_open_in_new", on_click=lambda att=att: self._open(att))
+                        .props("flat round dense size=sm")
+                        .classes("text-primary"),
+                        t("Open"),
+                    )
                 else:
                     with ui.link(target=url(att), new_tab=True).classes("attach-link"):
                         ui.icon("o_open_in_new", size="18px").tooltip(t("Open"))
-                ui.button(icon="o_download", on_click=lambda att=att: self._save_copy(att)).props(
-                    "flat round dense size=sm"
-                ).classes("text-primary").tooltip(t("Save a Copy…"))
+                named(
+                    ui.button(icon="o_download", on_click=lambda att=att: self._save_copy(att))
+                    .props("flat round dense size=sm")
+                    .classes("text-primary"),
+                    t("Save a Copy…"),
+                )
                 if not self.bill_id:  # the bill's file stays the bill's until it is paid
-                    ui.button(icon="o_delete", on_click=lambda att=att: self._remove(att)).props(
-                        "flat round dense size=sm"
-                    ).classes("text-3").tooltip(t("Remove"))
+                    named(
+                        ui.button(icon="o_delete", on_click=lambda att=att: self._remove(att))
+                        .props("flat round dense size=sm")
+                        .classes("text-3"),
+                        t("Remove"),
+                    )
 
     def _pending_row(self, index: int, name: str, data: bytes) -> None:
         ft = files.file_type(name, data)
@@ -240,9 +249,12 @@ class AttachmentList:
             with ui.column().classes("gap-0 min-w-0 attach-name"):
                 ui.label(name).classes("ellipsis")
                 ui.label(f"{attachments_svc.size_label(len(data))} · {t('Attached when you save')}").classes("caption")
-            ui.button(icon="close", on_click=lambda i=index: self._drop_pending(i)).props(
-                "flat round dense size=sm"
-            ).classes("text-3").tooltip(t("Remove"))
+            named(
+                ui.button(icon="close", on_click=lambda i=index: self._drop_pending(i))
+                .props("flat round dense size=sm")
+                .classes("text-3"),
+                t("Remove"),
+            )
 
     def _show_preview(self, att: Attachment | None) -> None:
         self._preview.clear()

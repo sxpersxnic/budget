@@ -22,6 +22,7 @@ from budget_app.ui.layout import (
     error,
     fmt,
     frame,
+    named,
     on_data_changed,
     parse_date,
     save_file,
@@ -175,10 +176,8 @@ def open_summary_sheet(ctx: Context, key: str) -> None:
 
 # ------------------------------------------------------------------ the page
 def _icon_button(icon: str, tip: str, on_click: Callable[[], object]) -> ui.button:
-    """A row's icon-only button: the tooltip doubles as its accessible name."""
-    button = ui.button(icon=icon, on_click=on_click).props(f'{ROW_ACTION} aria-label="{tip}"').classes("text-primary")
-    button.tooltip(tip)
-    return button
+    """A row's icon-only button: the tooltip doubles as its accessible name (F32)."""
+    return named(ui.button(icon=icon, on_click=on_click).props(ROW_ACTION).classes("text-primary"), tip)
 
 
 def page() -> None:

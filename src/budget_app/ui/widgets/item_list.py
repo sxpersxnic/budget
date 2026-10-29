@@ -20,7 +20,7 @@ from budget_app.i18n import t, tn
 from budget_app.services import items as items_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.items import ItemInput
-from budget_app.ui.layout import fmt
+from budget_app.ui.layout import fmt, named
 from budget_app.ui.widgets.selects import expenditure_category_select
 from budget_app.ui.widgets.tags import TagSelect
 
@@ -117,10 +117,13 @@ class ItemList:
             row = _Row(el, name_in, qty, price, line_total)
             row.init_category, row.init_tags = category, tag_codec.split(tags)
             row.split_btn = ui.button(icon="call_split", color=None, on_click=lambda r=row: self._toggle_split(r))
-            row.split_btn.props("flat dense round size=sm").classes("text-3 split-btn")
-            row.split_btn.tooltip(t("Own category or tags for this item"))
-            remove = ui.button(icon="close").props("flat dense round size=sm").classes("text-3")
-            remove.tooltip(t("Remove item"))
+            named(
+                row.split_btn.props("flat dense round size=sm").classes("text-3 split-btn"),
+                t("Own category or tags for this item"),
+            )
+            remove = named(
+                ui.button(icon="close").props("flat dense round size=sm").classes("text-3"), t("Remove item")
+            )
         self._rows.append(row)
         remove.on_click(lambda r=row: self._remove(r))
         for field in (name_in, qty, price):

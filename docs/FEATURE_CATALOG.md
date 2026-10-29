@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19 (done), F30 (done), F32, F31 (done), F22 (done), F23 (done), F33 (done), F34, F15 (done), F17 (done), F27, F26, F04 (done), F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19 (done), F30 (done), F32 (done), F31 (done), F22 (done), F23 (done), F33 (done), F34, F15 (done), F17 (done), F27, F26, F04 (done), F35 | – |
 
 ### Bugs
 
@@ -186,7 +186,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F29 | ☑ Done | Multi-language support | Experience | L | Local | – |
 | F30 | ☑ Done | Onboarding and demo data | Experience | M | Local | – |
 | F31 | ☑ Done | Reminders and alerts | Experience | M | Local | – |
-| F32 | ☐ Open | Keyboard shortcuts and accessibility | Experience | M | Local | – |
+| F32 | ☑ Done | Keyboard shortcuts and accessibility | Experience | M | Local | – |
 | F33 | ☑ Done | In-app update check | Experience | S | Optional | – |
 | F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
 | F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
@@ -1306,11 +1306,26 @@ Shown when the app runs; reminders while it's closed would need a small backgrou
 
 #### F32 · Keyboard shortcuts and accessibility
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
 
 - Shortcuts: new transaction, save, search, previous/next month (`←` `→`), switch pages.
 - Screen-reader labels, visible focus, logical tab order, sufficient contrast in both
   appearances (the colour tokens make the contrast checkable).
+
+**As built (decision 37):** Wherever the cursor is not in a field, **N** opens a new transaction (F06),
+**/** puts the cursor in the page's search, **←** and **→** step the month on pages with a month stepper, **1**–**9**
+open the places of the sidebar in their order and **,** opens Settings; **?** (or *Keyboard Shortcuts* at the foot
+of the sidebar) shows them all in a sheet. While a sheet is open the page keys wait: **Esc** closes it and
+**Ctrl/⌘ Enter** presses its action from any field (every sheet with *Cancel* and an action; the transaction form
+and bulk edit keep their own). The key stays in the sheet, so saving a template from the transaction form no longer
+also saves the transaction. Every icon-only button has a name for screen readers (`aria-label`, the same text as
+its tooltip), the sidebar is a navigation landmark and the page a main landmark, a *Skip to content* link appears on
+the first Tab, focus shows as a ring in the accent colour, and nothing takes a positive tab index, so the tab order
+follows the page. A test opens every page and fails on an unnamed icon button. **Colour contrast:** a test reads
+the colour tokens of both appearances and checks every text colour on the page, card and raised surfaces for WCAG
+AA (4.5:1) and white on filled buttons; that moved a few tokens: secondary and tertiary text, the light accent and
+positive green are a little darker, and in dark mode the tertiary text, accent text and red are lighter while filled
+buttons use a darker blue and red (`--accent-strong`, `--negative-strong`) so their white label keeps its contrast.
 
 #### F33 · In-app update check
 
