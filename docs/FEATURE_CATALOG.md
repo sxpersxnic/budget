@@ -590,7 +590,7 @@ and accents; the longest text wins, between equally long ones the newest. **Hist
 category the payee had most often among transactions of the same type (ties: the most recent), "Used 14 times for
 this payee"; rows stored before payees (F09) fall back to the same bank text without its digits. Where no account
 is fixed, an account is suggested too: the rule's, else the one the payee had most often. The **form** shows
-"Use Groceries · 01.1" with the reason under the category of a new expenditure or income once it has a payee; a
+"Use 01.1 Groceries" with the reason under the category of a new expenditure or income once it has a payee; a
 click fills the category (and the account, if still empty). The **import preview** (CSV and camt) fills in
 suggestions in italics, with a *Suggestion* column for the reason, counts them in the summary and offers *Clear
 Suggestions*; a category chosen by hand loses the mark, a changed payee brings a new suggestion, and importing keeps
@@ -617,16 +617,18 @@ categorize like this*, never from a confirmed suggestion.
 
 **Status:** ☑ Done (2026-10-20, `6786f2a`)
 
-**As built:** 81 common COICOP codes (and Taxes) have an everyday name in English, German, French
-and Italian plus about 1'700 search words (shops, brands and Swiss terms such as Migros, SBB, ZVV,
-Krankenkasse, Serafe, Kita, Nebenkosten) in `resources/everyday_categories.json`; every other
-category keeps its translated COICOP name. The picker shows "Groceries · 01.1" with the official
-name as a second line and lists the last ten distinct expenditure categories first (marked with a
+**As built:** every COICOP division and group, the classes people book and Taxes (218 entries since the
+redesign before 1.0, decision NEW-NAMES; 81 before) have an everyday name in English, German, French
+and Italian plus search words (shops, brands and Swiss terms such as Migros, SBB, ZVV,
+Krankenkasse, Serafe, Kita, Nebenkosten, Eigenmietwert) in `resources/everyday_categories.json`; a ".0" class
+that repeats its group takes the group's name, every other category keeps its translated COICOP name. The
+picker shows "01.1 Groceries" with the official name as a second line and lists the last ten distinct expenditure categories first (marked with a
 history icon). The search matches everyday name, search words, official name and code, ignoring
 case and accents, in the browser; since F40 also what the COICOP notes say a category includes
 (listed after the matches by name), and hovering an option shows its notes. Transaction form, budget forms, the Budget Plan sheet and the
-import page use it; the stored value stays the COICOP code. Not built: favourites, and everyday
-names outside the picker (lists and reports keep the COICOP labels).
+import page use it; the stored value stays the COICOP code. Since the redesign before 1.0 every list,
+ledger, report, chart and export shows the same label ("01.1 Groceries"); the official name is on the
+Categories page and on hover in the Budget ledger and the Transactions grid. Not built: favourites.
 
 COICOP names are statistical ("Individual consumption expenditure of non-profit institutions
 serving households"). Keep COICOP as the storage format, but:
@@ -699,7 +701,7 @@ Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
 **As built (decision 14):** a split is a category per item line. In the transaction form each item line of an
 expenditure has a split button that opens a row below it with the category picker (F08) and a tag field (F10) for
-that line; lines without a category keep the transaction's. Below the list, "Rest in 01.1 Food: 23.40 CHF" shows
+that line; lines without a category keep the transaction's. Below the list, "Rest in 01.1 Groceries: 23.40 CHF" shows
 what stays in the transaction's category, live. `transaction_items.csv` got `category` and `tags` columns (older
 files load unchanged). **How the amount is counted** (`domain.splits`, the one place every consumer uses): each
 line with its own category (or tags) counts its total there, in CHF at the transaction's own rate rounded to the
@@ -712,7 +714,7 @@ discount on its category and raises the rest by as much. **Advances:** every par
 *Income and Expenditure* chart series and their exports, the projection's "higher of recorded and budget", the
 COICOP page's spending this year, and tag totals, budgets and the *Spending by Tag* chart (a line's tags count
 that line, on top of the transaction's). Net income, account balances and the reconciliation use the whole
-transaction and never change (tested). **Transactions** shows a split as "01.1 Food + 2 more"; the search finds
+transaction and never change (tested). **Transactions** shows a split as "01.1 Groceries + 2 more"; the search finds
 its lines' categories, and the tag column and filter include its lines' tags. Deleting or merging a tag rewrites
 the lines too. **Bulk edit** changes only the rest's category (the hint says how many rows are split). Income,
 transfers, exchanges and revaluations are not split: the form hides the split buttons for income and says that
