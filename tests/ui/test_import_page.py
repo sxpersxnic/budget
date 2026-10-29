@@ -11,11 +11,16 @@ from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
 from test_importer import DE, UBS
 
+from budget_app.domain.coicop import get_coicop
 from budget_app.services import importer
 from budget_app.services import transactions as tx_svc
 from budget_app.services.transactions import TransactionInput
 
 SELECTED = re.compile(r".*getSelectedRows")
+NEED_ONE = (
+    "1 row needs a category: select rows, choose one and click Apply, or leave it out and import it later from the "
+    "same file."
+)
 
 
 # ------------------------------------------------------------------ helpers
@@ -114,11 +119,17 @@ async def test_import_a_file_in_three_steps(user: User, ctx, setup) -> None:
 
     put(user, field(user, ui.select, "Account"), setup["eur"].id)
     await user.should_see("3 new · 1 unreadable. Duplicates and unreadable lines are left out")
-    assert status(user) == "3 rows need a category: select rows, choose a category and click Apply."
+    assert status(user) == NEED_ONE
     assert import_button(user).text == "Import 3 Transactions" and not import_button(user).enabled
+    # Coop is a shop the category picker knows: suggested, in italics, with the reason
+    assert [(r["category"], r["suggested"], r["reason"]) for r in rows(user)][:3] == [
+        ("01.1 Groceries", True, "Payee contains “Coop”"),
+        ("01.1 Groceries", True, "Payee contains “Coop”"),
+        ("", False, ""),
+    ]
 
     await categorise(user, "01.1", 0, 1)
-    assert status(user) == "1 row needs a category: select rows, choose a category and click Apply."
+    assert status(user) == NEED_ONE
     await categorise(user, setup["salary"].id, 2)
     assert [r["category"] for r in rows(user)][:3] == ["01.1 Groceries", "01.1 Groceries", "Income · Salary"]
     assert status(user) == "" and import_button(user).enabled
@@ -183,11 +194,37 @@ async def test_categories_only_fit_the_matching_direction(user: User, ctx, setup
     click(user, button(user, "Apply"))
     await settle()
     assert notified(user, "1 row skipped: that category is for spending only")
-    assert [r["category"] for r in rows(user)][:3] == ["01.1 Groceries", "", ""]
+    assert [r["category"] for r in rows(user)][:3] == ["01.1 Groceries", "01.1 Groceries", ""]
 
     await categorise(user, setup["salary"].id, 0, 1, 2)
     assert notified(user, "2 rows skipped: that category is for money coming in only")
-    assert [r["category"] for r in rows(user)][:3] == ["01.1 Groceries", "", "Income · Salary"]
+    assert [r["category"] for r in rows(user)][:3] == ["01.1 Groceries", "01.1 Groceries", "Income · Salary"]
+
+
+async def test_a_category_applied_to_one_row_is_suggested_for_its_payee(user: User, ctx, setup) -> None:
+    await de_file_on_euro_account(user, setup)
+    click(user, button(user, "Clear Suggestions"))
+    await settle()
+    await categorise(user, "05.6", 0)
+    assert notified(user, "1 more row with the same payee got this category")
+    assert [(r["category"], r["suggested"], r["reason"]) for r in rows(user)][:3] == [
+        (get_coicop().label("05.6"), False, ""),
+        (get_coicop().label("05.6"), True, "Same payee as a row you chose"),
+        ("", False, ""),
+    ]
+
+
+async def test_rows_without_a_category_can_be_left_out_and_imported_later(user: User, ctx, setup) -> None:
+    await de_file_on_euro_account(user, setup)
+    assert status(user) == NEED_ONE and not import_button(user).enabled
+    click(user, button(user, "Leave Out Rows Without a Category"))
+    await settle()
+    assert [r["include"] for r in rows(user)] == [True, True, False, False]
+    assert status(user) == "" and import_button(user).text == "Import 2 Transactions"
+    await user.should_not_see("Leave Out Rows Without a Category")
+    click(user, import_button(user))
+    assert notified(user, "Imported 2 transactions")
+    assert len(ctx.store.transactions.all()) == 2  # the row left out comes back with the same file (test_importer)
 
 
 async def test_rows_can_be_excluded_and_included(user: User, ctx, setup) -> None:

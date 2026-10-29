@@ -158,8 +158,21 @@ def test_the_history_suggests_the_most_frequent_category_then_the_latest(ctx, se
     assert categorize.suggest(ctx, TX_EXPENDITURE, "Kiosk", "").reason == "Used 1 time for this payee"
     # another type, an unknown payee, a transfer
     assert categorize.suggest(ctx, TX_INCOME, "Coop", "") is None
-    assert categorize.suggest(ctx, TX_EXPENDITURE, "Migros", "") is None
+    assert categorize.suggest(ctx, TX_EXPENDITURE, "Hans Muster", "") is None
     assert categorize.suggest(ctx, "transfer", "Coop", "") is None
+
+
+def test_without_rule_or_history_a_shop_in_the_payee_suggests_its_category(ctx, setup):
+    hit = categorize.suggest(ctx, TX_EXPENDITURE, "Migros", "Einkauf MIGROS ZUERICH HB")
+    assert hit == categorize.Suggestion("01.1", "", "Payee contains “Migros”", categorize.KEYWORD)
+    # only the payee is searched: "Einkauf" is a search word too, but a booking word in the bank text
+    assert categorize.suggest(ctx, TX_EXPENDITURE, "Hans Muster", "Einkauf Hans Muster") is None
+    assert categorize.suggest(ctx, TX_INCOME, "Migros", "") is None  # income categories are the user's own
+    # history and rules come first
+    tx_svc.save(ctx, spend(setup, "Migros", "05.6"))
+    assert categorize.suggest(ctx, TX_EXPENDITURE, "Migros", "").source == categorize.PAYEE
+    rules_svc.save(ctx, RuleInput(match="migros", category="09.4"))
+    assert categorize.suggest(ctx, TX_EXPENDITURE, "Migros", "").source == categorize.RULE
 
 
 def test_income_learns_the_to_account_and_repayments_are_ignored(ctx, setup):
@@ -243,6 +256,16 @@ def test_a_few_thousand_transactions_stay_fast(ctx, setup):
 
 
 # ------------------------------------------------------------------ import
+def test_a_first_import_suggests_shops_and_brands(ctx, setup):
+    parsed = importer.read_file("ubs.csv", UBS)
+    rows = importer.analyse(ctx, importer.parse_rows(parsed, importer.guess_profile(parsed)), setup["chf"].id)
+    assert [(r.payee, r.category, r.suggested, r.reason) for r in rows] == [
+        ("Migros", "01.1", True, "Payee contains “Migros”"),
+        ("Brezelkönig", "", False, ""),
+        ("Muster AG", "", False, ""),
+    ]
+
+
 def test_the_import_suggests_rules_and_history_and_can_clear_them(ctx, setup):
     rules_svc.save(ctx, RuleInput(match="migros", category="01.1", account=setup["eur"].id))
     rules_svc.save(ctx, RuleInput(match="lohn", type=TX_INCOME, category=setup["salary"].id))

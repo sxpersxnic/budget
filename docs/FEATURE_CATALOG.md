@@ -581,20 +581,25 @@ Small changes for the most frequent task:
 
 **Status:** ☑ Done (2026-10-20)
 
-**As built:** levels 1 and 2, no AI (decision 8). **Rules** live in `rules.csv` (text, type, category, optional
+**As built:** levels 1 and 2 plus search words, no AI (decision 8). **Rules** live in `rules.csv` (text, type, category, optional
 account) and are made only on request: *Always Categorize Like This…* in the Transactions selection bar (one
 expenditure or income with a category) and in the edit sheet opens a sheet with the payee as the text (without a
 payee, the name found in the note), the category and the type; a rule with the same text and type is named there,
 and saving replaces it. A rule matches when its text occurs in the payee or in the bank text or note, ignoring case
 and accents; the longest text wins, between equally long ones the newest. **History:** without a matching rule, the
 category the payee had most often among transactions of the same type (ties: the most recent), "Used 14 times for
-this payee"; rows stored before payees (F09) fall back to the same bank text without its digits. Where no account
+this payee"; rows stored before payees (F09) fall back to the same bank text without its digits. **Search words**
+(2026-10-29): without a rule or history, a shop, brand or everyday word of the category picker (F08) found as whole
+words in the payee suggests its category, "Payee contains “Migros”" (spending only; words listed under unrelated
+categories are left out), so a first import is mostly categorized. Where no account
 is fixed, an account is suggested too: the rule's, else the one the payee had most often. The **form** shows
 "Use 01.1 Groceries" with the reason under the category of a new expenditure or income once it has a payee; a
 click fills the category (and the account, if still empty). The **import preview** (CSV and camt) fills in
 suggestions in italics, with a *Suggestion* column for the reason, counts them in the summary and offers *Clear
 Suggestions*; a category chosen by hand loses the mark, a changed payee brings a new suggestion, and importing keeps
-what the preview shows. Confirming a suggestion never makes a rule. **Categorization Rules** (`/rules`, under
+what the preview shows. A category applied to some rows is suggested for the file's other rows of the same payee,
+and *Leave Out Rows Without a Category* lets the rest of a large file be imported now and those rows later, from the
+same file. Confirming a suggestion never makes a rule. **Categorization Rules** (`/rules`, under
 Payees; *Rules…* on the Payees page and in Settings) lists the rules per type, with add, edit and delete; every
 change is undoable. Not built: the AI level, conditions on amount or account, and applying a new rule to stored
 transactions (bulk edit, F13, does that).

@@ -95,6 +95,48 @@ def test_import_values_at_booking_date_and_skips_duplicates_next_time(ctx, setup
     assert again[0].category == "01.1" and again[0].suggested
 
 
+def test_a_chosen_category_is_suggested_for_the_same_payee():
+    def row(i: int, amount: float, payee: str, category: str = "", suggested: bool = False, **kw):
+        return importer.ImportRow(
+            i, date(2026, 9, 1), amount, payee, category=category, suggested=suggested, payee=payee, **kw
+        )
+
+    chosen = row(0, -5, "Kiosk Muster", "02.3")
+    rows = [
+        chosen,
+        row(1, -3, "KIOSK MUSTER"),  # no category: filled in
+        row(2, -4, "Kiosk Muster", "01.1", suggested=True),  # a suggestion: replaced
+        row(3, -6, "Kiosk Muster", "05.6"),  # chosen by hand: kept
+        row(4, 10, "Kiosk Muster"),  # money coming in: another type
+        row(5, -2, "Bäckerei Muster"),  # another payee
+        row(6, -2, "Kiosk Muster", status=importer.ERROR),
+    ]
+    assert importer.spread(rows, [chosen]) == 2
+    assert [(r.category, r.suggested) for r in rows] == [
+        ("02.3", False),
+        ("02.3", True),
+        ("02.3", True),
+        ("05.6", False),
+        ("", False),
+        ("", False),
+        ("", False),
+    ]
+    assert rows[1].reason == "Same payee as a row you chose"
+    assert importer.spread(rows, [row(7, -1, "", "02.3")]) == 0  # no payee, nothing to go by
+
+
+def test_rows_left_out_come_back_when_the_file_is_imported_again(ctx, setup):
+    parsed = importer.read_file("ubs.csv", UBS)
+    profile = importer.guess_profile(parsed)
+    rows = importer.analyse(ctx, importer.parse_rows(parsed, profile), setup["chf"].id)
+    assert [(r.category, r.suggested) for r in rows] == [("01.1", True), ("", False), ("", False)]
+    rows[1].include = rows[2].include = False  # categorize those later
+    assert len(importer.commit(ctx, rows, setup["chf"].id)) == 1
+
+    again = importer.analyse(ctx, importer.parse_rows(parsed, profile), setup["chf"].id)
+    assert [(r.status, r.include) for r in again] == [("duplicate", False), ("new", True), ("new", True)]
+
+
 def test_manual_entry_on_the_same_day_is_flagged(ctx, setup):
     tx_svc.save(
         ctx,

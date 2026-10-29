@@ -14,6 +14,7 @@ from test_camt import CAMT053
 from test_import_page import field, import_button, rows, settle, upload
 from test_payees_page import newest
 
+from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, Rule
 from budget_app.services import accounts as acc_svc
 from budget_app.services import rules as rules_svc
@@ -293,12 +294,13 @@ async def test_the_import_preview_marks_suggestions_until_they_are_changed(user:
     assert [(r["payee"], r["category"], r["suggested"], r["reason"]) for r in rows(user)] == [
         ("Migros", "01.1 Groceries", True, "Rule: contains “migros”"),
         ("Brezelkönig", "11.1 Eating out", True, "Used 1 time for this payee"),
-        ("Papeterie Zumstein", "", False, ""),
+        # a search word of the category in the payee (#20's keyword match, with the everyday names' words)
+        ("Papeterie Zumstein", get_coicop().label("09.7.4"), True, "Payee contains “Papeterie”"),
     ]
     [grid] = user.find(kind=ui.aggrid).elements
     category = next(c for c in grid.options["columnDefs"] if c["field"] == "category")
     assert category["cellClassRules"] == {"suggested": "data.suggested"}  # in italics
-    assert "2 categories are suggestions (in italics): check them before importing." in summary(user)
+    assert "3 categories are suggestions (in italics): check them before importing." in summary(user)
     clear = button(user, "Clear Suggestions")
     assert clear.visible
 
@@ -308,7 +310,7 @@ async def test_the_import_preview_marks_suggestions_until_they_are_changed(user:
     click(user, button(user, "Apply"))
     await settle()
     assert [(r["suggested"], r["reason"]) for r in rows(user)][:2] == [(True, "Rule: contains “migros”"), (False, "")]
-    assert "1 category is a suggestion (in italics): check it before importing." in summary(user)
+    assert "2 categories are suggestions (in italics): check them before importing." in summary(user)
 
     # a new payee brings its own suggestion; the one chosen by hand stays
     edit_cell(user, 2, "payee", "Migros")

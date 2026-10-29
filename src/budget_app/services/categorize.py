@@ -1,10 +1,14 @@
-"""Category suggestions (F07): rules first, then what the payee had before. Local and explainable, no AI.
+"""Category suggestions (F07): rules first, then what the payee had before, then the shop or brand in the payee's
+name. Local and explainable, no AI.
 
 1. **Rules** ("Always categorize like this", `rules.py`): the longest rule text found in the payee or the bank
    text / note wins, between equally long ones the newest (`domain/rules.py`).
 2. **History:** without a matching rule, the category this payee had most often among the stored transactions of
    the same type; between equally frequent ones, the one used most recently. Transactions stored before payees
    existed (F09) have none, so for them the same bank text without its digits counts instead.
+3. **Search words:** for spending nobody has categorized yet, a shop, brand or everyday word of the category
+   picker (F08, `everyday.keyword_category`) found as whole words in the payee: "Migros" → groceries. Only the
+   payee is searched: bank texts carry booking words ("Einkauf") that are search words too.
 
 The account is suggested only where the caller does not fix it (`account=None`): an import knows its account,
 the form may not. It comes from the rule when the rule names one, otherwise from the payee's history in the same
@@ -24,6 +28,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 
+from budget_app.domain.everyday import keyword_category
 from budget_app.domain.models import TX_EXPENDITURE, Rule, Transaction
 from budget_app.domain.payees import key
 from budget_app.domain.rules import by_priority, first_match
@@ -31,7 +36,7 @@ from budget_app.i18n import t, tn
 from budget_app.services import rules as rules_svc
 from budget_app.services.context import Context
 
-RULE, PAYEE, TEXT = "rule", "payee", "text"
+RULE, PAYEE, TEXT, KEYWORD = "rule", "payee", "text", "keyword"
 
 
 @dataclass(frozen=True)
@@ -39,7 +44,7 @@ class Suggestion:
     category: str
     account: str = ""  # only when the caller left the account open
     reason: str = ""  # why, in the interface language: "Rule: contains “migros”", "Used 14 times for this payee"
-    source: str = ""  # RULE, PAYEE or TEXT
+    source: str = ""  # RULE, PAYEE, TEXT or KEYWORD
 
 
 @dataclass
@@ -124,6 +129,9 @@ class Suggester:
         if tk and (top := _top(self._by_text.get((type_, tk)))):
             category, n = top
             return Suggestion(category, "", tn("Used {n} time for this text", "Used {n} times for this text", n), TEXT)
+        if type_ == TX_EXPENDITURE and (hit := keyword_category(payee)):
+            category, word = hit
+            return Suggestion(category, "", t("Payee contains “{word}”", word=word), KEYWORD)
         return None
 
     def _account(self, rule: Rule | None, payee_key: tuple[str, str] | None) -> str:

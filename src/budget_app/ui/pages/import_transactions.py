@@ -4,8 +4,10 @@ camt.053 / camt.054 statement (file → review → import: the XML needs no colu
 The review step also offers the month-end balances the file shows (F36): from a CSV balance column, or
 the camt closing balance. Ticked ones are recorded after the transactions are saved.
 
-Rows without a category get the suggested one (F07: a rule, else the payee's history), shown in italics with the
-reason beside it until the user changes it; importing keeps what the preview shows."""
+Rows without a category get the suggested one (F07: a rule, else the payee's history, else a shop or brand in the
+payee), shown in italics with the reason beside it until the user changes it; importing keeps what the preview
+shows. A category applied to some rows is suggested for the file's other rows of the same payee. Rows nobody has
+categorized yet can be left out in one click and imported later from the same file."""
 
 from __future__ import annotations
 
@@ -169,6 +171,15 @@ def page() -> None:
                 summary = ui.label().classes("caption flex-1 min-w-[16rem]")
                 clear_btn = (
                     ui.button(t("Clear Suggestions"), icon="o_clear_all", on_click=lambda: clear_suggestions())  # noqa: PLW0108 - defined below
+                    .props("flat dense no-caps")
+                    .classes("text-primary")
+                )
+                leave_out_btn = (
+                    ui.button(
+                        t("Leave Out Rows Without a Category"),
+                        icon="o_playlist_remove",
+                        on_click=lambda: leave_out_uncategorized(),  # noqa: PLW0108 - defined below
+                    )
                     .props("flat dense no-caps")
                     .classes("text-primary")
                 )
@@ -460,7 +471,8 @@ def page() -> None:
                 )
             summary.set_text(text)
             clear_btn.set_visibility(any(r.suggested for r in rows))
-            missing = [r for r in chosen if not importer.valid_category(ctx, r.type, r.category)]
+            missing = uncategorized()
+            leave_out_btn.set_visibility(bool(missing))
             balances = [c for c in state["balances"] if c.include]
             if balances:
                 import_btn.set_text(
@@ -479,8 +491,10 @@ def page() -> None:
             elif missing:
                 status.set_text(
                     tn(
-                        "{n} row needs a category: select rows, choose a category and click Apply.",
-                        "{n} rows need a category: select rows, choose a category and click Apply.",
+                        "{n} row needs a category: select rows, choose one and click Apply, or leave it out and "
+                        "import it later from the same file.",
+                        "{n} rows need a category: select rows, choose one and click Apply, or leave them out and "
+                        "import them later from the same file.",
                         len(missing),
                     )
                 )
@@ -489,6 +503,14 @@ def page() -> None:
             import_btn.set_enabled(
                 bool(account.value and (chosen or balances) and not missing and not state["problem"])
             )
+
+        def uncategorized() -> list[importer.ImportRow]:
+            return [r for r in state["rows"] if r.include and not importer.valid_category(ctx, r.type, r.category)]
+
+        def leave_out_uncategorized() -> None:
+            for r in uncategorized():
+                r.include = False
+            render()
 
         async def selected_rows() -> list[importer.ImportRow]:
             ids = {int(r["id"]) for r in await grid.get_selected_rows()}
@@ -507,6 +529,14 @@ def page() -> None:
             fitting = [r for r in rows if importer.valid_category(ctx, r.type, bulk_cat.value)]
             for r in fitting:  # chosen by hand: no longer a suggestion
                 r.category, r.suggested, r.reason = bulk_cat.value, False, ""
+            if spread := importer.spread(state["rows"], fitting):
+                success(
+                    tn(
+                        "{n} more row with the same payee got this category",
+                        "{n} more rows with the same payee got this category",
+                        spread,
+                    )
+                )
             skipped = len(rows) - len(fitting)
             if skipped:
                 if importer.valid_category(ctx, TX_INCOME, bulk_cat.value):
