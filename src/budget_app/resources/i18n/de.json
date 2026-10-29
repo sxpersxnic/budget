@@ -1494,5 +1494,50 @@
   "{n} Darlehen",
   "{n} Darlehen"
  ],
- "… and so on": "… und so weiter"
+ "… and so on": "… und so weiter",
+ "Copied": "Kopiert",
+ "Copy": "Kopieren",
+ "Enter the amount received": "Geben Sie den erhaltenen Betrag ein",
+ "Nobody of that name owes anything": "Niemand mit diesem Namen schuldet etwas",
+ "Nobody owes you anything.": "Niemand schuldet Ihnen etwas.",
+ "Nothing open": "Nichts offen",
+ "Nothing open.": "Nichts offen.",
+ "Open items": "Offene Posten",
+ "Open items for {name} · {date}": "Offene Posten für {name} · {date}",
+ "Record Repayment": "Rückzahlung erfassen",
+ "Recorded {amount} from {name}": "{amount} von {name} erfasst",
+ "Save as Text…": "Als Text sichern …",
+ "Settle Up with {name}": "Mit {name} abrechnen",
+ "Settle Up…": "Abrechnen …",
+ "Settle up": "Abrechnen",
+ "Settle-up {name}": "Abrechnung {name}",
+ "Settled in {year}: {amount}": "Beglichen {year}: {amount}",
+ "Settled · {n} person": [
+  "Beglichen · {n} Person",
+  "Beglichen · {n} Personen"
+ ],
+ "Settles {n} item: {items}": [
+  "Begleicht {n} Posten: {items}",
+  "Begleicht {n} Posten: {items}"
+ ],
+ "Shared Expenses": "Geteilte Ausgaben",
+ "Summary for {name}": "Zusammenfassung für {name}",
+ "Summary…": "Zusammenfassung …",
+ "To send yourself; the app sends nothing.": "Zum Selberverschicken; die App verschickt nichts.",
+ "Total open: {amount}": "Total offen: {amount}",
+ "What": "Was",
+ "Who owes you what: the share of your payments made for others (advance payments), what came back, and a settle-up that records the repayment. Name the person as debtor when you record a payment partly made for others.": "Wer Ihnen was schuldet: der Anteil Ihrer Zahlungen, den Sie für andere übernommen haben (Vorauszahlungen), was zurückkam, und eine Abrechnung, die die Rückzahlung erfasst. Nennen Sie die Person als Schuldner, wenn Sie eine Zahlung teilweise für andere erfassen.",
+ "nothing settled in {year}": "nichts beglichen {year}",
+ "oldest {date}": "ältester {date}",
+ "settled in {year}: {amount}": "beglichen {year}: {amount}",
+ "{amount} open": "{amount} offen",
+ "{date} · {amount}": "{date} · {amount}",
+ "{name} owes nothing": "{name} schuldet nichts",
+ "{name} owes nothing in {currency}": "{name} schuldet nichts in {currency}",
+ "{name} owes {amount}, not more": "{name} schuldet {amount}, nicht mehr",
+ "{n} person owes you": [
+  "{n} Person schuldet Ihnen etwas",
+  "{n} Personen schulden Ihnen etwas"
+ ],
+ "{open} of {share}": "{open} von {share}"
 }

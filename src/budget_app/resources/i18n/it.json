@@ -1494,5 +1494,50 @@
   "{n} prestito",
   "{n} prestiti"
  ],
- "… and so on": "… e così via"
+ "… and so on": "… e così via",
+ "Copied": "Copiato",
+ "Copy": "Copia",
+ "Enter the amount received": "Inserisci l’importo ricevuto",
+ "Nobody of that name owes anything": "Nessuno con questo nome deve qualcosa",
+ "Nobody owes you anything.": "Nessuno ti deve niente.",
+ "Nothing open": "Niente in sospeso",
+ "Nothing open.": "Niente in sospeso.",
+ "Open items": "Partite aperte",
+ "Open items for {name} · {date}": "Partite aperte per {name} · {date}",
+ "Record Repayment": "Registra il rimborso",
+ "Recorded {amount} from {name}": "{amount} da {name} registrati",
+ "Save as Text…": "Salva come testo…",
+ "Settle Up with {name}": "Saldare con {name}",
+ "Settle Up…": "Salda…",
+ "Settle up": "Saldare",
+ "Settle-up {name}": "Saldo {name}",
+ "Settled in {year}: {amount}": "Saldato nel {year}: {amount}",
+ "Settled · {n} person": [
+  "Saldato · {n} persona",
+  "Saldato · {n} persone"
+ ],
+ "Settles {n} item: {items}": [
+  "Salda {n} partita: {items}",
+  "Salda {n} partite: {items}"
+ ],
+ "Shared Expenses": "Spese condivise",
+ "Summary for {name}": "Riepilogo per {name}",
+ "Summary…": "Riepilogo…",
+ "To send yourself; the app sends nothing.": "Da inviare tu stesso; l’app non invia nulla.",
+ "Total open: {amount}": "Totale in sospeso: {amount}",
+ "What": "Cosa",
+ "Who owes you what: the share of your payments made for others (advance payments), what came back, and a settle-up that records the repayment. Name the person as debtor when you record a payment partly made for others.": "Chi ti deve cosa: la parte dei tuoi pagamenti fatta per altri (anticipi), quanto è tornato, e un saldo che registra il rimborso. Indica la persona come debitore quando registri un pagamento fatto in parte per altri.",
+ "nothing settled in {year}": "niente saldato nel {year}",
+ "oldest {date}": "più vecchia {date}",
+ "settled in {year}: {amount}": "saldato nel {year}: {amount}",
+ "{amount} open": "{amount} in sospeso",
+ "{date} · {amount}": "{date} · {amount}",
+ "{name} owes nothing": "{name} non deve niente",
+ "{name} owes nothing in {currency}": "{name} non deve niente in {currency}",
+ "{name} owes {amount}, not more": "{name} deve {amount}, non di più",
+ "{n} person owes you": [
+  "{n} persona ti deve qualcosa",
+  "{n} persone ti devono qualcosa"
+ ],
+ "{open} of {share}": "{open} di {share}"
 }

@@ -1494,5 +1494,50 @@
   "{n} prêt",
   "{n} prêts"
  ],
- "… and so on": "… et ainsi de suite"
+ "… and so on": "… et ainsi de suite",
+ "Copied": "Copié",
+ "Copy": "Copier",
+ "Enter the amount received": "Saisissez le montant reçu",
+ "Nobody of that name owes anything": "Personne de ce nom ne doit quelque chose",
+ "Nobody owes you anything.": "Personne ne vous doit rien.",
+ "Nothing open": "Rien d’ouvert",
+ "Nothing open.": "Rien d’ouvert.",
+ "Open items": "Postes ouverts",
+ "Open items for {name} · {date}": "Postes ouverts pour {name} · {date}",
+ "Record Repayment": "Enregistrer le remboursement",
+ "Recorded {amount} from {name}": "{amount} de {name} enregistré",
+ "Save as Text…": "Enregistrer en texte…",
+ "Settle Up with {name}": "Régler avec {name}",
+ "Settle Up…": "Régler…",
+ "Settle up": "Régler",
+ "Settle-up {name}": "Règlement {name}",
+ "Settled in {year}: {amount}": "Réglé en {year}: {amount}",
+ "Settled · {n} person": [
+  "Réglé · {n} personne",
+  "Réglé · {n} personnes"
+ ],
+ "Settles {n} item: {items}": [
+  "Règle {n} poste: {items}",
+  "Règle {n} postes: {items}"
+ ],
+ "Shared Expenses": "Dépenses partagées",
+ "Summary for {name}": "Résumé pour {name}",
+ "Summary…": "Résumé…",
+ "To send yourself; the app sends nothing.": "À envoyer vous-même; l’app n’envoie rien.",
+ "Total open: {amount}": "Total ouvert: {amount}",
+ "What": "Quoi",
+ "Who owes you what: the share of your payments made for others (advance payments), what came back, and a settle-up that records the repayment. Name the person as debtor when you record a payment partly made for others.": "Qui vous doit quoi: la part de vos paiements faite pour d’autres (avances), ce qui est revenu, et un règlement qui enregistre le remboursement. Nommez la personne comme débiteur quand vous saisissez un paiement fait en partie pour d’autres.",
+ "nothing settled in {year}": "rien de réglé en {year}",
+ "oldest {date}": "le plus ancien {date}",
+ "settled in {year}: {amount}": "réglé en {year}: {amount}",
+ "{amount} open": "{amount} ouvert",
+ "{date} · {amount}": "{date} · {amount}",
+ "{name} owes nothing": "{name} ne doit rien",
+ "{name} owes nothing in {currency}": "{name} ne doit rien en {currency}",
+ "{name} owes {amount}, not more": "{name} doit {amount}, pas plus",
+ "{n} person owes you": [
+  "{n} personne vous doit quelque chose",
+  "{n} personnes vous doivent quelque chose"
+ ],
+ "{open} of {share}": "{open} sur {share}"
 }

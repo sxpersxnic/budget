@@ -446,11 +446,11 @@ def page() -> None:
                     ui.label(source_line(ctx, st)).classes("caption")
                 with ui.row().classes("row-actions gap-0 no-wrap"):
                     ui.button(icon="o_edit", on_click=lambda: open_loan_sheet(ctx, refresh, loan)).props(
-                        ROW_ACTION
+                        f'{ROW_ACTION} aria-label="{t("Edit")}"'
                     ).classes("text-primary").tooltip(t("Edit"))
-                    ui.button(icon="o_delete", on_click=lambda: delete(st)).props(ROW_ACTION).classes(
-                        "text-negative"
-                    ).tooltip(t("Delete"))
+                    ui.button(icon="o_delete", on_click=lambda: delete(st)).props(
+                        f'{ROW_ACTION} aria-label="{t("Delete")}"'
+                    ).classes("text-negative").tooltip(t("Delete"))
 
         def refresh() -> None:
             due_list.refresh()

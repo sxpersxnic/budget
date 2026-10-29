@@ -41,6 +41,7 @@ NAV = [
     ("/tags", N_("Tags"), "o_sell"),
     ("/investments", N_("Investments"), "o_show_chart"),
     ("/loans", N_("Loans"), "o_credit_score"),  # F22
+    ("/shared", N_("Shared Expenses"), "o_group"),  # F23: who owes what
     ("/tax", N_("Tax Summary"), "o_account_balance"),  # F20: once a year, so last; it draws on all the others
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")
