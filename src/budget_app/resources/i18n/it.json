@@ -1462,5 +1462,27 @@
  "e.g. 80 % work from January": "p. es. lavoro all’80 % da gennaio",
  "from {month} to the end of the plan": "da {month} alla fine del piano",
  "“{name}” is hidden on the Overview": "«{name}» è nascosto nella panoramica",
- "“{name}” is shown on the Overview": "«{name}» è mostrato nella panoramica"
+ "“{name}” is shown on the Overview": "«{name}» è mostrato nella panoramica",
+ "Accounts without a month-end balance for last month.": "Conti senza saldo di fine mese per il mese scorso.",
+ "Balances to record": "Saldi da registrare",
+ "Balances to record, recurring transactions and bills that are due, budgets exceeded and goals behind their plan, all in one place while the app runs. Nothing is sent anywhere; choose in Settings which kinds appear here.": "Saldi da registrare, transazioni ricorrenti e fatture in scadenza, budget superati e obiettivi in ritardo, tutto in un unico posto mentre l’app è aperta. Nulla viene inviato da nessuna parte; nelle impostazioni scegli quali tipi compaiono qui.",
+ "Behind: {amount} short of the plan line": "In ritardo: {amount} sotto la linea del piano",
+ "Bills due": "Fatture in scadenza",
+ "Budgets exceeded or about to be": "Budget superati o quasi",
+ "Budgets spent beyond their amount this month, or on pace to be.": "Budget superati questo mese, o che lo saranno a questo ritmo.",
+ "Due since {date}": "In scadenza dal {date}",
+ "Goals behind or overdue": "Obiettivi in ritardo o scaduti",
+ "No balance for {month} · last {amount}": "Nessun saldo per {month} · ultimo {amount}",
+ "Nothing to do right now.": "Niente da fare al momento.",
+ "Occurrences waiting in the Due list.": "Scadenze in attesa nell’elenco delle transazioni dovute.",
+ "Open QR bills that are overdue or due within a week.": "Fatture QR aperte scadute o in scadenza entro una settimana.",
+ "Overdue since {date} · {amount} to go": "Scaduto dal {date} · mancano {amount}",
+ "Recurring transactions due": "Transazioni ricorrenti dovute",
+ "Reminders": "Promemoria",
+ "Savings goals behind their plan or past their target date.": "Obiettivi di risparmio in ritardo sul piano o oltre la data obiettivo.",
+ "Shown on the Reminders page and counted in the sidebar while the app runs.": "Mostrati nella pagina Promemoria e contati nella barra laterale mentre l’app è aperta.",
+ "{n} reminder": [
+  "{n} promemoria",
+  "{n} promemoria"
+ ]
 }

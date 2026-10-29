@@ -16,10 +16,22 @@ from budget_app.services import archive
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
 from budget_app.services import investments as inv_svc
+from budget_app.services import reminders as rem_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, fmt, frame, month_options, save_file, sheet, sheet_buttons, success, undoable
+from budget_app.ui.layout import (
+    error,
+    fmt,
+    frame,
+    month_options,
+    refresh_due_badge,
+    save_file,
+    sheet,
+    sheet_buttons,
+    success,
+    undoable,
+)
 from budget_app.ui.pages.investments import open_conversion_sheet
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select
@@ -253,6 +265,29 @@ def _income_group(ctx: Context) -> None:
             )
 
 
+def _reminders_group(ctx: Context) -> None:
+    """F31: which kinds of reminders the Reminders page and its badge show; all in the app, nothing is sent."""
+
+    def toggle(kind: str, on: bool) -> None:
+        rem_svc.set_enabled(ctx, kind, on)
+        refresh_due_badge()
+
+    with ui.column().classes("w-full gap-0"):
+        ui.label(t("Reminders")).classes("group-header")
+        with ui.element("div").classes("group"):
+            for kind in rem_svc.KINDS:
+                with ui.element("div").classes("group-row"):
+                    with ui.column().classes("gap-0 flex-1 min-w-0"):
+                        ui.label(t(rem_svc.TITLES[kind]))
+                        ui.label(t(rem_svc.DESCRIPTIONS[kind])).classes("caption")
+                    ui.switch(
+                        value=rem_svc.enabled(ctx, kind), on_change=lambda e, k=kind: toggle(k, bool(e.value))
+                    ).props("dense")
+        ui.label(t("Shown on the Reminders page and counted in the sidebar while the app runs.")).classes(
+            "caption px-1 pt-1"
+        )
+
+
 def _restore(ctx: Context, files: dict[str, bytes], source: str) -> None:
     """Ask, then replace every record with `files`; the current ones go to the backups folder first."""
 
@@ -442,4 +477,5 @@ def page() -> None:
         _accounts_group(ctx, ACCOUNT_REGULAR, t("Accounts"))
         _accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"))
         _income_group(ctx)
+        _reminders_group(ctx)
         _data_group(ctx)

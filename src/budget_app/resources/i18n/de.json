@@ -1462,5 +1462,27 @@
  "e.g. 80 % work from January": "z. B. 80 % Arbeit ab Januar",
  "from {month} to the end of the plan": "von {month} bis zum Ende des Plans",
  "“{name}” is hidden on the Overview": "«{name}» ist auf der Übersicht ausgeblendet",
- "“{name}” is shown on the Overview": "«{name}» wird auf der Übersicht gezeigt"
+ "“{name}” is shown on the Overview": "«{name}» wird auf der Übersicht gezeigt",
+ "Accounts without a month-end balance for last month.": "Konten ohne Monatsendsaldo für den letzten Monat.",
+ "Balances to record": "Saldi zu erfassen",
+ "Balances to record, recurring transactions and bills that are due, budgets exceeded and goals behind their plan, all in one place while the app runs. Nothing is sent anywhere; choose in Settings which kinds appear here.": "Zu erfassende Saldi, fällige wiederkehrende Buchungen und Rechnungen, überschrittene Budgets und Sparziele im Rückstand, alles an einem Ort, solange die App läuft. Nichts wird irgendwohin gesendet; in den Einstellungen wählen Sie, welche Arten hier erscheinen.",
+ "Behind: {amount} short of the plan line": "Im Rückstand: {amount} unter der Planlinie",
+ "Bills due": "Fällige Rechnungen",
+ "Budgets exceeded or about to be": "Überschrittene oder bald überschrittene Budgets",
+ "Budgets spent beyond their amount this month, or on pace to be.": "Budgets, die diesen Monat überschritten sind oder bei diesem Tempo überschritten werden.",
+ "Due since {date}": "Fällig seit {date}",
+ "Goals behind or overdue": "Sparziele im Rückstand oder überfällig",
+ "No balance for {month} · last {amount}": "Kein Saldo für {month} · zuletzt {amount}",
+ "Nothing to do right now.": "Zurzeit nichts zu tun.",
+ "Occurrences waiting in the Due list.": "Fälligkeiten, die in der Liste «Fällig» warten.",
+ "Open QR bills that are overdue or due within a week.": "Offene QR-Rechnungen, die überfällig sind oder innerhalb einer Woche fällig werden.",
+ "Overdue since {date} · {amount} to go": "Überfällig seit {date} · noch {amount}",
+ "Recurring transactions due": "Fällige wiederkehrende Buchungen",
+ "Reminders": "Erinnerungen",
+ "Savings goals behind their plan or past their target date.": "Sparziele hinter ihrem Plan oder über ihrem Zieldatum.",
+ "Shown on the Reminders page and counted in the sidebar while the app runs.": "Auf der Seite «Erinnerungen» gezeigt und in der Seitenleiste gezählt, solange die App läuft.",
+ "{n} reminder": [
+  "{n} Erinnerung",
+  "{n} Erinnerungen"
+ ]
 }

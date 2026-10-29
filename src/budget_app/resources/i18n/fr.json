@@ -1462,5 +1462,27 @@
  "e.g. 80 % work from January": "p. ex. 80 % de travail dès janvier",
  "from {month} to the end of the plan": "de {month} à la fin du plan",
  "“{name}” is hidden on the Overview": "«{name}» est masqué sur l’aperçu",
- "“{name}” is shown on the Overview": "«{name}» est affiché sur l’aperçu"
+ "“{name}” is shown on the Overview": "«{name}» est affiché sur l’aperçu",
+ "Accounts without a month-end balance for last month.": "Comptes sans solde de fin de mois pour le mois dernier.",
+ "Balances to record": "Soldes à saisir",
+ "Balances to record, recurring transactions and bills that are due, budgets exceeded and goals behind their plan, all in one place while the app runs. Nothing is sent anywhere; choose in Settings which kinds appear here.": "Soldes à saisir, transactions récurrentes et factures échues, budgets dépassés et objectifs en retard, le tout au même endroit pendant que l’app tourne. Rien n’est envoyé nulle part ; choisissez dans les réglages quels types apparaissent ici.",
+ "Behind: {amount} short of the plan line": "En retard : {amount} sous la ligne du plan",
+ "Bills due": "Factures échues",
+ "Budgets exceeded or about to be": "Budgets dépassés ou sur le point de l’être",
+ "Budgets spent beyond their amount this month, or on pace to be.": "Budgets dépassés ce mois-ci, ou qui le seront à ce rythme.",
+ "Due since {date}": "Échu depuis le {date}",
+ "Goals behind or overdue": "Objectifs en retard ou échus",
+ "No balance for {month} · last {amount}": "Pas de solde pour {month} · dernier {amount}",
+ "Nothing to do right now.": "Rien à faire pour le moment.",
+ "Occurrences waiting in the Due list.": "Échéances en attente dans la liste des transactions dues.",
+ "Open QR bills that are overdue or due within a week.": "Factures QR ouvertes en retard ou à payer dans la semaine.",
+ "Overdue since {date} · {amount} to go": "En retard depuis le {date} · encore {amount}",
+ "Recurring transactions due": "Transactions récurrentes dues",
+ "Reminders": "Rappels",
+ "Savings goals behind their plan or past their target date.": "Objectifs d’épargne en retard sur leur plan ou au-delà de leur date cible.",
+ "Shown on the Reminders page and counted in the sidebar while the app runs.": "Affichés sur la page Rappels et comptés dans la barre latérale pendant que l’app tourne.",
+ "{n} reminder": [
+  "{n} rappel",
+  "{n} rappels"
+ ]
 }

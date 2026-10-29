@@ -504,3 +504,4 @@ class Settings:
     display_currency: str = "CHF"
     last_fx_download: str = ""
     language: str = ""  # "" = follow the system; otherwise a key of i18n.LANGUAGES
+    reminders_off: list[str] = field(default_factory=list)  # kinds of reminders turned off (F31, `reminders.KINDS`)
