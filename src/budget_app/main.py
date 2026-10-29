@@ -46,13 +46,11 @@ from budget_app.ui.pages import (
     payees,
     quick_add,
     recurring,
-    reminders,
     review,
     rules,
     scenarios,
     settings,
     shared,
-    subscriptions,
     tags,
     tax,
     transactions,
@@ -67,9 +65,7 @@ PAGES = {
     "/add-transaction": add_transaction.page,
     "/transactions": transactions.page,
     "/recurring": recurring.page,
-    "/subscriptions": subscriptions.page,
     "/bills": bills.page,
-    "/reminders": reminders.page,
     "/import": import_transactions.page,
     "/add-budget": add_budget.page,
     "/budget-entries": budget_entries.page,
@@ -88,6 +84,11 @@ PAGES = {
     "/accounts": accounts.page,  # Wealth: the accounts, out of Settings (UX review before 1.0)
     "/history": history.page,
     "/welcome": welcome.page,  # F30: the first-start screen; the Overview opens it while nothing is recorded
+}
+# Retired pages (UX review before 1.0): their routes stay, so links and bookmarks lead to where the content went.
+REDIRECTS = {
+    "/reminders": "/",  # the Overview's Due list (F31)
+    "/subscriptions": "/recurring",  # Recurring's *Found in your transactions* (F17)
 }
 # Pages outside the lock (F27): the lock page itself, and the phone's pairing page (F35).
 OPEN_PAGES = {
@@ -147,8 +148,17 @@ def _unlock_route(nonce: str) -> Response:
     return response
 
 
+def _redirect(target: str) -> Callable[[], RedirectResponse]:
+    def route() -> RedirectResponse:
+        return RedirectResponse(target)
+
+    return route
+
+
 def register_routes(api: FastAPI) -> None:
     api.add_middleware(phone.Gate)  # F35: other devices reach the phone pages only, and only while allowed
+    for path, target in REDIRECTS.items():  # the target page passes the lock (F27) itself
+        api.add_api_route(path, _redirect(target), methods=["GET"], include_in_schema=False)
     attachments_ui.register(api)  # serves attachment files to the page, by record id
     api.add_api_route(UNLOCK_ROUTE, _unlock_route, methods=["GET"], include_in_schema=False)
     selects.add_notes_route()

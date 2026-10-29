@@ -1,4 +1,5 @@
-"""Start page: wealth KPIs and a chart builder (several charts side by side)."""
+"""Start page: wealth KPIs, what is due (F31), what stands out this month (F18), and a chart builder (several charts
+side by side)."""
 
 from __future__ import annotations
 
@@ -44,6 +45,7 @@ from budget_app.ui.theme import (
     chart_layout,
     figure_dict,
 )
+from budget_app.ui.widgets.due import due_card
 from budget_app.ui.widgets.notable import notable_card
 from budget_app.ui.widgets.selects import currency_select
 
@@ -476,14 +478,14 @@ def class_breakdown(sums: dict[str, float], cur: str) -> None:
                         seg = ui.element("div").classes("class-seg")
                         seg.style(f"flex: {value / positive:.4f} 1 0; background: {color}")
                         seg.tooltip(t(ASSET_CLASSES[key]))
-        with ui.element("div").classes("class-legend"):
+        with ui.element("div").classes("class-legend"):  # the name over its amount, so neither is cut off
             for key, value in sums.items():
                 color = SERIES[keys.index(key) % len(SERIES)]
-                with ui.row().classes("items-center gap-2 no-wrap min-w-0"):
+                with ui.element("div").classes("class-item"):
                     ui.element("span").classes("class-dot").style(f"background: {color}")
-                    ui.label(t(ASSET_CLASSES[key])).classes("flex-1 truncate text-[13px]")
+                    ui.label(t(ASSET_CLASSES[key])).classes("text-[13px]")
                     share = f" · {value / positive * 100:.0f} %" if positive > 0 and value > 0 else ""
-                    ui.label(fmt(value, cur) + share).classes("num text-[13px] text-2 whitespace-nowrap")
+                    ui.label(fmt(value, cur) + share).classes("class-amount num text-[13px] text-2")
 
 
 def page() -> None:
@@ -519,6 +521,7 @@ def page() -> None:
                     ui.label(
                         t("{amount} by the end of the plan", amount=f"{'+' if change >= 0 else ''}{fmt(change, cur)}")
                     ).classes("metric-sub " + ("text-pos" if change >= 0 else "text-neg"))
+            due_card(ctx, cur)  # F31: what wants doing, with its action; the sidebar badge counts it
             notable_card(ctx, cur)  # F18: hidden when nothing stands out
             if wealth_svc.uses_classes(ctx):
                 class_breakdown(wealth_svc.by_class(ctx, months.previous_month(), cur), cur)

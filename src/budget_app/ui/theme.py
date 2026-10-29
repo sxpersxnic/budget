@@ -199,18 +199,38 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 /* net worth by asset class (Overview, F21) */
 .class-bar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; width: 100%; }
 .class-seg { min-width: 3px; }
-.class-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 6px 24px;
+.class-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: 8px 24px;
   width: 100%; }
+.class-item { display: grid; grid-template-columns: 9px minmax(0, 1fr); column-gap: 8px; align-items: center; }
+.class-item .class-amount { grid-column: 2; white-space: nowrap; }
 .class-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 /* notable this month (Overview, F18): icon · title over its reason · amount · chevron, each row a link */
 .nicegui-link.notable-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 18px; column-gap: 10px;
   align-items: center; padding: 7px 6px; margin: 0 -6px; border-radius: 8px; color: var(--label);
   text-decoration: none; }
 .nicegui-link.notable-row:hover { background: var(--fill-2); opacity: 1; }
-.notable-row .n-title { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.notable-row .n-sub { font-size: 12px; color: var(--label-2); line-height: 1.35; }
-.notable-row .n-amount { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.notable-row .n-title, .due-row .n-title { font-size: 14px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+.notable-row .n-sub, .due-row .n-sub { font-size: 12px; color: var(--label-2); line-height: 1.35; }
+.notable-row .n-amount, .due-row .n-amount { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;
+  white-space: nowrap; }
 .notable-warn { color: var(--warning); }
+/* the Overview's Due list (F31): icon · title over when · amount · the action that settles it */
+.due-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 5rem; column-gap: 10px;
+  align-items: center; min-height: 48px; padding: 4px 0; }
+.due-row + .due-row { border-top: 0.5px solid var(--separator); }
+.nicegui-link.due-text { display: flex; flex-direction: column; min-width: 0; color: var(--label);
+  text-decoration: none; }
+.nicegui-link.due-text:hover { opacity: 1; }
+.nicegui-link.due-text:hover .n-title { color: var(--accent); }
+.due-row .due-action { justify-self: end; }
+.due-empty { font-size: 13px; color: var(--label-2); padding: 0 4px; }
+@media (max-width: 640px) {
+  .due-row { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .due-row .due-icon { grid-row: 1 / span 2; }
+  .due-row .n-amount { grid-column: 2; grid-row: 2; font-size: 13px; }
+  .due-row .due-action { grid-column: 3; grid-row: 1 / span 2; }
+}
 
 /* the lock page (F27) and the phone pages (F35): one card, no sidebar */
 .quick-card { max-width: 26rem; }

@@ -1,5 +1,7 @@
-"""The Subscriptions page (F17): the detected list with its captions and totals, Make Recurring through F05's sheet,
-Ignore and Watch Again with undo, the running series with their yearly cost, and the empty page."""
+"""Recurring's *Found in Your Transactions* (F17, formerly the Subscriptions page): the detected list with its two-fact
+captions, the details in a tooltip and the totals, Make Recurring through F05's sheet, Ignore and Watch Again with
+undo, the running series' yearly cost in *Your Series*, the empty states that teach, and `/subscriptions` leading
+here."""
 
 import asyncio
 from datetime import date
@@ -10,6 +12,7 @@ from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
 from test_recurring_page import in_dialog
 
+from budget_app import i18n
 from budget_app.domain import months
 from budget_app.services import recurring as rec_svc
 from budget_app.services import subscriptions as sub_svc
@@ -17,7 +20,7 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services.recurring import RecurringInput
 from budget_app.services.transactions import TransactionInput
 from budget_app.ui import layout
-from budget_app.ui.pages import subscriptions as page
+from budget_app.ui.pages import recurring as page
 
 
 def day(months_back: int, d: int) -> date:
@@ -61,32 +64,38 @@ async def settle() -> None:
         await asyncio.sleep(0.01)
 
 
-async def test_the_empty_page_and_the_sidebar_entry(user: User, ctx) -> None:
-    assert layout.TAB_PARENT["/subscriptions"] == "/recurring"  # shown under Transactions · Recurring
-    await user.open("/subscriptions")
-    await user.should_see("Subscriptions")
-    await user.should_see("Nothing detected yet. A subscription shows once it was charged 3 times")
-    await user.should_see("No recurring expenditure yet.")
-    assert "Ignored" not in " ".join(labels(user))
+async def test_the_empty_page_teaches_and_subscriptions_leads_here(user: User, ctx) -> None:
+    assert "/subscriptions" not in layout.TAB_PARENT  # no page of its own any more
+    await user.open("/recurring")
+    with user:
+        assert user.client.page.path == "/recurring"
+    await user.should_see("Found in Your Transactions")
+    await user.should_see("shows here once it was charged 3 times (2 times for half-yearly and yearly ones)")
+    await user.should_see("Rent, premiums, a salary: add what repeats with New Recurring Transaction")
+    shown = " ".join(labels(user))
+    assert "Ignored" not in shown and "Due" not in labels(user)  # nothing can be due without a series
+    assert "spending about" not in shown
 
 
 async def test_detected_subscriptions_with_their_captions(user: User, ctx, setup) -> None:
     charges(ctx, setup)
-    await user.open("/subscriptions")
-    await user.should_see("Detected")
+    await user.open("/recurring")
+    await user.should_see("Found in Your Transactions")
     shown = labels(user)
     assert shown.index("ZVV") < shown.index("Swisscom")  # the dearer year first
     assert "2 subscriptions · about 1'618.80 CHF a year" in shown
     assert "1'020.00 CHF a year" in shown and "598.80 CHF a year" in shown
     [sub] = [s for s in sub_svc.detect(ctx, "CHF") if s.name == "Swisscom"]
     assert page.caption(sub) in shown
-    assert page.caption(sub).startswith("49.90 CHF · Every month · 6 charges since ")
-    assert "next around" in page.caption(sub)
+    assert page.caption(sub) == f"49.90 CHF · Every month · next around {i18n.date_label(day(0, 10))}"  # two facts
+    assert page.details(sub).startswith("6 charges since ") and "last on" in page.details(sub)
+    tips = [e for e in user.find(kind=ui.tooltip).elements if e.text == page.details(sub)]
+    assert tips  # the rest in the row's tooltip
 
 
 async def test_make_recurring_opens_the_prefilled_sheet_and_the_row_leaves(user: User, ctx, setup) -> None:
     charges(ctx, setup)
-    await user.open("/subscriptions")
+    await user.open("/recurring")
     await user.should_see("Swisscom")
     swisscom = buttons(user, "Make Recurring…")[1]  # the second row
     click(user, swisscom)
@@ -104,13 +113,13 @@ async def test_make_recurring_opens_the_prefilled_sheet_and_the_row_leaves(user:
     assert notified(user, "Recurring transaction added")
     shown = labels(user)
     assert "1 subscription · about 1'020.00 CHF a year" in shown
-    assert "Swisscom · 08.3 Information and communication services" in shown  # now under Recurring Transactions
-    assert "about 598.80 CHF a year" in shown
+    assert "Swisscom · 08.3 Information and communication services" in shown  # now under Your Series
+    assert "spending about 598.80 CHF a year" in shown
 
 
 async def test_ignore_and_watch_again(user: User, ctx, setup) -> None:
     charges(ctx, setup)
-    await user.open("/subscriptions")
+    await user.open("/recurring")
     await user.should_see("ZVV")
     ignore = icon_buttons(user, "o_visibility_off")[0]  # ZVV, the first row
     assert ignore.props["aria-label"] == "Ignore"  # an icon-only button says what it does
@@ -129,7 +138,7 @@ async def test_ignore_and_watch_again(user: User, ctx, setup) -> None:
 
 async def test_a_stale_watch_again_is_reported(user: User, ctx, setup) -> None:
     charges(ctx, setup)
-    await user.open("/subscriptions")
+    await user.open("/recurring")
     await user.should_see("ZVV")
     click(user, icon_buttons(user, "o_visibility_off")[0])
     await settle()
@@ -141,7 +150,7 @@ async def test_a_stale_watch_again_is_reported(user: User, ctx, setup) -> None:
 
 async def test_a_charge_deleted_meanwhile_is_reported(user: User, ctx, setup) -> None:
     charges(ctx, setup)
-    await user.open("/subscriptions")
+    await user.open("/recurring")
     await user.should_see("ZVV")
     last = max((tx for tx in ctx.store.transactions.all() if tx.payee == "ZVV"), key=lambda tx: tx.date)
     ctx.store.transactions.delete([last.id])
@@ -162,11 +171,8 @@ async def test_the_running_series_and_their_yearly_cost(user: User, ctx, setup) 
             amount=300, currency="CHF", category="12.1", from_account=setup["chf"].id, start=day(0, 1), recur_months=3
         ),
     )
-    await user.open("/subscriptions")
-    await user.should_see("Recurring Transactions")
+    await user.open("/recurring")
+    await user.should_see("Your Series")
     shown = labels(user)
-    assert "about 24'000.00 CHF a year" in shown
-    assert "22'800.00 CHF a year" in shown and "1'200.00 CHF a year" in shown
-    assert "300.00 CHF · Every quarter" in shown
-    links = [ln for ln in user.find(kind=ui.link).elements if ln.text == "All Recurring"]
-    assert links and links[0].props["href"] == "/recurring"
+    assert "spending about 24'000.00 CHF a year" in shown  # 22'800 + 1'200
+    assert any(text.startswith("300.00 CHF · Every quarter") for text in shown)

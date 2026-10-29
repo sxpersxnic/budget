@@ -76,11 +76,9 @@ SECTIONS = {
 TAB_PARENT = {
     "/add-transaction": "/transactions",
     "/import": "/transactions",
-    "/subscriptions": "/recurring",
     "/add-budget": "/budget-entries",
     "/history": "/settings",
     "/rules": "/payees",
-    "/reminders": "/",
 }
 # Every route that is not a place highlights its place in the sidebar.
 NAV_PARENT = {tab: place for place, tabs in SECTIONS.items() for tab, _ in tabs if tab != place}
@@ -107,10 +105,10 @@ _data_listeners: weakref.WeakKeyDictionary[Client, Callable[[], object]] = weakr
 # per page: the month stepper the arrow keys move (F32), and the sheets (page keys wait while one is open)
 _month_steps: weakref.WeakKeyDictionary[Client, Callable[[int], None]] = weakref.WeakKeyDictionary()
 _sheets: weakref.WeakKeyDictionary[Client, weakref.WeakSet[ui.dialog]] = weakref.WeakKeyDictionary()
-# per page: the sidebar badges by route (due recurring transactions, bills due soon, reminders)
+# per page: the badges by route (the Overview's Due list in the sidebar; due recurring, bills, loans on their tabs)
 _due_badges: weakref.WeakKeyDictionary[Client, dict[str, ui.badge]] = weakref.WeakKeyDictionary()
 BADGES = {
-    "/": N_("Things to do"),  # in the sidebar: what the Overview's Due list holds
+    "/": N_("Things to do"),  # in the sidebar: exactly the rows of the Overview's Due list (reminders.count)
     "/recurring": N_("Due recurring transactions"),  # the others on their tabs
     "/bills": N_("Bills due within a week or overdue"),
     "/loans": N_("Due loan payments"),

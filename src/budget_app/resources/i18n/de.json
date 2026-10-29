@@ -58,7 +58,6 @@
  "Add Loan": "Darlehen hinzufügen",
  "Add Profile…": "Profil hinzufügen …",
  "Add Recurring Transaction": "Wiederkehrende Buchung hinzufügen",
- "Add Recurring Transaction…": "Wiederkehrende Buchung hinzufügen …",
  "Add Rule…": "Regel hinzufügen …",
  "Add Scenario": "Szenario hinzufügen",
  "Add Tag": "Schlagwort hinzufügen",
@@ -104,7 +103,6 @@
  "Advance payments (default)": "Auslagen (Standard)",
  "Advance repayments": "Rückzahlungen von Auslagen",
  "All Goals": "Alle Sparziele",
- "All Recurring": "Alle wiederkehrenden",
  "All accounts, month end": "Alle Konten, Monatsende",
  "All records as one JSON file, for other programs. It can’t be restored.": "Alle Daten als eine JSON-Datei, für andere Programme. Sie lässt sich nicht wiederherstellen.",
  "All records in one ZIP file. Keep it somewhere safe; it can be restored here.": "Alle Daten in einer ZIP-Datei. An einem sicheren Ort aufbewahren; hier lässt sie sich wiederherstellen.",
@@ -167,7 +165,6 @@
  "Balance of {account}": "Saldo von {account}",
  "Balance recorded": "Saldo erfasst",
  "Balances to record": "Saldi zu erfassen",
- "Balances to record, recurring transactions and bills that are due, budgets exceeded and goals behind their plan, all in one place while the app runs. Nothing is sent anywhere; choose in Settings which kinds appear here.": "Zu erfassende Saldi, fällige wiederkehrende Buchungen und Rechnungen, überschrittene Budgets und Sparziele im Rückstand, alles an einem Ort, solange die App läuft. Nichts wird irgendwohin gesendet; in den Einstellungen wählen Sie, welche Arten hier erscheinen.",
  "Balances · End of {month}": "Salden · Ende {month}",
  "Bars": "Balken",
  "Base Currency": "Basiswährung",
@@ -227,8 +224,6 @@
  "Budget {version} is available": "Budget {version} ist verfügbar",
  "Budgeted {amount}": "Budgetiert {amount}",
  "Budgets can run until {month}. Change this in Settings.": "Budgets können bis {month} laufen. Dies lässt sich in den Einstellungen ändern.",
- "Budgets exceeded or about to be": "Überschrittene oder bald überschrittene Budgets",
- "Budgets spent beyond their amount this month, or on pace to be.": "Budgets, die diesen Monat überschritten sind oder bei diesem Tempo überschritten werden.",
  "Buy": "Kauf",
  "Buy {quantity} {name} at {price}": "Kauf {quantity} {name} zu {price}",
  "Buy {what}": "Kauf {what}",
@@ -280,7 +275,6 @@
  ],
  "Change…": "Ändern…",
  "Changing Until or Repeat replans this budget from {month} on.": "Eine Änderung von «Bis» oder «Wiederholen» plant dieses Budget ab {month} neu.",
- "Charges that come back at the same rhythm for about the same amount: streaming, phone, gym, insurance. Found in your transactions; nothing is booked for you. Turn one into a recurring transaction, or ignore it.": "Belastungen, die im gleichen Rhythmus mit etwa gleichem Betrag wiederkommen: Streaming, Telefon, Fitness, Versicherung. In Ihren Transaktionen gefunden; nichts wird für Sie gebucht. Machen Sie eine zur wiederkehrenden Transaktion oder ignorieren Sie sie.",
  "Chart error: {error}": "Diagrammfehler: {error}",
  "Check Now": "Jetzt prüfen",
  "Check for Updates": "Auf Aktualisierungen prüfen",
@@ -398,7 +392,6 @@
  ],
  "Description": "Beschreibung",
  "Details": "Details",
- "Detected": "Erkannt",
  "Difference": "Differenz",
  "Dismiss": "Verwerfen",
  "Dismiss a bill": "Rechnung verwerfen",
@@ -530,6 +523,7 @@
  "For the securities list: gross dividends with their withholding tax, and interest received": "Für das Wertschriftenverzeichnis: Bruttodividenden mit ihrer Verrechnungs- oder Quellensteuer und erhaltene Zinsen",
  "Forever": "Unbefristet",
  "Forgot your password?": "Passwort vergessen?",
+ "Found in Your Transactions": "In Ihren Transaktionen gefunden",
  "Free after goals": "Frei nach Sparzielen",
  "From": "Von",
  "From Account": "Belastungskonto",
@@ -657,6 +651,8 @@
  "Linked Account": "Verknüpftes Konto",
  "Load Sample Data": "Beispieldaten laden",
  "Loan": "Darlehen",
+ "Loan payments due": "Fällige Darlehenszahlungen",
+ "Loan payments that are due, as the schedule plans them.": "Fällige Zahlungen Ihrer Darlehen, wie der Zahlungsplan sie vorsieht.",
  "Loans": "Darlehen",
  "Loans and mortgages": "Darlehen und Hypotheken",
  "Lock Now": "Jetzt sperren",
@@ -761,8 +757,6 @@
  "No payees yet. Add one on a transaction, or import a bank file.": "Noch keine Gegenparteien. Erfassen Sie eine bei einer Buchung oder importieren Sie eine Bankdatei.",
  "No payment booked yet.": "Noch keine Zahlung gebucht.",
  "No price yet": "Noch kein Kurs",
- "No recurring expenditure yet.": "Noch keine wiederkehrenden Ausgaben.",
- "No recurring transactions yet.": "Noch keine wiederkehrenden Buchungen.",
  "No rules yet.": "Noch keine Regeln.",
  "No scenarios yet.": "Noch keine Szenarien.",
  "No spending recorded in the last 12 months yet": "In den letzten 12 Monaten sind noch keine Ausgaben erfasst",
@@ -784,7 +778,7 @@
  "Note": "Notiz",
  "Nothing changes: the rows already look like this.": "Nichts ändert sich: Die Buchungen sind bereits so.",
  "Nothing could be read from this receipt. Type the amount, date and payee from it.": "Aus diesem Kassenbon konnte nichts gelesen werden. Tippen Sie Betrag, Datum und Empfänger davon ab.",
- "Nothing detected yet. A subscription shows once it was charged {n} times at the same rhythm ({m} times for half-yearly and yearly ones).": "Noch nichts erkannt. Ein Abonnement erscheint, sobald es {n} Mal im gleichen Rhythmus belastet wurde ({m} Mal bei halbjährlichen und jährlichen).",
+ "Nothing due. Balances to record, bookings and bills show here when they need you.": "Nichts fällig. Zu erfassende Saldi, Buchungen und Rechnungen erscheinen hier, wenn sie Sie brauchen.",
  "Nothing in the {n} months before": "Nichts in den {n} Monaten davor",
  "Nothing in {year}": "Nichts in {year}",
  "Nothing is due.": "Nichts ist fällig.",
@@ -797,9 +791,8 @@
  "Nothing recorded": "Nichts erfasst",
  "Nothing recorded in {month}": "Nichts erfasst im {month}",
  "Nothing recorded in {year}": "Nichts erfasst in {year}",
- "Nothing to do right now.": "Zurzeit nichts zu tun.",
  "Nothing was spent or received in these months.": "In diesen Monaten wurde nichts ausgegeben oder eingenommen.",
- "Occurrences waiting in the Due list.": "Fälligkeiten, die in der Liste «Fällig» warten.",
+ "Occurrences of recurring transactions that are due.": "Fällige Termine wiederkehrender Buchungen.",
  "Off: the app never asks on its own. The releases page lists the installers.": "Aus: Die App fragt nie von selbst. Die Seite der Versionen führt die Installationsprogramme auf.",
  "Old and New Value": "Alter und neuer Wert",
  "Old value": "Alter Wert",
@@ -875,6 +868,7 @@
  "Payees": "Gegenparteien",
  "Paying Account": "Zahlendes Konto",
  "Payments already booked stay as they are; the schedule continues on the new terms.": "Bereits gebuchte Zahlungen bleiben, wie sie sind; der Zahlungsplan läuft mit den neuen Bedingungen weiter.",
+ "Pay…": "Bezahlen …",
  "Pension fund (pillar 2)": "Pensionskasse (2. Säule)",
  "Per month": "Pro Monat",
  "Phones can no longer reach Budget": "Telefone erreichen Budget nicht mehr",
@@ -950,9 +944,9 @@
  "Recorded {amount} from {name}": "{amount} von {name} erfasst",
  "Records and balances agree": "Buchungen und Salden stimmen überein",
  "Records changed on another computer were read again.": "Auf einem anderen Computer geänderte Daten wurden neu eingelesen.",
+ "Record…": "Erfassen …",
  "Recovery key": "Wiederherstellungsschlüssel",
  "Recurring": "Wiederkehrend",
- "Recurring Transactions": "Wiederkehrende Transaktionen",
  "Recurring transaction": "Wiederkehrende Buchung",
  "Recurring transaction added": "Wiederkehrende Buchung hinzugefügt",
  "Recurring transaction not found": "Wiederkehrende Buchung nicht gefunden",
@@ -982,7 +976,7 @@
  "Rename a tag": "Schlagwort umbenennen",
  "Rename an income category": "Einnahmenkategorie umbenennen",
  "Renamed to “{name}”": "Umbenannt in «{name}»",
- "Rent, premiums, subscriptions: transactions that repeat. When one is due, book it here; a series that books automatically needs no confirmation.": "Miete, Prämien, Abos: Buchungen, die sich wiederholen. Ist eine fällig, wird sie hier gebucht; eine Reihe, die automatisch bucht, braucht keine Bestätigung.",
+ "Rent, premiums, a salary: add what repeats with New Recurring Transaction, or make one of the charges found in your transactions recurring. When one is due, book it here or on the Overview; one that books automatically needs no confirmation.": "Miete, Prämien, Lohn: Erfassen Sie, was sich wiederholt, mit «Neue wiederkehrende Buchung», oder machen Sie eine der in Ihren Transaktionen gefundenen Belastungen wiederkehrend. Ist eine fällig, buchen Sie sie hier oder in der Übersicht; eine, die automatisch bucht, braucht keine Bestätigung.",
  "Reopen": "Wieder öffnen",
  "Reopen a bill": "Rechnung wieder öffnen",
  "Reopened the bill of {creditor}": "Rechnung von {creditor} wieder geöffnet",
@@ -1121,7 +1115,6 @@
  "Semicolon ;": "Semikolon ;",
  "Separate budgets in separate folders, switched from the top of the sidebar. Each has its own lock.": "Getrennte Budgets in getrennten Ordnern, oben in der Seitenleiste gewechselt. Jedes hat seine eigene Sperre.",
  "Separator": "Trennzeichen",
- "Series": "Reihen",
  "Set": "Festlegen",
  "Set New Password": "Neues Passwort setzen",
  "Set Password": "Passwort setzen",
@@ -1152,8 +1145,12 @@
  "Show or hide the preview": "Vorschau ein- oder ausblenden",
  "Show the transaction": "Buchung anzeigen",
  "Show what this category includes": "Zeigen, was diese Kategorie umfasst",
+ "Show {n} more": [
+  "{n} weitere zeigen",
+  "{n} weitere zeigen"
+ ],
  "Showing amounts in {currency}": "Beträge werden in {currency} angezeigt",
- "Shown on the Reminders page and counted in the sidebar while the app runs.": "Auf der Seite «Erinnerungen» gezeigt und in der Seitenleiste gezählt, solange die App läuft.",
+ "Shown in the Overview's Due list and counted in the sidebar while the app runs.": "In der Liste «Fällig» der Übersicht gezeigt und in der Seitenleiste gezählt, solange die App läuft.",
  "Show…": "Anzeigen …",
  "Skip": "Überspringen",
  "Skip a loan payment": "Darlehenszahlung überspringen",
@@ -1171,7 +1168,7 @@
  "Start Date": "Startdatum",
  "Statement {month}": "Auszug {month}",
  "Status": "Status",
- "Subscriptions": "Abonnemente",
+ "Streaming, phone, gym, insurance: a charge that comes back at the same rhythm for about the same amount shows here once it was charged {n} times ({m} times for half-yearly and yearly ones). Nothing is booked for you.": "Streaming, Telefon, Fitness, Versicherung: Eine Belastung, die im gleichen Rhythmus mit etwa gleichem Betrag wiederkommt, erscheint hier, sobald sie {n} Mal belastet wurde ({m} Mal bei halbjährlichen und jährlichen). Nichts wird für Sie gebucht.",
  "Suggestion": "Vorschlag",
  "Summary": "Übersicht",
  "Summary for {name}": "Zusammenfassung für {name}",
@@ -1457,6 +1454,7 @@
  "Your New Recovery Key": "Ihr neuer Wiederherstellungsschlüssel",
  "Your Own Data": "Ihre eigenen Daten",
  "Your Recovery Key": "Ihr Wiederherstellungsschlüssel",
+ "Your Series": "Ihre Reihen",
  "Your budget stays on this computer: plain CSV files in your data folder, CHF as the base currency, ECB exchange rates and COICOP 2018 categories. Nothing is uploaded.": "Ihr Budget bleibt auf diesem Computer: einfache CSV-Dateien in Ihrem Datenordner, CHF als Basiswährung, EZB-Wechselkurse und COICOP-2018-Kategorien. Nichts wird hochgeladen.",
  "Your income, spending, savings and wealth over a year, against the year before. The figures are the monthly statements added up; wealth is the recorded month-end balances.": "Ihre Einnahmen, Ausgaben, Ersparnisse und Ihr Vermögen über ein Jahr, verglichen mit dem Vorjahr. Die Zahlen sind die Monatsabschlüsse zusammengezählt; das Vermögen sind die erfassten Monatsendsaldi.",
  "Your records are kept here as CSV files. To use another folder, start Budget with --data-dir or set BUDGET_DATA_DIR.": "Hier liegen Ihre Daten als CSV-Dateien. Für einen anderen Ordner starten Sie Budget mit --data-dir oder setzen BUDGET_DATA_DIR.",
@@ -1465,7 +1463,6 @@
   "Ihre Einträge beginnen im {month}, darum zählt {n} Monat: {span}. Beträge in CHF.",
   "Ihre Einträge beginnen im {month}, darum zählen {n} Monate: {span}. Beträge in CHF."
  ],
- "about {amount} a year": "etwa {amount} pro Jahr",
  "account|From": "Von Konto",
  "account|To": "Auf Konto",
  "added": "hinzugefügt",
@@ -1526,6 +1523,7 @@
  "replaces {price}": "ersetzt {price}",
  "reserved in the projection": "in der Prognose zurückgestellt",
  "settled in {year}: {amount}": "beglichen {year}: {amount}",
+ "spending about {amount} a year": "Ausgaben etwa {amount} pro Jahr",
  "spent {amount}": "ausgegeben {amount}",
  "tax withheld {amount}": "einbehaltene Steuer {amount}",
  "term ended": "Laufzeit abgelaufen",
@@ -1535,6 +1533,7 @@
  "the file ends on {date} — not a month-end balance": "die Datei endet am {date} – kein Saldo am Monatsende",
  "the transaction’s category": "der Kategorie der Buchung",
  "this computer’s address": "die Adresse dieses Computers",
+ "todo|Due": "Fällig",
  "undone": "rückgängig gemacht",
  "until {date}": "bis {date}",
  "withholding tax {amount}, reclaimable": "Verrechnungssteuer {amount}, rückforderbar",
@@ -1680,6 +1679,10 @@
   "{n} neu",
   "{n} neu"
  ],
+ "{n} occurrence due since {date}": [
+  "{n} Termin fällig seit {date}",
+  "{n} Termine fällig seit {date}"
+ ],
  "{n} of {total} rows is a spread booking or booked on the Investments page and keeps its tags": [
   "{n} von {total} Buchungen ist eine Kursdifferenz oder auf der Seite Anlagen gebucht und behält ihre Schlagwörter",
   "{n} von {total} Buchungen sind Kursdifferenzen oder auf der Seite Anlagen gebucht und behalten ihre Schlagwörter"
@@ -1708,6 +1711,10 @@
   "{n} Gegenpartei",
   "{n} Gegenparteien"
  ],
+ "{n} payment due since {date}": [
+  "{n} Zahlung fällig seit {date}",
+  "{n} Zahlungen fällig seit {date}"
+ ],
  "{n} pending entry left out": [
   "{n} vorgemerkte Buchung weggelassen",
   "{n} vorgemerkte Buchungen weggelassen"
@@ -1719,10 +1726,6 @@
  "{n} possible duplicate": [
   "{n} mögliches Duplikat",
   "{n} mögliche Duplikate"
- ],
- "{n} reminder": [
-  "{n} Erinnerung",
-  "{n} Erinnerungen"
  ],
  "{n} row": [
   "{n} Zeile",
@@ -1767,6 +1770,10 @@
  "{n} tag": [
   "{n} Schlagwort",
   "{n} Schlagwörter"
+ ],
+ "{n} thing to do": [
+  "{n} zu erledigen",
+  "{n} zu erledigen"
  ],
  "{n} transaction": [
   "{n} Buchung",
