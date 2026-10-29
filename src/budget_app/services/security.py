@@ -90,6 +90,14 @@ def configure(data_dir: Path) -> State:
     return _state
 
 
+def relocate(data_dir: Path) -> State:
+    """The open folder's records were moved to `data_dir` (F26): the same security file, key and sessions there."""
+    st = state()
+    st.data_dir = data_dir
+    st.vault = Vault.load(data_dir)
+    return st
+
+
 def state() -> State:
     if _state is None:
         raise RuntimeError("security not configured")

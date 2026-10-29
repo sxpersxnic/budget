@@ -16,6 +16,7 @@ from budget_app.services import archive, security
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
 from budget_app.services import investments as inv_svc
+from budget_app.services import profiles as profiles_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
@@ -25,6 +26,7 @@ from budget_app.ui.layout import (
     frame,
     lock_now,
     month_options,
+    open_profile,
     save_file,
     sheet,
     sheet_buttons,
@@ -36,6 +38,16 @@ from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select
 
 ROW_ACTION = "flat dense round size=sm"
+
+
+def _icon_button(icon: str, label: str, on_click, classes: str = "text-primary") -> ui.button:
+    """A row's icon-only button; its tooltip is also its accessible name."""
+    return (
+        ui.button(icon=icon, on_click=on_click)
+        .props(f'{ROW_ACTION} aria-label="{label}"')
+        .classes(classes)
+        .tooltip(label)
+    )
 
 
 def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
@@ -283,6 +295,103 @@ def _restore(ctx: Context, files: dict[str, bytes], source: str) -> None:
         action=t("Restore"),
         detail=t("The current records are copied to the backups folder first, so this can be undone."),
     )
+
+
+# ------------------------------------------------------------------ profiles (F34)
+def _profile_sheet(refresh, profile=None) -> None:
+    """Add a profile (profile=None) or rename one."""
+    with sheet(t("Rename Profile") if profile else t("New Profile"), width="28rem") as dlg:
+        if profile is None:
+            ui.label(
+                t(
+                    "A profile is a budget of its own, with its own accounts, settings and password, in a folder "
+                    "of its own: for example a joint household or an association."
+                )
+            ).classes("footnote")
+        name = (
+            ui.input(t("Name"), value=profile.name if profile else "")
+            .props("dense outlined autofocus")
+            .classes("w-full")
+        )
+        folder = ui.input(t("Folder (optional)")).props("dense outlined").classes("w-full mono")
+        folder.set_visibility(profile is None)
+        if profile is None:
+            ui.label(
+                t(
+                    "Leave it empty for a new folder beside the app’s own. A folder that already holds records, "
+                    "for example in a cloud folder, is opened as it is."
+                )
+            ).classes("caption -mt-2")
+
+        def save() -> None:
+            try:
+                if profile is None:
+                    added = profiles_svc.add(name.value or "", folder.value or "")
+                    success(t("Added {name}", name=added.name))
+                else:
+                    profiles_svc.rename(profile.id, name.value or "")
+            except ValidationError as exc:
+                error(str(exc))
+                return
+            dlg.close()
+            refresh()
+
+        sheet_buttons(dlg, t("Save") if profile else t("Add"), save)
+        name.on("keydown.enter", save)
+
+
+def _profiles_group() -> None:
+    @ui.refreshable
+    def body() -> None:
+        reg = profiles_svc.load()
+        with ui.element("div").classes("group"):
+            for p in reg.profiles:
+                current = p.id == reg.current
+                with ui.element("div").classes("group-row"):
+                    with ui.column().classes("gap-0 flex-1 min-w-0"):
+                        ui.label(p.name + (f" · {t('open')}" if current else "")).classes("truncate")
+                        ui.label(p.path).classes("caption break-all")
+                    if not current:
+                        ui.button(t("Open"), on_click=lambda p=p: open_profile(p.id)).props(
+                            "flat dense no-caps"
+                        ).classes("text-primary")
+                    with ui.row().classes("row-actions gap-0 no-wrap"):
+                        _icon_button("o_edit", t("Rename"), lambda p=p: _profile_sheet(body.refresh, p))
+                        if not current:
+
+                            def remove(p=p) -> None:
+                                def do() -> None:
+                                    try:
+                                        profiles_svc.remove(p.id)
+                                    except ValidationError as exc:
+                                        error(str(exc))
+                                        return
+                                    success(t("Removed {name}", name=p.name))
+                                    body.refresh()
+
+                                confirm(
+                                    t("Remove “{name}”?", name=p.name),
+                                    do,
+                                    action=t("Remove"),
+                                    detail=t(
+                                        "The profile leaves this list; its folder and records stay where they "
+                                        "are: {folder}",
+                                        folder=p.path,
+                                    ),
+                                )
+
+                            _icon_button("o_delete", t("Remove"), remove, "text-negative")
+            with ui.element("div").classes("group-row"):
+                ui.button(t("Add Profile…"), on_click=lambda: _profile_sheet(body.refresh)).props(
+                    "flat dense no-caps"
+                ).classes("link-btn -ml-2")
+
+    with ui.column().classes("w-full gap-0"):
+        ui.label(t("Profiles")).classes("group-header")
+        body()
+        ui.label(
+            t("Separate budgets in separate folders, switched from the top of the sidebar. Each has its own lock.")
+        ).classes("caption px-2 pt-1")
 
 
 # ------------------------------------------------------------------ security (F27)
@@ -608,5 +717,6 @@ def page() -> None:
         _accounts_group(ctx, ACCOUNT_REGULAR, t("Accounts"))
         _accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"))
         _income_group(ctx)
+        _profiles_group()
         _security_group(ctx)
         _data_group(ctx)

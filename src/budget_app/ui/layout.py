@@ -18,6 +18,7 @@ from budget_app import config, i18n
 from budget_app.domain import months
 from budget_app.i18n import N_, t
 from budget_app.services import bills as bills_svc
+from budget_app.services import profiles as profiles_svc
 from budget_app.services import recurring as recurring_svc
 from budget_app.services import security
 from budget_app.services import transactions as tx_svc
@@ -157,6 +158,45 @@ def lock_now() -> None:
     ui.navigate.to("/lock")
 
 
+def open_profile(profile_id: str) -> None:
+    """Switch to another profile (F34): its folder opens, and every open page starts over on its Overview."""
+    try:
+        profile = profiles_svc.switch(profile_id)
+    except ValidationError as exc:
+        error(str(exc))
+        return
+    for client in list(Client.instances.values()):
+        if client is not ui.context.client and client.has_socket_connection:
+            with client:
+                ui.navigate.to("/")  # pages still showing the other profile's records
+    success(t("Opened {name}", name=profile.name))
+    ui.navigate.to("/")
+
+
+def _brand() -> None:
+    """The app's name above the sidebar; with several profiles (F34), the open profile's name and a menu of the
+    others."""
+    reg = profiles_svc.load()
+    with ui.row().classes("items-center gap-2 px-2 pb-4 no-wrap"):
+        ui.icon("savings", size="22px").classes("text-primary")
+        if len(reg.profiles) < 2:
+            ui.label("Budget").classes("text-[15px] font-semibold")
+            return
+        with (
+            ui.button(reg.active.name)
+            .props("flat dense no-caps align=left icon-right=unfold_more")
+            .classes("profile-button text-[15px] font-semibold min-w-0 flex-1")
+            .tooltip(t("Profiles")),
+            ui.menu().props("auto-close"),
+        ):
+            for p in reg.profiles:
+                with ui.menu_item(on_click=lambda p=p: open_profile(p.id)).classes("items-center gap-2"):
+                    ui.icon("check" if p.id == reg.current else "", size="18px").classes("text-primary w-5")
+                    ui.label(p.name)
+            ui.separator()
+            ui.menu_item(t("Profiles…"), on_click=lambda: ui.navigate.to("/settings"))
+
+
 def _page_shortcut(e: KeyEventArguments) -> None:
     """N opens a new transaction on every page (F06)."""
     mods = e.modifiers
@@ -180,9 +220,7 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
         ui.left_drawer().props("width=232 :breakpoint=1023").classes("sidebar") as drawer,
         ui.column().classes("w-full h-full gap-0 px-3 pt-4 pb-3 no-wrap"),
     ):
-        with ui.row().classes("items-center gap-2 px-2 pb-4"):
-            ui.icon("savings", size="22px").classes("text-primary")
-            ui.label("Budget").classes("text-[15px] font-semibold")
+        _brand()
         ui.button(t("New Transaction"), icon="add", on_click=_new_transaction).props("unelevated no-wrap").classes(
             "w-full bg-primary text-white mb-4"
         )

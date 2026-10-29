@@ -18,10 +18,12 @@ class AlreadyRunningError(RuntimeError):
     pass
 
 
-def acquire(data_dir: Path) -> None:
-    """Take an exclusive OS lock on `<data_dir>/.lock`; released automatically when the process exits."""
-    global _handle  # noqa: PLW0603 - one lock per process
-    handle = (data_dir / ".lock").open("a+", encoding="utf-8")
+LOCK_FILE = ".lock"
+
+
+def _take(data_dir: Path) -> IO[str]:
+    """An exclusive OS lock on `<data_dir>/.lock`, with this process's PID in the file."""
+    handle = (data_dir / LOCK_FILE).open("a+", encoding="utf-8")
     try:
         if sys.platform == "win32":
             import msvcrt  # noqa: PLC0415 - platform specific
@@ -39,4 +41,20 @@ def acquire(data_dir: Path) -> None:
     handle.truncate()
     handle.write(str(os.getpid()))
     handle.flush()
+    return handle
+
+
+def acquire(data_dir: Path) -> None:
+    """Take an exclusive OS lock on `<data_dir>/.lock`; released automatically when the process exits."""
+    global _handle  # noqa: PLW0603 - one lock per process
+    _handle = _take(data_dir)
+
+
+def switch(data_dir: Path) -> None:
+    """Lock another data folder (F34, F26), then let go of the one held so far; raises AlreadyRunningError and keeps
+    the old lock when another window has the new folder open."""
+    global _handle  # noqa: PLW0603 - see acquire
+    handle = _take(data_dir)
+    if _handle is not None:
+        _handle.close()  # closing the file releases its lock
     _handle = handle

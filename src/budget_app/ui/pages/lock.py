@@ -5,11 +5,12 @@ from __future__ import annotations
 from nicegui import ui
 
 from budget_app.i18n import t
+from budget_app.services import profiles as profiles_svc
 from budget_app.services import security
 from budget_app.services.context import ValidationError
 from budget_app.storage.vault import FILE_NAME
 from budget_app.ui import theme
-from budget_app.ui.layout import error
+from budget_app.ui.layout import error, open_profile
 
 
 def _next_path() -> str:
@@ -68,6 +69,9 @@ def page() -> None:
         with ui.row().classes("items-center gap-2 self-center pb-1"):
             ui.icon("lock", size="26px").classes("text-primary")
             ui.label("Budget").classes("text-[20px] font-semibold")
+        reg = profiles_svc.load()
+        if len(reg.profiles) > 1:  # F34: which profile is locked
+            ui.label(reg.active.name).classes("text-[15px] font-semibold self-center")
         ui.label(t("Enter your password to open your records.")).classes("footnote text-center")
         password = (
             ui.input(t("Password"), password=True, password_toggle_button=True)
@@ -102,3 +106,20 @@ def page() -> None:
                     )
                 ).classes("footnote")
         help_box.set_visibility(False)
+        _other_profiles()
+
+
+def _other_profiles() -> None:
+    """The way to another profile (F34) without this one's password: each profile has its own lock."""
+    reg = profiles_svc.load()
+    others = [p for p in reg.profiles if p.id != reg.current]
+    if not others:
+        return
+    with (
+        ui.button(t("Open Another Profile"), icon="o_folder_shared")
+        .props("flat dense no-caps")
+        .classes("link-btn self-center"),
+        ui.menu().props("auto-close"),
+    ):
+        for p in others:
+            ui.menu_item(p.name, on_click=lambda p=p: open_profile(p.id))

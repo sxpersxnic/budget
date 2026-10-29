@@ -20,10 +20,11 @@ from fastapi.responses import RedirectResponse
 from nicegui import app, background_tasks, native, ui
 
 from budget_app import config, i18n
+from budget_app.i18n import t
 from budget_app.services import attachments as attachments_svc
 from budget_app.services import context as context_module
-from budget_app.services import security
-from budget_app.services.context import Context, get_ctx, init_context
+from budget_app.services import profiles, security
+from budget_app.services.context import Context, ValidationError, get_ctx, init_context
 from budget_app.storage import lock as instance_lock
 from budget_app.ui import theme
 from budget_app.ui.layout import book_recurring, refresh_rates
@@ -145,14 +146,32 @@ async def refresh() -> None:
     book_recurring(ctx)  # at the rates of the day
 
 
-def _open_after_unlock(data_dir: Path) -> None:
+def _open_and_refresh(data_dir: Path) -> None:
     open_data(data_dir)
     background_tasks.create(refresh(), name="refresh after unlock")
 
 
+def open_folder(folder: Path, moved: bool = False) -> None:
+    """Close the open data folder and open `folder`: another profile (F34), or the same records moved to a new place
+    (`moved`, F26: the same lock and key, so the browser stays unlocked). Refused, with nothing changed, when another
+    Budget window has the folder open."""
+    try:
+        instance_lock.switch(folder)
+    except instance_lock.AlreadyRunningError as exc:
+        raise ValidationError(t("The folder {folder} is open in another Budget window", folder=folder)) from exc
+    context_module.close_context()
+    if moved:
+        security.relocate(folder)
+    else:
+        security.configure(folder)
+    if security.can_open_without_password() or security.codec().encrypting:
+        _open_and_refresh(folder)
+
+
 def setup(data_dir: Path) -> None:
     security.configure(data_dir)
-    security.opener = _open_after_unlock
+    security.opener = _open_and_refresh
+    profiles.opener = open_folder
     theme.install()
     register_routes(app)
     register_pages()

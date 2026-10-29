@@ -1,3 +1,4 @@
+import os
 from datetime import date
 
 import pandas as pd
@@ -11,6 +12,21 @@ from budget_app.storage.store import Store
 pytest_plugins = ["nicegui.testing.user_plugin"]  # the `User` simulation for tests/ui
 
 TODAY = date(2026, 10, 18)
+
+
+@pytest.fixture(autouse=True)
+def home_folder(tmp_path):
+    """The app's home folder and its profile registry (F34) are the test's own folder, never the developer's data.
+
+    Not through `monkeypatch`: an autouse fixture would set it up first, so its undo would run after the UI tests'
+    `user` fixture has shut the app down, too late for what those tests patch on the app."""
+    before = os.environ.get("BUDGET_DATA_DIR")
+    os.environ["BUDGET_DATA_DIR"] = str(tmp_path)
+    yield
+    if before is None:
+        os.environ.pop("BUDGET_DATA_DIR", None)
+    else:
+        os.environ["BUDGET_DATA_DIR"] = before
 
 
 @pytest.fixture
