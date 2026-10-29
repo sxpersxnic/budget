@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F27 (done), F19, F30, F32, F31, F22, F23, F33, F34 (done), F15, F17, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F27 (done), F19, F30, F32, F31, F22, F23, F33, F34 (done), F15, F17, F26 (done), F04, F35 | – |
 
 ### Bugs
 
@@ -179,7 +179,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F23 | ☐ Open | Who owes what (shared expenses) | Wealth | M | Local | – |
 | F24 | ☑ Done | Export to CSV and JSON | Data out | S–M | Local | – |
 | F25 | ☑ Done | Full backup and restore | Data out | S | Local | – |
-| F26 | ☐ Open | Sync through a cloud folder | Data out | L | Optional | F28 |
+| F26 | ☑ Done | Sync through a cloud folder | Data out | L | Optional | F28 |
 | F27 | ☑ Done | Encryption and app lock | Security | L | Local | – |
 | F28 | ☑ Done | Undo and change history | Security | M | Local | – |
 | F29 | ☑ Done | Multi-language support | Experience | L | Local | – |
@@ -1040,7 +1040,22 @@ every table must load), and the current records go to `backups/<timestamp>_befor
 
 #### F26 · Sync through a cloud folder
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision 19, decision NEW-F26):** *Settings → Data → Data Folder · Move…* copies the open profile's
+folder (records, attachments, automatic backups, the lock's `security.json`) to a new or empty folder and opens it
+from there; the cloud folders found on the computer (iCloud Drive, Dropbox, OneDrive, Google Drive) are offered as
+`<cloud>/Budget`. The old folder is left as it was. Another profile's folder, a folder inside the current one and
+a folder that is not empty are refused; a copy that fails leaves the profile where it was. On the second computer,
+*Settings → Profiles → Add Profile…* with the same folder opens it as it is. While a folder is open, the app keeps
+`.in-use.<computer>.json` in it, refreshed every minute and removed on closing; a fresh one from another computer
+(seen within ten minutes) shows a warning on every page: *Budget is open on … too, since …*. Every five seconds the
+app compares the record files with what it last read or wrote itself; files another computer changed are read
+again, in place, once they are the same on two checks in a row (a sync client still copying is waited for), and
+every open page is told and refreshes. A file that can't be read yet (half synced) is skipped until it changes
+again. Not built: merging (decision 19: one computer at a time; a change made on both between two checks keeps the
+one written last), conflict copies made by the sync clients (they are ignored), and moving another profile's
+folder from its own row (*Move…* moves the open one).
 
 Use the app on two computers by keeping the data folder in iCloud Drive, OneDrive or
 Dropbox.

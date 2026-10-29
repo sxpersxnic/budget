@@ -183,6 +183,13 @@ The app opens in its own window and keeps all data in your user folder:
   password; switch between them at the top of the sidebar. **Remove** only takes a profile off the
   list: its folder and records stay where they are. The list itself is `profiles.json` in the data
   folder above.
+- **Two computers (cloud folder):** **Settings → Data → Data Folder · Move…** copies your records to
+  another folder, for example `iCloud Drive/Budget`, `Dropbox/Budget` or `OneDrive/Budget`, and
+  uses them there; the old folder is left as it was. On the other computer, add the same folder
+  under **Settings → Profiles → Add Profile…**. Use one computer at a time: while Budget is open on
+  the other one, every page says so, and records changed there are read again after a few seconds,
+  but changes made on both at the same time are not merged. Budget itself never connects to the
+  cloud service; your sync app copies the files.
 
 ## First steps
 
