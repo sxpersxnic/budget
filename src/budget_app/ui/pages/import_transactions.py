@@ -12,17 +12,19 @@ at once and the rest can follow later from the same file."""
 
 from __future__ import annotations
 
+import json
+
 from nicegui import events, ui
 
 from budget_app.domain import months
 from budget_app.domain.everyday import category_options
-from budget_app.domain.models import TX_INCOME
+from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME
 from budget_app.i18n import N_, date_label, t, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import camt, categorize, import_balances, importer
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, fmt, frame, picks_files, segmented, success
+from budget_app.ui.layout import error, fmt, frame, picks_files, segmented, sheet, success
 from budget_app.ui.widgets.grid import date_col, make_grid, num_col
 from budget_app.ui.widgets.selects import CategorySelect, account_options
 
@@ -36,7 +38,7 @@ NONE = ""  # select value for "no column"
 
 
 def _columns(currency: str) -> list[dict]:
-    amount = num_col("amount", t("Amount"), width=140)
+    amount = num_col("amount", t("Amount"), width=124)
     amount["cellClassRules"] = {"amt-in": "x > 0"}
     amount[":valueFormatter"] = (
         "p => p.value == null ? '' : (p.value > 0 ? '+' : '') + p.value.toLocaleString('de-CH', "
@@ -46,26 +48,44 @@ def _columns(currency: str) -> list[dict]:
         {
             "field": "include",
             "headerName": t("Import"),
-            "width": 90,
+            "width": 76,
             "editable": True,
             "cellRenderer": "agCheckboxCellRenderer",
             "cellEditor": "agCheckboxCellEditor",
         },
-        date_col("date", t("Date"), width=120),
-        {"field": "text", "headerName": t("Description"), "flex": 1, "minWidth": 200},
-        # the payee found for the row (F09); double-click to change it, the bank text is remembered for it
-        {"field": "payee", "headerName": t("Payee"), "width": 180, "editable": True},
+        # next to the tick, so a row left out says why: no category yet, a duplicate, unreadable
+        {
+            "field": "status",
+            "headerName": t("Status"),
+            "width": 150,
+            "cellClassRules": {"waiting": "data.group === 'wait'", "muted": "data.group === 'out'"},
+        },
+        date_col("date", t("Date"), width=108),
+        # the payee found for the row (F09); click to change it, the bank text is remembered for it
+        {"field": "payee", "headerName": t("Payee"), "width": 150, "editable": True, "singleClickEdit": True},
+        {"field": "text", "headerName": t("Description"), "flex": 1, "minWidth": 120},
         amount,
-        # a suggested category is set in italics until the user changes it; the next column says why (F07)
+        # click to choose (`pick_category`); a suggestion is in italics until the user changes it, and its tooltip
+        # says why (F07)
         {
             "field": "category",
             "headerName": t("Category"),
             "width": 260,
-            "cellClassRules": {"suggested": "data.suggested"},
+            "tooltipField": "reason",
+            "cellClass": "pick",
+            "cellClassRules": {"suggested": "data.suggested", "placeholder": "!x"},
+            ":valueFormatter": f"p => p.value || {json.dumps(t('Choose…'))}",
         },
-        {"field": "reason", "headerName": t("Suggestion"), "width": 220, "cellClass": "muted"},
-        {"field": "status", "headerName": t("Status"), "width": 170, "cellClass": "muted"},
+        # in / wait / out: what the filter above the grid shows
+        {"field": "group", "hide": True, "filter": "agTextColumnFilter"},
     ]
+
+
+def quietly(shown: dict, values: dict) -> None:
+    """Change the grid's copy of a row without NiceGUI noticing. Its props are observed, and any change it notices
+    rebuilds AG Grid (page, sort and selection lost); the browser gets the change by `applyTransaction` instead."""
+    for key, value in values.items():
+        dict.__setitem__(shown, key, value)
 
 
 def _income_options(ctx: Context) -> dict[str, str]:
@@ -168,8 +188,11 @@ def page() -> None:
         # ---------------------------------------------------------- 3 · review
         with ui.element("div").classes("surface flex flex-col gap-3") as review_card:
             review_title = ui.label(t("3 · Review")).classes("section-title")
-            with ui.row().classes("w-full items-center gap-x-2 gap-y-1 -mt-2"):
-                summary = ui.label().classes("caption flex-1 min-w-[16rem]")
+            summary = ui.label().classes("caption -mt-2")
+            with ui.row().classes("w-full items-center gap-x-2 gap-y-1"):
+                # which rows the grid shows: a large file is worked through one group at a time
+                view = segmented({"all": t("All · {n}", n=0)}, "all", on_change=lambda e: show(e.value))
+                ui.space()
                 clear_btn = (
                     ui.button(t("Clear Suggestions"), icon="o_clear_all", on_click=lambda: clear_suggestions())  # noqa: PLW0108 - defined below
                     .props("flat dense no-caps")
@@ -378,32 +401,75 @@ def page() -> None:
             state["balances"] = import_balances.compare(ctx, offer.candidates, account.value or "")
             state["balance_problem"] = offer.problem
 
-        def render() -> None:
-            importer.hold_uncategorized(ctx, state["rows"])  # a row without a category waits; one that got one is in
+        def currency() -> str:
             acc = ctx.store.accounts.get(account.value) if account.value else None
-            currency = state["statement"].currency if state["statement"] else acc.currency if acc else ""
-            grid.options["columnDefs"] = _columns(currency)
-            grid.options["rowData"] = [
-                {
-                    "id": str(r.index),
-                    "include": r.include,
-                    "date": r.date.isoformat() if r.date else "",
-                    "text": r.text,
-                    "payee": r.payee,
-                    "amount": r.amount,
-                    "category": category_labels.get(r.category, ""),
-                    "suggested": r.suggested,
-                    "reason": r.reason if r.suggested else "",
-                    "status": r.error or (t(STATUS[r.status]) if r.status in STATUS else ""),
-                }
-                for r in state["rows"]
-            ]
-            visible_rows = min(len(state["rows"]), 12)
-            grid.style(f"height: {visible_rows * 40 + 100}px; min-height: 180px")  # fit short files
+            return state["statement"].currency if state["statement"] else acc.currency if acc else ""
+
+        def row_status(r: importer.ImportRow) -> str:
+            if r.error:
+                return r.error
+            if r.waiting:
+                return t("Needs a category")
+            if not r.include and r.status == importer.NEW:
+                return t("Left out")
+            return t(STATUS[r.status]) if r.status in STATUS else ""
+
+        def row_data(r: importer.ImportRow) -> dict:
+            return {
+                "id": str(r.index),
+                "include": r.include,
+                "group": "in" if r.include else "wait" if r.waiting else "out",
+                "date": r.date.isoformat() if r.date else "",
+                "text": r.text,
+                "payee": r.payee,
+                "amount": r.amount,
+                "category": category_labels.get(r.category, ""),
+                "suggested": r.suggested,
+                "reason": r.reason if r.suggested else "",
+                "status": row_status(r),
+            }
+
+        def hold() -> None:
+            """A row without a category waits, and one that got one is in; before the account is chosen there are no
+            suggestions yet, so nothing waits."""
+            if account.value:
+                importer.hold_uncategorized(ctx, state["rows"])
+
+        def render() -> None:
+            """Draw the grid anew for a new file, account or column choice. AG Grid is rebuilt, so the page, sort and
+            selection start over; a change to some rows goes through `sync` instead."""
+            hold()
+            grid.options["columnDefs"] = _columns(currency())
+            grid.options["rowData"] = [row_data(r) for r in state["rows"]]
+            visible_rows = min(len(state["rows"]), 20)
+            grid.style(f"height: min({visible_rows * 40 + 100}px, 75vh); min-height: 180px")  # fit short files
             grid.update()
             bar.set_visibility(False)
-            render_balances(currency)
+            render_balances(currency())
             update_status()
+            show(view.value)  # the new grid has no filter yet
+
+        def sync() -> None:
+            """Send the rows that changed to AG Grid in place, so the page, sort, filter and scroll position stay.
+            Touching the grid element itself (update, style, its options) would rebuild it."""
+            hold()
+            data = grid.options["rowData"]
+            changed = []
+            for i, r in enumerate(state["rows"]):
+                new = row_data(r)
+                if data[i] != new:
+                    quietly(data[i], new)
+                    changed.append(new)
+            if changed:
+                grid.run_grid_method("applyTransaction", {"update": changed})
+            update_status()
+
+        def show(group: str) -> None:
+            """Show one group of rows (in, wait, out) or all of them. Rows that move to another group leave the view,
+            so "Need a Category" empties as rows get one. A selection hidden by the filter is dropped."""
+            grid.run_grid_method("deselectAll")
+            model = {} if group == "all" else {"group": {"filterType": "text", "type": "equals", "filter": group}}
+            grid.run_grid_method("setFilterModel", model)
 
         def render_balances(currency: str) -> None:
             candidates, problem = state["balances"], state["balance_problem"]
@@ -450,11 +516,18 @@ def page() -> None:
                 parts.append(tn("{n} possible duplicate", "{n} possible duplicates", n))
             if errors:
                 parts.append(tn("{n} unreadable", "{n} unreadable", errors))
-            text = t(
-                "{counts}. Duplicates and unreadable lines are left out; tick them to import anyway.",
-                counts=" · ".join(parts),
-            )
+            text = " · ".join(parts) + "."
             chosen = [r for r in rows if r.include]
+            waiting = sum(1 for r in rows if r.waiting)
+            view.set_options(
+                {
+                    "all": t("All · {n}", n=len(rows)),
+                    "in": t("To import · {n}", n=len(chosen)),
+                    "wait": t("Need a category · {n}", n=waiting),
+                    "out": t("Left out · {n}", n=len(rows) - len(chosen) - waiting),
+                },
+                value=view.value,
+            )
             suggested = sum(1 for r in chosen if r.suggested)
             if suggested:
                 text += " " + tn(
@@ -464,7 +537,6 @@ def page() -> None:
                 )
             summary.set_text(text)
             clear_btn.set_visibility(any(r.suggested for r in rows))
-            waiting = sum(1 for r in rows if r.waiting)
             balances = [c for c in state["balances"] if c.include]
             if balances:
                 import_btn.set_text(
@@ -483,10 +555,10 @@ def page() -> None:
             elif waiting:
                 status.set_text(
                     tn(
-                        "{n} row without a category is left out: give it one (select it, choose a category, Apply) "
-                        "to import it now, or import it later from the same file.",
-                        "{n} rows without a category are left out: give them one (select them, choose a category, "
-                        "Apply) to import them now, or import them later from the same file.",
+                        "{n} row without a category is left out: click its category to choose one, or import it "
+                        "later from the same file.",
+                        "{n} rows without a category are left out: click a row's category to choose one, or import "
+                        "them later from the same file.",
                         waiting,
                     )
                 )
@@ -503,14 +575,12 @@ def page() -> None:
             bar.set_visibility(bool(rows))
             selected_label.set_text(tn("{n} selected", "{n} selected", len(rows)))
 
-        async def apply_category() -> None:
-            if not bulk_cat.value:
-                error(t("Choose a category first"))
-                return
-            rows = await selected_rows()
-            fitting = [r for r in rows if importer.valid_category(ctx, r.type, bulk_cat.value)]
+        def set_category(rows: list[importer.ImportRow], code: str) -> None:
+            """Give `rows` the category chosen by hand; the file's other rows of the same payee get it as a suggestion
+            (`importer.spread`). Rows of the other type (money in, money out) are skipped and counted."""
+            fitting = [r for r in rows if importer.valid_category(ctx, r.type, code)]
             for r in fitting:  # chosen by hand: no longer a suggestion
-                r.category, r.suggested, r.reason = bulk_cat.value, False, ""
+                r.category, r.suggested, r.reason = code, False, ""
             if spread := importer.spread(state["rows"], fitting):
                 success(
                     tn(
@@ -521,7 +591,7 @@ def page() -> None:
                 )
             skipped = len(rows) - len(fitting)
             if skipped:
-                if importer.valid_category(ctx, TX_INCOME, bulk_cat.value):
+                if importer.valid_category(ctx, TX_INCOME, code):
                     error(
                         tn(
                             "{n} row skipped: that category is for money coming in only",
@@ -537,13 +607,67 @@ def page() -> None:
                             skipped,
                         )
                     )
-            render()
+            sync()
+
+        async def apply_category() -> None:
+            if not bulk_cat.value:
+                error(t("Choose a category first"))
+                return
+            set_category(await selected_rows(), bulk_cat.value)
+            grid.run_grid_method("deselectAll")  # done with these rows; under a filter they may have left the view
+
+        def pick_category(row: importer.ImportRow) -> None:
+            """The category of one row, chosen in a sheet: a click on the category cell opens it with the search
+            ready. Only the categories of the row's type are offered."""
+            expense = row.type == TX_EXPENDITURE
+            others = len(importer.same_payee(state["rows"], row))
+            with sheet(row.payee or row.text or t("Category"), width="28rem") as dlg:
+                details = [date_label(row.date) if row.date else "", fmt(row.amount, currency()), row.text]
+                ui.label(" · ".join(d for d in details if d)).classes("caption -mt-2")
+
+                def chosen(code: str | None) -> None:
+                    if code and (code != row.category or row.suggested):
+                        set_category([row], code)
+                    dlg.close()
+
+                picker = (
+                    CategorySelect(
+                        expenditure if expense else [],
+                        None if expense else {c.id: c.name for c in acc_svc.income_categories(ctx)},
+                        label=t("Category"),
+                        value=row.category or None,
+                        on_change=lambda e: chosen(e.value),
+                    )
+                    .props("outlined autofocus")
+                    .classes("w-full")
+                )
+                if others:
+                    ui.label(
+                        tn(
+                            "The other row of this payee gets it too, as a suggestion.",
+                            "The {n} other rows of this payee get it too, as a suggestion.",
+                            others,
+                        )
+                    ).classes("caption")
+                with ui.row().classes("w-full justify-end pt-1"):
+                    ui.button(t("Cancel"), on_click=dlg.close).props("flat").classes("text-primary")
+                dlg.on("show", lambda: picker.run_method("showPopup"))  # the list open, once the sheet is in place
+
+        def cell_clicked(e: events.GenericEventArguments) -> None:
+            if e.args.get("colId") != "category":
+                return
+            row = row_by_id((e.args.get("data") or {}).get("id"))
+            if row is not None and row.status != importer.ERROR:
+                pick_category(row)
+
+        def row_by_id(row_id) -> importer.ImportRow | None:
+            return next((r for r in state["rows"] if str(r.index) == row_id), None)
 
         async def set_include(value: bool) -> None:
             rows = [r for r in await selected_rows() if r.status != importer.ERROR]
             for r in rows:
                 r.include, r.waiting = value, False
-            render()  # a row ticked without a category goes back to waiting
+            sync()  # a row ticked without a category goes back to waiting
             if value and (held := sum(1 for r in rows if r.waiting)):
                 error(
                     tn(
@@ -555,8 +679,13 @@ def page() -> None:
 
         def cell_changed(e: events.GenericEventArguments) -> None:
             data = e.args.get("data") or {}
-            row = next((r for r in state["rows"] if str(r.index) == data.get("id")), None)
-            if row is not None and e.args.get("colId") == "include":
+            col = e.args.get("colId")
+            row = row_by_id(data.get("id"))
+            if row is None or col not in ("include", "payee"):
+                return
+            # the browser shows the edit already: the grid's copy follows, so `sync` sends what the row turns out as
+            quietly(grid.options["rowData"][state["rows"].index(row)], {col: e.args.get("newValue")})
+            if col == "include":
                 row.include, row.waiting = bool(e.args.get("newValue")) and row.status != importer.ERROR, False
                 if row.include and not importer.valid_category(ctx, row.type, row.category):
                     error(
@@ -566,20 +695,17 @@ def page() -> None:
                             1,
                         )
                     )
-                    render()  # back to waiting, and the box unticked
-                else:
-                    update_status()
-            elif row is not None and e.args.get("colId") == "payee":
+            else:
                 row.payee = " ".join(str(e.args.get("newValue") or "").split())
                 if row.suggested or not row.category:  # a suggestion follows the new payee; a choice stays
                     importer.clear_suggestions([row])
                     if account.value and row.status != importer.ERROR:
                         importer.suggest(categorize.Suggester(ctx), row, account.value)
-                    render()
+            sync()  # a row ticked without a category goes back to waiting, its box unticked
 
         def clear_suggestions() -> None:
             importer.clear_suggestions(state["rows"])
-            render()
+            sync()
 
         def save_settings() -> None:
             if state["parsed"] is None:
@@ -635,3 +761,4 @@ def page() -> None:
         profile_sel.on_value_change(choose_profile)
         grid.on("selectionChanged", selection_changed)
         grid.on("cellValueChanged", cell_changed)
+        grid.on("cellClicked", cell_clicked)

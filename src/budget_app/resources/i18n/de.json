@@ -111,6 +111,7 @@
  "All records in one ZIP file. Keep it somewhere safe; it can be restored here.": "Alle Daten in einer ZIP-Datei. An einem sicheren Ort aufbewahren; hier lässt sie sich wiederherstellen.",
  "All time": "Gesamte Zeit",
  "All time, {currency}": "Gesamte Zeit, {currency}",
+ "All · {n}": "Alle · {n}",
  "Already imported": "Bereits importiert",
  "Already recorded. Saving replaces it.": "Bereits erfasst. Sichern ersetzt den Wert.",
  "Also by tag": "Auch per Schlagwort",
@@ -294,6 +295,7 @@
  "Choose the account the file belongs to": "Bitte das Konto wählen, zu dem die Datei gehört",
  "Choose the account this file belongs to.": "Bitte das Konto wählen, zu dem diese Datei gehört.",
  "Choose the kind of goal": "Wählen Sie die Art des Ziels",
+ "Choose…": "Wählen …",
  "Class": "Klasse",
  "Clear": "Leeren",
  "Clear Selection": "Auswahl aufheben",
@@ -646,6 +648,8 @@
  "Leave it empty for a new folder beside the app’s own. A folder that already holds records, for example in a cloud folder, is opened as it is.": "Leer lassen für einen neuen Ordner neben dem der App. Ein Ordner, der schon Buchungen enthält, zum Beispiel in einem Cloud-Ordner, wird so geöffnet, wie er ist.",
  "Leave the repayment empty for an interest-only mortgage.": "Lassen Sie die Rückzahlung leer für eine Hypothek ohne Amortisation.",
  "Leave unchanged": "Unverändert lassen",
+ "Left out": "Weggelassen",
+ "Left out · {n}": "Weggelassen · {n}",
  "Lender": "Kreditgeber",
  "Let phones on your home network add expenses?": "Telefone im Heimnetz Ausgaben erfassen lassen?",
  "Lets a phone on your home network add expenses once you pair it with a code. Budget then also listens on the home network.": "Lässt ein Telefon in Ihrem Heimnetz Ausgaben erfassen, sobald Sie es mit einem Code koppeln. Budget ist dann auch im Heimnetz erreichbar.",
@@ -707,6 +711,8 @@
  "Name": "Name",
  "Name is required": "Bitte einen Namen eingeben",
  "Name, e.g. UBS Private": "Name, z. B. UBS Privat",
+ "Need a category · {n}": "Ohne Kategorie · {n}",
+ "Needs a category": "Braucht eine Kategorie",
  "Net Income": "Nettoeinkommen",
  "Net dividends": "Nettodividenden",
  "Net {amount} to {account}": "Netto {amount} auf {account}",
@@ -1180,7 +1186,6 @@
  "Statement {month}": "Auszug {month}",
  "Status": "Status",
  "Streaming, phone, gym, insurance: a charge that comes back at the same rhythm for about the same amount shows here once it was charged {n} times ({m} times for half-yearly and yearly ones). Nothing is booked for you.": "Streaming, Telefon, Fitness, Versicherung: Eine Belastung, die im gleichen Rhythmus mit etwa gleichem Betrag wiederkommt, erscheint hier, sobald sie {n} Mal belastet wurde ({m} Mal bei halbjährlichen und jährlichen). Nichts wird für Sie gebucht.",
- "Suggestion": "Vorschlag",
  "Summary": "Übersicht",
  "Summary for {name}": "Zusammenfassung für {name}",
  "Summary…": "Zusammenfassung …",
@@ -1282,6 +1287,10 @@
  "The next file with the same columns is recognised automatically.": "Die nächste Datei mit denselben Spalten wird automatisch erkannt.",
  "The notes are those of the UN's COICOP 2018 publication; translations of them are the app's own and unofficial.": "Die Erläuterungen stammen aus der Publikation COICOP 2018 der UNO; ihre Übersetzungen sind die eigenen der App und inoffiziell.",
  "The order of the lines can’t be told from the file (newest or oldest first), so no month-end balances are offered.": "Die Reihenfolge der Zeilen (neueste oder älteste zuerst) lässt sich aus der Datei nicht erkennen, deshalb werden keine Salden am Monatsende angeboten.",
+ "The other row of this payee gets it too, as a suggestion.": [
+  "Die andere Zeile dieser Gegenpartei erhält sie auch, als Vorschlag.",
+  "Die {n} anderen Zeilen dieser Gegenpartei erhalten sie auch, als Vorschlag."
+ ],
  "The outstanding debt of its loan on the Loans page; no balances to record.": "Die offene Schuld seines Darlehens auf der Seite «Darlehen»; keine Saldi zu erfassen.",
  "The password needs at least {n} characters": "Das Passwort braucht mindestens {n} Zeichen",
  "The passwords differ": "Die Passwörter stimmen nicht überein",
@@ -1366,6 +1375,7 @@
  "To": "Bis",
  "To Account": "Gutschriftskonto",
  "To end of": "Bis Ende",
+ "To import · {n}": "Zu importieren · {n}",
  "To send yourself; the app sends nothing.": "Zum Selberverschicken; die App verschickt nichts.",
  "To the cent": "Auf den Rappen",
  "Total": "Total",
@@ -1576,7 +1586,6 @@
   "{category} + {n} weitere"
  ],
  "{change} since the end of {month}": "{change} seit Ende {month}",
- "{counts}. Duplicates and unreadable lines are left out; tick them to import anyway.": "{counts}. Duplikate und unlesbare Zeilen werden ausgelassen; zum Importieren trotzdem anhaken.",
  "{count} · matches the amount": "{count} · entspricht dem Betrag",
  "{count} · {difference} more than the amount": "{count} · {difference} mehr als der Betrag",
  "{count} · {difference} not itemised": "{count} · {difference} nicht aufgeschlüsselt",
@@ -1768,9 +1777,9 @@
   "{n} Zeile übersprungen: Diese Kategorie gilt nur für Ausgaben",
   "{n} Zeilen übersprungen: Diese Kategorie gilt nur für Ausgaben"
  ],
- "{n} row without a category is left out: give it one (select it, choose a category, Apply) to import it now, or import it later from the same file.": [
-  "{n} Zeile ohne Kategorie wird weggelassen: Geben Sie ihr eine (auswählen, Kategorie wählen, «Anwenden»), um sie jetzt zu importieren, oder importieren Sie sie später aus derselben Datei.",
-  "{n} Zeilen ohne Kategorie werden weggelassen: Geben Sie ihnen eine (auswählen, Kategorie wählen, «Anwenden»), um sie jetzt zu importieren, oder importieren Sie sie später aus derselben Datei."
+ "{n} row without a category is left out: click its category to choose one, or import it later from the same file.": [
+  "{n} Zeile ohne Kategorie wird weggelassen: Klicken Sie auf ihre Kategorie, um eine zu wählen, oder importieren Sie sie später aus derselben Datei.",
+  "{n} Zeilen ohne Kategorie werden weggelassen: Klicken Sie auf die Kategorie einer Zeile, um eine zu wählen, oder importieren Sie sie später aus derselben Datei."
  ],
  "{n} rule": [
   "{n} Regel",

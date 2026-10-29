@@ -595,7 +595,7 @@ categories are left out), so a first import is mostly categorized. Where no acco
 is fixed, an account is suggested too: the rule's, else the one the payee had most often. The **form** shows
 "Use 01.1 Groceries" with the reason under the category of a new expenditure or income once it has a payee; a
 click fills the category (and the account, if still empty). The **import preview** (CSV and camt) fills in
-suggestions in italics, with a *Suggestion* column for the reason, counts them in the summary and offers *Clear
+suggestions in italics, with the reason as the cell's tooltip, counts them in the summary and offers *Clear
 Suggestions*; a category chosen by hand loses the mark, a changed payee brings a new suggestion, and importing keeps
 what the preview shows. A category applied to some rows is suggested for the file's other rows of the same payee,
 and rows still without a category start unticked, so the rest of a large file can be imported at once and those rows

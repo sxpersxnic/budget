@@ -18,8 +18,7 @@ from budget_app.services.transactions import TransactionInput
 
 SELECTED = re.compile(r".*getSelectedRows")
 WAITING_ONE = (
-    "1 row without a category is left out: give it one (select it, choose a category, Apply) to import it now, or "
-    "import it later from the same file."
+    "1 row without a category is left out: click its category to choose one, or import it later from the same file."
 )
 
 
@@ -89,6 +88,37 @@ async def categorise(user: User, category: str, *indexes: int) -> None:
     await settle()
 
 
+def view(user: User) -> ui.toggle:
+    """The filter above the grid: all rows, those to import, those needing a category, those left out."""
+    return next(e for e in user.find(kind=ui.toggle).elements if "all" in e.options)
+
+
+def grid_calls(user: User) -> list[list]:
+    """The AG Grid API calls the page makes from now on, as [method, *arguments]."""
+    [grid] = user.find(kind=ui.aggrid).elements
+    calls: list[list] = []
+    original = grid.run_grid_method
+
+    def record(name: str, *args, **kwargs):
+        calls.append([name, *args])
+        return original(name, *args, **kwargs)
+
+    grid.run_grid_method = record  # type: ignore[method-assign]
+    return calls
+
+
+def grid_event(user: User, name: str, args: dict) -> None:
+    [grid] = user.find(kind=ui.aggrid).elements
+    UserInteraction(user, {grid}, None).trigger(name, args)
+
+
+def sheet_category(user: User) -> ui.select:
+    """The category picker in the sheet a click on a category cell opens (the last one opened)."""
+    with user:
+        found = [e for e in ElementFilter(kind=ui.select, local_scope=False) if e.props.get("label") == "Category"]
+    return max(found, key=lambda e: e.id)
+
+
 async def de_file_on_euro_account(user: User, setup) -> None:
     await user.open("/import")
     await upload(user, "de.csv", DE)
@@ -118,7 +148,7 @@ async def test_import_a_file_in_three_steps(user: User, ctx, setup) -> None:
     assert not import_button(user).enabled
 
     put(user, field(user, ui.select, "Account"), setup["eur"].id)
-    await user.should_see("3 new · 1 unreadable. Duplicates and unreadable lines are left out")
+    await user.should_see("3 new · 1 unreadable.")
     # the refund has no category: it waits, and the two categorized rows can be imported at once
     assert status(user) == WAITING_ONE
     assert import_button(user).text == "Import 2 Transactions" and import_button(user).enabled
@@ -225,6 +255,57 @@ async def test_rows_without_a_category_wait_and_the_rest_import_at_once(user: Us
     click(user, import_button(user))
     assert notified(user, "Imported 2 transactions")
     assert len(ctx.store.transactions.all()) == 2  # the row left out comes back with the same file (test_importer)
+
+
+async def test_the_status_says_why_a_row_is_left_out_and_the_filter_counts_them(user: User, ctx, setup) -> None:
+    await de_file_on_euro_account(user, setup)
+    assert [(r["status"], r["group"]) for r in rows(user)] == [
+        ("New", "in"),
+        ("New", "in"),
+        ("Needs a category", "wait"),
+        ("No valid date", "out"),
+    ]
+    assert view(user).options == {
+        "all": "All · 4",
+        "in": "To import · 2",
+        "wait": "Need a category · 1",
+        "out": "Left out · 1",
+    }
+    await select(user, 0)
+    click(user, button(user, "Exclude"))
+    await settle()
+    assert rows(user)[0]["status"] == "Left out"  # unticked by hand
+    assert view(user).options["out"] == "Left out · 2"
+
+    calls = grid_calls(user)
+    put(user, view(user), "wait")  # AG Grid filters on the hidden group column
+    await settle()
+    assert calls[-1] == ["setFilterModel", {"group": {"filterType": "text", "type": "equals", "filter": "wait"}}]
+
+
+async def test_a_click_on_a_category_opens_a_picker_for_that_row(user: User, ctx, setup) -> None:
+    await user.open("/import")
+    await upload(user, "ubs.csv", UBS)  # Migros (suggested), salary and rent (none)
+    put(user, field(user, ui.select, "Account"), setup["chf"].id)
+    await settle()
+    grid_event(user, "cellClicked", {"data": {"id": "2"}, "colId": "category"})
+    await user.should_see("Miete Oktober")
+    picker = sheet_category(user)
+    assert setup["salary"].id not in picker.options  # money out: spending categories only
+    calls = grid_calls(user)
+    put(user, picker, "04.1")
+    await settle()
+    assert [(r["category"], r["suggested"], r["include"]) for r in rows(user)][2] == (
+        get_coicop().label("04.1"),
+        False,
+        True,
+    )
+    # sent in place, not by rebuilding the grid: the page, sort and filter stay
+    assert [c[0] for c in calls] == ["applyTransaction"]
+
+    grid_event(user, "cellClicked", {"data": {"id": "1"}, "colId": "category"})
+    await user.should_see("Lohn Firma AG")
+    assert list(sheet_category(user).options) == [setup["salary"].id]  # money in: income categories only
 
 
 async def test_rows_can_be_excluded_and_included(user: User, ctx, setup) -> None:

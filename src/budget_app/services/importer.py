@@ -439,6 +439,23 @@ def spread(rows: list[ImportRow], chosen: list[ImportRow]) -> int:
     return filled
 
 
+def same_payee(rows: list[ImportRow], row: ImportRow) -> list[ImportRow]:
+    """The file's other rows that `spread` would give the category chosen for `row`: same payee and type, readable,
+    and without a category chosen by hand."""
+    k = payee_key(row.payee)
+    if not k:
+        return []
+    return [
+        r
+        for r in rows
+        if r is not row
+        and r.status != ERROR
+        and r.type == row.type
+        and payee_key(r.payee) == k
+        and not (r.category and not r.suggested)
+    ]
+
+
 def clear_suggestions(rows: list[ImportRow]) -> int:
     """Empty every suggested category; the number of rows cleared."""
     cleared = [r for r in rows if r.suggested]

@@ -516,6 +516,12 @@ body.body--dark .nicegui-aggrid { border: 0.5px solid var(--separator); }
   .nicegui-aggrid .ag-paging-page-size, .nicegui-aggrid .ag-paging-row-summary-panel { display: none; } }
 /* a category the import suggested (F07): not the user's choice until they keep it */
 .nicegui-aggrid .suggested { color: var(--label-2); font-style: italic; }
+/* the import's category cell opens a picker on click; an empty one invites the choice */
+.nicegui-aggrid .pick { cursor: pointer; padding-right: 28px; }
+.nicegui-aggrid .pick::after { content: "▾"; position: absolute; right: 12px; color: var(--label-3); }
+.nicegui-aggrid .pick:hover::after { color: var(--accent); }
+.nicegui-aggrid .placeholder { color: var(--accent); font-style: normal; }
+.nicegui-aggrid .waiting { color: var(--warning); font-weight: 500; }
 /* ---------------------------------------------------------------- utilities (last, so they win) */
 .caption:empty { display: none; }
 .text-pos { color: var(--positive) !important; }

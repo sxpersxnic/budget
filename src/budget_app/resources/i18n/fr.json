@@ -111,6 +111,7 @@
  "All records in one ZIP file. Keep it somewhere safe; it can be restored here.": "Toutes les données dans un fichier ZIP. À conserver en lieu sûr ; il peut être restauré ici.",
  "All time": "Depuis le début",
  "All time, {currency}": "Depuis le début, {currency}",
+ "All · {n}": "Toutes · {n}",
  "Already imported": "Déjà importée",
  "Already recorded. Saving replaces it.": "Déjà saisi. L’enregistrement remplace la valeur.",
  "Also by tag": "Aussi par étiquette",
@@ -294,6 +295,7 @@
  "Choose the account the file belongs to": "Choisir le compte auquel appartient le fichier",
  "Choose the account this file belongs to.": "Choisir le compte auquel appartient ce fichier.",
  "Choose the kind of goal": "Choisissez le type d’objectif",
+ "Choose…": "Choisir…",
  "Class": "Classe",
  "Clear": "Effacer",
  "Clear Selection": "Désélectionner",
@@ -646,6 +648,8 @@
  "Leave it empty for a new folder beside the app’s own. A folder that already holds records, for example in a cloud folder, is opened as it is.": "Laissez vide pour un nouveau dossier à côté de celui de l’app. Un dossier qui contient déjà des écritures, par exemple dans un dossier cloud, est ouvert tel quel.",
  "Leave the repayment empty for an interest-only mortgage.": "Laissez l’amortissement vide pour une hypothèque sans amortissement.",
  "Leave unchanged": "Laisser inchangé",
+ "Left out": "Laissée de côté",
+ "Left out · {n}": "Laissées de côté · {n}",
  "Lender": "Prêteur",
  "Let phones on your home network add expenses?": "Laisser les téléphones du réseau domestique saisir des dépenses ?",
  "Lets a phone on your home network add expenses once you pair it with a code. Budget then also listens on the home network.": "Permet à un téléphone de votre réseau domestique de saisir des dépenses une fois couplé avec un code. Budget est alors aussi joignable sur le réseau domestique.",
@@ -707,6 +711,8 @@
  "Name": "Nom",
  "Name is required": "Saisir un nom",
  "Name, e.g. UBS Private": "Nom, p. ex. UBS Privé",
+ "Need a category · {n}": "Sans catégorie · {n}",
+ "Needs a category": "Catégorie requise",
  "Net Income": "Revenu net",
  "Net dividends": "Dividendes nets",
  "Net {amount} to {account}": "Net {amount} sur {account}",
@@ -1180,7 +1186,6 @@
  "Statement {month}": "Relevé {month}",
  "Status": "Statut",
  "Streaming, phone, gym, insurance: a charge that comes back at the same rhythm for about the same amount shows here once it was charged {n} times ({m} times for half-yearly and yearly ones). Nothing is booked for you.": "Streaming, téléphone, salle de sport, assurance : un débit qui revient au même rythme pour à peu près le même montant apparaît ici une fois débité {n} fois ({m} fois pour les semestriels et annuels). Rien n’est comptabilisé pour vous.",
- "Suggestion": "Suggestion",
  "Summary": "Résumé",
  "Summary for {name}": "Résumé pour {name}",
  "Summary…": "Résumé…",
@@ -1282,6 +1287,10 @@
  "The next file with the same columns is recognised automatically.": "Le prochain fichier avec les mêmes colonnes sera reconnu automatiquement.",
  "The notes are those of the UN's COICOP 2018 publication; translations of them are the app's own and unofficial.": "Les notes sont celles de la publication COICOP 2018 de l'ONU ; leurs traductions sont propres à l'application et non officielles.",
  "The order of the lines can’t be told from the file (newest or oldest first), so no month-end balances are offered.": "L’ordre des lignes (les plus récentes ou les plus anciennes d’abord) ne ressort pas du fichier, aucun solde de fin de mois n’est donc proposé.",
+ "The other row of this payee gets it too, as a suggestion.": [
+  "L’autre ligne de ce bénéficiaire la reçoit aussi, comme suggestion.",
+  "Les {n} autres lignes de ce bénéficiaire la reçoivent aussi, comme suggestion."
+ ],
  "The outstanding debt of its loan on the Loans page; no balances to record.": "La dette restante de son prêt sur la page «Prêts»; pas de solde à saisir.",
  "The password needs at least {n} characters": "Le mot de passe doit avoir au moins {n} caractères",
  "The passwords differ": "Les mots de passe ne correspondent pas",
@@ -1366,6 +1375,7 @@
  "To": "Au",
  "To Account": "Compte crédité",
  "To end of": "Jusqu’à fin",
+ "To import · {n}": "À importer · {n}",
  "To send yourself; the app sends nothing.": "À envoyer vous-même; l’app n’envoie rien.",
  "To the cent": "Au centime",
  "Total": "Total",
@@ -1576,7 +1586,6 @@
   "{category} + {n} autres"
  ],
  "{change} since the end of {month}": "{change} depuis fin {month}",
- "{counts}. Duplicates and unreadable lines are left out; tick them to import anyway.": "{counts}. Les doublons et les lignes illisibles sont exclus ; les cocher pour les importer quand même.",
  "{count} · matches the amount": "{count} · correspond au montant",
  "{count} · {difference} more than the amount": "{count} · {difference} de plus que le montant",
  "{count} · {difference} not itemised": "{count} · {difference} non ventilé",
@@ -1768,9 +1777,9 @@
   "{n} ligne ignorée : cette catégorie est réservée aux dépenses",
   "{n} lignes ignorées : cette catégorie est réservée aux dépenses"
  ],
- "{n} row without a category is left out: give it one (select it, choose a category, Apply) to import it now, or import it later from the same file.": [
-  "{n} ligne sans catégorie est laissée de côté : donnez-lui-en une (sélectionnez-la, choisissez une catégorie, Appliquer) pour l’importer maintenant, ou importez-la plus tard depuis le même fichier.",
-  "{n} lignes sans catégorie sont laissées de côté : donnez-leur-en une (sélectionnez-les, choisissez une catégorie, Appliquer) pour les importer maintenant, ou importez-les plus tard depuis le même fichier."
+ "{n} row without a category is left out: click its category to choose one, or import it later from the same file.": [
+  "{n} ligne sans catégorie est laissée de côté : cliquez sur sa catégorie pour en choisir une, ou importez-la plus tard depuis le même fichier.",
+  "{n} lignes sans catégorie sont laissées de côté : cliquez sur la catégorie d’une ligne pour en choisir une, ou importez-les plus tard depuis le même fichier."
  ],
  "{n} rule": [
   "{n} règle",

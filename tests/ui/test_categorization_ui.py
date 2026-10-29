@@ -1,6 +1,7 @@
 """Automatic categorization (F07) in the interface: the form's suggestion, the import preview, the rule sheet
 ("Always Categorize Like This…") and the Categorization Rules page."""
 
+import re
 from datetime import date
 
 import pytest
@@ -58,7 +59,7 @@ def spend(setup, payee: str, category: str = "01.1", **kw) -> TransactionInput:
 
 
 def summary(user: User) -> str:
-    return next(e.text for e in user.find(kind=ui.label).elements if "Duplicates and unreadable" in e.text)
+    return next(e.text for e in user.find(kind=ui.label).elements if re.match(r"\d+ new", e.text))
 
 
 def edit_cell(user: User, index: int, column: str, value) -> None:
@@ -299,7 +300,7 @@ async def test_the_import_preview_marks_suggestions_until_they_are_changed(user:
     ]
     [grid] = user.find(kind=ui.aggrid).elements
     category = next(c for c in grid.options["columnDefs"] if c["field"] == "category")
-    assert category["cellClassRules"] == {"suggested": "data.suggested"}  # in italics
+    assert category["cellClassRules"]["suggested"] == "data.suggested"  # in italics
     assert "3 categories are suggestions (in italics): check them before importing." in summary(user)
     clear = button(user, "Clear Suggestions")
     assert clear.visible
