@@ -54,6 +54,42 @@ def setup(ctx):
     return {"chf": chf, "eur": eur, "salary": salary}
 
 
+# What one test worker holds at its peak (a NiceGUI app and the clients its UI tests built): measured up to 1.1 GB.
+WORKER_MEMORY = 1 << 30
+
+
+def memory_limit() -> int | None:
+    """The memory this process may use, in bytes: a container's limit (cgroup v2 or v1), else the machine's."""
+    for path in ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
+        try:
+            text = open(path, encoding="ascii").read().strip()  # noqa: PTH123, SIM115 - a one-line system file
+        except OSError:
+            continue
+        if text.isdigit() and int(text) < 1 << 60:  # "max", or v1's huge number, means no limit
+            return int(text)
+    try:
+        return os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+    except (ValueError, OSError, AttributeError):
+        return None
+
+
+def worker_count(cpus: int, memory: int | None) -> int:
+    """`-n auto`: one worker per CPU, but no more than the memory holds (one worker's worth kept for the rest)."""
+    if memory is None:
+        return max(1, cpus)
+    return max(1, min(cpus, memory // WORKER_MEMORY - 1))
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_xdist_auto_num_workers(config):
+    """One worker per CPU killed the CI runner's container (exit 137, out of memory): count the memory too.
+    PYTEST_XDIST_AUTO_NUM_WORKERS still sets the number outright (pytest-xdist's own hook reads it)."""
+    if os.environ.get("PYTEST_XDIST_AUTO_NUM_WORKERS"):
+        return None
+    cpus = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else (os.cpu_count() or 1)
+    return worker_count(cpus, memory_limit())
+
+
 def pytest_unconfigure(config):
     """If the process is still alive 30 s after the session ends, print every thread's stack and exit.
 
