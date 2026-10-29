@@ -11,7 +11,7 @@ from notifications import notified
 
 from budget_app import i18n
 from budget_app.domain import months
-from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR
+from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR, PROJECTION_BUDGET, PROJECTION_HIGHER
 from budget_app.services import accounts as acc_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
@@ -375,3 +375,15 @@ async def test_switching_the_language_is_saved_and_reloads(user: User, ctx, tmp_
     assert Store(tmp_path).settings.language == "de"
     assert i18n.language() == "de"
     await user.should_see("Einstellungen")  # the reloaded page is German
+
+
+async def test_projection_rule_is_chosen_in_settings(user: User, ctx) -> None:
+    """The owner's choice for months without balances: F47's rule by default, or the budgets alone."""
+    await user.open("/settings")
+    await user.should_see("Projected Wealth")
+    rule = user.find(marker="projection-rule").elements.pop()
+    assert rule.value == PROJECTION_HIGHER and set(rule.options) == {PROJECTION_BUDGET, PROJECTION_HIGHER}
+    rule.set_value(PROJECTION_BUDGET)
+    assert ctx.store.settings.projection == PROJECTION_BUDGET
+    assert Store(ctx.store.data_dir).settings.projection == PROJECTION_BUDGET  # saved with the settings
+    assert notified(user, "Projected wealth: Budget only")

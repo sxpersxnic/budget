@@ -227,6 +227,12 @@ def test_revalue_to_transaction_dates(ctx, setup):
     assert fixed.fx_date == date(2026, 8, 29) and fixed.amount_chf == pytest.approx(95.0)
     assert ctx.store.transactions.get(chf.id).fx_date == date(2026, 8, 29)  # CHF rows: same amount, new date
     assert tx_svc.revalue_to_transaction_dates(ctx) == 0  # nothing left to do
+    # the right rate date with a base amount that doesn't match it (a hand-edited file) is corrected too
+    wrong = ctx.store.transactions.get(tx.id)
+    wrong.amount_chf = 80.0
+    ctx.store.transactions.update_many([wrong])
+    assert tx_svc.revalue_to_transaction_dates(ctx) == 1
+    assert ctx.store.transactions.get(tx.id).amount_chf == pytest.approx(95.0)
 
 
 def test_revaluation_entered_as_values_or_difference(ctx, setup):

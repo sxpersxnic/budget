@@ -31,6 +31,7 @@ from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
 
 EPS = 0.005
+RATE_EPS = 1e-6  # base amounts are stored to six decimals; a smaller difference is no other rate
 FROM, TO, ADVANCE = "from", "to", "advance"
 # Whole sentences per account role (word order differs between languages)
 _SELECT_ACCOUNT = {
@@ -438,7 +439,9 @@ def revalue_to_transaction_dates(ctx: Context) -> int:
     """Value every transaction at the ECB rate of its date (the last rate on or before it).
 
     Brings old entries, valued at the then latest rate, in line, and catches up rows whose date had
-    no rate yet when they were saved (entered before the ECB published, or dated in the future).
+    no rate yet when they were saved (entered before the ECB published, or dated in the future). The base
+    amount is recomputed, not only the rate date compared, so a row whose CHF amount doesn't match its rate
+    (an older version's, or a file edited by hand) is corrected too; it runs at every start (decision NEW-PROJ).
     The amount an exchange received is kept; its split into ECB amount and spread follows the rate.
     Returns the number of transactions changed; does nothing without exchange rates.
     """
@@ -446,10 +449,12 @@ def revalue_to_transaction_dates(ctx: Context) -> int:
         return 0
     changed = []
     for tx in ctx.store.transactions.all():
-        target = ctx.fx.rate_date_on_or_before(tx.date)
-        if target is None or target == tx.fx_date:
+        if ctx.fx.rate_date_on_or_before(tx.date) is None:
             continue
-        tx.amount_chf, tx.fx_date = ctx.to_base_on(tx.amount, tx.currency, tx.date)
+        amount_chf, fx_date = ctx.to_base_on(tx.amount, tx.currency, tx.date)
+        if fx_date == tx.fx_date and abs(amount_chf - tx.amount_chf) < RATE_EPS:
+            continue
+        tx.amount_chf, tx.fx_date = amount_chf, fx_date
         changed.append(tx)
     if changed:
         ctx.store.transactions.update_many(changed)
