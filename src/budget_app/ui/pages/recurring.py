@@ -371,10 +371,11 @@ def page() -> None:
                                 ui.label(sub.name).classes("truncate")
                                 ui.label(caption(sub)).classes("caption")
                             text.tooltip(details(sub))
-                            ui.label(yearly_label(sub.yearly, sub.currency)).classes("num whitespace-nowrap")
-                            with ui.row().classes("items-center gap-0 no-wrap"):
+                            # the cost and the actions stay together, on the row or on a line of their own
+                            with ui.row().classes("items-center gap-0 no-wrap ml-auto"):
+                                ui.label(yearly_label(sub.yearly, sub.currency)).classes("num whitespace-nowrap pr-2")
                                 ui.button(t("Make Recurring…"), on_click=lambda s=sub: make_recurring(s)).props(
-                                    "flat dense no-caps"
+                                    "flat dense no-caps no-wrap"
                                 ).classes("text-primary")
                                 named(
                                     ui.button(icon="o_visibility_off", on_click=lambda s=sub: ignore(s))
