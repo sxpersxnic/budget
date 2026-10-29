@@ -518,7 +518,7 @@ Without just:
 
 ```bash
 uv sync --group dev && uv run lefthook install   # dev dependencies and git hooks
-uv run pytest --cov                                # tests with coverage (at least 87 %)
+uv run pytest --cov                                # tests with coverage (at least 87 %), one worker per CPU
 uv run ruff check . && uv run ruff format --check .  # lint and formatting (config in pyproject.toml)
 ```
 

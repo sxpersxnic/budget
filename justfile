@@ -38,7 +38,7 @@ demo:
     uv run python scripts/demo_data.py demo-data
     uv run --extra native --extra ocr budget --native --data-dir demo-data
 
-# Run the tests (extra arguments go to pytest, e.g. `just test -k fx`)
+# Run the tests, in parallel (extra arguments go to pytest, e.g. `just test -k fx`, or `-n 0` for one process)
 test *args:
     uv run pytest -q {{ args }}
 

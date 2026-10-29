@@ -128,6 +128,19 @@ def test_prune_keeps_the_newest_backups_of_both_kinds(tmp_path):
         (zip_of({"run.sh": "x"}, MANIFEST_OK), "unexpected file"),
         (zip_of({"settings.json": "{}"}, MANIFEST_OK), "no records"),
     ],
+    # named, because pytest would name them by their bytes, which hold the ZIP's time of writing: test IDs then
+    # differed between parallel workers that collected in different seconds (pytest-xdist refuses that)
+    ids=[
+        "not-a-zip",
+        "no-manifest",
+        "other-format",
+        "newer-version",
+        "path-escape",
+        "subfolder",
+        "lock-file",
+        "script",
+        "no-records",
+    ],
 )
 def test_read_refuses_what_is_not_a_backup(data, message):
     with pytest.raises(ValidationError, match=message):

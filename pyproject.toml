@@ -35,6 +35,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "pytest-timeout>=2.4.0",
+    "pytest-xdist>=3.8.0",
     "qrbill>=1.2.0",
     "ruff>=0.17.1",
     "segno>=1.6.6",
@@ -63,6 +64,9 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 main_file = ""  # UI tests pass their own main file (tests/ui/ui_main.py)
 timeout = 120  # a hanging test fails with a traceback instead of blocking the pre-push hook
+# one worker per CPU, each taking whole files (a file's tests share fixtures and module state): the suite takes about a
+# minute instead of twelve here, and stays inside CI's time limit; `-n 0` runs in one process, e.g. for a debugger
+addopts = "-n auto --dist loadfile"
 
 [tool.ruff]
 line-length = 120
