@@ -177,6 +177,29 @@ def _first_activity_month(ctx: Context) -> str | None:
     return min(found) if found else None
 
 
+def revalue_entries(ctx: Context) -> int:
+    """Value every recorded balance at the ECB rate of its month's end (the last rate within the month).
+
+    The counterpart of `transactions.revalue_to_transaction_dates` for account entries: catches up a balance of the
+    current month recorded before the month's last rate, and corrects entries an older version valued otherwise.
+    Returns the number of entries changed; does nothing without exchange rates (decision 36).
+    """
+    if ctx.fx.latest_date() is None:
+        return 0
+    changed = []
+    for entry in ctx.store.account_entries.all():
+        rate_date = ctx.fx.rate_date_on_or_before(months.last_day(entry.month))
+        if rate_date is None:
+            continue
+        amount_chf = round(ctx.convert_on(entry.amount, entry.currency, BASE_CURRENCY, rate_date), 6)
+        if rate_date == entry.fx_date and abs(amount_chf - entry.amount_chf) < 1e-6:
+            continue
+        changed.append(replace(entry, amount_chf=amount_chf, fx_date=rate_date))
+    if changed:
+        ctx.store.account_entries.update_many(changed)
+    return len(changed)
+
+
 def _projection_start(ctx: Context, view_cur: str) -> tuple[str | None, float]:
     """First projected month and the wealth it builds on (last recorded month's wealth)."""
     last = last_recorded_month(ctx)

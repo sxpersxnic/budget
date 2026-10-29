@@ -24,6 +24,7 @@ from budget_app.services import reminders as reminders_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
 from budget_app.services import updates as updates_svc
+from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError, get_ctx
 from budget_app.ui import theme
 
@@ -105,6 +106,9 @@ async def refresh_rates(ctx: Context) -> None:
     changed = await run.io_bound(tx_svc.revalue_to_transaction_dates, ctx)
     if changed:
         log.info("Valued %d transactions at the rate of their date", changed)
+    balances = await run.io_bound(wealth_svc.revalue_entries, ctx)
+    if balances:
+        log.info("Valued %d account balances at the rate of their month's end", balances)
 
 
 async def check_updates(ctx: Context) -> None:

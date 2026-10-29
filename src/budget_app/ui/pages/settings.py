@@ -16,8 +16,10 @@ from budget_app.domain.models import (
     ASSET_CLASSES,
     ASSET_LOAN,
     HOLDING_CLASSES,
+    PROJECTION_BUDGET,
+    PROJECTION_HIGHER,
 )
-from budget_app.i18n import t, tn
+from budget_app.i18n import N_, t, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import archive
 from budget_app.services import budget as budget_svc
@@ -536,6 +538,12 @@ def _backup_date(b: archive.SavedBackup) -> str:
     return f"{i18n.date_label(b.created.date())}, {b.created:%H:%M}"
 
 
+PROJECTION_LABELS = {  # the choice in Settings, in its order (decision 36)
+    PROJECTION_BUDGET: N_("Budget only"),
+    PROJECTION_HIGHER: N_("Recorded where higher"),
+}
+
+
 def page() -> None:
     with frame(t("Settings"), "/settings", narrow=True) as (ctx, _):
         with ui.column().classes("w-full gap-0"):
@@ -588,6 +596,26 @@ def page() -> None:
 
                     apply_btn.on_click(apply)
                     sel.on_value_change(lambda e: apply_btn.set_visibility(e.value != ctx.horizon()))
+                with ui.element("div").classes("group-row"):
+                    with ui.column().classes("gap-0 flex-1 min-w-0"):
+                        ui.label(t("Projected Wealth"))
+                        ui.label(
+                            t(
+                                "For months without recorded balances: the budgets alone, or per top-level "
+                                "category the recorded amount where it exceeds the budget."
+                            )
+                        ).classes("caption")
+
+                    def set_projection(e):
+                        ctx.store.settings.projection = e.value
+                        ctx.store.save_settings()
+                        success(t("Projected wealth: {rule}", rule=t(PROJECTION_LABELS[e.value])))
+
+                    ui.select(
+                        {k: t(v) for k, v in PROJECTION_LABELS.items()},
+                        value=ctx.store.settings.projection,
+                        on_change=set_projection,
+                    ).props("dense outlined options-dense").classes("w-56").mark("projection-rule")
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
                         ui.label(t("Display Currency"))

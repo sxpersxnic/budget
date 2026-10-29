@@ -518,6 +518,12 @@ class Price:
     id: str = field(default_factory=new_id)
 
 
+# How a month the projection estimates (no recorded balance yet) adds to the projected wealth (decision 36)
+PROJECTION_BUDGET = "budget"  # option 1: the month's budgeted income minus its budgeted expenditure
+PROJECTION_HIGHER = "higher"  # option 2 (F47): per top-level category, recorded where it exceeds the budget
+PROJECTION_RULES = (PROJECTION_BUDGET, PROJECTION_HIGHER)
+
+
 @dataclass
 class Loan:
     """A loan or mortgage (F22): a liability account with a repayment schedule.
@@ -563,3 +569,4 @@ class Settings:
     update_checked: str = ""  # F33: the day of the last successful check (ISO date)
     update_latest: str = ""  # F33: the tag it answered with ("v0.2.0")
     reminders_off: list[str] = field(default_factory=list)  # kinds of reminders turned off (F31, `reminders.KINDS`)
+    projection: str = PROJECTION_HIGHER  # PROJECTION_RULES; files from before the setting keep F47's rule

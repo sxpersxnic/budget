@@ -18,6 +18,7 @@ from budget_app.domain.coicop import ADV, TAX, get_coicop
 from budget_app.domain.models import (
     BUDGET_EXPENDITURE,
     BUDGET_INCOME,
+    PROJECTION_BUDGET,
     TX_EXCHANGE,
     TX_EXPENDITURE,
     TX_INCOME,
@@ -135,11 +136,12 @@ def top_expenditure_codes() -> list[str]:
 
 
 def projected_net(ctx: Context, month: str, view_cur: str) -> float:
-    """Income minus expenditure a month is expected to end with (F47).
+    """Income minus expenditure a month is expected to end with, by the rule chosen in Settings.
 
-    Per top-level expenditure row and per income category, the higher of what is recorded and what
-    is budgeted: recorded overspending (or extra income) counts, an unspent budget still does too.
-    Advances and their repayments have no budget, so they count as recorded.
+    `PROJECTION_HIGHER` (F47, the default): per top-level expenditure row and per income category, the higher of
+    what is recorded and what is budgeted: recorded overspending (or extra income) counts, an unspent budget still
+    does too; advances and their repayments have no budget, so they count as recorded. `PROJECTION_BUDGET`: the
+    budgeted income minus the budgeted expenditure, whatever is recorded.
     """
     mset = {month}
     return net_with_budgets(
@@ -155,10 +157,12 @@ def net_with_budgets(
     ctx: Context, month: str, view_cur: str, exp_budget: dict[str, float], inc_budget: dict[str, float]
 ) -> float:
     """`projected_net` with the budgets given (direct, per category, in the view currency) instead of the plan's: a
-    what-if scenario (F15) lays its changes over the plan and projects with the result."""
+    what-if scenario (F15) lays its changes over the plan and projects with the result, by the same rule."""
+    exp_bud = rollup(exp_budget)
+    if ctx.store.settings.projection == PROJECTION_BUDGET:  # the same rows, the budgets alone
+        return sum(inc_budget.values()) - sum(exp_bud.get(c, 0.0) for c in top_expenditure_codes())
     mset = {month}
     exp_act = rollup(actual_expenditure(ctx, mset, view_cur))
-    exp_bud = rollup(exp_budget)
     spending = sum(max(exp_act.get(c, 0.0), exp_bud.get(c, 0.0)) for c in top_expenditure_codes())
     inc_act = actual_income(ctx, mset, view_cur)
     income = sum(max(inc_act.get(k, 0.0), inc_budget.get(k, 0.0)) for k in set(inc_act) | set(inc_budget))

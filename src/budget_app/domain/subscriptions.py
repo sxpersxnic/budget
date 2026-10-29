@@ -2,7 +2,7 @@
 
 A subscription is a payee charging again and again at the same rhythm (every month, two months, quarter, half
 year or year) for about the same amount. The thresholds are fixed and explained here (architecture §7, decision
-NEW-F17); amounts are compared in the charges' own currency, so a price is a price whatever the display currency.
+33); amounts are compared in the charges' own currency, so a price is a price whatever the display currency.
 """
 
 from __future__ import annotations
