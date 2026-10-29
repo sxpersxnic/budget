@@ -642,7 +642,6 @@
  "Language": "Lingua",
  "Last price": "Ultimo corso",
  "Last recorded balance: {amount} at the end of {month}.": "Ultimo saldo registrato: {amount} a fine {month}.",
- "Leave Out Rows Without a Category": "Tralascia le righe senza categoria",
  "Leave Until empty to repeat without an end.": "Lasciare vuoto «Fino a» per ripetere senza fine.",
  "Leave it empty for a new folder beside the app’s own. A folder that already holds records, for example in a cloud folder, is opened as it is.": "Lascia vuoto per una nuova cartella accanto a quella dell’app. Una cartella che contiene già registrazioni, per esempio in una cartella cloud, viene aperta così com’è.",
  "Leave the repayment empty for an interest-only mortgage.": "Lascia vuoto l’ammortamento per un’ipoteca senza ammortamento.",
@@ -1753,13 +1752,13 @@
   "{n} riga",
   "{n} righe"
  ],
+ "{n} row has no category yet: give it one first": [
+  "{n} riga non ha ancora una categoria: assegnatele prima una categoria",
+  "{n} righe non hanno ancora una categoria: assegnate loro prima una categoria"
+ ],
  "{n} row is split by its items: only the rest in its own category changes": [
   "{n} transazione è suddivisa per articoli: cambia solo il resto nella sua categoria",
   "{n} transazioni sono suddivise per articoli: cambia solo il resto nella loro categoria"
- ],
- "{n} row needs a category: select rows, choose one and click Apply, or leave it out and import it later from the same file.": [
-  "{n} riga richiede una categoria: selezionare le righe, scegliere una categoria e fare clic su «Applica», oppure tralasciarla e importarla più tardi dallo stesso file.",
-  "{n} righe richiedono una categoria: selezionare le righe, scegliere una categoria e fare clic su «Applica», oppure tralasciarle e importarle più tardi dallo stesso file."
  ],
  "{n} row skipped: that category is for money coming in only": [
   "{n} riga ignorata: questa categoria vale solo per le entrate",
@@ -1768,6 +1767,10 @@
  "{n} row skipped: that category is for spending only": [
   "{n} riga ignorata: questa categoria vale solo per le uscite",
   "{n} righe ignorate: questa categoria vale solo per le uscite"
+ ],
+ "{n} row without a category is left out: give it one (select it, choose a category, Apply) to import it now, or import it later from the same file.": [
+  "{n} riga senza categoria viene tralasciata: assegnatele una categoria (selezionatela, scegliete una categoria, Applica) per importarla ora, oppure importatela più tardi dallo stesso file.",
+  "{n} righe senza categoria vengono tralasciate: assegnate loro una categoria (selezionatele, scegliete una categoria, Applica) per importarle ora, oppure importatele più tardi dallo stesso file."
  ],
  "{n} rule": [
   "{n} regola",

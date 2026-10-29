@@ -6,8 +6,9 @@ the camt closing balance. Ticked ones are recorded after the transactions are sa
 
 Rows without a category get the suggested one (F07: a rule, else the payee's history, else a shop or brand in the
 payee), shown in italics with the reason beside it until the user changes it; importing keeps what the preview
-shows. A category applied to some rows is suggested for the file's other rows of the same payee. Rows nobody has
-categorized yet can be left out in one click and imported later from the same file."""
+shows. A category applied to some rows is suggested for the file's other rows of the same payee. A row without a
+category starts unticked and is ticked once it gets one (`importer.hold_uncategorized`), so the categorized rows import
+at once and the rest can follow later from the same file."""
 
 from __future__ import annotations
 
@@ -171,15 +172,6 @@ def page() -> None:
                 summary = ui.label().classes("caption flex-1 min-w-[16rem]")
                 clear_btn = (
                     ui.button(t("Clear Suggestions"), icon="o_clear_all", on_click=lambda: clear_suggestions())  # noqa: PLW0108 - defined below
-                    .props("flat dense no-caps")
-                    .classes("text-primary")
-                )
-                leave_out_btn = (
-                    ui.button(
-                        t("Leave Out Rows Without a Category"),
-                        icon="o_playlist_remove",
-                        on_click=lambda: leave_out_uncategorized(),  # noqa: PLW0108 - defined below
-                    )
                     .props("flat dense no-caps")
                     .classes("text-primary")
                 )
@@ -387,6 +379,7 @@ def page() -> None:
             state["balance_problem"] = offer.problem
 
         def render() -> None:
+            importer.hold_uncategorized(ctx, state["rows"])  # a row without a category waits; one that got one is in
             acc = ctx.store.accounts.get(account.value) if account.value else None
             currency = state["statement"].currency if state["statement"] else acc.currency if acc else ""
             grid.options["columnDefs"] = _columns(currency)
@@ -471,8 +464,7 @@ def page() -> None:
                 )
             summary.set_text(text)
             clear_btn.set_visibility(any(r.suggested for r in rows))
-            missing = uncategorized()
-            leave_out_btn.set_visibility(bool(missing))
+            waiting = sum(1 for r in rows if r.waiting)
             balances = [c for c in state["balances"] if c.include]
             if balances:
                 import_btn.set_text(
@@ -488,29 +480,19 @@ def page() -> None:
                 status.set_text(t("Choose the account this file belongs to."))
             elif state["problem"]:
                 status.set_text(state["problem"])
-            elif missing:
+            elif waiting:
                 status.set_text(
                     tn(
-                        "{n} row needs a category: select rows, choose one and click Apply, or leave it out and "
-                        "import it later from the same file.",
-                        "{n} rows need a category: select rows, choose one and click Apply, or leave them out and "
-                        "import them later from the same file.",
-                        len(missing),
+                        "{n} row without a category is left out: give it one (select it, choose a category, Apply) "
+                        "to import it now, or import it later from the same file.",
+                        "{n} rows without a category are left out: give them one (select them, choose a category, "
+                        "Apply) to import them now, or import them later from the same file.",
+                        waiting,
                     )
                 )
             else:
                 status.set_text("")
-            import_btn.set_enabled(
-                bool(account.value and (chosen or balances) and not missing and not state["problem"])
-            )
-
-        def uncategorized() -> list[importer.ImportRow]:
-            return [r for r in state["rows"] if r.include and not importer.valid_category(ctx, r.type, r.category)]
-
-        def leave_out_uncategorized() -> None:
-            for r in uncategorized():
-                r.include = False
-            render()
+            import_btn.set_enabled(bool(account.value and (chosen or balances) and not state["problem"]))
 
         async def selected_rows() -> list[importer.ImportRow]:
             ids = {int(r["id"]) for r in await grid.get_selected_rows()}
@@ -558,17 +540,35 @@ def page() -> None:
             render()
 
         async def set_include(value: bool) -> None:
-            for r in await selected_rows():
-                if r.status != importer.ERROR:
-                    r.include = value
-            render()
+            rows = [r for r in await selected_rows() if r.status != importer.ERROR]
+            for r in rows:
+                r.include, r.waiting = value, False
+            render()  # a row ticked without a category goes back to waiting
+            if value and (held := sum(1 for r in rows if r.waiting)):
+                error(
+                    tn(
+                        "{n} row has no category yet: give it one first",
+                        "{n} rows have no category yet: give them one first",
+                        held,
+                    )
+                )
 
         def cell_changed(e: events.GenericEventArguments) -> None:
             data = e.args.get("data") or {}
             row = next((r for r in state["rows"] if str(r.index) == data.get("id")), None)
             if row is not None and e.args.get("colId") == "include":
-                row.include = bool(e.args.get("newValue")) and row.status != importer.ERROR
-                update_status()
+                row.include, row.waiting = bool(e.args.get("newValue")) and row.status != importer.ERROR, False
+                if row.include and not importer.valid_category(ctx, row.type, row.category):
+                    error(
+                        tn(
+                            "{n} row has no category yet: give it one first",
+                            "{n} rows have no category yet: give them one first",
+                            1,
+                        )
+                    )
+                    render()  # back to waiting, and the box unticked
+                else:
+                    update_status()
             elif row is not None and e.args.get("colId") == "payee":
                 row.payee = " ".join(str(e.args.get("newValue") or "").split())
                 if row.suggested or not row.category:  # a suggestion follows the new payee; a choice stays
