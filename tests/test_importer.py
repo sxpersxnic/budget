@@ -76,11 +76,15 @@ def test_import_values_at_booking_date_and_skips_duplicates_next_time(ctx, setup
     rows = importer.analyse(ctx, importer.parse_rows(parsed, profile), setup["eur"].id)
     assert [r.status for r in rows] == ["new", "new", "new", "error"]
     assert rows[0].import_ref != rows[1].import_ref  # identical lines stay two transactions
+    # the two Coop rows have a suggested category and are in; the refund has none and waits; unreadable is out
+    assert [(r.include, r.waiting) for r in rows] == [(True, False), (True, False), (False, True), (False, False)]
 
+    rows[2].include = True  # ticked by hand without a category
     with pytest.raises(ValidationError, match="choose a category"):
         importer.commit(ctx, rows, setup["eur"].id)
-    rows[0].category = rows[1].category = "01.1"
     rows[2].category = setup["salary"].id
+    assert importer.hold_uncategorized(ctx, rows) == 0  # it got a category: nothing waits
+    assert [r.include for r in rows] == [True, True, True, False]
     saved = importer.commit(ctx, rows, setup["eur"].id)
     assert len(saved) == 3
     assert saved[0].type == TX_EXPENDITURE and saved[0].from_account == setup["eur"].id
@@ -130,11 +134,25 @@ def test_rows_left_out_come_back_when_the_file_is_imported_again(ctx, setup):
     profile = importer.guess_profile(parsed)
     rows = importer.analyse(ctx, importer.parse_rows(parsed, profile), setup["chf"].id)
     assert [(r.category, r.suggested) for r in rows] == [("01.1", True), ("", False), ("", False)]
-    rows[1].include = rows[2].include = False  # categorize those later
+    # the categorized row is in, the two without a category wait: the file imports at once
+    assert [(r.include, r.waiting) for r in rows] == [(True, False), (False, True), (False, True)]
     assert len(importer.commit(ctx, rows, setup["chf"].id)) == 1
 
     again = importer.analyse(ctx, importer.parse_rows(parsed, profile), setup["chf"].id)
-    assert [(r.status, r.include) for r in again] == [("duplicate", False), ("new", True), ("new", True)]
+    assert [(r.status, r.include, r.waiting) for r in again] == [
+        ("duplicate", False, False),
+        ("new", False, True),  # offered again, still waiting for a category
+        ("new", False, True),
+    ]
+
+
+def test_a_row_the_user_left_out_stays_out_when_it_gets_a_category(ctx, setup):
+    parsed = importer.read_file("ubs.csv", UBS)
+    rows = importer.analyse(ctx, importer.parse_rows(parsed, importer.guess_profile(parsed)), setup["chf"].id)
+    rows[0].include = False  # left out by hand, with its category
+    rows[2].category = "01.1"  # the waiting expenditure gets one
+    assert importer.hold_uncategorized(ctx, rows) == 1  # the salary still waits
+    assert [r.include for r in rows] == [False, False, True]  # only the row that was waiting comes back
 
 
 def test_manual_entry_on_the_same_day_is_flagged(ctx, setup):

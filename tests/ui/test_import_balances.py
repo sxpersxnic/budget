@@ -40,17 +40,17 @@ async def test_the_balances_of_each_month_are_offered_and_recorded(user: User, c
     ]
     await user.should_see("replaces 1'900.00 CHF")
     await user.should_see("the file ends on 3 Oct 2026 — not a month-end balance")
-    assert import_button(user).text == "Import 6 Transactions and 2 Balances"
+    assert import_button(user).text == "Import 3 Transactions and 2 Balances"  # three rows wait for a category
 
     put(user, checkboxes(user)[2], True)  # the partial month, ticked by hand
     put(user, checkboxes(user)[0], False)
-    assert import_button(user).text == "Import 6 Transactions and 2 Balances"
+    assert import_button(user).text == "Import 3 Transactions and 2 Balances"
     put(user, checkboxes(user)[1], False)
-    assert import_button(user).text == "Import 6 Transactions and 1 Balance"
+    assert import_button(user).text == "Import 3 Transactions and 1 Balance"
 
     await categorise(user, "01.1", 0, 2, 4, 5)
     await categorise(user, setup["salary"].id, 1, 3)
-    assert status(user) == "" and import_button(user).enabled
+    assert status(user) == "" and import_button(user).text == "Import 6 Transactions and 1 Balance"
     click(user, import_button(user))
     await user.should_see("Transactions")
     assert notified(user, "Imported 6 transactions · 1 month-end balance recorded")
@@ -66,6 +66,7 @@ async def test_balances_are_saved_when_every_line_is_imported_already(user: User
     done = importer.analyse(ctx, importer.parse_rows(parsed, importer.guess_profile(parsed)), chf)
     for r in done:
         r.category = setup["salary"].id if (r.amount or 0) > 0 else "01.1"
+    importer.hold_uncategorized(ctx, done)
     importer.commit(ctx, done, chf)
     wealth.upsert_entry(ctx, chf, "2026-09", 7554.7)
 
@@ -93,7 +94,7 @@ async def test_balances_that_do_not_add_up_are_explained_not_offered(user: User,
     await user.should_see("Month-end balances")
     await user.should_see("The balances in the file do not follow from its amounts")
     assert checkboxes(user) == []
-    assert import_button(user).text == "Import 6 Transactions"
+    assert import_button(user).text == "Import 3 Transactions"  # three rows wait for a category
 
     put(user, field(user, ui.select, "Balance column"), "")  # no balance column: the section goes
     await user.should_not_see("Month-end balances")
@@ -121,8 +122,9 @@ async def test_a_statement_ending_inside_a_month_offers_its_balance_unticked(use
 
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
     put(user, checkboxes(user)[0], True)
-    assert import_button(user).text == "Import 1 Transaction and 1 Balance"
+    assert import_button(user).text == "Import 0 Transactions and 1 Balance"  # the entry waits for a category
     await categorise(user, "01.1", 0)
+    assert import_button(user).text == "Import 1 Transaction and 1 Balance"
     click(user, import_button(user))
     await user.should_see("Transactions")
     assert wealth.entry_for(ctx, setup["chf"].id, "2026-09").amount == -500.0

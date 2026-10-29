@@ -598,8 +598,8 @@ click fills the category (and the account, if still empty). The **import preview
 suggestions in italics, with a *Suggestion* column for the reason, counts them in the summary and offers *Clear
 Suggestions*; a category chosen by hand loses the mark, a changed payee brings a new suggestion, and importing keeps
 what the preview shows. A category applied to some rows is suggested for the file's other rows of the same payee,
-and *Leave Out Rows Without a Category* lets the rest of a large file be imported now and those rows later, from the
-same file. Confirming a suggestion never makes a rule. **Categorization Rules** (`/rules`, under
+and rows still without a category start unticked, so the rest of a large file can be imported at once and those rows
+later, from the same file; a row is ticked as soon as it gets a category. Confirming a suggestion never makes a rule. **Categorization Rules** (`/rules`, under
 Payees; *Rules…* on the Payees page and in Settings) lists the rules per type, with add, edit and delete; every
 change is undoable. Not built: the AI level, conditions on amount or account, and applying a new rule to stored
 transactions (bulk edit, F13, does that).

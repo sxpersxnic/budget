@@ -280,7 +280,9 @@ comes back. Sample data only goes into an empty data folder.
    balance to record (the month the file ends inside stays unticked).
    Rows without a category get a suggested one, shown in italics with the reason beside it: from your
    rules, or the category the payee had most often. Check them before importing (importing keeps what
-   you see), choose another category for some rows, or **Clear Suggestions**.
+   you see), choose another category for some rows, or **Clear Suggestions**. Rows still without a
+   category are left out until you give them one, so the rest can be imported at once; import the same
+   file again later and only the rows left out are offered.
    To have a payee or bank text always suggest the same category, select a transaction and choose
    **Always Categorize Like This…** (also in the edit sheet): adjust the text it looks for ("migros")
    and save the rule. Taking a suggestion never creates a rule on its own.

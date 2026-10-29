@@ -159,6 +159,7 @@ class ImportRow:
     balance: float | None = None  # the account's balance after this booking, when the file shows it
     counterparty: str = ""  # who was paid or who paid, when the file names them apart from the text
     payee: str = ""  # F09: found from the counterparty (else the text) by `analyse`, editable in the preview
+    waiting: bool = False  # left out only because it has no category yet; ticked again once it gets one
 
     @property
     def payee_source(self) -> str:
@@ -412,6 +413,7 @@ def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Import
             row.payee = payee_svc.resolve(ctx, row.payee_source)
         if not row.category:
             suggest(suggester, row, account_id)
+    hold_uncategorized(ctx, rows)
     return rows
 
 
@@ -448,6 +450,22 @@ def clear_suggestions(rows: list[ImportRow]) -> int:
 def _source(import_ref: str) -> str:
     """'csv', 'camt', or '' for a transaction typed by hand."""
     return import_ref.split(":", 1)[0] if import_ref else ""
+
+
+def hold_uncategorized(ctx: Context, rows: list[ImportRow]) -> int:
+    """Leave out the rows that would be imported but have no category yet, and take back those that got one since.
+
+    A file's categorized rows can then be imported at once while the rest wait, instead of the whole import waiting
+    for the last row (1900 lines, 1007 without a category). A row the user left out stays out: only rows this
+    function held (`waiting`) come back. The number of rows waiting.
+    """
+    for row in rows:
+        has_category = valid_category(ctx, row.type, row.category)
+        if row.include and not has_category:
+            row.include, row.waiting = False, True
+        elif row.waiting and has_category:
+            row.include, row.waiting = True, False
+    return sum(1 for r in rows if r.waiting)
 
 
 def valid_category(ctx: Context, type_: str, category: str) -> bool:

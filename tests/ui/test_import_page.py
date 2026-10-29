@@ -17,9 +17,9 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services.transactions import TransactionInput
 
 SELECTED = re.compile(r".*getSelectedRows")
-NEED_ONE = (
-    "1 row needs a category: select rows, choose one and click Apply, or leave it out and import it later from the "
-    "same file."
+WAITING_ONE = (
+    "1 row without a category is left out: give it one (select it, choose a category, Apply) to import it now, or "
+    "import it later from the same file."
 )
 
 
@@ -119,8 +119,9 @@ async def test_import_a_file_in_three_steps(user: User, ctx, setup) -> None:
 
     put(user, field(user, ui.select, "Account"), setup["eur"].id)
     await user.should_see("3 new · 1 unreadable. Duplicates and unreadable lines are left out")
-    assert status(user) == NEED_ONE
-    assert import_button(user).text == "Import 3 Transactions" and not import_button(user).enabled
+    # the refund has no category: it waits, and the two categorized rows can be imported at once
+    assert status(user) == WAITING_ONE
+    assert import_button(user).text == "Import 2 Transactions" and import_button(user).enabled
     # Coop is a shop the category picker knows: suggested, in italics, with the reason
     assert [(r["category"], r["suggested"], r["reason"]) for r in rows(user)][:3] == [
         ("01.1 Groceries", True, "Payee contains “Coop”"),
@@ -129,10 +130,11 @@ async def test_import_a_file_in_three_steps(user: User, ctx, setup) -> None:
     ]
 
     await categorise(user, "01.1", 0, 1)
-    assert status(user) == NEED_ONE
-    await categorise(user, setup["salary"].id, 2)
+    assert status(user) == WAITING_ONE
+    await categorise(user, setup["salary"].id, 2)  # with a category it is ticked again
     assert [r["category"] for r in rows(user)][:3] == ["01.1 Groceries", "01.1 Groceries", "Income · Salary"]
-    assert status(user) == "" and import_button(user).enabled
+    assert [r["include"] for r in rows(user)] == [True, True, True, False]
+    assert status(user) == "" and import_button(user).text == "Import 3 Transactions"
 
     click(user, import_button(user))
     await user.should_see("Transactions")
@@ -153,6 +155,7 @@ async def test_reimporting_the_same_file_skips_every_line(user: User, ctx, setup
     for r in rows_[:2]:
         r.category = "01.1"
     rows_[2].category = setup["salary"].id
+    importer.hold_uncategorized(ctx, rows_)  # with its category the refund is in again
     importer.commit(ctx, rows_, setup["eur"].id)
 
     await de_file_on_euro_account(user, setup)
@@ -214,14 +217,11 @@ async def test_a_category_applied_to_one_row_is_suggested_for_its_payee(user: Us
     ]
 
 
-async def test_rows_without_a_category_can_be_left_out_and_imported_later(user: User, ctx, setup) -> None:
+async def test_rows_without_a_category_wait_and_the_rest_import_at_once(user: User, ctx, setup) -> None:
     await de_file_on_euro_account(user, setup)
-    assert status(user) == NEED_ONE and not import_button(user).enabled
-    click(user, button(user, "Leave Out Rows Without a Category"))
-    await settle()
     assert [r["include"] for r in rows(user)] == [True, True, False, False]
-    assert status(user) == "" and import_button(user).text == "Import 2 Transactions"
-    await user.should_not_see("Leave Out Rows Without a Category")
+    assert status(user) == WAITING_ONE
+    assert import_button(user).text == "Import 2 Transactions" and import_button(user).enabled
     click(user, import_button(user))
     assert notified(user, "Imported 2 transactions")
     assert len(ctx.store.transactions.all()) == 2  # the row left out comes back with the same file (test_importer)

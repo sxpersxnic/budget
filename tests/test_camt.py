@@ -402,9 +402,10 @@ def test_helpers():
 
 
 # ------------------------------------------------------------------ importing
-def categorise(rows: list[importer.ImportRow], salary: str) -> None:
+def categorise(ctx, rows: list[importer.ImportRow], salary: str) -> None:
     for r in rows:
         r.category = salary if r.type == TX_INCOME else "01.1"
+    importer.hold_uncategorized(ctx, rows)  # as the page does: rows that waited for a category are in again
 
 
 def test_import_marks_duplicates_and_remembers_the_account(ctx, setup):
@@ -413,7 +414,7 @@ def test_import_marks_duplicates_and_remembers_the_account(ctx, setup):
     assert camt.remembered_account(ctx.store, IBAN) == ""
     rows = importer.analyse(ctx, st.fresh_rows(), chf)
     assert [r.import_ref for r in rows] == [r.import_ref for r in st.rows]  # analyse keeps the bank's reference
-    categorise(rows, setup["salary"].id)
+    categorise(ctx, rows, setup["salary"].id)
     saved = camt.commit(ctx, st, rows, chf)
     assert len(saved) == 6 and st.rows[0].category == ""  # the statement's own rows are untouched
     assert (saved[0].type, saved[0].amount, saved[0].currency, saved[0].from_account) == (
@@ -445,7 +446,7 @@ def test_a_statement_in_another_currency_is_refused(ctx, setup):
     problem = camt.currency_problem(ctx, st, setup["eur"].id)
     assert problem == "The statement is in CHF, but “Euro account” is in EUR. Choose an account in CHF."
     rows = st.fresh_rows()
-    categorise(rows, setup["salary"].id)
+    categorise(ctx, rows, setup["salary"].id)
     with pytest.raises(ValidationError, match="The statement is in CHF"):
         camt.commit(ctx, st, rows, setup["eur"].id)
     assert ctx.store.transactions.all() == []
@@ -455,7 +456,7 @@ def test_a_statement_in_another_currency_is_refused(ctx, setup):
 def test_an_account_without_iban_is_not_remembered(ctx, setup):
     st = camt.read_statement("bare.xml", b"<BkToCstmrStmt><Stmt>" + entry().encode() + b"</Stmt></BkToCstmrStmt>")
     rows = importer.analyse(ctx, st.fresh_rows(), setup["chf"].id)
-    categorise(rows, setup["salary"].id)
+    categorise(ctx, rows, setup["salary"].id)
     camt.commit(ctx, st, rows, setup["chf"].id)
     assert not (ctx.store.data_dir / camt.ACCOUNTS_FILE).exists()
     assert camt.remembered_account(ctx.store, "") == ""
@@ -487,7 +488,7 @@ def test_entries_from_a_csv_import_or_typed_by_hand_are_possible_duplicates(ctx,
     # and the other way round: CSV lines matching an entry imported from a statement
     st = camt.read_statement("x.xml", statement(entry(day="2026-09-15", amount="12.30")))
     rows = importer.analyse(ctx, st.fresh_rows(), chf)
-    categorise(rows, setup["salary"].id)
+    categorise(ctx, rows, setup["salary"].id)
     camt.commit(ctx, st, rows, chf)
     parsed = importer.read_file("de.csv", DE)
     csv_rows = importer.analyse(ctx, importer.parse_rows(parsed, importer.guess_profile(parsed)), chf)
