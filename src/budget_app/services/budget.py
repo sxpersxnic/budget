@@ -74,13 +74,12 @@ def create(ctx: Context, inp: BudgetInput) -> list[BudgetEntry]:
     month_list = validate(ctx, inp)
     if inp.overwrite:
         targets = set(month_list)
-        ctx.store.budget.delete(
-            [
-                b.id
-                for b in ctx.store.budget.all()
-                if b.type == inp.type and b.category == inp.category and b.month in targets
-            ]
-        )
+        same = [b for b in ctx.store.budget.all() if b.type == inp.type and b.category == inp.category]
+        ctx.store.budget.delete([b.id for b in same if b.month in targets])
+        if inp.forever:  # the new series continues the category's plan; an older 'Forever' one stops where it is
+            ctx.store.budget.update_many(
+                [replace(b, forever=False, generated_until="") for b in same if b.forever and b.month not in targets]
+            )
     amount = round(float(inp.amount or 0), 2)  # validated > 0 above
     amount_chf, fx_date = ctx.to_base_latest(amount, inp.currency)
     series = new_id()
@@ -211,18 +210,116 @@ def reschedule(ctx: Context, entry_id: str, inp: BudgetInput) -> list[BudgetEntr
     entry = ctx.store.budget.get(entry_id)
     if entry is None:
         raise ValidationError(t("Budget entry not found"))
-    category = inp.category or entry.category
-    inp = replace(inp, start_month=entry.month, type=entry.type, category=category, overwrite=False)
+    rows = [b for b in ctx.store.budget.all() if entry.series_id and b.series_id == entry.series_id] or [entry]
+    return _replan(
+        ctx, rows, replace(inp, start_month=entry.month, type=entry.type, category=inp.category or entry.category)
+    )
+
+
+def _replan(ctx: Context, rows: list[BudgetEntry], inp: BudgetInput) -> list[BudgetEntry]:
+    """Replace the `rows` from `inp.start_month` on with a new series made from `inp` (its category, if it names
+    none, the rows' own); the rows before keep their values and end there."""
+    inp = replace(inp, category=inp.category or rows[0].category, overwrite=False)
     validate(ctx, inp)
-    earlier = [
-        replace(b, forever=False, generated_until="")
-        for b in ctx.store.budget.all()
-        if entry.series_id and b.series_id == entry.series_id and b.month < entry.month
-    ]
-    ctx.store.budget.delete([entry.id] + [b.id for b in later_in_series(ctx, entry)])
+    earlier = [replace(b, forever=False, generated_until="") for b in rows if b.month < inp.start_month]
+    ctx.store.budget.delete([b.id for b in rows if b.month >= inp.start_month])
     if earlier:
         ctx.store.budget.update_many(earlier)
     return create(ctx, inp)
+
+
+# ------------------------------------------------------------------ the plan as series
+@dataclass
+class Series:
+    """The budget entries planned together: one `series_id` (an entry without one is a series of its own) and one
+    type and category (a month moved to another category leaves its series)."""
+
+    key: str
+    entries: list[BudgetEntry]  # by month
+    current: BudgetEntry  # the entry of the current month, else the next one, else the last
+
+    @property
+    def type(self) -> str:
+        return self.current.type
+
+    @property
+    def category(self) -> str:
+        return self.current.category
+
+    @property
+    def first(self) -> str:
+        return self.entries[0].month
+
+    @property
+    def last(self) -> str:
+        return self.entries[-1].month
+
+    @property
+    def forever(self) -> bool:
+        return any(b.forever for b in self.entries)
+
+    @property
+    def once(self) -> bool:
+        return len(self.entries) == 1 and not self.forever
+
+    @property
+    def differing(self) -> int:
+        """The months whose amount or currency differs from the current one's (changed one by one)."""
+        cur = self.current
+        return sum((b.amount, b.currency) != (cur.amount, cur.currency) for b in self.entries)
+
+    def ended(self, month: str) -> bool:
+        return not self.forever and self.last < month
+
+
+def series_key(b: BudgetEntry) -> str:
+    return f"{b.series_id or b.id}|{b.type}|{b.category}"
+
+
+def series(ctx: Context, month: str | None = None) -> list[Series]:
+    """The plan as series, income first, then by category and first month; `month` (the current one by default)
+    decides each series' current entry."""
+    month = month or months.current_month()
+    groups: dict[str, list[BudgetEntry]] = {}
+    for b in ctx.store.budget.all():
+        groups.setdefault(series_key(b), []).append(b)
+    out = []
+    for key, rows in groups.items():
+        rows.sort(key=lambda b: (b.month, b.id))
+        current = next((b for b in rows if b.month >= month), rows[-1])
+        out.append(Series(key, rows, current))
+    out.sort(key=lambda s: (s.type != BUDGET_INCOME, s.category, s.first, s.key))
+    return out
+
+
+def find_series(ctx: Context, key: str) -> Series | None:
+    return next((s for s in series(ctx) if s.key == key), None)
+
+
+@recorded(N_("Replan a budget"))
+def replan_series(ctx: Context, key: str, inp: BudgetInput) -> list[BudgetEntry]:
+    """Replan a series from `inp.start_month` on (amount, currency, category, schedule and note); the months before
+    keep their values and end there. A start before the series' first month replaces the whole series."""
+    found = find_series(ctx, key)
+    if found is None:
+        raise ValidationError(t("Budget entry not found"))
+    return _replan(ctx, found.entries, replace(inp, type=found.type))
+
+
+@recorded(N_("Delete a budget"))
+def delete_series(ctx: Context, key: str) -> int:
+    found = find_series(ctx, key)
+    return ctx.store.budget.delete([b.id for b in found.entries]) if found else 0
+
+
+def planned(ctx: Context, shown: list[Series], month: str, view_cur: str) -> dict[str, float]:
+    """The amounts the `shown` series plan for `month` per type, in the view currency at the latest rate."""
+    out = {BUDGET_INCOME: 0.0, BUDGET_EXPENDITURE: 0.0}
+    for s in shown:
+        for b in s.entries:
+            if b.month == month:
+                out[b.type] += ctx.convert_on(b.amount, b.currency, view_cur, None)
+    return out
 
 
 def entries_for(ctx: Context, month: str, type_: str, category: str) -> list[BudgetEntry]:

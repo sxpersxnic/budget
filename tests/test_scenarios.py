@@ -259,8 +259,8 @@ def test_adopt_writes_the_changes_and_removes_the_scenario_in_one_step(ctx, plan
         (b.month, b.amount, b.comment, b.forever) for b in ctx.store.budget.all() if b.type == BUDGET_INCOME
     )
     assert income == [
-        ("2026-11", 6200, "", True),
-        ("2026-12", 6200, "", True),
+        ("2026-11", 6200, "", False),  # the old salary ends where the cut begins: only the cut continues
+        ("2026-12", 6200, "", False),
         ("2027-01", 4960, "80 %", True),
         ("2027-02", 4960, "80 %", True),
         ("2027-03", 3100, "", False),  # the later change won, as in the overlay
