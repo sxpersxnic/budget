@@ -24,6 +24,7 @@ from budget_app.domain.models import (
     Scenario,
     ScenarioChange,
     Settings,
+    SubscriptionIgnore,
     Tag,
     TaxSection,
     Template,
@@ -83,6 +84,8 @@ class Store:
         self.scenarios = CsvTable(data_dir / "scenarios.csv", Scenario, h)  # F15
         self.scenario_changes = CsvTable(data_dir / "scenario_changes.csv", ScenarioChange, h)
         self.tax_sections = CsvTable(data_dir / "tax_sections.csv", TaxSection, h)  # F20: tags per section
+        # F17: detected subscriptions the user doesn't want listed
+        self.subscription_ignores = CsvTable(data_dir / "subscription_ignores.csv", SubscriptionIgnore, h)
         self._settings = SettingsStore(data_dir / "settings.json")
 
     def tables(self) -> dict[str, CsvTable]:
@@ -108,6 +111,7 @@ class Store:
             self.scenarios,
             self.scenario_changes,
             self.tax_sections,
+            self.subscription_ignores,
         ]
         return {t.name: t for t in tables}
 

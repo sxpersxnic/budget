@@ -16,29 +16,23 @@ import unicodedata
 import zipfile
 from dataclasses import dataclass
 from datetime import date
-from xml.sax.saxutils import escape
 
 import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import KeepTogether, PageBreak, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from budget_app import i18n
 from budget_app.i18n import t, tn
 from budget_app.services import attachments as attachments_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.services.export import frame_csv
+from budget_app.services.export import PDF_TABLE_STYLE, ROW_TINT, frame_csv, money, para, pdf_styles
 from budget_app.services.tax import CURRENCY, Entry, SectionSummary, Summary
 
 MAX_ZIP_BYTES = 1024 * 1024 * 1024  # the files are read into memory; 1 GB is far more than a year of receipts
 _UNSAFE = re.compile(r'[\\/:*?"<>|\x00-\x1f\x7f]+')
-
-
-def money(value: float) -> str:
-    """1'234.50, the Swiss format of the app (with a plain hyphen, which the PDF's font has)."""
-    return f"{round(value, 2) + 0.0:,.2f}".replace(",", "'")
 
 
 def file_name(year: int, ext: str) -> str:
@@ -95,50 +89,17 @@ def summary_csv(summary: Summary) -> bytes:
 
 
 # ------------------------------------------------------------------ PDF
-def _styles() -> dict[str, ParagraphStyle]:
-    base = getSampleStyleSheet()
-    cell = ParagraphStyle("cell", parent=base["Normal"], fontName="Helvetica", fontSize=8, leading=10)
-    return {
-        "title": base["Title"],
-        "h2": base["Heading2"],
-        "normal": base["Normal"],
-        "small": ParagraphStyle("small", parent=base["Normal"], fontSize=8.5, leading=11, textColor="#555555"),
-        "cell": cell,
-        "num": ParagraphStyle("num", parent=cell, alignment=2),
-        "head": ParagraphStyle("head", parent=cell, fontName="Helvetica-Bold"),
-        "head_num": ParagraphStyle("head_num", parent=cell, fontName="Helvetica-Bold", alignment=2),
-        "bold_num": ParagraphStyle("bold_num", parent=cell, fontName="Helvetica-Bold", alignment=2),
-        "indent": ParagraphStyle("indent", parent=cell, leftIndent=12),
-    }
-
-
-def _p(text: str, style: ParagraphStyle) -> Paragraph:
-    return Paragraph(escape(text), style)
-
-
-ROW_TINT = colors.HexColor("#f6f8fb")
-TABLE_STYLE = [
-    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8eef6")),
-    ("LINEBELOW", (0, 0), (-1, 0), 0.6, colors.HexColor("#8aa0b8")),
-    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, ROW_TINT]),
-    ("LINEABOVE", (0, -1), (-1, -1), 0.6, colors.HexColor("#8aa0b8")),
-    ("TOPPADDING", (0, 0), (-1, -1), 2.5),
-    ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
-]
-
-
 def _summary_table(summary: Summary, st: dict[str, ParagraphStyle]) -> Table:
     total = t("Total ({currency})", currency=CURRENCY)
-    data = [[_p(t("Section"), st["head"]), _p(t("Rows"), st["head_num"]), _p(total, st["head_num"])]]
+    data = [[para(t("Section"), st["head"]), para(t("Rows"), st["head_num"]), para(total, st["head_num"])]]
     for s in summary.sections:
-        title = _p(t(s.section.title), st["cell"])
+        title = para(t(s.section.title), st["cell"])
         total_text = money(s.total) if s.entries else "–"
-        data.append([title, _p(str(len(s.entries)), st["num"]), _p(total_text, st["num"])])
+        data.append([title, para(str(len(s.entries)), st["num"]), para(total_text, st["num"])])
         if s.tax_total:
-            data.append([_p(t("of which tax withheld"), st["indent"]), "", _p(money(s.tax_total), st["num"])])
+            data.append([para(t("of which tax withheld"), st["indent"]), "", para(money(s.tax_total), st["num"])])
     table = Table(data, colWidths=[120 * mm, 20 * mm, 40 * mm], repeatRows=1, hAlign="LEFT")
-    table.setStyle(TableStyle([*TABLE_STYLE[:3], ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, ROW_TINT])]))
+    table.setStyle(TableStyle([*PDF_TABLE_STYLE[:3], ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, ROW_TINT])]))
     return table
 
 
@@ -151,24 +112,24 @@ def _section_table(s: SectionSummary, st: dict[str, ParagraphStyle]) -> Table:
         widths = [19, 42, 36, 22, 22, 39]
     numeric = len(head)
     head.append(t("Proof"))
-    data = [[_p(h, st["head_num"] if 3 <= i < numeric else st["head"]) for i, h in enumerate(head)]]
+    data = [[para(h, st["head_num"] if 3 <= i < numeric else st["head"]) for i, h in enumerate(head)]]
     for e in s.entries:
         row = [
-            _p(f"{e.date:%d.%m.%Y}", st["cell"]),
-            _p(e.label, st["cell"]),
-            _p(e.category, st["cell"]),
-            _p(money(e.amount), st["num"]),
+            para(f"{e.date:%d.%m.%Y}", st["cell"]),
+            para(e.label, st["cell"]),
+            para(e.category, st["cell"]),
+            para(money(e.amount), st["num"]),
         ]
         if with_tax:
-            row.append(_p(money(e.tax) if e.tax else "", st["num"]))
-        row.append(_p(proof(e), st["cell"]))
+            row.append(para(money(e.tax) if e.tax else "", st["num"]))
+        row.append(para(proof(e), st["cell"]))
         data.append(row)
-    total = ["", _p(t("Total"), st["head"]), "", _p(money(s.total), st["bold_num"])]
+    total = ["", para(t("Total"), st["head"]), "", para(money(s.total), st["bold_num"])]
     if with_tax:
-        total.append(_p(money(s.tax_total), st["bold_num"]))
+        total.append(para(money(s.tax_total), st["bold_num"]))
     data.append([*total, ""])
     table = Table(data, colWidths=[w * mm for w in widths], repeatRows=1, hAlign="LEFT")
-    table.setStyle(TableStyle(TABLE_STYLE))
+    table.setStyle(TableStyle(PDF_TABLE_STYLE))
     return table
 
 
@@ -184,22 +145,24 @@ def summary_pdf(summary: Summary, today: date | None = None) -> bytes:
         bottomMargin=18 * mm,
         title=title,
     )
-    st = _styles()
+    st = pdf_styles()
     made = i18n.date_label(today or date.today())
     story = [
-        _p(title, st["title"]),
-        _p(t("Amounts in {currency} · made on {date}", currency=CURRENCY, date=made), st["normal"]),
+        para(title, st["title"]),
+        para(t("Amounts in {currency} · made on {date}", currency=CURRENCY, date=made), st["normal"]),
         Spacer(1, 5 * mm),
-        _p(note(), st["normal"]),
+        para(note(), st["normal"]),
         Spacer(1, 2 * mm),
-        _p(overlap_note(), st["small"]),
+        para(overlap_note(), st["small"]),
         Spacer(1, 6 * mm),
         _summary_table(summary, st),
         PageBreak(),
     ]
     for s in summary.sections:
-        body = _section_table(s, st) if s.entries else _p(t("Nothing in {year}", year=str(summary.year)), st["normal"])
-        heading = [_p(t(s.section.title), st["h2"]), _p(t(s.section.note), st["small"]), Spacer(1, 2 * mm)]
+        body = (
+            _section_table(s, st) if s.entries else para(t("Nothing in {year}", year=str(summary.year)), st["normal"])
+        )
+        heading = [para(t(s.section.title), st["h2"]), para(t(s.section.note), st["small"]), Spacer(1, 2 * mm)]
         story += [KeepTogether([*heading, body]), Spacer(1, 6 * mm)]
 
     def footer(canvas, document) -> None:
