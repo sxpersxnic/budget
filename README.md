@@ -569,3 +569,9 @@ types, tests and coverage before each push.
 All of them come as wheels with their native code for macOS, Windows and Linux, so `uv sync` needs no
 compiler. ONNX Runtime has no wheel for Intel Macs on Python 3.13, so there the app runs without the receipt
 reader and the receipt sheet says so.
+
+## Licence
+
+Budget is free software, under the [GNU General Public License, version 3 or later](LICENSE)
+(GPL-3.0-or-later). You may use, study, share and change it; if you pass on a changed version, it has to be under
+the same licence, with its source. The libraries above keep their own licences, all of which allow this.
