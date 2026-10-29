@@ -418,9 +418,12 @@ async def test_setup_registers_pages_and_refreshes_rates(tmp_path, monkeypatch, 
     ctx = context_module.get_ctx()
     assert ctx.store.data_dir == tmp_path
     assert i18n.language() == "de"
-    # every page is registered behind the app lock's guard (F27), plus the lock page itself
-    assert [path for path, _ in pages] == [*main_module.PAGES, *main_module.PHONE_PAGES, *main_module.OPEN_PAGES]
-    assert all(builder.__name__ in ("page", "pair_page") for _, builder in pages)
+    # every page is registered behind the app lock's guard (F27), plus the lock page itself; the pages with the
+    # sidebar share the shell (NEW-SPA)
+    registered = [*main_module.PAGES, *main_module.LONE_PAGES, *main_module.PHONE_PAGES, *main_module.OPEN_PAGES]
+    assert [path for path, _ in pages] == registered
+    assert {builder for path, builder in pages if path in main_module.PAGES} == {main_module._shell}
+    assert all(builder.__name__ in ("page", "pair_page", "_shell") for _, builder in pages)
     assert timers == [(1800, False), (main_module.sync.INTERVAL, False)]  # rates; changes from another computer (F26)
     assert main_module.sync.stop in shutdown and main_module.sync.others() == []
     main_module.sync.stop()

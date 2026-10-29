@@ -26,6 +26,7 @@ from budget_app.ui.layout import (
     error,
     fmt,
     frame,
+    full_load,
     metric,
     money_html,
     month_options,
@@ -490,7 +491,7 @@ def class_breakdown(sums: dict[str, float], cur: str) -> None:
 
 def page() -> None:
     if demo_svc.first_run(get_ctx()):  # F30: nothing recorded yet, and the welcome screen not passed
-        ui.navigate.to("/welcome")
+        full_load("/welcome")  # a page of its own, without the sidebar
         return
     with frame(t("Overview"), "/") as (ctx, actions):
         currency = {"value": ctx.store.settings.display_currency}

@@ -37,6 +37,7 @@ from budget_app.ui.layout import (
     error,
     fmt,
     frame,
+    full_load,
     lock_now,
     month_options,
     named,
@@ -546,7 +547,7 @@ def _password_sheet(ctx: Context, mode: str, refresh) -> None:
                 if mode == "set":
                     nonce = security.set_password(new.value or "", repeat.value or "")
                     dlg.close()
-                    ui.navigate.to(f"/unlock/{nonce}")  # this browser gets its session; the page returns here
+                    full_load(f"/unlock/{nonce}")  # this browser gets its session; the page returns here
                     return
                 if mode == "change":
                     security.change_password(current.value or "", new.value or "", repeat.value or "")

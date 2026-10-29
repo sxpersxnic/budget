@@ -1,4 +1,9 @@
-"""Shared page frame (sidebar), formatting, dialogs and notification helpers."""
+"""The window's shell (sidebar, phone header), the page frame, formatting, dialogs and notification helpers.
+
+Every window builds the shell once (`shell`); the pages swap in its content area (`ui.sub_pages`), so a change of
+page keeps the sidebar and never loads a new document (NEW-SPA). State a page leaves for the window (its data
+listener, month stepper, sheets) goes when the next one starts (`new_page`).
+"""
 
 from __future__ import annotations
 
@@ -7,8 +12,10 @@ import logging
 import weakref
 from collections.abc import Callable
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from typing import cast
 
 from nicegui import app, events, run, ui
 from nicegui.client import Client
@@ -101,6 +108,7 @@ SAVE_KEYS = (
     "(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); emit(); } }"
 )
 
+# per window, for the page it shows (reset by new_page): what refreshes the page when a sheet from the sidebar saves
 _data_listeners: weakref.WeakKeyDictionary[Client, Callable[[], object]] = weakref.WeakKeyDictionary()
 # per page: the month stepper the arrow keys move (F32), and the sheets (page keys wait while one is open)
 _month_steps: weakref.WeakKeyDictionary[Client, Callable[[int], None]] = weakref.WeakKeyDictionary()
@@ -234,17 +242,23 @@ def _badge(target: str) -> None:
         refresh_due_badge()
 
 
-def _nav_item(target: str, label: str, icon: str, active: bool) -> None:
-    with (
-        ui.link(target=target)
-        .classes("nav-item" + (" active" if active else ""))
-        .props('aria-current="page"' if active else "")
-    ):
+def _nav_item(target: str, label: str, icon: str) -> ui.link:
+    """A place in the sidebar; `_Shell.show` marks the one the page belongs to."""
+    with ui.link(target=target).classes("nav-item") as link:
         ui.icon(icon)
         ui.label(t(label))
         if target in BADGES:
             ui.space()
             _badge(target)
+    return link
+
+
+def _mark(link: ui.link, active: bool) -> None:
+    """The open place or tab: highlighted, and `aria-current` for screen readers."""
+    if active:
+        link.classes(add="active").props('aria-current="page"')
+    else:
+        link.classes(remove="active").props(remove="aria-current")
 
 
 def _section_tabs(place: str, path: str) -> None:
@@ -253,14 +267,10 @@ def _section_tabs(place: str, path: str) -> None:
     with ui.element("nav").classes("section-tabs") as nav:
         nav.props["aria-label"] = t(next(label for target, label, _ in [*NAV, SETTINGS] if target == place))
         for target, label in SECTIONS[place]:
-            active = target == current
-            with (
-                ui.link(target=target)
-                .classes("section-tab" + (" active" if active else ""))
-                .props('aria-current="page"' if active else "")
-            ):
+            with ui.link(target=target).classes("section-tab") as link:
                 ui.label(t(label))
                 _badge(target)
+            _mark(link, target == current)
 
 
 def _new_transaction() -> None:
@@ -269,14 +279,20 @@ def _new_transaction() -> None:
     open_transaction_sheet(get_ctx(), on_saved=data_changed)
 
 
+def full_load(path: str) -> None:
+    """Open `path` as a new document instead of in the shell's content area (NEW-SPA): the pages without the shell
+    (the lock, the welcome screen, the unlock route), and a window that has to start over (another profile)."""
+    ui.context.client.open(path)
+
+
 def lock_now() -> None:
     """Lock the app (F27): every browser and phone has to pass the lock again."""
     security.lock()
-    ui.navigate.to("/lock")
+    full_load("/lock")
 
 
 def open_profile(profile_id: str) -> None:
-    """Switch to another profile (F34): its folder opens, and every open page starts over on its Overview."""
+    """Switch to another profile (F34): its folder opens, and every open window starts over on its Overview."""
     try:
         profile = profiles_svc.switch(profile_id)
     except ValidationError as exc:
@@ -285,9 +301,9 @@ def open_profile(profile_id: str) -> None:
     for client in list(Client.instances.values()):
         if client is not ui.context.client and client.has_socket_connection:
             with client:
-                ui.navigate.to("/")  # pages still showing the other profile's records
+                full_load("/")  # windows still showing the other profile's records and sidebar
     success(t("Opened {name}", name=profile.name))
-    ui.navigate.to("/")
+    full_load("/")  # the sidebar too: the profile's name, its language, its rates
 
 
 def _brand() -> None:
@@ -364,70 +380,144 @@ def named(button: ui.button, label: str) -> ui.button:
     return button.tooltip(label)
 
 
-@contextmanager
-def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = False, wide: bool = False):
-    """Page skeleton. Yields (ctx, actions): `actions` is the row beside the title for page-level buttons.
+# The drawer on a phone covers the page; a change of page closes it (below the breakpoint, Quasar marks the drawer
+# around the element's content --mobile).
+HIDE_MOBILE_DRAWER = (
+    "(() => {{ const el = getHtmlElement({id}); "
+    "if (el?.parentElement.classList.contains('q-drawer--mobile')) getElement({id}).hide(); }})()"
+)
 
-    On small screens the large title gives way to the compact header, and the actions wrap below it.
-    """
-    ctx = get_ctx()
+
+@dataclass(eq=False)
+class _Shell:
+    """What a window builds once: the sidebar and the phone header, with what each page changes in them."""
+
+    drawer: ui.left_drawer
+    nav: dict[str, ui.link]  # the places, by route
+    brand: ui.element  # the app's or the profile's name (F34)
+    footer: ui.element  # version, rates, update, shortcuts, lock
+    title: ui.label  # the phone header's
+    skip: ui.link
+    pages: ui.sub_pages | None = None  # the content area, once it exists
+
+    def show(self, ctx: Context, title: str, path: str) -> None:
+        """A page started in the content area: its place is marked, its title is in the header, and what the sidebar
+        shows besides is current again, as on a page load."""
+        current = NAV_PARENT.get(path, path)
+        for target, link in self.nav.items():
+            _mark(link, target == current)
+        self.title.set_text(title)
+        with self.brand.clear():
+            _brand()
+        with self.footer.clear():
+            _footer(ctx)
+        refresh_due_badge()
+
+
+_shells: weakref.WeakKeyDictionary[Client, _Shell] = weakref.WeakKeyDictionary()
+
+
+def shell(routes: dict[str, Callable[..., object]]) -> None:
+    """The window around the pages, built once per window (NEW-SPA): the page keys, the skip link, the sidebar and the
+    phone header, then the content area, which shows the page of the URL and swaps pages on links,
+    `ui.navigate.to` and the browser's back and forward."""
+    client = ui.context.client
     theme.apply_colors()
-    ui.page_title(f"{title} – Budget")
     ui.keyboard(on_key=_page_shortcut)  # ignores keys typed into fields
-    _month_steps.pop(ui.context.client, None)
     skip = ui.link(t("Skip to content"), "#").classes("skip-link")
-    current = NAV_PARENT.get(path, path)
     with (
         ui.left_drawer().props("width=232 :breakpoint=1023 role=navigation").classes("sidebar") as drawer,
         ui.column().classes("w-full h-full gap-0 px-3 pt-4 pb-3 no-wrap"),
     ):
-        _brand()
+        brand = ui.element("div").classes("contents")
         drawer.props["aria-label"] = t("Places")
         ui.button(t("New Transaction"), icon="add", on_click=_new_transaction).props("unelevated no-wrap").classes(
             "w-full bg-primary text-white mb-4"
         )
-        for target, label, icon in NAV:
-            _nav_item(target, label, icon, target == current)
+        nav = {target: _nav_item(target, label, icon) for target, label, icon in NAV}
         ui.space()
-        _nav_item(*SETTINGS, SETTINGS[0] == current)
-        latest = ctx.fx.latest_date()
-        with ui.row().classes("items-end no-wrap px-2 pt-3 gap-1"):
-            with ui.column().classes("gap-0 flex-1 min-w-0 items-start"):
-                ui.label(f"Budget {config.app_version()}").classes("nav-footer")
-                if ctx.store.settings.sample_data:  # F30: the folder holds the sample set
-                    ui.label(t("Sample data")).classes("nav-footer")
-                ui.label(
-                    t("ECB rates of {date}", date=i18n.date_label(latest)) if latest else t("No exchange rates yet")
-                ).classes("nav-footer")
-                release = updates_svc.available(ctx)  # F33: only after a check the user turned on
-                if release:
-                    ui.link(
-                        t("Budget {version} is available", version=release.version), release.url, new_tab=True
-                    ).classes("nav-footer text-primary").tooltip(
-                        t(
-                            "Opens the release page with the installers and the update steps. "
-                            "Nothing is downloaded by the app."
-                        )
-                    )
-                ui.button(t("Keyboard Shortcuts"), on_click=open_shortcuts).props("flat dense no-caps").classes(
-                    "nav-footer footer-link"
-                )
-            if security.required():  # F27: lock now, from every page
-                named(
-                    ui.button(icon="o_lock", on_click=lock_now)
-                    .props("flat round dense size=sm")
-                    .classes("text-primary"),
-                    t("Lock Now"),
-                )
+        nav[SETTINGS[0]] = _nav_item(*SETTINGS)
+        footer = ui.element("div").classes("contents")
     with ui.header().classes("mobile-bar lg:hidden px-2 py-1 items-center gap-1"):
         menu = ui.button(icon="menu", on_click=drawer.toggle).props("flat round dense").classes("text-primary")
         named(menu, t("Menu"))
-        ui.label(title).classes("font-semibold text-[15px]")
+        title = ui.label().classes("font-semibold text-[15px]")
         ui.space()
         named(
             ui.button(icon="add", on_click=_new_transaction).props("flat round dense").classes("text-primary"),
             t("New Transaction"),
         )
+    window = _shells[client] = _Shell(drawer, nav, brand, footer, title, skip)
+
+    def close_drawer(_path: str) -> None:
+        client.run_javascript(HIDE_MOBILE_DRAWER.format(id=drawer.id))
+
+    client.sub_pages_router.on_path_changed(close_drawer)
+    window.pages = ui.sub_pages(routes).classes("w-full")
+
+
+def new_page() -> None:
+    """A page is about to be built in the shell: what the page before left for the window goes (NEW-SPA). Its
+    elements, timers and refreshables went with it when the content area was cleared."""
+    client = ui.context.client
+    _data_listeners.pop(client, None)
+    _month_steps.pop(client, None)
+    for dlg in list(_sheets.pop(client, ())):  # a sheet still open (the browser's back): a page load closed it too
+        if not dlg.is_deleted:
+            dlg.delete()
+    badges = _due_badges.get(client, {})
+    for target in [target for target, badge in badges.items() if badge.is_deleted]:
+        del badges[target]  # the tabs of the page before
+
+
+def page_area() -> ui.element:
+    """The content area of the window: a place for sheets that must outlive a refresh of the list that opened them,
+    and go with the page."""
+    return cast(ui.element, _shells[ui.context.client].pages)  # set before any page can open a sheet
+
+
+def _footer(ctx: Context) -> None:
+    """Below the places: the version, the sample data, the rates, an available update, the shortcuts, the lock."""
+    latest = ctx.fx.latest_date()
+    with ui.row().classes("items-end no-wrap px-2 pt-3 gap-1"):
+        with ui.column().classes("gap-0 flex-1 min-w-0 items-start"):
+            ui.label(f"Budget {config.app_version()}").classes("nav-footer")
+            if ctx.store.settings.sample_data:  # F30: the folder holds the sample set
+                ui.label(t("Sample data")).classes("nav-footer")
+            ui.label(
+                t("ECB rates of {date}", date=i18n.date_label(latest)) if latest else t("No exchange rates yet")
+            ).classes("nav-footer")
+            release = updates_svc.available(ctx)  # F33: only after a check the user turned on
+            if release:
+                ui.link(t("Budget {version} is available", version=release.version), release.url, new_tab=True).classes(
+                    "nav-footer text-primary"
+                ).tooltip(
+                    t(
+                        "Opens the release page with the installers and the update steps. "
+                        "Nothing is downloaded by the app."
+                    )
+                )
+            ui.button(t("Keyboard Shortcuts"), on_click=open_shortcuts).props("flat dense no-caps").classes(
+                "nav-footer footer-link"
+            )
+        if security.required():  # F27: lock now, from every page
+            named(
+                ui.button(icon="o_lock", on_click=lock_now).props("flat round dense size=sm").classes("text-primary"),
+                t("Lock Now"),
+            )
+
+
+@contextmanager
+def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = False, wide: bool = False):
+    """Page skeleton in the shell's content area. Yields (ctx, actions): `actions` is the row beside the title for
+    page-level buttons. The shell follows: the place in the sidebar, the titles, the badges.
+
+    On small screens the large title gives way to the compact header, and the actions wrap below it.
+    """
+    ctx = get_ctx()
+    shell_ = _shells[ui.context.client]  # every page with a frame is built in the shell (main.register_pages)
+    ui.page_title(f"{title} – Budget")
+    shell_.show(ctx, title, path)
     if ctx.fx_service and ctx.fx_service.last_error:
         with ui.row().classes("w-full px-8 pt-4 max-sm:px-4"), ui.element("div").classes("callout"):
             ui.icon("o_cloud_off")
@@ -438,7 +528,8 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
         .classes("page" + (" narrow" if narrow else "") + (" wide" if wide else ""))
         .props("role=main tabindex=-1") as main
     ):
-        skip.props["href"] = f"#{main.html_id}"
+        shell_.skip.props["href"] = f"#{main.html_id}"
+        shell_.skip.update()
         with ui.row().classes("w-full items-end gap-3 flex-wrap"):
             with ui.column().classes("gap-0"):
                 ui.label(title).classes("large-title max-lg:hidden")

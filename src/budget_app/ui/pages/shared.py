@@ -24,6 +24,7 @@ from budget_app.ui.layout import (
     frame,
     named,
     on_data_changed,
+    page_area,
     parse_date,
     save_file,
     segmented,
@@ -238,7 +239,7 @@ def page() -> None:
                     for item in p.items:
 
                         def edit(tx: Transaction = item.tx) -> None:
-                            with ui.context.client.content:  # outside the list, which refreshes on save
+                            with page_area():  # outside the list, which refreshes on save
                                 open_transaction_sheet(ctx, refresh, editing=tx)
 
                         with (

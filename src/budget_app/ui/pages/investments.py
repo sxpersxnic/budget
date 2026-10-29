@@ -40,6 +40,7 @@ from budget_app.ui.layout import (
     month_options,
     named,
     on_data_changed,
+    page_area,
     parse_date,
     segmented,
     sheet,
@@ -889,7 +890,7 @@ def _holding_row(ctx: Context, h: Holding, cur: str, refresh: Callable[[], objec
     perf = inv_svc.performance(ctx, h.id)
 
     def show() -> None:
-        with ui.context.client.content:  # outside the list, which refreshes while the sheet stays open
+        with page_area():  # outside the list, which refreshes while the sheet stays open
             open_holding_sheet(ctx, h.id, refresh)
 
     with ui.element("div").classes("group-row cursor-pointer").props("role=button tabindex=0") as row:

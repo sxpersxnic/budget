@@ -26,7 +26,7 @@ from budget_app.services import context as context_module
 from budget_app.services import phone, profiles, security, sync
 from budget_app.services.context import Context, ValidationError, get_ctx, init_context
 from budget_app.storage import lock as instance_lock
-from budget_app.ui import theme
+from budget_app.ui import layout, theme
 from budget_app.ui.layout import book_recurring, check_updates, records_reloaded, refresh_rates
 from budget_app.ui.pages import (
     accounts,
@@ -59,6 +59,8 @@ from budget_app.ui.pages import (
 from budget_app.ui.widgets import attachments as attachments_ui
 from budget_app.ui.widgets import selects
 
+# The pages in the window's shell (NEW-SPA): one document per window, the sidebar built once, the pages swapped in
+# its content area. Each route is also a page of its own URL, so a reload or a bookmark opens it directly.
 PAGES = {
     "/": overview.page,
     "/budget": budget_overview.page,
@@ -83,7 +85,11 @@ PAGES = {
     "/settings": settings.page,
     "/accounts": accounts.page,  # Wealth: the accounts, out of Settings (UX review before 1.0)
     "/history": history.page,
-    "/welcome": welcome.page,  # F30: the first-start screen; the Overview opens it while nothing is recorded
+}
+# Pages without the sidebar, behind the lock: the first-start screen (F30), which the Overview opens while nothing is
+# recorded.
+LONE_PAGES = {
+    "/welcome": welcome.page,
 }
 # Retired pages (UX review before 1.0): their routes stay, so links and bookmarks lead to where the content went.
 REDIRECTS = {
@@ -127,9 +133,41 @@ def _guarded(path: str, builder: Callable[..., None], phone_ok: bool = False) ->
     return page
 
 
+def _sub_page(builder: Callable[..., None]) -> Callable[..., None]:
+    """A page of PAGES as the shell's content area shows it: behind the lock (F27), like a page load, since a change
+    of page no longer asks the server for a document; with the query parameters the builder takes (NiceGUI fills them
+    in by the signature, and builds the page anew when one of them changes)."""
+
+    def show(**query: str) -> None:
+        client = ui.context.client
+        target = security.redirect_for(client.request, client.sub_pages_router.current_path)
+        if target is not None:
+            layout.full_load(target)
+            return
+        layout.new_page()
+        builder(**query)
+
+    show.__signature__ = inspect.signature(builder)  # type: ignore[attr-defined]
+    return show
+
+
+def _shell(request: Request) -> RedirectResponse | None:
+    """Every URL of PAGES (NEW-SPA): the lock first, then the window's shell, which shows the page of the URL. Links
+    and `ui.navigate.to` change pages in the shell from then on; the browser's back and forward too."""
+    wanted = f"{request.url.path}?{request.url.query}" if request.url.query else request.url.path
+    target = security.redirect_for(request, wanted)
+    if target is not None:
+        return RedirectResponse(target)
+    layout.shell({path: _sub_page(builder) for path, builder in PAGES.items()})
+    return None
+
+
 def register_pages() -> None:
-    """Every page of the app (each sets its translated title in layout.frame)."""
-    for path, builder in PAGES.items():
+    """Every page of the app (each sets its translated title in layout.frame). The pages of PAGES share one builder,
+    the shell: NiceGUI's router tells a page of the shell from a page of its own by the builder."""
+    for path in PAGES:
+        ui.page(path, title="Budget")(_shell)
+    for path, builder in LONE_PAGES.items():
         ui.page(path, title="Budget")(_guarded(path, builder))
     for path, builder in PHONE_PAGES.items():
         ui.page(path, title="Budget")(_guarded(path, builder, phone_ok=True))

@@ -143,9 +143,8 @@ async def test_the_due_list_with_its_actions_and_the_badge(user: User, ctx, setu
     assert due_badge(user).text == "3" and len(rows(user)) == 3
 
     await click(user, action(user, rem_svc.GOALS))
-    await user.should_see("New Goal")  # the Goals page
-    with user:
-        assert user.client.page.path == "/goals"
+    await user.should_see("New Goal")  # the Goals page, in the window's shell (NEW-SPA)
+    assert user.client.sub_pages_router.current_path == "/goals"
 
 
 async def test_a_stale_row_is_reported(user: User, ctx, setup) -> None:
