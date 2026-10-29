@@ -12,6 +12,7 @@ from test_payees_page import put
 from test_recurring_page import in_dialog
 
 from budget_app.domain import months
+from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import BILL_DISMISSED, Bill
 from budget_app.services import goals as goal_svc
 from budget_app.services import loans as loan_svc
@@ -24,7 +25,10 @@ from budget_app.services.recurring import RecurringInput
 from budget_app.ui import layout
 
 TODAY = date.today()
-RENT = "Landlord · 04.1 Actual rental payments made for housing"
+
+
+def rent_title() -> str:
+    return f"Landlord · {get_coicop().label('04.1')}"
 
 
 def due_badge(user: User) -> ui.badge:
@@ -100,7 +104,7 @@ async def test_the_due_list_with_its_actions_and_the_badge(user: User, ctx, setu
     prev = found["prev"]
     await user.open("/")
     await user.should_see("5 things to do")
-    await user.should_see(RENT)
+    await user.should_see(rent_title())
     await user.should_see(f"No balance for {months.label(prev)} · last 1'200.00 CHF")
     await user.should_see("Swisscom")
     await user.should_see("89.90 CHF")
@@ -113,7 +117,7 @@ async def test_the_due_list_with_its_actions_and_the_badge(user: User, ctx, setu
     assert sorted(e.text for e in late)[0].startswith("2 occurrences due since ")
 
     await click(user, action(user, rem_svc.RECURRING))  # books the earliest at the series' amount
-    assert notified(user, f"Booked {RENT}")
+    assert notified(user, f"Booked {rent_title()}")
     [tx] = ctx.store.transactions.all()
     assert (tx.amount, tx.recurring_id) == (1900, found["rent"].id)
     await user.should_see("Due since ")

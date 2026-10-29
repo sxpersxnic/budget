@@ -4,6 +4,7 @@ turns kinds off, the count for the sidebar (exactly the Due list's rows), and no
 import json
 from datetime import date, timedelta
 
+from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import Bill
 from budget_app.services import budget as budget_svc
 from budget_app.services import goals as goal_svc
@@ -81,7 +82,7 @@ def test_recurring_transactions_due(ctx, setup):
     # one item per series: the earliest occurrence, the one to book next, and how many are due
     assert [(i.title, i.sub, i.amount, i.tone, i.link, i.on, i.times) for i in found] == [
         (
-            "04.1 Actual rental payments made for housing",
+            get_coicop().label("04.1"),
             "2 occurrences due since 1 Sep 2026",
             1900,
             rem_svc.LATE,

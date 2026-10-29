@@ -14,6 +14,7 @@ from test_recurring_page import in_dialog
 
 from budget_app import i18n
 from budget_app.domain import months
+from budget_app.domain.coicop import get_coicop
 from budget_app.services import recurring as rec_svc
 from budget_app.services import subscriptions as sub_svc
 from budget_app.services import transactions as tx_svc
@@ -113,7 +114,7 @@ async def test_make_recurring_opens_the_prefilled_sheet_and_the_row_leaves(user:
     assert notified(user, "Recurring transaction added")
     shown = labels(user)
     assert "1 subscription · about 1'020.00 CHF a year" in shown
-    assert "Swisscom · 08.3 Information and communication services" in shown  # now under Your Series
+    assert f"Swisscom · {get_coicop().label('08.3')}" in shown  # now under Your Series
     assert "spending about 598.80 CHF a year" in shown
 
 
