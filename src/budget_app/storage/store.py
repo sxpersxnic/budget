@@ -59,7 +59,15 @@ class Store:
     def __init__(self, data_dir: Path, codec: Codec | None = None):
         self.data_dir = data_dir
         self.codec = codec if codec is not None else Codec()
-        c = self.codec
+        self._open()
+
+    def reload(self) -> None:
+        """Read every file again (F26: another computer changed them). The same object, so pages that hold it see
+        the new records."""
+        self._open()
+
+    def _open(self) -> None:
+        data_dir, c = self.data_dir, self.codec
         data_dir.mkdir(parents=True, exist_ok=True)
         self.history = History(data_dir / HISTORY_FILE, codec=c)
         h = self.history

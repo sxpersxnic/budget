@@ -23,11 +23,11 @@ from budget_app import config, i18n
 from budget_app.i18n import t
 from budget_app.services import attachments as attachments_svc
 from budget_app.services import context as context_module
-from budget_app.services import profiles, security
+from budget_app.services import profiles, security, sync
 from budget_app.services.context import Context, ValidationError, get_ctx, init_context
 from budget_app.storage import lock as instance_lock
 from budget_app.ui import theme
-from budget_app.ui.layout import book_recurring, refresh_rates
+from budget_app.ui.layout import book_recurring, records_reloaded, refresh_rates
 from budget_app.ui.pages import (
     add_budget,
     add_transaction,
@@ -159,6 +159,7 @@ def open_folder(folder: Path, moved: bool = False) -> None:
         instance_lock.switch(folder)
     except instance_lock.AlreadyRunningError as exc:
         raise ValidationError(t("The folder {folder} is open in another Budget window", folder=folder)) from exc
+    sync.stop()
     context_module.close_context()
     if moved:
         security.relocate(folder)
@@ -166,6 +167,13 @@ def open_folder(folder: Path, moved: bool = False) -> None:
         security.configure(folder)
     if security.can_open_without_password() or security.codec().encrypting:
         _open_and_refresh(folder)
+    sync.start(folder)
+
+
+def check_folder() -> None:
+    """F26: reload records another computer changed, and tell the open pages."""
+    if sync.tick():
+        records_reloaded()
 
 
 def setup(data_dir: Path) -> None:
@@ -177,8 +185,11 @@ def setup(data_dir: Path) -> None:
     register_pages()
     if security.can_open_without_password():
         open_data(data_dir)
+    sync.start(data_dir)
     app.on_startup(refresh)
+    app.on_shutdown(sync.stop)
     app.timer(30 * 60, refresh, immediate=False)  # keeps rates current, and books what falls due overnight
+    app.timer(sync.INTERVAL, check_folder, immediate=False)  # F26: changes from another computer
 
 
 def _redirect_missing_streams(data_dir: Path) -> None:

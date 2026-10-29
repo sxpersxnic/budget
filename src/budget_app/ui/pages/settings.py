@@ -12,7 +12,7 @@ from budget_app.domain import months
 from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR, ASSET_CASH, ASSET_CLASSES, HOLDING_CLASSES
 from budget_app.i18n import t, tn
 from budget_app.services import accounts as acc_svc
-from budget_app.services import archive, security
+from budget_app.services import archive, security, sync
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
 from budget_app.services import investments as inv_svc
@@ -549,6 +549,39 @@ def _security_group(ctx: Context) -> None:
         body()
 
 
+def _move_sheet() -> None:
+    """F26: copy the open profile's records to another folder, for example a cloud folder, and use them there."""
+    with sheet(t("Move the Records"), width="30rem") as dlg:
+        ui.label(
+            t(
+                "The records, attachments and automatic backups are copied to a new or empty folder and used from "
+                "there; the old folder is left as it is. In a cloud folder (iCloud Drive, OneDrive, Dropbox) they can "
+                "be used on another computer too, one at a time: there, add the folder under Profiles."
+            )
+        ).classes("footnote")
+        folder = ui.input(t("New folder")).props("dense outlined autofocus").classes("w-full mono")
+        clouds = sync.cloud_folders()
+        if clouds:
+            with ui.row().classes("gap-2 flex-wrap"):
+                for name, path in clouds:
+                    ui.chip(name, icon="o_cloud", on_click=lambda p=path: folder.set_value(str(p / "Budget"))).props(
+                        "outline clickable"
+                    )
+
+        def save() -> None:
+            try:
+                moved = profiles_svc.move(profiles_svc.active().id, folder.value or "")
+            except ValidationError as exc:
+                error(str(exc))
+                return
+            dlg.close()
+            success(t("The records are now in {folder}. The old folder is left as it was.", folder=moved.path))
+            ui.navigate.reload()
+
+        sheet_buttons(dlg, t("Move"), save)
+        folder.on("keydown.enter", save)
+
+
 def _data_group(ctx: Context) -> None:
     async def export_json() -> None:
         await save_file(export_svc.everything_json(ctx), f"budget-export_{date.today().isoformat()}.json")
@@ -613,9 +646,11 @@ def _data_group(ctx: Context) -> None:
                 ui.button(t("Show…"), on_click=lambda: ui.navigate.to("/history")).props("flat dense no-caps").classes(
                     "text-primary"
                 )
-            with ui.element("div").classes("group-row"), ui.column().classes("gap-0 flex-1 min-w-0"):
-                ui.label(t("Data Folder"))
-                ui.label(str(ctx.store.data_dir)).classes("caption break-all select-all")
+            with ui.element("div").classes("group-row"):
+                with ui.column().classes("gap-0 flex-1 min-w-0"):
+                    ui.label(t("Data Folder"))
+                    ui.label(str(ctx.store.data_dir)).classes("caption break-all select-all")
+                ui.button(t("Move…"), on_click=_move_sheet).props("flat dense no-caps").classes("text-primary")
 
     saved = archive.saved_backups(ctx)
     with ui.column().classes("w-full gap-0"):

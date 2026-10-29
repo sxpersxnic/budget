@@ -395,7 +395,11 @@ async def test_setup_registers_pages_and_refreshes_rates(tmp_path, monkeypatch, 
     monkeypatch.setattr(main_module.theme, "install", lambda: None)
     monkeypatch.setattr(main_module.ui, "page", lambda path, title: lambda builder: pages.append((path, builder)))
     monkeypatch.setattr(main_module.app, "on_startup", startup.append)
+    shutdown: list = []
+    monkeypatch.setattr(main_module.app, "on_shutdown", shutdown.append)
     monkeypatch.setattr(main_module.app, "timer", lambda interval, fn, immediate: timers.append((interval, immediate)))
+    for module, hook in ((main_module.security, "opener"), (main_module.profiles, "opener")):
+        monkeypatch.setattr(module, hook, None)  # set by setup; the other tests expect them unset
 
     async def fake_refresh(ctx):
         refreshed.append(ctx)
@@ -412,7 +416,9 @@ async def test_setup_registers_pages_and_refreshes_rates(tmp_path, monkeypatch, 
     # every page is registered behind the app lock's guard (F27), plus the lock page itself
     assert [path for path, _ in pages] == [*main_module.PAGES, *main_module.OPEN_PAGES]
     assert all(builder.__name__ == "page" for _, builder in pages)
-    assert timers == [(1800, False)]
+    assert timers == [(1800, False), (main_module.sync.INTERVAL, False)]  # rates; changes from another computer (F26)
+    assert main_module.sync.stop in shutdown and main_module.sync.others() == []
+    main_module.sync.stop()
     [refresh] = startup
     await refresh()
     assert refreshed == [ctx]

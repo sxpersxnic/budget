@@ -18,6 +18,8 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
 
+from budget_app.storage import watch
+
 MAGIC = b"BUDGET-ENCRYPTED-1\n"
 HISTORY_FILE = "history.jsonl"
 
@@ -70,6 +72,7 @@ def is_encrypted(path: Path) -> bool:
 
 
 def read_text(path: Path, codec: Codec = PLAIN) -> str:
+    watch.note(path)  # F26: noted first, so a change landing during the read is seen as a change at the next check
     return codec.decode(path.read_bytes())
 
 
@@ -82,6 +85,7 @@ def write_text(path: Path, text: str, codec: Codec = PLAIN) -> None:
         f.flush()
         os.fsync(f.fileno())
     tmp.replace(path)
+    watch.note(path)  # F26: written here, not by another computer
 
 
 def record_files(folder: Path) -> list[Path]:

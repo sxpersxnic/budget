@@ -20,7 +20,7 @@ from budget_app.i18n import N_, t
 from budget_app.services import bills as bills_svc
 from budget_app.services import profiles as profiles_svc
 from budget_app.services import recurring as recurring_svc
-from budget_app.services import security
+from budget_app.services import security, sync
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
 from budget_app.services.context import Context, ValidationError, get_ctx
@@ -116,6 +116,35 @@ def data_changed() -> None:
     if callback:
         callback()
     refresh_due_badge()
+
+
+def records_reloaded() -> None:
+    """F26: the records were read again after another computer changed them; every open page is told, and pages
+    that refresh themselves do."""
+    for client in list(Client.instances.values()):
+        if not client.has_socket_connection:
+            continue
+        with client:
+            ui.notify(t("Records changed on another computer were read again."), type="info")
+            callback = _data_listeners.get(client)
+            if callback:
+                callback()
+
+
+def _open_elsewhere() -> None:
+    """F26: a warning while another computer has the same folder open (a cloud folder)."""
+    for other in sync.others():
+        since = other.since_at
+        with ui.row().classes("w-full px-8 pt-4 max-sm:px-4"), ui.element("div").classes("callout"):
+            ui.icon("o_devices")
+            ui.label(
+                t(
+                    "Budget is open on {computer} too, since {time}. Close it there before you change anything here: "
+                    "changes made on two computers at the same time overwrite each other.",
+                    computer=other.host,
+                    time=f"{i18n.date_label(since.date())}, {since:%H:%M}",
+                )
+            )
 
 
 def refresh_due_badge() -> None:
@@ -250,6 +279,7 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
         with ui.row().classes("w-full px-8 pt-4 max-sm:px-4"), ui.element("div").classes("callout"):
             ui.icon("o_cloud_off")
             ui.label(ctx.fx_service.last_error)
+    _open_elsewhere()
     with ui.column().classes("page" + (" narrow" if narrow else "") + (" wide" if wide else "")):
         with ui.row().classes("w-full items-end gap-3 flex-wrap"):
             with ui.column().classes("gap-0"):
