@@ -1,11 +1,14 @@
 """UI tests run the real pages in NiceGUI's simulated client: no browser, no server, no network."""
 
+import re
 from collections.abc import AsyncGenerator
 from datetime import date
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
-from nicegui import background_tasks
+from nicegui import Client, background_tasks
+from nicegui.nicegui import _on_handshake
 from nicegui.testing import User
 from nicegui.testing.user_simulation import user_simulation
 
@@ -89,6 +92,46 @@ def _follow_full_loads(self: User) -> None:
 
 
 User._patch_outbox_emit_function = _follow_full_loads  # type: ignore[method-assign]
+
+
+async def _open(self: User, path: str, *, clear_forward_history: bool = True) -> Client:
+    """NiceGUI's `User.open`, with the simulated browser's JavaScript answers in place before the page connects.
+
+    NiceGUI connects first and only then installs them, so the sidebar's question on connecting (`ui.left_drawer`,
+    "is the drawer open?") could go out unanswered on a busy machine, and its 1 s wait failed the test (seen on the
+    CI runner with parallel workers).
+    """
+    response = await self.http_client.get(path, follow_redirects=True)
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
+    if response.headers.get("X-Nicegui-Content") != "page":
+        raise ValueError(f"Expected a page response, got {response.text}")
+    match = re.search(r"'client_id': '([0-9a-f-]+)'", response.text)
+    assert match is not None
+    self.client = Client.instances[match.group(1)]
+    self._patch_outbox_emit_function()  # before the handshake, which runs the page's on_connect handlers
+    self.sio.on("connect")
+    await _on_handshake(
+        f"test-{uuid4()}", {"client_id": self.client.id, "tab_id": self.tab_id, "document_id": str(uuid4())}
+    )
+    self.back_history.append(path)
+    if clear_forward_history:
+        self.forward_history.clear()
+    return self.client
+
+
+User.open = _open  # type: ignore[method-assign]
+
+# A page change that reloads the page (the lock, the welcome screen) takes longer on a busy machine than the 0.3 s
+# NiceGUI's `should_see` waits by default; up to 3 s here, which costs nothing when the text is already there.
+WAIT_RETRIES = 30
+_should_see = User.should_see
+
+
+async def _patient_should_see(self: User, *args, retries: int = WAIT_RETRIES, **kwargs) -> None:
+    await _should_see(self, *args, retries=retries, **kwargs)
+
+
+User.should_see = _patient_should_see  # type: ignore[method-assign, assignment]
 
 
 @pytest.fixture

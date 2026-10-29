@@ -1280,7 +1280,10 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 
 - `uv run pytest` runs the tests in parallel, one worker per CPU taking whole files (`pytest-xdist`, `addopts` in
   `pyproject.toml`): about a minute on ten cores instead of twelve in one process; `-n 0` runs them in one process.
-  It runs the unit tests (`tests/`) for:
+  `-n auto` takes as many workers as the memory holds too, at 1 GB each and one kept spare (`worker_count` in
+  `tests/conftest.py`, which reads a container's cgroup limit): one worker per CPU ran the CI runner's container out of
+  memory. `PYTEST_XDIST_AUTO_NUM_WORKERS` sets the number outright. CI runs the checks (lint, formatting, types) and
+  the tests as two jobs, so either can be re-run alone. It runs the unit tests (`tests/`) for:
   - FX parsing, cross-rates and date fallback;
   - COICOP level counts and roll-up;
   - every transaction type, the advance split, settlement and deletion rules;
