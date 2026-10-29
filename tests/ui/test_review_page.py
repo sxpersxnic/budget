@@ -110,7 +110,7 @@ async def test_the_page_reviews_last_year(user: User, ctx, setup) -> None:
     assert f"+4'000.00 since the end of Dec {LAST - 1}" in shown
     # the groups
     assert "Spending by Category" in shown and "Biggest Expenses" in shown
-    assert "04 Housing, water, electricity, gas and other fuels" in shown and "3'800.00 CHF" in shown
+    assert "04 Housing and energy" in shown and "3'800.00 CHF" in shown
     assert "▲ 6 %" in shown and f"{LAST - 1}: 3'600.00 CHF · 61 % of spending" in shown  # the rent rose
     assert "new" in shown  # the washing machine's division had nothing the year before
     assert f"Nothing in {LAST - 1} · 39 % of spending" in shown  # the caption of a new line

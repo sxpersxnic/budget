@@ -1,4 +1,17 @@
 {
+ "01": {
+  "en": "Food and drinks",
+  "de": "Essen und Getränke",
+  "fr": "Alimentation et boissons",
+  "it": "Alimentari e bevande",
+  "keywords": [
+   "Nahrung",
+   "Ernährung",
+   "nourriture",
+   "cibo",
+   "food"
+  ]
+ },
  "01.1": {
   "en": "Groceries",
   "de": "Lebensmittel",
@@ -38,6 +51,176 @@
    "supermarket"
   ]
  },
+ "01.1.1": {
+  "en": "Bread and cereals",
+  "de": "Brot und Getreideprodukte",
+  "fr": "Pain et céréales",
+  "it": "Pane e cereali",
+  "keywords": [
+   "Teigwaren",
+   "Pasta",
+   "Reis",
+   "Müesli",
+   "Mehl",
+   "pâtes",
+   "riz",
+   "farine",
+   "riso",
+   "farina",
+   "bread",
+   "rice",
+   "flour"
+  ]
+ },
+ "01.1.2": {
+  "en": "Meat",
+  "de": "Fleisch",
+  "fr": "Viande",
+  "it": "Carne",
+  "keywords": [
+   "Wurst",
+   "Poulet",
+   "Metzgerei",
+   "charcuterie",
+   "boucherie",
+   "salumi",
+   "pollo",
+   "macelleria",
+   "sausage",
+   "chicken"
+  ]
+ },
+ "01.1.3": {
+  "en": "Fish and seafood",
+  "de": "Fisch und Meeresfrüchte",
+  "fr": "Poisson et fruits de mer",
+  "it": "Pesce e frutti di mare",
+  "keywords": [
+   "Lachs",
+   "Thon",
+   "Crevetten",
+   "saumon",
+   "crevettes",
+   "salmone",
+   "tonno",
+   "gamberi",
+   "salmon",
+   "tuna"
+  ]
+ },
+ "01.1.4": {
+  "en": "Dairy and eggs",
+  "de": "Milchprodukte und Eier",
+  "fr": "Produits laitiers et œufs",
+  "it": "Latticini e uova",
+  "keywords": [
+   "Milch",
+   "Käse",
+   "Joghurt",
+   "Rahm",
+   "lait",
+   "fromage",
+   "yogourt",
+   "crème",
+   "latte",
+   "formaggio",
+   "yogurt",
+   "panna",
+   "milk",
+   "cheese"
+  ]
+ },
+ "01.1.5": {
+  "en": "Oils and fats",
+  "de": "Öle und Fette",
+  "fr": "Huiles et graisses",
+  "it": "Oli e grassi",
+  "keywords": [
+   "Butter",
+   "Olivenöl",
+   "Margarine",
+   "beurre",
+   "huile d’olive",
+   "burro",
+   "olio d’oliva",
+   "olive oil"
+  ]
+ },
+ "01.1.6": {
+  "en": "Fruit and nuts",
+  "de": "Früchte und Nüsse",
+  "fr": "Fruits et noix",
+  "it": "Frutta e noci",
+  "keywords": [
+   "Obst",
+   "Äpfel",
+   "Bananen",
+   "Dörrobst",
+   "pommes",
+   "fruits secs",
+   "mele",
+   "frutta secca",
+   "apples"
+  ]
+ },
+ "01.1.7": {
+  "en": "Vegetables",
+  "de": "Gemüse",
+  "fr": "Légumes",
+  "it": "Verdura",
+  "keywords": [
+   "Kartoffeln",
+   "Salat",
+   "Hülsenfrüchte",
+   "pommes de terre",
+   "salade",
+   "légumineuses",
+   "patate",
+   "insalata",
+   "legumi",
+   "potatoes",
+   "salad"
+  ]
+ },
+ "01.1.8": {
+  "en": "Sweets and desserts",
+  "de": "Süsses und Desserts",
+  "fr": "Sucreries et desserts",
+  "it": "Dolci e dessert",
+  "keywords": [
+   "Schokolade",
+   "Zucker",
+   "Glace",
+   "Guetzli",
+   "chocolat",
+   "sucre",
+   "biscuits",
+   "cioccolato",
+   "zucchero",
+   "gelato",
+   "biscotti",
+   "chocolate",
+   "ice cream"
+  ]
+ },
+ "01.1.9": {
+  "en": "Ready meals and other food",
+  "de": "Fertiggerichte und weitere Lebensmittel",
+  "fr": "Plats préparés et autres aliments",
+  "it": "Piatti pronti e altri alimenti",
+  "keywords": [
+   "Gewürze",
+   "Saucen",
+   "Babynahrung",
+   "épices",
+   "sauces",
+   "aliments pour bébés",
+   "spezie",
+   "salse",
+   "alimenti per neonati",
+   "spices"
+  ]
+ },
  "01.2": {
   "en": "Drinks, coffee and tea",
   "de": "Getränke, Kaffee und Tee",
@@ -65,6 +248,119 @@
    "capsule"
   ]
  },
+ "01.2.1": {
+  "en": "Juices",
+  "de": "Säfte",
+  "fr": "Jus",
+  "it": "Succhi",
+  "keywords": [
+   "Orangensaft",
+   "Süssmost",
+   "jus d’orange",
+   "succo d’arancia",
+   "orange juice"
+  ]
+ },
+ "01.2.2": {
+  "en": "Coffee",
+  "de": "Kaffee",
+  "fr": "Café",
+  "it": "Caffè",
+  "keywords": [
+   "Nespresso",
+   "Kaffeekapseln",
+   "Kaffeebohnen",
+   "capsules",
+   "grains de café",
+   "capsule",
+   "chicchi",
+   "coffee beans"
+  ]
+ },
+ "01.2.3": {
+  "en": "Tea",
+  "de": "Tee",
+  "fr": "Thé",
+  "it": "Tè",
+  "keywords": [
+   "Kräutertee",
+   "tisane",
+   "tisana",
+   "herbal tea"
+  ]
+ },
+ "01.2.4": {
+  "en": "Cocoa and chocolate drinks",
+  "de": "Kakao und Schokoladengetränke",
+  "fr": "Cacao et boissons chocolatées",
+  "it": "Cacao e bevande al cioccolato",
+  "keywords": [
+   "Ovomaltine",
+   "Caotina",
+   "Nesquik",
+   "hot chocolate"
+  ]
+ },
+ "01.2.5": {
+  "en": "Bottled water",
+  "de": "Mineralwasser",
+  "fr": "Eau minérale",
+  "it": "Acqua minerale",
+  "keywords": [
+   "Henniez",
+   "Valser",
+   "Aproz",
+   "Wasser",
+   "eau",
+   "acqua",
+   "water"
+  ]
+ },
+ "01.2.6": {
+  "en": "Soft drinks",
+  "de": "Süssgetränke",
+  "fr": "Boissons sucrées",
+  "it": "Bibite",
+  "keywords": [
+   "Cola",
+   "Rivella",
+   "Limonade",
+   "Eistee",
+   "soda",
+   "thé froid",
+   "tè freddo",
+   "iced tea"
+  ]
+ },
+ "01.3": {
+  "en": "Processing of your own produce",
+  "de": "Verarbeitung eigener Ernte",
+  "fr": "Transformation de récoltes propres",
+  "it": "Lavorazione di raccolti propri",
+  "keywords": [
+   "Mosterei",
+   "Lohnmosterei",
+   "Mühle",
+   "pressage",
+   "moulin",
+   "torchio",
+   "mulino",
+   "cider pressing"
+  ]
+ },
+ "02": {
+  "en": "Alcohol and tobacco",
+  "de": "Alkohol und Tabak",
+  "fr": "Alcool et tabac",
+  "it": "Alcol e tabacco",
+  "keywords": [
+   "Genussmittel",
+   "Spirituosen",
+   "spiritueux",
+   "superalcolici",
+   "spirits"
+  ]
+ },
  "02.1": {
   "en": "Alcoholic drinks",
   "de": "Alkoholische Getränke",
@@ -89,6 +385,62 @@
    "beer"
   ]
  },
+ "02.1.1": {
+  "en": "Spirits",
+  "de": "Spirituosen",
+  "fr": "Spiritueux",
+  "it": "Superalcolici",
+  "keywords": [
+   "Schnaps",
+   "Whisky",
+   "Gin",
+   "Likör",
+   "liqueur",
+   "liquore",
+   "liquor"
+  ]
+ },
+ "02.1.2": {
+  "en": "Wine",
+  "de": "Wein",
+  "fr": "Vin",
+  "it": "Vino",
+  "keywords": [
+   "Weinhandlung",
+   "Mövenpick Wein",
+   "Prosecco",
+   "Champagner",
+   "cave",
+   "enoteca",
+   "champagne"
+  ]
+ },
+ "02.1.3": {
+  "en": "Beer",
+  "de": "Bier",
+  "fr": "Bière",
+  "it": "Birra",
+  "keywords": [
+   "Feldschlösschen",
+   "Brauerei",
+   "brasserie",
+   "birreria",
+   "brewery"
+  ]
+ },
+ "02.2": {
+  "en": "Distilling services",
+  "de": "Lohnbrennerei",
+  "fr": "Distillation à façon",
+  "it": "Distillazione per conto terzi",
+  "keywords": [
+   "Schnapsbrennen",
+   "Brennerei",
+   "distillerie",
+   "distilleria",
+   "distillery"
+  ]
+ },
  "02.3": {
   "en": "Tobacco",
   "de": "Tabak",
@@ -106,6 +458,31 @@
    "tabac",
    "sigarette",
    "chiosco"
+  ]
+ },
+ "02.4": {
+  "en": "Cannabis and other drugs",
+  "de": "Cannabis und andere Drogen",
+  "fr": "Cannabis et autres drogues",
+  "it": "Cannabis e altre droghe",
+  "keywords": [
+   "Betäubungsmittel",
+   "stupéfiants",
+   "stupefacenti",
+   "narcotics"
+  ]
+ },
+ "03": {
+  "en": "Clothing and shoes",
+  "de": "Kleider und Schuhe",
+  "fr": "Vêtements et chaussures",
+  "it": "Abbigliamento e scarpe",
+  "keywords": [
+   "Mode",
+   "Bekleidung",
+   "habillement",
+   "moda",
+   "fashion"
   ]
  },
  "03.1": {
@@ -151,6 +528,41 @@
    "clothes"
   ]
  },
+ "03.1.3": {
+  "en": "Hats, scarves and accessories",
+  "de": "Mützen, Schals und Accessoires",
+  "fr": "Bonnets, écharpes et accessoires",
+  "it": "Cappelli, sciarpe e accessori",
+  "keywords": [
+   "Handschuhe",
+   "Gürtel",
+   "Krawatte",
+   "gants",
+   "ceinture",
+   "cravate",
+   "guanti",
+   "cintura",
+   "cravatta",
+   "gloves",
+   "belt"
+  ]
+ },
+ "03.1.4": {
+  "en": "Dry cleaning and tailoring",
+  "de": "Chemische Reinigung und Schneiderei",
+  "fr": "Pressing et retouches",
+  "it": "Lavanderia e sartoria",
+  "keywords": [
+   "Textilreinigung",
+   "Änderungsschneiderei",
+   "Kleiderreparatur",
+   "nettoyage à sec",
+   "couture",
+   "lavasecco",
+   "riparazioni sartoriali",
+   "alterations"
+  ]
+ },
  "03.2": {
   "en": "Shoes",
   "de": "Schuhe",
@@ -171,6 +583,18 @@
    "scarpe",
    "calzolaio",
    "shoes"
+  ]
+ },
+ "03.2.2": {
+  "en": "Shoe repair",
+  "de": "Schuhreparatur",
+  "fr": "Cordonnerie",
+  "it": "Calzolaio",
+  "keywords": [
+   "Schuhmacher",
+   "cordonnier",
+   "riparazione scarpe",
+   "cobbler"
   ]
  },
  "04": {
@@ -221,6 +645,48 @@
    "rent"
   ]
  },
+ "04.1.1": {
+  "en": "Rent (main home)",
+  "de": "Miete (Hauptwohnung)",
+  "fr": "Loyer (logement principal)",
+  "it": "Affitto (abitazione principale)",
+  "keywords": [
+   "Mietzins",
+   "Wohnungsmiete",
+   "loyer mensuel",
+   "pigione",
+   "monthly rent"
+  ]
+ },
+ "04.1.2": {
+  "en": "Rent (garage, second home)",
+  "de": "Miete (Garage, Zweitwohnung)",
+  "fr": "Loyer (garage, résidence secondaire)",
+  "it": "Affitto (garage, residenza secondaria)",
+  "keywords": [
+   "Parkplatz",
+   "Einstellhalle",
+   "Tiefgarage",
+   "place de parc",
+   "parking souterrain",
+   "posteggio",
+   "autorimessa",
+   "parking space"
+  ]
+ },
+ "04.2": {
+  "en": "Imputed rent (own home)",
+  "de": "Eigenmietwert",
+  "fr": "Valeur locative",
+  "it": "Valore locativo",
+  "keywords": [
+   "Eigenheim",
+   "Wohneigentum",
+   "propriétaire",
+   "proprietario",
+   "imputed rent"
+  ]
+ },
  "04.3": {
   "en": "Home repairs and maintenance",
   "de": "Reparaturen und Unterhalt der Wohnung",
@@ -254,6 +720,48 @@
    "elettricista",
    "falegname",
    "ristrutturazione"
+  ]
+ },
+ "04.3.1": {
+  "en": "Materials for home repairs",
+  "de": "Material für Reparaturen in der Wohnung",
+  "fr": "Matériel pour l’entretien du logement",
+  "it": "Materiale per la manutenzione della casa",
+  "keywords": [
+   "Farbe",
+   "Plättli",
+   "Tapete",
+   "Baumarkt",
+   "Alarmanlage",
+   "peinture",
+   "carrelage",
+   "vernice",
+   "piastrelle",
+   "paint",
+   "tiles"
+  ]
+ },
+ "04.3.2": {
+  "en": "Tradespeople and repairs",
+  "de": "Handwerker und Reparaturen",
+  "fr": "Artisans et réparations",
+  "it": "Artigiani e riparazioni",
+  "keywords": [
+   "Sanitär",
+   "Maler",
+   "Elektriker",
+   "Schreiner",
+   "Schlüsseldienst",
+   "plombier",
+   "peintre",
+   "électricien",
+   "menuisier",
+   "idraulico",
+   "imbianchino",
+   "elettricista",
+   "falegname",
+   "plumber",
+   "electrician"
   ]
  },
  "04.4": {
@@ -293,6 +801,65 @@
    "sacco ufficiale",
    "custode",
    "condominio"
+  ]
+ },
+ "04.4.1": {
+  "en": "Water supply",
+  "de": "Wasserversorgung",
+  "fr": "Approvisionnement en eau",
+  "it": "Approvvigionamento idrico",
+  "keywords": [
+   "Wasserzins",
+   "Wassergebühr",
+   "taxe d’eau",
+   "tassa sull’acqua",
+   "water bill"
+  ]
+ },
+ "04.4.2": {
+  "en": "Waste collection",
+  "de": "Kehrichtabfuhr",
+  "fr": "Ramassage des déchets",
+  "it": "Raccolta dei rifiuti",
+  "keywords": [
+   "Kehrichtsack",
+   "Abfallmarke",
+   "Grüngut",
+   "Sackgebühr",
+   "sac poubelle",
+   "taxe au sac",
+   "sacco rifiuti",
+   "tassa sul sacco",
+   "rubbish bags"
+  ]
+ },
+ "04.4.3": {
+  "en": "Sewage",
+  "de": "Abwasser",
+  "fr": "Eaux usées",
+  "it": "Acque luride",
+  "keywords": [
+   "Abwassergebühr",
+   "Kanalisation",
+   "taxe d’épuration",
+   "tassa di canalizzazione",
+   "sewage fee"
+  ]
+ },
+ "04.4.4": {
+  "en": "Building service charges",
+  "de": "Nebenkosten und Hauswart",
+  "fr": "Charges et conciergerie",
+  "it": "Spese accessorie e custode",
+  "keywords": [
+   "Nebenkostenabrechnung",
+   "Treppenhausreinigung",
+   "Kaminfeger",
+   "décompte de charges",
+   "ramoneur",
+   "conteggio spese accessorie",
+   "spazzacamino",
+   "service charges"
   ]
  },
  "04.5": {
@@ -366,6 +933,64 @@
    "power"
   ]
  },
+ "04.5.2": {
+  "en": "Gas",
+  "de": "Gas",
+  "fr": "Gaz",
+  "it": "Gas naturale",
+  "keywords": [
+   "Erdgas",
+   "Biogas",
+   "Propan",
+   "gaz naturel",
+   "propane",
+   "propano",
+   "natural gas"
+  ]
+ },
+ "04.5.3": {
+  "en": "Heating oil",
+  "de": "Heizöl",
+  "fr": "Mazout",
+  "it": "Olio combustibile",
+  "keywords": [
+   "Öltank",
+   "Tankrevision",
+   "fioul",
+   "nafta",
+   "gasolio da riscaldamento",
+   "fuel oil"
+  ]
+ },
+ "04.5.4": {
+  "en": "Wood and pellets",
+  "de": "Holz und Pellets",
+  "fr": "Bois et pellets",
+  "it": "Legna e pellet",
+  "keywords": [
+   "Brennholz",
+   "Cheminée",
+   "Kohle",
+   "bois de chauffage",
+   "charbon",
+   "legna da ardere",
+   "carbone",
+   "firewood"
+  ]
+ },
+ "04.5.5": {
+  "en": "District heating",
+  "de": "Fernwärme",
+  "fr": "Chauffage à distance",
+  "it": "Teleriscaldamento",
+  "keywords": [
+   "Wärmeverbund",
+   "Fernheizung",
+   "chauffage urbain",
+   "riscaldamento a distanza",
+   "heat network"
+  ]
+ },
  "05": {
   "en": "Household and furniture",
   "de": "Haushalt und Möbel",
@@ -415,6 +1040,24 @@
    "materasso"
   ]
  },
+ "05.2": {
+  "en": "Bed linen, towels and curtains",
+  "de": "Bettwäsche, Frottierwäsche und Vorhänge",
+  "fr": "Linge de maison et rideaux",
+  "it": "Biancheria per la casa e tende",
+  "keywords": [
+   "Duvet",
+   "Kissen",
+   "Tischtuch",
+   "couette",
+   "oreiller",
+   "nappe",
+   "piumino",
+   "cuscino",
+   "tovaglia",
+   "bedding"
+  ]
+ },
  "05.3": {
   "en": "Household appliances",
   "de": "Haushaltgeräte",
@@ -449,6 +1092,140 @@
    "macchina del caffè"
   ]
  },
+ "05.3.1": {
+  "en": "Large appliances",
+  "de": "Grosse Haushaltgeräte",
+  "fr": "Gros électroménager",
+  "it": "Grandi elettrodomestici",
+  "keywords": [
+   "Waschmaschine",
+   "Tumbler",
+   "Kühlschrank",
+   "Geschirrspüler",
+   "lave-linge",
+   "réfrigérateur",
+   "lave-vaisselle",
+   "lavatrice",
+   "frigorifero",
+   "lavastoviglie",
+   "washing machine",
+   "fridge",
+   "dishwasher"
+  ]
+ },
+ "05.3.1.1": {
+  "en": "Fridges, ovens and dishwashers",
+  "de": "Kühlschränke, Backöfen und Geschirrspüler",
+  "fr": "Réfrigérateurs, fours et lave-vaisselle",
+  "it": "Frigoriferi, forni e lavastoviglie",
+  "keywords": [
+   "Kochherd",
+   "Steamer",
+   "Gefrierschrank",
+   "Dampfabzug",
+   "cuisinière",
+   "congélateur",
+   "hotte",
+   "piano cottura",
+   "congelatore",
+   "cappa",
+   "oven",
+   "freezer"
+  ]
+ },
+ "05.3.1.2": {
+  "en": "Washing machines and dryers",
+  "de": "Waschmaschinen und Tumbler",
+  "fr": "Lave-linge et sèche-linge",
+  "it": "Lavatrici e asciugatrici",
+  "keywords": [
+   "Waschturm",
+   "Wäschetrockner",
+   "colonne de lavage",
+   "colonna di lavaggio",
+   "tumble dryer"
+  ]
+ },
+ "05.3.2": {
+  "en": "Small appliances",
+  "de": "Kleine Haushaltgeräte",
+  "fr": "Petit électroménager",
+  "it": "Piccoli elettrodomestici",
+  "keywords": [
+   "Kaffeemaschine",
+   "Toaster",
+   "Wasserkocher",
+   "Mixer",
+   "machine à café",
+   "bouilloire",
+   "macchina del caffè",
+   "bollitore",
+   "coffee machine",
+   "kettle"
+  ]
+ },
+ "05.3.3": {
+  "en": "Appliance repair",
+  "de": "Reparatur von Haushaltgeräten",
+  "fr": "Réparation d’électroménager",
+  "it": "Riparazione di elettrodomestici",
+  "keywords": [
+   "Kundendienst",
+   "Servicetechniker",
+   "service après-vente",
+   "assistenza tecnica",
+   "appliance service"
+  ]
+ },
+ "05.4": {
+  "en": "Tableware and kitchenware",
+  "de": "Geschirr und Küchenartikel",
+  "fr": "Vaisselle et ustensiles de cuisine",
+  "it": "Stoviglie e utensili da cucina",
+  "keywords": [
+   "Besteck",
+   "Pfannen",
+   "Gläser",
+   "couverts",
+   "casseroles",
+   "verres",
+   "posate",
+   "pentole",
+   "bicchieri",
+   "cutlery"
+  ]
+ },
+ "05.5": {
+  "en": "Tools for house and garden",
+  "de": "Werkzeug für Haus und Garten",
+  "fr": "Outils pour la maison et le jardin",
+  "it": "Attrezzi per la casa e il giardino",
+  "keywords": [
+   "Rasenmäher",
+   "Bohrmaschine",
+   "Leiter",
+   "tondeuse",
+   "perceuse",
+   "échelle",
+   "tosaerba",
+   "trapano",
+   "scala",
+   "lawn mower",
+   "drill"
+  ]
+ },
+ "05.6": {
+  "en": "Household supplies and services",
+  "de": "Haushaltbedarf und Haushaltdienste",
+  "fr": "Fournitures et services ménagers",
+  "it": "Articoli e servizi per la casa",
+  "keywords": [
+   "Haushalt",
+   "ménage",
+   "economia domestica",
+   "housekeeping"
+  ]
+ },
  "05.6.1": {
   "en": "Cleaning and household supplies",
   "de": "Putz- und Haushaltmittel",
@@ -477,6 +1254,43 @@
    "lampadina"
   ]
  },
+ "05.6.1.1": {
+  "en": "Cleaning products",
+  "de": "Putzmittel",
+  "fr": "Produits de nettoyage",
+  "it": "Detersivi",
+  "keywords": [
+   "Waschmittel",
+   "Abwaschmittel",
+   "Reiniger",
+   "lessive",
+   "liquide vaisselle",
+   "détergent",
+   "detersivo per bucato",
+   "detersivo per piatti",
+   "detergent"
+  ]
+ },
+ "05.6.1.9": {
+  "en": "Kitchen paper, candles and household items",
+  "de": "Haushaltpapier, Kerzen und Haushaltartikel",
+  "fr": "Essuie-tout, bougies et articles ménagers",
+  "it": "Carta da cucina, candele e articoli per la casa",
+  "keywords": [
+   "Alufolie",
+   "Backpapier",
+   "Abfallsäcke",
+   "Zündhölzer",
+   "papier alu",
+   "sacs poubelle",
+   "allumettes",
+   "carta stagnola",
+   "sacchi della spazzatura",
+   "fiammiferi",
+   "aluminium foil",
+   "bin bags"
+  ]
+ },
  "05.6.2": {
   "en": "Cleaning help and household services",
   "de": "Putzhilfe und Haushaltdienste",
@@ -498,6 +1312,31 @@
    "donna delle pulizie",
    "pulizie",
    "cleaner"
+  ]
+ },
+ "06": {
+  "en": "Health",
+  "de": "Gesundheit",
+  "fr": "Santé",
+  "it": "Salute",
+  "keywords": [
+   "Gesundheitskosten",
+   "Krankheitskosten",
+   "frais médicaux",
+   "spese mediche",
+   "medical"
+  ]
+ },
+ "06.1": {
+  "en": "Medicines and health products",
+  "de": "Medikamente und Gesundheitsprodukte",
+  "fr": "Médicaments et produits de santé",
+  "it": "Medicinali e prodotti sanitari",
+  "keywords": [
+   "Drogerie",
+   "droguerie",
+   "drogheria",
+   "health products"
   ]
  },
  "06.1.1": {
@@ -524,6 +1363,38 @@
    "medicinale",
    "ricetta",
    "pharmacy"
+  ]
+ },
+ "06.1.2": {
+  "en": "Medical supplies",
+  "de": "Medizinisches Material",
+  "fr": "Matériel médical",
+  "it": "Materiale sanitario",
+  "keywords": [
+   "Pflaster",
+   "Verband",
+   "Fiebermesser",
+   "pansement",
+   "thermomètre",
+   "cerotto",
+   "termometro",
+   "plasters",
+   "bandages"
+  ]
+ },
+ "06.1.3": {
+  "en": "Glasses, hearing aids and other aids",
+  "de": "Brillen, Hörgeräte und Hilfsmittel",
+  "fr": "Lunettes, appareils auditifs et moyens auxiliaires",
+  "it": "Occhiali, apparecchi acustici e mezzi ausiliari",
+  "keywords": [
+   "Rollstuhl",
+   "Krücken",
+   "fauteuil roulant",
+   "béquilles",
+   "sedia a rotelle",
+   "stampelle",
+   "wheelchair"
   ]
  },
  "06.1.3.1": {
@@ -571,6 +1442,21 @@
    "studio medico",
    "partecipazione ai costi",
    "doctor"
+  ]
+ },
+ "06.2.1": {
+  "en": "Check-ups and vaccinations",
+  "de": "Vorsorge und Impfungen",
+  "fr": "Prévention et vaccins",
+  "it": "Prevenzione e vaccinazioni",
+  "keywords": [
+   "Impfung",
+   "Vorsorgeuntersuchung",
+   "Check-up",
+   "dépistage",
+   "vaccin",
+   "vaccino",
+   "screening"
   ]
  },
  "06.2.2": {
@@ -664,6 +1550,92 @@
    "hospital"
   ]
  },
+ "06.3.2": {
+  "en": "Nursing home",
+  "de": "Pflegeheim",
+  "fr": "Établissement médico-social",
+  "it": "Casa di cura",
+  "keywords": [
+   "Langzeitpflege",
+   "EMS",
+   "soins de longue durée",
+   "cure di lunga durata",
+   "long-term care"
+  ]
+ },
+ "06.4": {
+  "en": "Lab tests, imaging and rescue services",
+  "de": "Labor, Röntgen und Rettungsdienst",
+  "fr": "Analyses, radiologie et sauvetage",
+  "it": "Analisi, radiologia e soccorso",
+  "keywords": [
+   "Untersuchung",
+   "examen",
+   "esame",
+   "medical tests"
+  ]
+ },
+ "06.4.1": {
+  "en": "Lab tests and imaging",
+  "de": "Labor und Röntgen",
+  "fr": "Analyses et radiologie",
+  "it": "Analisi e radiologia",
+  "keywords": [
+   "Blutuntersuchung",
+   "MRI",
+   "MRT",
+   "IRM",
+   "prise de sang",
+   "risonanza",
+   "esami del sangue",
+   "blood test",
+   "x-ray"
+  ]
+ },
+ "06.4.2": {
+  "en": "Ambulance and rescue",
+  "de": "Rettungsdienst und Krankentransport",
+  "fr": "Ambulance et sauvetage",
+  "it": "Ambulanza e soccorso",
+  "keywords": [
+   "Rega",
+   "Sanität",
+   "Krankenwagen",
+   "Rettungshelikopter",
+   "hélicoptère",
+   "elicottero",
+   "rescue helicopter"
+  ]
+ },
+ "07": {
+  "en": "Transport",
+  "de": "Verkehr und Mobilität",
+  "fr": "Transports et mobilité",
+  "it": "Trasporti e mobilità",
+  "keywords": [
+   "unterwegs",
+   "Reisen",
+   "déplacements",
+   "spostamenti",
+   "mobility",
+   "travel"
+  ]
+ },
+ "07.1": {
+  "en": "Vehicle purchase",
+  "de": "Fahrzeugkauf",
+  "fr": "Achat de véhicule",
+  "it": "Acquisto di veicoli",
+  "keywords": [
+   "Neuwagen",
+   "Occasion",
+   "voiture neuve",
+   "auto nuova",
+   "usato",
+   "new car",
+   "used car"
+  ]
+ },
  "07.1.1": {
   "en": "Car purchase",
   "de": "Autokauf",
@@ -688,6 +1660,21 @@
    "car"
   ]
  },
+ "07.1.2": {
+  "en": "Motorcycles and scooters",
+  "de": "Motorräder und Roller",
+  "fr": "Motos et scooters",
+  "it": "Moto e scooter",
+  "keywords": [
+   "Töff",
+   "Töffli",
+   "Mofa",
+   "Vespa",
+   "cyclomoteur",
+   "motorino",
+   "motorbike"
+  ]
+ },
  "07.1.3": {
   "en": "Bicycles and e-bikes",
   "de": "Velos und E-Bikes",
@@ -706,6 +1693,34 @@
    "bicicletta",
    "bici",
    "bike"
+  ]
+ },
+ "07.2": {
+  "en": "Vehicle running costs",
+  "de": "Fahrzeugkosten",
+  "fr": "Frais de véhicule",
+  "it": "Spese per il veicolo",
+  "keywords": [
+   "Auto",
+   "Motorrad",
+   "voiture",
+   "macchina",
+   "moto",
+   "car"
+  ]
+ },
+ "07.2.1": {
+  "en": "Tyres, parts and accessories",
+  "de": "Pneus, Ersatzteile und Zubehör",
+  "fr": "Pneus, pièces et accessoires",
+  "it": "Pneumatici, ricambi e accessori",
+  "keywords": [
+   "Winterreifen",
+   "Autozubehör",
+   "Velozubehör",
+   "pneus d’hiver",
+   "gomme invernali",
+   "winter tyres"
   ]
  },
  "07.2.2": {
@@ -777,6 +1792,19 @@
    "collaudo"
   ]
  },
+ "07.2.4": {
+  "en": "Parking, tolls and car rental",
+  "de": "Parkieren, Maut und Mietauto",
+  "fr": "Parking, péages et location",
+  "it": "Parcheggi, pedaggi e noleggio",
+  "keywords": [
+   "Autobahn",
+   "Parkhaus",
+   "autoroute",
+   "autostrada",
+   "car park"
+  ]
+ },
  "07.2.4.1": {
   "en": "Parking",
   "de": "Parkieren",
@@ -817,6 +1845,25 @@
    "pedaggio",
    "autostrada",
    "toll"
+  ]
+ },
+ "07.2.4.3": {
+  "en": "Driving lessons, licences and vehicle tests",
+  "de": "Fahrstunden, Ausweise und MFK",
+  "fr": "Leçons de conduite, permis et expertise",
+  "it": "Lezioni di guida, licenze e collaudo",
+  "keywords": [
+   "Fahrschule",
+   "Führerausweis",
+   "Lernfahrausweis",
+   "Strassenverkehrsamt",
+   "auto-école",
+   "permis de conduire",
+   "service des automobiles",
+   "scuola guida",
+   "licenza di condurre",
+   "ufficio della circolazione",
+   "driving school"
   ]
  },
  "07.2.4.4": {
@@ -932,6 +1979,30 @@
    "railway"
   ]
  },
+ "07.3.1.2": {
+  "en": "Tram and metro",
+  "de": "Tram und Metro",
+  "fr": "Tram et métro",
+  "it": "Tram e metropolitana",
+  "keywords": [
+   "Strassenbahn",
+   "tramway",
+   "tranvia",
+   "subway"
+  ]
+ },
+ "07.3.2": {
+  "en": "Bus, coach and taxi",
+  "de": "Bus, Car und Taxi",
+  "fr": "Bus, car et taxi",
+  "it": "Autobus, pullman e taxi",
+  "keywords": [
+   "Postauto",
+   "CarPostal",
+   "AutoPostale",
+   "road transport"
+  ]
+ },
  "07.3.2.1": {
   "en": "Bus and coach",
   "de": "Bus und Car",
@@ -1000,6 +2071,22 @@
    "flight"
   ]
  },
+ "07.3.4": {
+  "en": "Boats and ferries",
+  "de": "Schiff und Fähre",
+  "fr": "Bateau et ferry",
+  "it": "Battello e traghetto",
+  "keywords": [
+   "Schifffahrt",
+   "SGV",
+   "ZSG",
+   "CGN",
+   "Navigazione Lago Maggiore",
+   "navigation",
+   "navigazione",
+   "cruise"
+  ]
+ },
  "07.3.5": {
   "en": "Fare network passes and zone tickets",
   "de": "Verbundabo und Zonenbillette",
@@ -1027,6 +2114,35 @@
    "abonnement",
    "comunità tariffale",
    "abbonamento"
+  ]
+ },
+ "07.3.6": {
+  "en": "Cable cars and funiculars",
+  "de": "Seilbahnen und Standseilbahnen",
+  "fr": "Téléphériques et funiculaires",
+  "it": "Funivie e funicolari",
+  "keywords": [
+   "Gondel",
+   "Sesselbahn",
+   "Bergbahn",
+   "télécabine",
+   "télésiège",
+   "cabinovia",
+   "seggiovia",
+   "gondola",
+   "chairlift"
+  ]
+ },
+ "07.4": {
+  "en": "Post and removals",
+  "de": "Post und Umzug",
+  "fr": "Poste et déménagement",
+  "it": "Posta e trasloco",
+  "keywords": [
+   "Versand",
+   "envoi",
+   "spedizione",
+   "shipping"
   ]
  },
  "07.4.1": {
@@ -1057,6 +2173,26 @@
    "parcel"
   ]
  },
+ "07.4.9": {
+  "en": "Removals and deliveries",
+  "de": "Umzug und Lieferungen",
+  "fr": "Déménagement et livraisons",
+  "it": "Traslochi e consegne",
+  "keywords": [
+   "Zügeln",
+   "Umzugsfirma",
+   "Lagerraum",
+   "Hauslieferung",
+   "déménageur",
+   "garde-meubles",
+   "livraison à domicile",
+   "ditta di traslochi",
+   "deposito",
+   "consegna a domicilio",
+   "moving",
+   "storage"
+  ]
+ },
  "08": {
   "en": "Phone, internet and devices",
   "de": "Telefon, Internet und Geräte",
@@ -1069,6 +2205,19 @@
    "électronique",
    "telecomunicazioni",
    "elettronica"
+  ]
+ },
+ "08.1": {
+  "en": "Phones, computers and devices",
+  "de": "Telefone, Computer und Geräte",
+  "fr": "Téléphones, ordinateurs et appareils",
+  "it": "Telefoni, computer e dispositivi",
+  "keywords": [
+   "Elektronik",
+   "Hardware",
+   "électronique",
+   "elettronica",
+   "electronics"
   ]
  },
  "08.1.2": {
@@ -1128,6 +2277,64 @@
    "schermo"
   ]
  },
+ "08.1.3.2": {
+  "en": "Printers, ink and peripherals",
+  "de": "Drucker, Tinte und Zubehör",
+  "fr": "Imprimantes, encre et périphériques",
+  "it": "Stampanti, inchiostro e periferiche",
+  "keywords": [
+   "Toner",
+   "Maus",
+   "Tastatur",
+   "Monitor",
+   "souris",
+   "clavier",
+   "écran",
+   "mouse",
+   "tastiera",
+   "keyboard"
+  ]
+ },
+ "08.1.4": {
+  "en": "TV, audio and headphones",
+  "de": "TV, Audio und Kopfhörer",
+  "fr": "TV, audio et écouteurs",
+  "it": "TV, audio e cuffie",
+  "keywords": [
+   "Fernseher",
+   "Lautsprecher",
+   "Beamer",
+   "Sonos",
+   "AirPods",
+   "télévision",
+   "enceinte",
+   "televisore",
+   "altoparlante",
+   "speaker",
+   "television"
+  ]
+ },
+ "08.1.9": {
+  "en": "Accessories and other devices",
+  "de": "Zubehör und weitere Geräte",
+  "fr": "Accessoires et autres appareils",
+  "it": "Accessori e altri dispositivi",
+  "keywords": [
+   "Ladegerät",
+   "Kabel",
+   "Handyhülle",
+   "Smartwatch",
+   "chargeur",
+   "câble",
+   "coque",
+   "caricatore",
+   "cavo",
+   "custodia",
+   "charger",
+   "cable",
+   "phone case"
+  ]
+ },
  "08.2": {
   "en": "Software and apps",
   "de": "Software und Apps",
@@ -1179,6 +2386,18 @@
    "telefono",
    "offerta combinata",
    "bolletta telefonica"
+  ]
+ },
+ "08.3.1": {
+  "en": "Landline",
+  "de": "Festnetz",
+  "fr": "Téléphone fixe",
+  "it": "Telefono fisso",
+  "keywords": [
+   "Festnetzanschluss",
+   "ligne fixe",
+   "linea fissa",
+   "home phone"
   ]
  },
  "08.3.2": {
@@ -1236,6 +2455,44 @@
    "fibra ottica"
   ]
  },
+ "08.3.4": {
+  "en": "Internet, TV and phone bundle",
+  "de": "Kombi-Abo Internet, TV und Telefon",
+  "fr": "Offre combinée internet, TV et téléphone",
+  "it": "Pacchetto internet, TV e telefono",
+  "keywords": [
+   "Kombiangebot",
+   "offre groupée",
+   "pacchetto combinato",
+   "triple play"
+  ]
+ },
+ "08.3.5": {
+  "en": "Device repair and rental",
+  "de": "Reparatur und Miete von Geräten",
+  "fr": "Réparation et location d’appareils",
+  "it": "Riparazione e noleggio di dispositivi",
+  "keywords": [
+   "Handyreparatur",
+   "Displayreparatur",
+   "réparation d’écran",
+   "riparazione schermo",
+   "screen repair"
+  ]
+ },
+ "08.3.9": {
+  "en": "TV fee and streaming",
+  "de": "TV-Abgabe und Streaming",
+  "fr": "Redevance et streaming",
+  "it": "Canone e streaming",
+  "keywords": [
+   "Medienabgabe",
+   "Abos",
+   "abonnements",
+   "abbonamenti",
+   "subscriptions"
+  ]
+ },
  "08.3.9.1": {
   "en": "Radio and TV fee (Serafe)",
   "de": "Radio- und TV-Abgabe (Serafe)",
@@ -1277,6 +2534,103 @@
    "DAZN",
    "Streaming",
    "streaming"
+  ]
+ },
+ "09": {
+  "en": "Leisure, sport and culture",
+  "de": "Freizeit, Sport und Kultur",
+  "fr": "Loisirs, sport et culture",
+  "it": "Tempo libero, sport e cultura",
+  "keywords": [
+   "Hobby",
+   "Unterhaltung",
+   "divertissement",
+   "passe-temps",
+   "svago",
+   "divertimento",
+   "hobbies",
+   "entertainment"
+  ]
+ },
+ "09.1": {
+  "en": "Cameras and large leisure items",
+  "de": "Kameras und grosse Freizeitgeräte",
+  "fr": "Appareils photo et gros équipements de loisirs",
+  "it": "Fotocamere e grandi attrezzature per il tempo libero",
+  "keywords": [
+   "Fotoapparat",
+   "Wohnwagen",
+   "Boot",
+   "appareil photo",
+   "caravane",
+   "bateau",
+   "macchina fotografica",
+   "roulotte",
+   "barca",
+   "camera",
+   "boat"
+  ]
+ },
+ "09.1.1": {
+  "en": "Cameras and optics",
+  "de": "Kameras und Optik",
+  "fr": "Appareils photo et optique",
+  "it": "Fotocamere e ottica",
+  "keywords": [
+   "Fotoapparat",
+   "Objektiv",
+   "Feldstecher",
+   "objectif",
+   "jumelles",
+   "obiettivo",
+   "binocolo",
+   "lens",
+   "binoculars"
+  ]
+ },
+ "09.1.2": {
+  "en": "Caravans, boats and large leisure items",
+  "de": "Wohnwagen, Boote und grosse Freizeitgeräte",
+  "fr": "Caravanes, bateaux et gros équipements de loisirs",
+  "it": "Roulotte, barche e grandi attrezzature per il tempo libero",
+  "keywords": [
+   "Wohnmobil",
+   "Camper",
+   "Kajak",
+   "camping-car",
+   "kayak",
+   "caravan",
+   "motorhome"
+  ]
+ },
+ "09.2": {
+  "en": "Leisure and sports articles",
+  "de": "Freizeit- und Sportartikel",
+  "fr": "Articles de loisirs et de sport",
+  "it": "Articoli per il tempo libero e lo sport",
+  "keywords": [
+   "Spielzeug",
+   "Sportgeschäft",
+   "jouets",
+   "magasin de sport",
+   "giocattoli",
+   "negozio di sport",
+   "toys"
+  ]
+ },
+ "09.2.1": {
+  "en": "Games, toys and hobbies",
+  "de": "Spiele, Spielwaren und Hobby",
+  "fr": "Jeux, jouets et loisirs créatifs",
+  "it": "Giochi, giocattoli e hobby",
+  "keywords": [
+   "Brettspiel",
+   "Puzzle",
+   "Lego",
+   "Franz Carl Weber",
+   "jeu de société",
+   "gioco da tavolo",
+   "board game"
   ]
  },
  "09.2.1.1": {
@@ -1383,6 +2737,19 @@
    "sacco a pelo"
   ]
  },
+ "09.3": {
+  "en": "Garden and pets",
+  "de": "Garten und Haustiere",
+  "fr": "Jardin et animaux",
+  "it": "Giardino e animali",
+  "keywords": [
+   "Gartenbedarf",
+   "Tierbedarf",
+   "jardinage",
+   "giardinaggio",
+   "gardening"
+  ]
+ },
  "09.3.1": {
   "en": "Garden, plants and flowers",
   "de": "Garten, Pflanzen und Blumen",
@@ -1441,6 +2808,32 @@
    "pets"
   ]
  },
+ "09.4": {
+  "en": "Leisure and sport",
+  "de": "Freizeit und Sport",
+  "fr": "Loisirs et sport",
+  "it": "Tempo libero e sport",
+  "keywords": [
+   "Freizeitangebot",
+   "Ausflug",
+   "sortie",
+   "uscita",
+   "outing"
+  ]
+ },
+ "09.4.4": {
+  "en": "Sports gear rental and repair",
+  "de": "Miete und Reparatur von Sportartikeln",
+  "fr": "Location et réparation d’articles de sport",
+  "it": "Noleggio e riparazione di articoli sportivi",
+  "keywords": [
+   "Skimiete",
+   "Skiservice",
+   "location de skis",
+   "noleggio sci",
+   "ski rental"
+  ]
+ },
  "09.4.5": {
   "en": "Vet and pet care",
   "de": "Tierarzt und Tierbetreuung",
@@ -1462,6 +2855,19 @@
    "pensione per animali",
    "toelettatura",
    "vet"
+  ]
+ },
+ "09.4.6": {
+  "en": "Leisure and sport activities",
+  "de": "Freizeit- und Sportangebote",
+  "fr": "Activités de loisirs et de sport",
+  "it": "Attività ricreative e sportive",
+  "keywords": [
+   "Kurs",
+   "Eintritt",
+   "entrée",
+   "ingresso",
+   "admission"
   ]
  },
  "09.4.6.1": {
@@ -1536,6 +2942,22 @@
    "gym"
   ]
  },
+ "09.4.6.3": {
+  "en": "Sports events",
+  "de": "Sportveranstaltungen",
+  "fr": "Manifestations sportives",
+  "it": "Eventi sportivi",
+  "keywords": [
+   "Fussball",
+   "Eishockey",
+   "Saisonkarte",
+   "match",
+   "football",
+   "hockey",
+   "partita",
+   "season ticket"
+  ]
+ },
  "09.4.7": {
   "en": "Lottery and betting",
   "de": "Lotto und Wetten",
@@ -1559,6 +2981,63 @@
    "lotteria",
    "scommesse",
    "gratta e vinci"
+  ]
+ },
+ "09.5": {
+  "en": "Instruments, music and films",
+  "de": "Instrumente, Musik und Filme",
+  "fr": "Instruments, musique et films",
+  "it": "Strumenti, musica e film",
+  "keywords": [
+   "Medien",
+   "médias",
+   "media"
+  ]
+ },
+ "09.5.1": {
+  "en": "Musical instruments",
+  "de": "Musikinstrumente",
+  "fr": "Instruments de musique",
+  "it": "Strumenti musicali",
+  "keywords": [
+   "Klavier",
+   "Gitarre",
+   "Noten",
+   "piano",
+   "guitare",
+   "partitions",
+   "pianoforte",
+   "chitarra",
+   "spartiti",
+   "guitar",
+   "sheet music"
+  ]
+ },
+ "09.5.2": {
+  "en": "CDs, records and DVDs",
+  "de": "CDs, Schallplatten und DVDs",
+  "fr": "CD, disques et DVD",
+  "it": "CD, dischi e DVD",
+  "keywords": [
+   "Vinyl",
+   "Blu-ray",
+   "vinyle",
+   "vinile",
+   "LP"
+  ]
+ },
+ "09.6": {
+  "en": "Culture and events",
+  "de": "Kultur und Veranstaltungen",
+  "fr": "Culture et spectacles",
+  "it": "Cultura e spettacoli",
+  "keywords": [
+   "Billett",
+   "Ticketcorner",
+   "Eventim",
+   "billet",
+   "biglietto",
+   "tickets"
   ]
  },
  "09.6.1": {
@@ -1600,6 +3079,50 @@
    "concerto",
    "opera",
    "circo"
+  ]
+ },
+ "09.6.2": {
+  "en": "Museums, zoos and libraries",
+  "de": "Museen, Zoos und Bibliotheken",
+  "fr": "Musées, zoos et bibliothèques",
+  "it": "Musei, zoo e biblioteche",
+  "keywords": [
+   "Museumspass",
+   "Ausstellung",
+   "Tierpark",
+   "passeport musées",
+   "exposition",
+   "mostra",
+   "exhibition"
+  ]
+ },
+ "09.6.3": {
+  "en": "Photo services",
+  "de": "Fotoservice",
+  "fr": "Services photo",
+  "it": "Servizi fotografici",
+  "keywords": [
+   "Fotobuch",
+   "Passfoto",
+   "Fotograf",
+   "Ifolor",
+   "livre photo",
+   "photographe",
+   "fotolibro",
+   "fotografo",
+   "photo book"
+  ]
+ },
+ "09.7": {
+  "en": "Books, newspapers and stationery",
+  "de": "Bücher, Zeitungen und Papeterie",
+  "fr": "Livres, journaux et papeterie",
+  "it": "Libri, giornali e cartoleria",
+  "keywords": [
+   "Lesen",
+   "lecture",
+   "lettura",
+   "reading"
   ]
  },
  "09.7.1": {
@@ -1662,6 +3185,44 @@
    "newspaper"
   ]
  },
+ "09.7.3": {
+  "en": "Cards, calendars and other print",
+  "de": "Karten, Kalender und Drucksachen",
+  "fr": "Cartes, calendriers et imprimés",
+  "it": "Biglietti d’auguri, calendari e stampati",
+  "keywords": [
+   "Glückwunschkarte",
+   "Geburtstagskarte",
+   "Landkarte",
+   "Poster",
+   "carte de vœux",
+   "affiche",
+   "biglietto d’auguri",
+   "cartina",
+   "greeting card",
+   "map"
+  ]
+ },
+ "09.7.4": {
+  "en": "Stationery and art supplies",
+  "de": "Schreibwaren und Malbedarf",
+  "fr": "Fournitures de bureau et de dessin",
+  "it": "Cancelleria e materiale da disegno",
+  "keywords": [
+   "Schulmaterial",
+   "Hefte",
+   "Stifte",
+   "Papeterie",
+   "fournitures scolaires",
+   "cahiers",
+   "stylos",
+   "materiale scolastico",
+   "quaderni",
+   "penne",
+   "school supplies",
+   "pens"
+  ]
+ },
  "09.8": {
   "en": "Holidays and package tours",
   "de": "Ferien und Pauschalreisen",
@@ -1692,6 +3253,64 @@
    "crociera",
    "holiday",
    "vacation"
+  ]
+ },
+ "10": {
+  "en": "Education",
+  "de": "Bildung",
+  "fr": "Formation",
+  "it": "Formazione",
+  "keywords": [
+   "Schule",
+   "Ausbildung",
+   "école",
+   "enseignement",
+   "scuola",
+   "istruzione",
+   "school"
+  ]
+ },
+ "10.1": {
+  "en": "Kindergarten and primary school",
+  "de": "Kindergarten und Primarschule",
+  "fr": "École enfantine et primaire",
+  "it": "Scuola dell’infanzia ed elementare",
+  "keywords": [
+   "Schulgeld",
+   "Privatschule",
+   "écolage",
+   "école privée",
+   "retta scolastica",
+   "scuola privata",
+   "school fees"
+  ]
+ },
+ "10.2": {
+  "en": "Secondary school",
+  "de": "Sekundarschule und Gymnasium",
+  "fr": "École secondaire et gymnase",
+  "it": "Scuola media e liceo",
+  "keywords": [
+   "Gymi",
+   "Kantonsschule",
+   "Berufsschule",
+   "collège",
+   "lycée",
+   "scuola professionale",
+   "high school"
+  ]
+ },
+ "10.3": {
+  "en": "Vocational baccalaureate and bridging courses",
+  "de": "Berufsmaturität und Passerelle",
+  "fr": "Maturité professionnelle et passerelle",
+  "it": "Maturità professionale e passerella",
+  "keywords": [
+   "BMS",
+   "Berufsmaturitätsschule",
+   "EPM",
+   "SPM",
+   "post-secondary"
   ]
  },
  "10.4": {
@@ -1762,6 +3381,20 @@
    "sortie au restaurant",
    "uscire",
    "eating out"
+  ]
+ },
+ "11.1": {
+  "en": "Eating out",
+  "de": "Auswärts essen",
+  "fr": "Repas à l’extérieur",
+  "it": "Pasti fuori casa",
+  "keywords": [
+   "Essen gehen",
+   "Mittagessen",
+   "repas",
+   "déjeuner",
+   "pranzo",
+   "lunch"
   ]
  },
  "11.1.1": {
@@ -1888,6 +3521,33 @@
    "pernottamento"
   ]
  },
+ "12": {
+  "en": "Insurance and banking",
+  "de": "Versicherungen und Bank",
+  "fr": "Assurances et banque",
+  "it": "Assicurazioni e banca",
+  "keywords": [
+   "Finanzen",
+   "finances",
+   "finanze",
+   "finance"
+  ]
+ },
+ "12.1": {
+  "en": "Insurance",
+  "de": "Versicherungen",
+  "fr": "Assurances",
+  "it": "Assicurazioni",
+  "keywords": [
+   "Prämie",
+   "Police",
+   "prime",
+   "premio",
+   "polizza",
+   "premium",
+   "policy"
+  ]
+ },
  "12.1.1": {
   "en": "Life and accident insurance",
   "de": "Lebens- und Unfallversicherung",
@@ -1997,6 +3657,18 @@
    "assicurazione stabili"
   ]
  },
+ "12.1.4": {
+  "en": "Vehicle and travel insurance",
+  "de": "Fahrzeug- und Reiseversicherung",
+  "fr": "Assurance véhicule et voyage",
+  "it": "Assicurazione veicolo e viaggio",
+  "keywords": [
+   "Motorfahrzeugversicherung",
+   "assurance RC auto",
+   "assicurazione RC veicoli",
+   "motor insurance"
+  ]
+ },
  "12.1.4.1": {
   "en": "Car insurance",
   "de": "Autoversicherung",
@@ -2023,6 +3695,20 @@
    "RC auto"
   ]
  },
+ "12.1.4.2": {
+  "en": "Travel insurance",
+  "de": "Reiseversicherung",
+  "fr": "Assurance voyage",
+  "it": "Assicurazione viaggio",
+  "keywords": [
+   "Annullierungsversicherung",
+   "ETI",
+   "Allianz Travel",
+   "assurance annulation",
+   "assicurazione annullamento",
+   "cancellation insurance"
+  ]
+ },
  "12.1.9": {
   "en": "Liability and other insurance",
   "de": "Privathaftpflicht und weitere Versicherungen",
@@ -2043,6 +3729,35 @@
    "protection juridique",
    "responsabilità civile",
    "protezione giuridica"
+  ]
+ },
+ "12.2": {
+  "en": "Banking and finance",
+  "de": "Bank und Finanzen",
+  "fr": "Banque et finances",
+  "it": "Banca e finanze",
+  "keywords": [
+   "Zinsen",
+   "intérêts",
+   "interessi",
+   "interest"
+  ]
+ },
+ "12.2.1": {
+  "en": "Interest on loans and mortgages",
+  "de": "Schuld- und Hypothekarzinsen",
+  "fr": "Intérêts de prêts et hypothécaires",
+  "it": "Interessi su prestiti e ipoteche",
+  "keywords": [
+   "Hypothek",
+   "Kreditzins",
+   "Kreditkartenzins",
+   "hypothèque",
+   "intérêts de carte",
+   "ipoteca",
+   "interessi carta",
+   "mortgage",
+   "loan interest"
   ]
  },
  "12.2.2": {
@@ -2093,6 +3808,49 @@
    "bank fees"
   ]
  },
+ "12.2.9": {
+  "en": "Other financial fees",
+  "de": "Weitere Finanzgebühren",
+  "fr": "Autres frais financiers",
+  "it": "Altre spese finanziarie",
+  "keywords": [
+   "Finanzdienstleistung",
+   "services financiers",
+   "servizi finanziari",
+   "financial services"
+  ]
+ },
+ "12.2.9.1": {
+  "en": "Money transfer fees",
+  "de": "Gebühren für Geldüberweisungen",
+  "fr": "Frais de transfert d’argent",
+  "it": "Spese per trasferimenti di denaro",
+  "keywords": [
+   "Western Union",
+   "Wise",
+   "Remitly",
+   "Auslandüberweisung",
+   "virement international",
+   "bonifico internazionale",
+   "remittance"
+  ]
+ },
+ "12.2.9.9": {
+  "en": "Custody and trading fees",
+  "de": "Depotgebühren und Courtage",
+  "fr": "Droits de garde et courtages",
+  "it": "Commissioni di custodia e di intermediazione",
+  "keywords": [
+   "Depot",
+   "Swissquote",
+   "Interactive Brokers",
+   "Saxo",
+   "dépôt-titres",
+   "deposito titoli",
+   "brokerage",
+   "custody"
+  ]
+ },
  "13": {
   "en": "Personal care and other",
   "de": "Körperpflege und Sonstiges",
@@ -2104,6 +3862,34 @@
    "divers",
    "varie",
    "miscellaneous"
+  ]
+ },
+ "13.1": {
+  "en": "Personal care",
+  "de": "Körperpflege",
+  "fr": "Soins personnels",
+  "it": "Cura della persona",
+  "keywords": [
+   "Pflege",
+   "Hygiene",
+   "hygiène",
+   "igiene",
+   "grooming"
+  ]
+ },
+ "13.1.1": {
+  "en": "Hairdryers, shavers and electric toothbrushes",
+  "de": "Föhn, Rasierer und elektrische Zahnbürsten",
+  "fr": "Sèche-cheveux, rasoirs et brosses à dents électriques",
+  "it": "Asciugacapelli, rasoi e spazzolini elettrici",
+  "keywords": [
+   "Haarglätter",
+   "Epilierer",
+   "lisseur",
+   "épilateur",
+   "piastra",
+   "epilatore",
+   "hair straightener"
   ]
  },
  "13.1.2": {
@@ -2169,6 +3955,84 @@
    "haircut"
   ]
  },
+ "13.2": {
+  "en": "Jewellery, watches and accessories",
+  "de": "Schmuck, Uhren und Accessoires",
+  "fr": "Bijoux, montres et accessoires",
+  "it": "Gioielli, orologi e accessori",
+  "keywords": [
+   "Bijouterie",
+   "gioielleria",
+   "jeweller"
+  ]
+ },
+ "13.2.1": {
+  "en": "Jewellery and watches",
+  "de": "Schmuck und Uhren",
+  "fr": "Bijoux et montres",
+  "it": "Gioielli e orologi",
+  "keywords": [
+   "Uhrmacher",
+   "Uhrenreparatur",
+   "Bucherer",
+   "Swatch",
+   "Ring",
+   "horloger",
+   "bague",
+   "orologiaio",
+   "anello",
+   "watchmaker"
+  ]
+ },
+ "13.2.9": {
+  "en": "Bags, luggage and other personal items",
+  "de": "Taschen, Koffer und weitere persönliche Artikel",
+  "fr": "Sacs, bagages et autres effets personnels",
+  "it": "Borse, valigie e altri effetti personali",
+  "keywords": [
+   "persönliche Gegenstände",
+   "effets personnels",
+   "effetti personali",
+   "personal effects"
+  ]
+ },
+ "13.2.9.1": {
+  "en": "Bags, luggage and baby articles",
+  "de": "Taschen, Koffer und Babyartikel",
+  "fr": "Sacs, bagages et articles pour bébés",
+  "it": "Borse, valigie e articoli per neonati",
+  "keywords": [
+   "Rucksack",
+   "Kinderwagen",
+   "Windeln",
+   "Sonnenbrille",
+   "sac à dos",
+   "poussette",
+   "couches",
+   "lunettes de soleil",
+   "zaino",
+   "passeggino",
+   "pannolini",
+   "occhiali da sole",
+   "backpack",
+   "pram",
+   "nappies",
+   "sunglasses"
+  ]
+ },
+ "13.3": {
+  "en": "Childcare and elderly care",
+  "de": "Kinder- und Altersbetreuung",
+  "fr": "Garde d’enfants et aide aux aînés",
+  "it": "Custodia dei bambini e assistenza agli anziani",
+  "keywords": [
+   "Betreuung",
+   "Pflegekosten",
+   "prise en charge",
+   "assistenza",
+   "care"
+  ]
+ },
  "13.3.0.1": {
   "en": "Childcare",
   "de": "Kinderbetreuung",
@@ -2199,6 +4063,45 @@
    "doposcuola",
    "babysitter",
    "daycare"
+  ]
+ },
+ "13.3.0.2": {
+  "en": "Retirement home",
+  "de": "Altersheim",
+  "fr": "Résidence pour aînés",
+  "it": "Casa per anziani",
+  "keywords": [
+   "Alterswohnung",
+   "Seniorenresidenz",
+   "logement protégé",
+   "residenza per anziani",
+   "retirement residence"
+  ]
+ },
+ "13.3.0.3": {
+  "en": "Home help for older people",
+  "de": "Hilfe zu Hause für ältere Menschen",
+  "fr": "Aide à domicile pour personnes âgées",
+  "it": "Aiuto a domicilio per anziani",
+  "keywords": [
+   "Haushilfe",
+   "Pro Senectute",
+   "Mahlzeitendienst",
+   "repas à domicile",
+   "pasti a domicilio",
+   "home help"
+  ]
+ },
+ "13.9": {
+  "en": "Other services",
+  "de": "Weitere Dienstleistungen",
+  "fr": "Autres services",
+  "it": "Altri servizi",
+  "keywords": [
+   "Dienstleistung",
+   "prestation",
+   "prestazione",
+   "service"
   ]
  },
  "13.9.0.9": {
@@ -2266,6 +4169,57 @@
    "donation"
   ]
  },
+ "14.1": {
+  "en": "Non-profit housing",
+  "de": "Gemeinnütziges Wohnen",
+  "fr": "Logement d’utilité publique",
+  "it": "Alloggi di utilità pubblica",
+  "keywords": [
+   "Notwohnung",
+   "Obdach",
+   "hébergement d’urgence",
+   "alloggio d’emergenza",
+   "shelter"
+  ]
+ },
+ "14.2": {
+  "en": "Non-profit health services",
+  "de": "Gemeinnützige Gesundheitsdienste",
+  "fr": "Services de santé d’utilité publique",
+  "it": "Servizi sanitari di utilità pubblica",
+  "keywords": [
+   "Spitex",
+   "soins à domicile",
+   "cure a domicilio",
+   "home nursing"
+  ]
+ },
+ "14.3": {
+  "en": "Non-profit sport and culture",
+  "de": "Gemeinnützige Sport- und Kulturangebote",
+  "fr": "Sport et culture d’utilité publique",
+  "it": "Sport e cultura di utilità pubblica",
+  "keywords": [
+   "Sportverein",
+   "Musikverein",
+   "club",
+   "société de musique",
+   "società sportiva",
+   "sports club"
+  ]
+ },
+ "14.4": {
+  "en": "Non-profit education",
+  "de": "Gemeinnützige Bildungsangebote",
+  "fr": "Formation d’utilité publique",
+  "it": "Formazione di utilità pubblica",
+  "keywords": [
+   "Volkshochschule",
+   "université populaire",
+   "università popolare",
+   "adult education"
+  ]
+ },
  "14.5": {
   "en": "Charitable donations",
   "de": "Spenden an Hilfswerke",
@@ -2304,6 +4258,21 @@
    "charity"
   ]
  },
+ "14.6": {
+  "en": "Church, unions and associations",
+  "de": "Kirche, Verbände und Vereine",
+  "fr": "Église, syndicats et associations",
+  "it": "Chiesa, sindacati e associazioni",
+  "keywords": [
+   "Kirchgemeinde",
+   "Gewerkschaft",
+   "paroisse",
+   "syndicat",
+   "parrocchia",
+   "sindacato",
+   "union"
+  ]
+ },
  "14.6.2": {
   "en": "Party, union and association fees",
   "de": "Partei-, Gewerkschafts- und Verbandsbeiträge",
@@ -2330,6 +4299,81 @@
    "partito",
    "associazione professionale",
    "union"
+  ]
+ },
+ "15": {
+  "en": "Public services",
+  "de": "Öffentliche Dienstleistungen",
+  "fr": "Services publics",
+  "it": "Servizi pubblici",
+  "keywords": [
+   "öffentliche Hand",
+   "Staat",
+   "pouvoirs publics",
+   "État",
+   "ente pubblico",
+   "Stato",
+   "government"
+  ]
+ },
+ "15.1": {
+  "en": "Public housing",
+  "de": "Öffentliche Wohnangebote",
+  "fr": "Logement public",
+  "it": "Alloggi pubblici",
+  "keywords": [
+   "Sozialwohnung",
+   "logement social",
+   "alloggio sociale",
+   "social housing"
+  ]
+ },
+ "15.2": {
+  "en": "Public health services",
+  "de": "Öffentliches Gesundheitswesen",
+  "fr": "Santé publique",
+  "it": "Sanità pubblica",
+  "keywords": [
+   "öffentliche Hand",
+   "pouvoirs publics",
+   "ente pubblico",
+   "public sector"
+  ]
+ },
+ "15.3": {
+  "en": "Public sport and culture",
+  "de": "Öffentliche Sport- und Kulturangebote",
+  "fr": "Sport et culture publics",
+  "it": "Sport e cultura pubblici",
+  "keywords": [
+   "öffentliche Hand",
+   "pouvoirs publics",
+   "ente pubblico",
+   "public sector"
+  ]
+ },
+ "15.4": {
+  "en": "Public education",
+  "de": "Öffentliche Bildung",
+  "fr": "Instruction publique",
+  "it": "Istruzione pubblica",
+  "keywords": [
+   "öffentliche Hand",
+   "pouvoirs publics",
+   "ente pubblico",
+   "public sector"
+  ]
+ },
+ "15.5": {
+  "en": "Public social services",
+  "de": "Öffentliche Sozialdienste",
+  "fr": "Services sociaux publics",
+  "it": "Servizi sociali pubblici",
+  "keywords": [
+   "öffentliche Hand",
+   "pouvoirs publics",
+   "ente pubblico",
+   "public sector"
   ]
  },
  "TAX": {

@@ -16,6 +16,7 @@ from budget_app.domain.models import (
     TX_INCOME,
     TX_REVALUATION,
     TX_TYPES,
+    Account,
     Tag,
     Transaction,
 )
@@ -50,7 +51,7 @@ def _columns() -> list[dict]:
     return [
         date_col("date", t("Date"), sort="desc", width=120),
         {"field": "payee", "headerName": t("Payee"), "width": 180},
-        {"field": "category", "headerName": t("Category"), "width": 250},
+        {"field": "category", "headerName": t("Category"), "width": 250, "tooltipField": "_category_tip"},
         {"field": "tags", "headerName": t("Tags"), "width": 170, ":cellRenderer": CHIPS_RENDERER},  # F10
         money_col("amount", t("Amount"), width=150),
         {"field": "items", "headerName": t("Items"), "width": 90, "type": "rightAligned", "cellClass": "muted"},
@@ -71,10 +72,6 @@ def _columns() -> list[dict]:
         {"field": "recurring", "headerName": t("Repeats"), "width": 140, "cellClass": "muted"},
         date_col("fx_date", t("Rate Date"), width=120, cellClass="muted"),
     ]
-
-
-def _label(code: str) -> str:
-    return get_coicop().label(code)
 
 
 def split_columns(ctx: Context, tx: Transaction, lines: dict[str, list]) -> tuple[list[str], list[str]]:
@@ -103,21 +100,26 @@ def _row(
     tags: dict[str, Tag] | None = None,
     attachments: tuple[dict[str, int], dict[str, str]] = ({}, {}),
     split: tuple[list[str], list[str]] = ([], []),
+    accounts: dict[str, Account] | None = None,
 ) -> dict:
-    """`split`: the categories a split expenditure counts in (F11), the transaction's first, and its lines' tags."""
+    """`split`: the categories a split expenditure counts in (F11), the transaction's first, and its lines' tags.
+    `accounts`: the accounts by id, for a transfer's or an exchange's route ("Bank → Savings")."""
     split_codes, line_tags = split
-    if tx.type == TX_EXPENDITURE and len(split_codes) > 1:  # "01.1 Food… + 2 more"; the search finds them all
-        category = tn(
-            "{category} + {n} more", "{category} + {n} more", len(split_codes) - 1, category=_label(split_codes[0])
-        )
+    coicop = get_coicop()
+    tip = ""  # the official COICOP name of an expenditure's category, on hover
+    if tx.type == TX_EXPENDITURE and len(split_codes) > 1:  # "01.1 Groceries + 2 more"; the search finds them all
+        first = coicop.label(split_codes[0])
+        category = tn("{category} + {n} more", "{category} + {n} more", len(split_codes) - 1, category=first)
+        tip = "\n".join(filter(None, (coicop.tooltip(c) for c in split_codes)))
     elif tx.type == TX_EXPENDITURE:
-        category = get_coicop().label(tx.category)
+        category, tip = coicop.label(tx.category), coicop.tooltip(tx.category)
     elif tx.type == TX_INCOME:
         category = t(ADV_REPAY_NAME) if tx.is_advance else income_cats.get(tx.category, "")
     elif tx.type == TX_REVALUATION:
         category = t(REVALUATION_KINDS.get(tx.category, tx.category))
-    else:
-        category = _type_label(tx.type)
+    else:  # a transfer or an exchange: where the money went
+        found = accounts or {}
+        category = acc_svc.route_label(found.get(tx.from_account), found.get(tx.to_account))
     advance = ""
     if tx.is_advance and tx.type == TX_EXPENDITURE:
         advance = f"{tx.advance_amount:.2f} · {tx.debtor}"
@@ -137,6 +139,7 @@ def _row(
         "currency": tx.currency,
         "amount_chf": round(tx.amount_chf, 2),
         "category": category,
+        "_category_tip": tip,
         "payee": tx.payee,
         "from": accs.get(tx.from_account, ""),
         "to": to,
@@ -152,7 +155,8 @@ def _row(
             [
                 tx.payee,
                 category,
-                *(_label(c) for c in split_codes[1:]),  # every category of a split (F11)
+                tip,  # the official COICOP names too
+                *(coicop.label(c) for c in split_codes[1:]),  # every category of a split (F11)
                 accs.get(tx.from_account, ""),
                 to,
                 tx.debtor,
@@ -260,6 +264,7 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
             )
         bar.set_visibility(False)
         grid = make_grid(_columns())
+        grid.options["tooltipShowDelay"] = 400  # the official COICOP name of a category (`_category_tip`)
         count = ui.label().classes("caption px-1")
         shown: list[dict] = []  # the rows the filters let through, for the export
 
@@ -270,7 +275,8 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
             tags = tag_svc.by_id(ctx)
             start, end = parse_date(d_from.value), parse_date(d_to.value)
             q = (text.value or "").lower().strip()
-            accs = {a.id: acc_svc.account_label(a) for a in ctx.store.accounts.all()}
+            accounts = {a.id: a for a in ctx.store.accounts.all()}
+            accs = {a.id: acc_svc.account_label(a) for a in accounts.values()}
             income_cats = {c.id: c.name for c in ctx.store.income_categories.all()}
             item_counts, item_names = items_svc.counts(ctx), items_svc.names_by_transaction(ctx)
             repeats = {r.id: recurrence_label(r.recur_months) for r in ctx.store.recurring.all()}
@@ -294,7 +300,9 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
                 if cat_filter.value and not in_category(ctx, tx, cat_filter.value, lines):
                     continue
                 received = tx_svc.received_amount(ctx, tx) if tx.type == TX_EXCHANGE else None
-                r = _row(tx, accs, income_cats, item_counts, item_names, received, repeats, tags, attached, split)
+                r = _row(
+                    tx, accs, income_cats, item_counts, item_names, received, repeats, tags, attached, split, accounts
+                )
                 if acc.value and acc.value not in r["_accounts"]:
                     continue
                 if q and q not in r["_search"]:

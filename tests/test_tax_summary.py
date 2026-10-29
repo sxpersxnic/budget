@@ -233,7 +233,7 @@ def test_pillar_3a_counts_transfers_into_a_3a_account(ctx, setup):
     s = tax_svc.summary(ctx, YEAR)
     rows = s.section("pillar3a").entries
     assert [(e.transaction_id, e.amount, e.payee, e.category) for e in rows] == [
-        (paid.id, 7258, "VIAC 3a", "Account transfer")
+        (paid.id, 7258, "VIAC 3a", "Bank → VIAC 3a")  # where the money went
     ]
     assert [e.transaction_id for e in s.section("debt_interest").entries] == [tagged.id]
 

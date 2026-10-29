@@ -50,7 +50,7 @@ def valid_account(ctx: Context, account_id: str) -> bool:
 
 
 def category_label(ctx: Context, type_: str, category: str) -> str:
-    """The category picker's label ("Groceries · 01.1") for expenditure, the category's name for income."""
+    """The category's label ("01.1 Groceries") for expenditure, the category's name for income."""
     if type_ == TX_EXPENDITURE:
         return everyday.label(category)
     cat = ctx.store.income_categories.get(category)

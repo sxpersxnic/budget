@@ -231,11 +231,11 @@ comes back. Sample data only goes into an empty data folder.
    quantity and price; the Transactions search then also finds a purchase by item name. To **split** an expenditure across categories
    (food, detergent and a present on one receipt), click the split button beside a line and give it
    its own category, and tags if you like; the line below the list shows what stays in the
-   transaction's category ("Rest in 01.1 Food: 23.40"). Reports, budgets, charts and tag totals then
+   transaction's category ("Rest in 01.1 Groceries: 23.40"). Reports, budgets, charts and tag totals then
    count each line in its own category; a share paid for others is taken proportionally from every
    part. Lines with their own category can't add up to more than the amount; a negative line (a
    discount) lowers its category. Only expenditure is split. The Transactions list shows a split
-   as "01.1 Food + 2 more", and its search finds the lines' categories. Under **Attachments** you can keep the receipt,
+   as "01.1 Groceries + 2 more", and its search finds the lines' categories. Under **Attachments** you can keep the receipt,
    invoice or contract with the transaction: drop files onto the box or click it to choose them
    (PDF, photos including iPhone HEIC, Word, Excel, OpenDocument, text or CSV, up to 20 MB each).
    Click a photo's or PDF's name to preview it; **Open** shows it in your usual viewer, **Save a
@@ -248,8 +248,11 @@ comes back. Sample data only goes into an empty data folder.
    in the sidebar and **,** opens Settings; press **?** (or **Keyboard Shortcuts** at the foot of the sidebar)
    to see them all. In any sheet, **⌘↩** (Ctrl+Enter) saves and **Esc** closes it. Every button has a name for
    screen readers, and text keeps a contrast of at least 4.5:1 in light and dark mode.
-   The category field shows everyday names ("Groceries · 01.1") and your recently used
-   categories first, and its search also knows shops and brands: type "Migros", "SBB" or "Netflix".
+   The category field shows everyday names with their COICOP code ("01.1 Groceries", the official
+   name below it) and your recently used categories first, and its search also knows shops and
+   brands: type "Migros", "SBB" or "Netflix". Every list, report and chart shows the same name;
+   hover over a category in the Budget page or the Transactions list to see its official COICOP
+   name. Transfers and exchanges show their accounts there ("Bank → Savings").
    It also finds a category by what it includes ("quinoa" finds 01.1.1.1 Cereals); hover over a
    category, or tap its ⓘ on a touch screen, to see what it includes and excludes.
    Expenditures and income have a **Payee** (who you paid, or who paid you): pick one of the
@@ -340,7 +343,8 @@ comes back. Sample data only goes into an empty data folder.
    PDF goes with the payment as an attachment. **Dismiss** a bill you don't pay here (for example one
    paid by eBill); paid and dismissed bills are kept under **Paid and Dismissed**. The same bill
    dropped twice is refused; deleting its payment puts a bill back on the open list.
-7. **Categories** (sidebar): look up a COICOP category by code, name or what it includes; the ⓘ
+7. **Categories** (sidebar): look up a COICOP category by code, official or everyday name, or what it
+   includes (each row shows both names: "01.1 Food · Groceries"); the ⓘ
    beside a name shows what the category includes, also includes and excludes. The ones you used
    show what you spent in them this year.
    **Payees** (sidebar) lists everyone you paid or who paid you, with the number of transactions and
@@ -376,7 +380,7 @@ comes back. Sample data only goes into an empty data folder.
    - **Large payment:** a payment of 250 CHF or more that is four times the usual size in its
      category (the median of its payments in the last six months, with at least three of them), or,
      in a category with fewer earlier payments, a quarter of a usual month's spending or more.
-   - **Well above usual:** a category (COICOP group, such as *01.1 Food*) at 1.5 times its usual
+   - **Well above usual:** a category (COICOP group, such as *01.1 Groceries*) at 1.5 times its usual
      month (the median of the last six complete months) and at least 100 CHF above it, unless its
      budget covers the amount or one large payment explains it.
 9. **Investments** (sidebar, optional): give an account the asset class *Securities* or *Crypto*

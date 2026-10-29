@@ -77,9 +77,10 @@ async def test_options_show_the_everyday_name_code_and_official_name(user: User,
     await user.open("/add-transaction")
     sel = picker(user)
     by_code = {o["code"]: o for o in options(sel)}
-    assert by_code["01.1"]["label"] == "Groceries · 01.1" and by_code["01.1"]["caption"] == "Food"
-    assert by_code["01.1.1"]["label"] == "01.1.1 Cereals and cereal products" and by_code["01.1.1"]["caption"] == ""
-    assert by_code["01.1.1"]["level"] == 3
+    assert by_code["01.1"]["label"] == "01.1 Groceries" and by_code["01.1"]["caption"] == "Food"
+    assert by_code["01.1.1"]["label"] == "01.1.1 Bread and cereals"
+    assert by_code["01.1.1"]["caption"] == "Cereals and cereal products" and by_code["01.1.1"]["level"] == 3
+    assert by_code["01.1.1.1"]["label"] == "01.1.1.1 Cereals" and by_code["01.1.1.1"]["caption"] == ""  # no other name
     assert sel.props["recent-title"] == "Recently used"
     assert sel.props["use-input"] is True
     assert type(sel).component.path == RESOURCES_DIR / "category_select.js"
@@ -98,7 +99,7 @@ async def test_choosing_an_everyday_name_saves_the_coicop_code(user: User, ctx, 
         account.value = setup["chf"].id
     sel = picker(user)
     UserInteraction(user, {sel}, None).click()  # opens the dropdown
-    UserInteraction(user, {sel}, "Groceries · 01.1").click()  # picks the option by its label
+    UserInteraction(user, {sel}, "01.1 Groceries").click()  # picks the option by its label
     assert sel.value == "01.1"
     user.find("Add Transaction").click()
     await user.should_see("Transaction added")
@@ -150,8 +151,8 @@ async def test_typing_what_a_category_includes_offers_it(user: User, setup) -> N
     sel = picker(user)
     assert offered(sel, "teff") == ["01.1.1.1"]  # only in the UN's notes
     bread = offered(sel, "bread")
-    assert bread[0] == "01.1.1.3" and len(bread) > 1  # the name first, then categories whose notes mention it
-    assert "07.3.6" in offered(sel, "funicular") and "07.3.1" not in offered(sel, "funicular")  # 07.3.1 excludes it
+    assert bread[:2] == ["01.1.1", "01.1.1.3"] and len(bread) > 2  # names first, then categories whose notes say it
+    assert "07.3.6" in offered(sel, "porters") and "07.3.1" not in offered(sel, "funicular")  # 07.3.1 excludes it
     by_code = {o["code"]: o for o in options(sel)}
     assert "teff" in by_code["01.1.1.1"]["note_search"] and "teff" not in by_code["01.1.1.1"]["search"]
     assert "planting" not in by_code["01.1.1.1"]["note_search"]  # excludes: "seeds for planting"
@@ -184,9 +185,9 @@ async def test_german_names_when_the_language_is_german(user: User, setup) -> No
         await user.open("/add-transaction")
         sel = picker(user, "Kategorie")
         by_code = {o["code"]: o for o in options(sel)}
-        assert by_code["01.1"]["label"] == "Lebensmittel · 01.1"
+        assert by_code["01.1"]["label"] == "01.1 Lebensmittel"
         assert by_code["01.1"]["caption"] == "Nahrungsmittel"
-        assert by_code["12.1.2"]["label"] == "Krankenkasse · 12.1.2"
+        assert by_code["12.1.2"]["label"] == "12.1.2 Krankenkasse"
         assert by_code[TAX]["label"] == "Steuern"
         assert sel.props["recent-title"] == "Kürzlich verwendet"
         assert offered(sel, "lebensmittel")[0] == "01.1"

@@ -311,6 +311,7 @@ body.body--dark .lock-card { border: 0.5px solid var(--separator); }
 .cat-node .code { color: var(--label-3); font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
 .cat-node .name { min-width: 0; overflow-wrap: anywhere; }  /* an information page: names wrap, never cut */
 .cat-node.lvl-1 .name { font-weight: 600; }
+.cat-node .name .everyday { color: var(--label-2); font-weight: 400; }  /* the name the app shows (F08) */
 .cat-node .caption { white-space: nowrap; }
 .cat-node .spent { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;
   color: var(--label-2); }

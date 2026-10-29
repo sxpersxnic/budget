@@ -1,8 +1,11 @@
 """Everyday names and search words for the common expenditure categories, and the category picker's options (F08).
 
-COICOP stays what is stored. About 80 codes people use every day ("Groceries" for 01.1 Food) have a short
-name in each language and search words (shops, brands and the words people type: "Migros", "SBB", "Miete")
-in `resources/everyday_categories.json`. Every other category keeps its translated COICOP name.
+COICOP stays what is stored. Every division and group, and the classes people use ("Groceries" for 01.1 Food),
+have a short name in each language and search words (shops, brands and the words people type: "Migros", "SBB",
+"Miete") in `resources/everyday_categories.json`. A class that only repeats its parent (09.8.0 Package holidays
+under 09.8) takes the parent's name; every other category keeps its translated COICOP name. The name is what the
+whole app shows (`Category.label`: "01.1 Groceries"); the official name stays on the Categories page and in
+tooltips (`Coicop.tooltip`).
 
 The search also finds a category by what its COICOP notes say it includes (F40), after the categories found
 by name.
@@ -41,13 +44,28 @@ def everyday() -> dict[str, Everyday]:
     }
 
 
+@cache
+def everyday_name(code: str, lang: str) -> str:
+    """The everyday name of `code` in `lang`; empty when it has none. A class whose code ends in ".0" and that
+    carries its parent's COICOP name (09.8.0 Package holidays under 09.8) takes the parent's everyday name."""
+    entry = everyday().get(code)
+    if entry is not None:
+        return entry.name(lang)
+    coicop = get_coicop()
+    cat = coicop.get(code)
+    parent = coicop.get(cat.parent) if cat and cat.parent and code.endswith(".0") else None
+    if cat and parent and parent.name == cat.name:
+        return everyday_name(parent.code, lang)
+    return ""
+
+
 @dataclass(frozen=True)
 class CategoryOption:
     """One entry of the category picker."""
 
     code: str
-    label: str  # "Groceries · 01.1" for a common category, "01.1.1 Cereals and cereal products" otherwise
-    caption: str  # the official COICOP name under an everyday name; empty otherwise
+    label: str  # code and everyday name, as everywhere in the app: "01.1 Groceries"
+    caption: str  # the official COICOP name under an everyday name; empty where the label shows the official name
     level: int
     search: str  # folded text the search matches: code, names in every language, search words
     recent: bool = False
@@ -55,19 +73,18 @@ class CategoryOption:
 
 
 def _option(cat: Category, lang: str) -> CategoryOption:
-    official = cat.display_name
-    common = everyday().get(cat.code)
+    official = cat.official_name
     notes = note_words(cat.code, lang)
-    if common is None:
+    name = everyday_name(cat.code, lang)
+    if not name:
         search = _search_text((cat.code, official, cat.name))
         return CategoryOption(cat.code, cat.label, "", cat.level, search, note_search=notes)
-    name = common.name(lang)
-    if cat.code in PSEUDO_NAMES:  # Taxes: no code and no official name to show
-        label, caption = name, ""
-    else:
-        label, caption = f"{name} · {cat.code}", official
-    words = (cat.code, *common.names.values(), official, cat.name, *common.keywords)
-    return CategoryOption(cat.code, label, caption, cat.level, _search_text(words), note_search=notes)
+    caption = "" if cat.code in PSEUDO_NAMES or name == official else official  # Taxes: no official name
+    common = everyday().get(cat.code)
+    # an inherited name is not searched: typing "Krankenkasse" offers 12.1.2, not 12.1.2.0 below it as well
+    names = (*common.names.values(), *common.keywords) if common else ()
+    words = (cat.code, *names, official, cat.name)
+    return CategoryOption(cat.code, cat.label, caption, cat.level, _search_text(words), note_search=notes)
 
 
 def _search_text(words: Iterable[str]) -> str:
@@ -86,7 +103,7 @@ def _by_code(lang: str) -> dict[str, CategoryOption]:
 
 
 def label(code: str) -> str:
-    """The picker's label of one category in the interface language ("Groceries · 01.1"); `code` when unknown."""
+    """The picker's label of one category in the interface language ("01.1 Groceries"); `code` when unknown."""
     option = _by_code(i18n.language()).get(code)
     return option.label if option else code
 

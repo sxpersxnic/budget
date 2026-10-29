@@ -104,7 +104,7 @@ async def test_make_recurring_opens_the_prefilled_sheet_and_the_row_leaves(user:
     assert notified(user, "Recurring transaction added")
     shown = labels(user)
     assert "1 subscription · about 1'020.00 CHF a year" in shown
-    assert "Swisscom · 08.3 Information and communication services" in shown  # now under Recurring Transactions
+    assert "Swisscom · 08.3 Phone and internet" in shown  # now under Recurring Transactions
     assert "about 598.80 CHF a year" in shown
 
 

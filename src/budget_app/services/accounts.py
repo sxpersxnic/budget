@@ -33,6 +33,14 @@ def account_label(acc: Account | None) -> str:
     return f"{acc.name} ({acc.currency})" if acc else ""
 
 
+def route_label(src: Account | None, dst: Account | None) -> str:
+    """Where a transfer or an exchange went, from → to: "Bank → Savings"; with the currencies when they differ
+    (an exchange: "Bank (CHF) → Travel (EUR)"). An account that no longer exists shows as "—"."""
+    if src is not None and dst is not None and src.currency != dst.currency:
+        return f"{account_label(src)} → {account_label(dst)}"
+    return f"{src.name if src else '—'} → {dst.name if dst else '—'}"
+
+
 def account_in_use(ctx: Context, account_id: str) -> bool:
     for tx in ctx.store.transactions.all():
         if account_id in (tx.from_account, tx.to_account, tx.advance_account):

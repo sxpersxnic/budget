@@ -128,7 +128,7 @@ def test_rules_are_listed_by_type_and_text_and_labelled(ctx, setup):
     rules_svc.save(ctx, RuleInput(match="SBB", category="07.3"))
     rules_svc.save(ctx, RuleInput(match="Coop", category="01.1"))
     assert [r.match for r in rules_svc.all_rules(ctx)] == ["Coop", "SBB", "Lohn"]
-    assert rules_svc.category_label(ctx, TX_EXPENDITURE, "01.1") == "Groceries · 01.1"
+    assert rules_svc.category_label(ctx, TX_EXPENDITURE, "01.1") == "01.1 Groceries"
     assert rules_svc.category_label(ctx, TX_INCOME, setup["salary"].id) == "Salary"
     assert rules_svc.category_label(ctx, TX_INCOME, "gone") == ""
 

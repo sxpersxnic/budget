@@ -96,7 +96,7 @@ def test_repayments_follow_the_debtor_of_their_advance(ctx, debts):
 
 def test_item_labels(ctx, debts):
     assert shared_svc.item_label(debts["dinner"]) == "Restaurant X · birthday"
-    assert shared_svc.item_label(debts["ben"]) == "11.1.1 Restaurants, cafés and the like"
+    assert shared_svc.item_label(debts["ben"]) == "11.1.1 Restaurants and cafés"
     assert shared_svc.count_label(1) == "1 item" and shared_svc.count_label(3) == "3 items"
 
 
@@ -155,7 +155,7 @@ def test_the_summary_as_text(ctx, debts):
         "Open items for anna · 18 Oct 2026",
         "",
         "12 Sep 2026 · Restaurant X · birthday · 40.00 CHF of 60.00 CHF",
-        "1 Oct 2026 · 07.3 Passenger transport services · 45.00 EUR",
+        "1 Oct 2026 · 07.3 Public transport · 45.00 EUR",
         "",
         "Total open: 40.00 CHF",
         "Total open: 45.00 EUR",

@@ -555,6 +555,15 @@ def test_account_labels_and_sorting(ctx, setup):
     assert acc_svc.account_label(None) == ""
 
 
+def test_a_route_names_both_accounts_with_currencies_only_when_they_differ(ctx, setup):
+    savings = acc_svc.add_account(ctx, "Savings", "CHF")
+    bank, euro = setup["chf"], setup["eur"]
+    assert acc_svc.route_label(bank, savings) == "Bank → Savings"  # a transfer
+    assert acc_svc.route_label(bank, euro) == "Bank (CHF) → Euro account (EUR)"  # an exchange
+    assert acc_svc.route_label(bank, None) == "Bank → —"  # an account deleted since
+    assert acc_svc.route_label(None, None) == "— → —"
+
+
 def test_account_validation(ctx, setup, english):
     with pytest.raises(ValidationError, match="Name is required"):
         acc_svc.add_account(ctx, "   ", "CHF")

@@ -250,7 +250,8 @@ async def test_expanding_a_division_shows_its_subcategories(user: User, demo) ->
     assert not [e for e in find_all(user, ui.html) if 'class="code">01.1<' in e.content]
     await click(user, label_cell(user, "01"))
     sub = next(e for e in find_all(user, ui.html) if 'class="code">01.1<' in e.content)
-    assert sub.props["title"] == "01.1 Food"
+    assert sub.props["title"] == "01.1 Groceries\nCOICOP 01.1 Food"  # the label, and the official name on hover
+    assert sub.content.endswith("Groceries")
     assert sub.parent_slot.parent._style["padding-left"] == "18px"  # indented one level
     assert any("open" in i.classes for i in find_all(user, ui.icon, label_cell(user, "01")))
     assert not [e for e in find_all(user, ui.html) if 'class="code">01.2<' in e.content]  # empty: hidden
@@ -441,7 +442,7 @@ async def test_replan_hides_the_later_months_switch(user: User, demo) -> None:
 async def test_add_a_budget_to_an_empty_category(user: User, demo, ctx) -> None:
     await open_budget(user)
     dlg = await edit_budget(user, "02")
-    await user.should_see("Alcoholic beverages, tobacco and narcotics")
+    await user.should_see("02 Alcohol and tobacco")  # the sheet is titled with the label
     assert not find_all(user, ui.checkbox, dlg)  # nothing to remove
     await set_value(user, find_one(user, ui.number, dlg, label="Amount"), 45)
     await set_value(user, find_one(user, ui.select, dlg, label="Until"), months.add_months(CM, 6))

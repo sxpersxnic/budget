@@ -12,6 +12,7 @@ from budget_app import i18n
 from budget_app.config import COICOP_FILE, RESOURCES_DIR
 from budget_app.domain import months
 from budget_app.domain.coicop import get_coicop
+from budget_app.domain.everyday import EVERYDAY_FILE
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "budget_app"
 
@@ -85,7 +86,8 @@ def test_every_coicop_name_is_translated(lang):
 def test_switching_language(german):
     assert i18n.set_language("de") == "de"
     assert months.label("2026-03") == "März 2026"
-    assert get_coicop().label("01.1") == "01.1 Nahrungsmittel"
+    assert get_coicop().get("01.1").official_label == "01.1 Nahrungsmittel"
+    assert get_coicop().label("01.1") == "01.1 Lebensmittel"  # the everyday name
     assert get_coicop().label("TAX") == german["Taxes"]
     assert i18n.tn("{n} transaction", "{n} transactions", 2) == german["{n} transaction"][1].format(n=2)
     i18n.set_language("en")
@@ -106,7 +108,9 @@ def test_french_and_italian_dates(lang, month, day):
         assert i18n.date_label(date(2026, 10, 9)) == day
         assert i18n.browser_locale() == f"{lang}-CH"
         assert i18n.t("Settings") == load(f"{lang}.json")["Settings"]
-        assert get_coicop().label("01") == "01 " + load(f"coicop_{lang}.json")["Food and non-alcoholic beverages"]
+        official = load(f"coicop_{lang}.json")["Food and non-alcoholic beverages"]
+        assert get_coicop().get("01").official_label == "01 " + official
+        assert get_coicop().label("01") == "01 " + json.loads(EVERYDAY_FILE.read_text("utf-8"))["01"][lang]
     finally:
         i18n.set_language("en")
 

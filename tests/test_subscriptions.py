@@ -285,8 +285,8 @@ def test_recurring_spend_lists_the_running_expenditure_series(ctx, setup):
     )
     rows = sub_svc.recurring_spend(ctx, "CHF")
     assert [(r.title, r.yearly, round(r.yearly_view, 2)) for r in rows] == [
-        ("04.1 Actual rental payments made for housing", 22800, 22800),
-        ("Spotify · 08.3 Information and communication services", 40, 36),
+        ("04.1 Rent", 22800, 22800),
+        ("Spotify · 08.3 Phone and internet", 40, 36),
     ]
 
 

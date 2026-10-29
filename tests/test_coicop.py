@@ -17,3 +17,17 @@ def test_rollup_sums_lower_levels_into_parents():
     assert totals["01.1"] == 30.0
     assert totals["01.1.1"] == 20.0
     assert totals[TAX] == 7.0
+
+
+def test_one_label_everywhere_with_the_official_name_beside_it():
+    c = get_coicop()
+    food = c.get("01.1")
+    assert (food.label, food.display_name) == ("01.1 Groceries", "Groceries")
+    assert (food.official_label, food.official_name) == ("01.1 Food", "Food")
+    assert c.label("11.1") == "11.1 Eating out" and c.label("NOPE") == "NOPE"
+    assert c.label("01.1.1.1") == "01.1.1.1 Cereals"  # no everyday name: the official one
+    assert c.tooltip("01.1") == "COICOP 01.1 Food"
+    assert c.tooltip("01.1.1.1") == ""  # the label already is the official name
+    assert c.tooltip("06") == ""  # the everyday name is the official one: Health
+    assert c.tooltip(TAX) == c.tooltip(ADV) == c.tooltip("NOPE") == ""
+    assert c.label(TAX) == c.get(TAX).official_label == "Taxes" and c.label(ADV) == "Advance payments"
