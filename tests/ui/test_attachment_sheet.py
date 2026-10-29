@@ -218,6 +218,7 @@ async def test_the_drop_zone_opens_the_file_picker(user: User, ctx, setup) -> No
     UserInteraction(user, {drop}, None).trigger("click")  # runs the uploader's pickFiles in the browser
     listeners = {listener.type: listener for listener in drop._event_listeners.values()}
     assert "addFiles(e.dataTransfer.files)" in listeners["drop.prevent"].js_handler
+    assert "'pickFiles'" in listeners["click"].js_handler and listeners["click"].handler is None  # in the browser
 
 
 # ------------------------------------------------------------------ new transaction

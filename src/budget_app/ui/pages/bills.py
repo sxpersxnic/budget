@@ -20,7 +20,7 @@ from budget_app.i18n import t, tc, tn
 from budget_app.services import attachments as attachments_svc
 from budget_app.services import bills as bills_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, fmt, frame, named, on_data_changed, refresh_due_badge, undoable
+from budget_app.ui.layout import error, fmt, frame, named, on_data_changed, picks_files, refresh_due_badge, undoable
 from budget_app.ui.widgets import attachments as att_ui
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
@@ -119,9 +119,7 @@ def page() -> None:
         )
         add_files = f"getElement({upload.id}).$refs.qRef.addFiles(e.dataTransfer.files)"
         with (
-            ui.element("div")
-            .classes("attach-drop bill-drop")
-            .on("click", lambda: upload.run_method("pickFiles"))
+            picks_files(ui.element("div").classes("attach-drop bill-drop"), upload)
             .on("dragover.prevent", js_handler="() => {}")
             .on("drop.prevent", js_handler=f"(e) => {add_files}")
         ):

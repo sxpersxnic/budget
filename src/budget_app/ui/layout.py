@@ -307,6 +307,16 @@ def open_shortcuts() -> None:
             ui.button(t("Done"), on_click=dlg.close).props("unelevated")
 
 
+def picks_files(trigger: ui.element, upload: ui.upload) -> ui.element:
+    """Open the system file dialog for `upload` when `trigger` is clicked, in the browser itself.
+
+    A browser opens a file dialog only while it handles the user's click. Asking the server first
+    (`upload.run_method("pickFiles")`) loses that permission: Chrome often still allows it, WebKit (the macOS
+    window) shows nothing.
+    """
+    return trigger.on("click", js_handler=f"() => runMethod({upload.id}, 'pickFiles', [])")
+
+
 def named(button: ui.button, label: str) -> ui.button:
     """Name an icon-only button: the tooltip for the eye, `aria-label` for screen readers (F32)."""
     button.props["aria-label"] = label

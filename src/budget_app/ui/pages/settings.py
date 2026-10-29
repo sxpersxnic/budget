@@ -41,6 +41,7 @@ from budget_app.ui.layout import (
     month_options,
     named,
     open_profile,
+    picks_files,
     refresh_due_badge,
     save_file,
     sheet,
@@ -804,9 +805,7 @@ def _data_group(ctx: Context) -> None:
                 with ui.column().classes("gap-0 flex-1 min-w-0"):
                     ui.label(t("Restore"))
                     ui.label(t("Replaces all records with those of a backup file.")).classes("caption")
-                ui.button(t("Choose Backup…"), on_click=lambda: upload.run_method("pickFiles")).props(
-                    "flat dense no-caps"
-                ).classes("text-primary")
+                picks_files(ui.button(t("Choose Backup…")), upload).props("flat dense no-caps").classes("text-primary")
             with ui.element("div").classes("group-row"):
                 with ui.column().classes("gap-0 flex-1 min-w-0"):
                     ui.label(t("Export Everything"))
