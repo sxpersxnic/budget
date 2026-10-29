@@ -853,7 +853,7 @@ March".
 
 **Status:** ☑ Done (2026-10-22)
 
-**As built:** *Propose from History…* on Budget Plan (beside *New Budget Entry*) opens one sheet. **Inputs:** the
+**As built:** *Propose from History…* on Budget Plan (in its *More* menu, and in the empty plan's card) opens one sheet. **Inputs:** the
 last 3, 6 or 12 complete months (default 6), *Average* or *Median*, the COICOP level of the expenditure rows
 (division, group (default) or class), the rounding (to the cent, 1, 5, 10 (default), 50 or 100 CHF), and From
 (this month to the plan's end) and Until (a month or *Forever*, as in the New Budget Entry form). **Rows:** every
@@ -1161,7 +1161,8 @@ Advance payments already record money paid for others. Build on that:
 
 **Status:** ☑ Done (2026-10-19)
 
-**As built:** a share button on Transactions and Budget Plan exports the rows the filters show,
+**As built:** a share button on Transactions and the *More* menu on Budget Plan export the rows the list shows
+(on Budget Plan: one per budget in the Series view, one per month in the Months view),
 in the list's column order, as CSV or Excel. *Settings → Data → Export as JSON…* writes every
 record into one document (`format: budget-app/export`, `version: 1`). Decided: the JSON export is
 for other programs and is not imported back; full backups (F25) are the restore format.
@@ -1499,7 +1500,8 @@ replaces the specification's rule that manual entries use the latest rate.
 **B09 as built.** Budget entries are stored one row per month, linked by a series ID. The
 dialog shows the series' end month (or *Forever*), its rhythm and an editable note; changing
 the schedule replans the series from the edited month on, as a new series, and the earlier
-months end there. The Budget Plan page's dialog has the same fields since B14.
+months end there. The Budget Plan page's month dialog has the same fields since B14, and its series sheet
+(before 1.0) changes a whole budget from a chosen month on the same way (`budget.replan_series`).
 
 ### Follow-up fixes and milestone 2
 
