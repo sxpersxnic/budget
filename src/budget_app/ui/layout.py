@@ -32,6 +32,7 @@ NAV = [
     ("/budget", N_("Budget"), "o_donut_large"),
     ("/transactions", N_("Transactions"), "o_receipt_long"),
     ("/recurring", N_("Recurring"), "o_event_repeat"),
+    ("/subscriptions", N_("Subscriptions"), "o_subscriptions"),  # F17: what repeats without a series yet
     ("/bills", N_("Bills"), "o_request_quote"),
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
     ("/goals", N_("Goals"), "o_flag"),

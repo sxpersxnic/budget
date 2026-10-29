@@ -89,6 +89,7 @@ TABLE_NAMES = {
     "bills": N_("Bill"),
     "goals": N_("Savings goal"),
     "tax_sections": N_("Tax summary section"),
+    "subscription_ignores": N_("Ignored subscription"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 

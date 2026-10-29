@@ -22,6 +22,7 @@ from budget_app.domain.models import (
     Recurring,
     Rule,
     Settings,
+    SubscriptionIgnore,
     Tag,
     TaxSection,
     Template,
@@ -79,6 +80,8 @@ class Store:
         self.bills = CsvTable(data_dir / "bills.csv", Bill, h)  # F03; their files are attachments
         self.goals = CsvTable(data_dir / "goals.csv", Goal, h)  # F14
         self.tax_sections = CsvTable(data_dir / "tax_sections.csv", TaxSection, h)  # F20: tags per section
+        # F17: detected subscriptions the user doesn't want listed
+        self.subscription_ignores = CsvTable(data_dir / "subscription_ignores.csv", SubscriptionIgnore, h)
         self._settings = SettingsStore(data_dir / "settings.json")
 
     def tables(self) -> dict[str, CsvTable]:
@@ -102,6 +105,7 @@ class Store:
             self.bills,
             self.goals,
             self.tax_sections,
+            self.subscription_ignores,
         ]
         return {t.name: t for t in tables}
 

@@ -289,6 +289,17 @@ class TaxSection:
     id: str = field(default_factory=new_id)
 
 
+@dataclass
+class SubscriptionIgnore:
+    """A detected subscription the user told the Subscriptions page to leave out (F17): the group it was found
+    by, `key` (a payee's lookup key, or `note:` and the folded note) with its `currency`, and the `name` shown."""
+
+    key: str
+    currency: str
+    name: str = ""
+    id: str = field(default_factory=new_id)
+
+
 BILL_OPEN = "open"
 BILL_PAID = "paid"
 BILL_DISMISSED = "dismissed"

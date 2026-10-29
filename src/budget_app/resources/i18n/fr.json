@@ -75,6 +75,7 @@
  "Advance payments (default)": "Avances (par défaut)",
  "Advance repayments": "Remboursements d’avances",
  "All Goals": "Tous les objectifs",
+ "All Recurring": "Toutes les récurrentes",
  "All accounts, month end": "Tous les comptes, fin de mois",
  "All records as one JSON file, for other programs. It can’t be restored.": "Toutes les données dans un fichier JSON, pour d’autres programmes. Il ne peut pas être restauré.",
  "All records in one ZIP file. Keep it somewhere safe; it can be restored here.": "Toutes les données dans un fichier ZIP. À conserver en lieu sûr ; il peut être restauré ici.",
@@ -224,6 +225,7 @@
   "Modifie {n} transactions"
  ],
  "Changing Until or Repeat replans this budget from {month} on.": "Modifier «Jusqu’à» ou «Répétition» replanifie ce budget dès {month}.",
+ "Charges that come back at the same rhythm for about the same amount: streaming, phone, gym, insurance. Found in your transactions; nothing is booked for you. Turn one into a recurring transaction, or ignore it.": "Des débits qui reviennent au même rythme pour à peu près le même montant : streaming, téléphone, fitness, assurance. Trouvés dans vos transactions ; rien n’est comptabilisé pour vous. Rendez-en un récurrent, ou ignorez-le.",
  "Chart error: {error}": "Erreur de graphique : {error}",
  "Childcare": "Frais de garde des enfants par des tiers",
  "Choose Backup…": "Choisir une sauvegarde…",
@@ -326,6 +328,7 @@
  ],
  "Description": "Description",
  "Details": "Détails",
+ "Detected": "Détectés",
  "Difference": "Différence",
  "Dismiss": "Écarter",
  "Dismiss a bill": "Écarter une facture",
@@ -464,6 +467,14 @@
  "Holding {n}: “{name}” is listed twice": "Position {n} : « {name} » figure deux fois",
  "How each account moved between two month ends": "Évolution de chaque compte entre deux fins de mois",
  "ISIN or symbol": "ISIN ou symbole",
+ "Ignore": "Ignorer",
+ "Ignore a subscription": "Ignorer un abonnement",
+ "Ignored subscription": "Abonnement ignoré",
+ "Ignored {name}": "{name} ignoré",
+ "Ignored · {n} subscription": [
+  "Ignorés · {n} abonnement",
+  "Ignorés · {n} abonnements"
+ ],
  "Import": "Importer",
  "Import Transactions": "Importer des transactions",
  "Import transactions": "Importer des transactions",
@@ -606,6 +617,7 @@
  "No payee matches.": "Aucun bénéficiaire ne correspond.",
  "No payees yet. Add one on a transaction, or import a bank file.": "Pas encore de bénéficiaires. Indiquez-en un sur une transaction ou importez un fichier bancaire.",
  "No price yet": "Pas encore de cours",
+ "No recurring expenditure yet.": "Pas encore de dépense récurrente.",
  "No recurring transactions yet.": "Pas encore de transactions récurrentes.",
  "No rules yet.": "Aucune règle pour l’instant.",
  "No spending recorded in the last 12 months yet": "Aucune dépense saisie ces 12 derniers mois",
@@ -623,6 +635,7 @@
  "Notable This Month": "À noter ce mois-ci",
  "Note": "Remarque",
  "Nothing changes: the rows already look like this.": "Rien ne change : les transactions sont déjà ainsi.",
+ "Nothing detected yet. A subscription shows once it was charged {n} times at the same rhythm ({m} times for half-yearly and yearly ones).": "Rien de détecté pour l’instant. Un abonnement apparaît une fois débité {n} fois au même rythme ({m} fois pour les semestriels et annuels).",
  "Nothing in the {n} months before": "Rien les {n} mois précédents",
  "Nothing in {year}": "Rien en {year}",
  "Nothing is due.": "Rien à comptabiliser.",
@@ -732,6 +745,7 @@
  "Recorded balances, then the budget projection": "Soldes saisis, puis la prévision budgétaire",
  "Records and balances agree": "Écritures et soldes concordent",
  "Recurring": "Récurrentes",
+ "Recurring Transactions": "Transactions récurrentes",
  "Recurring transaction": "Transaction récurrente",
  "Recurring transaction added": "Transaction récurrente ajoutée",
  "Recurring transaction not found": "Transaction récurrente introuvable",
@@ -891,6 +905,7 @@
  "Spread of the exchange against the ECB rate": "Écart de change par rapport au taux BCE",
  "Statement {month}": "Relevé {month}",
  "Status": "Statut",
+ "Subscriptions": "Abonnements",
  "Suggestion": "Suggestion",
  "Summary": "Résumé",
  "Swiss withholding tax on dividends in CHF accounts. Claim it back with your tax return for that year.": "Impôt anticipé sur les dividendes des comptes en CHF. Récupérez-le avec la déclaration d’impôt de cette année-là.",
@@ -1023,6 +1038,7 @@
  "This revaluation belongs to a currency exchange. Delete the exchange instead.": "Cette réévaluation appartient à une opération de change. Supprimer plutôt l’opération de change.",
  "This revaluation belongs to a currency exchange. Edit the exchange instead.": "Cette réévaluation appartient à une opération de change. Modifier plutôt l’opération de change.",
  "This series has ended": "Cette série est terminée",
+ "This subscription is not ignored": "Cet abonnement n’est pas ignoré",
  "This transaction already belongs to a recurring transaction": "Cette transaction appartient déjà à une transaction récurrente",
  "This transaction was booked on the Investments page. Change its trade or price there.": "Cette transaction a été comptabilisée sur la page Placements. Modifiez-y son opération ou son cours.",
  "This transaction was booked on the Investments page; its trade or price no longer exists.": "Cette transaction a été comptabilisée sur la page Placements ; son opération ou son cours n’existe plus.",
@@ -1080,6 +1096,9 @@
  "Valued from its holdings from {month} on; the balances recorded before stay as its history.": "Évalué à partir de ses positions dès {month} ; les soldes saisis avant restent son historique.",
  "Valued from its holdings on the Investments page; no balances to record.": "Évalué d’après ses positions de la page Placements ; aucun solde à saisir.",
  "Valued from the balances you record at the end of each month.": "Évalué d’après les soldes que vous saisissez à la fin de chaque mois.",
+ "Watch Again": "Suivre à nouveau",
+ "Watch a subscription again": "Suivre à nouveau un abonnement",
+ "Watching {name} again": "{name} est suivi à nouveau",
  "Wealth": "Fortune",
  "Wealth Over Time": "Évolution de la fortune",
  "Wealth at the end ({month})": "Fortune à la fin ({month})",
@@ -1104,6 +1123,7 @@
   "Vos écritures commencent en {month}, donc {n} mois compte : {span}. Montants en CHF.",
   "Vos écritures commencent en {month}, donc {n} mois comptent : {span}. Montants en CHF."
  ],
+ "about {amount} a year": "environ {amount} par an",
  "account|From": "Du compte",
  "account|To": "Au compte",
  "added": "ajouté",
@@ -1131,9 +1151,11 @@
  "income {gross} in Dividends, {tax} under Taxes": "revenu {gross} en Dividendes, {tax} sous Impôts",
  "incomplete": "incomplète",
  "last booked on {date}": "dernière le {date}",
+ "last on {date}": "dernier le {date}",
  "made on {date}": "établi le {date}",
  "net {amount}": "net {amount}",
  "new": "nouveau",
+ "next around {date}": "prochain vers le {date}",
  "next on {date}": "prochaine le {date}",
  "no target date": "sans date cible",
  "of which tax withheld": "dont impôt retenu",
@@ -1161,6 +1183,7 @@
  "{account} is valued from its holdings from {month} on; earlier days belong to its recorded balances": "{account} est évalué à partir de ses positions dès {month} ; les jours antérieurs relèvent de ses soldes saisis",
  "{actual} of {budget}": "{actual} sur {budget}",
  "{amount} a month until {date}": "{amount} par mois jusqu’au {date}",
+ "{amount} a year": "{amount} par an",
  "{amount} above the {budget} budget": "{amount} de plus que le budget de {budget}",
  "{amount} at the end of {month}": "{amount} à fin {month}",
  "{amount} by the end of the plan": "{amount} à la fin de la planification",
@@ -1230,6 +1253,10 @@
  "{n} change": [
   "{n} modification",
   "{n} modifications"
+ ],
+ "{n} charge since {date}": [
+  "{n} débit depuis le {date}",
+  "{n} débits depuis le {date}"
  ],
  "{n} could not be booked: {reason}": [
   "{n} n’a pas pu être comptabilisée : {reason}",
@@ -1354,6 +1381,10 @@
  "{n} subcategory": [
   "{n} sous-catégorie",
   "{n} sous-catégories"
+ ],
+ "{n} subscription · about {amount} a year": [
+  "{n} abonnement · environ {amount} par an",
+  "{n} abonnements · environ {amount} par an"
  ],
  "{n} tag": [
   "{n} étiquette",
