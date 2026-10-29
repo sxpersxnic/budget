@@ -79,8 +79,8 @@ def test_recurring_transactions_due(ctx, setup):
     )
     found = rem_svc.reminders(ctx, "CHF", TODAY)[rem_svc.RECURRING]
     assert [(i.title, i.sub, i.amount, i.tone, i.link) for i in found] == [
-        ("04.1 Actual rental payments made for housing", "Due since 1 Sep 2026", 1900, rem_svc.LATE, "/recurring"),
-        ("04.1 Actual rental payments made for housing", "Due since 1 Oct 2026", 1900, rem_svc.LATE, "/recurring"),
+        ("04.1 Rent", "Due since 1 Sep 2026", 1900, rem_svc.LATE, "/recurring"),
+        ("04.1 Rent", "Due since 1 Oct 2026", 1900, rem_svc.LATE, "/recurring"),
         ("Boss · Salary", "Due today", 100, rem_svc.WARN, "/recurring"),
     ]
     assert rem_svc.count(ctx, TODAY) == 3
@@ -128,8 +128,8 @@ def test_budgets_exceeded_or_on_pace(ctx, setup):
         )
     found = rem_svc.reminders(ctx, "CHF", TODAY)[rem_svc.BUDGETS]
     assert [(i.title, i.sub, i.amount, i.tone) for i in found] == [
-        ("01.1 Food", "100.00 over the 500.00 CHF budget", 600, rem_svc.LATE),
-        ("07.3 Passenger transport services", "On pace for 129.17 of the 100.00 CHF budget", 75, rem_svc.WARN),
+        ("01.1 Groceries", "100.00 over the 500.00 CHF budget", 600, rem_svc.LATE),
+        ("07.3 Public transport", "On pace for 129.17 of the 100.00 CHF budget", 75, rem_svc.WARN),
     ]
     assert found[0].link == "/budget?month=2026-10&category=01.1"
     eur = rem_svc.reminders(ctx, "EUR", TODAY)[rem_svc.BUDGETS]

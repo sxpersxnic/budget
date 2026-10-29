@@ -245,8 +245,8 @@ def test_frames_and_excel(ctx, year_2025):
     assert summary.loc["Wealth at the end (Dec 2025)", "2025"] == 14000
     assert summary.loc["Wealth change", "2025"] == 4000 and summary.loc["Wealth change", "2024"] == 1000
     exp = frames["Expenditure"].set_index("Category")
-    assert exp.loc["05 Furnishings, household equipment and routine household maintenance", "Change"] == "new"
-    assert exp.loc["01 Food and non-alcoholic beverages", "Change"] == "+27 %"
+    assert exp.loc["05 Household and furniture", "Change"] == "new"
+    assert exp.loc["01 Food and drinks", "Change"] == "+27 %"
     assert list(frames["Biggest Expenses"].columns) == ["Date", "Payee", "Category", "Amount (CHF)"]
     assert frames["Biggest Expenses"].iloc[0].tolist() == [
         "2025-08-20",

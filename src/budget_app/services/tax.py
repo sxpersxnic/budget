@@ -53,6 +53,7 @@ from budget_app.domain.tax import (
     section_of_code,
 )
 from budget_app.i18n import N_, t
+from budget_app.services import accounts as acc_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services import tags as tag_svc
 from budget_app.services.aggregates import split_lines, transaction_parts
@@ -274,7 +275,7 @@ class _Collector:
         if dst is not None and dst.asset_class == ASSET_PILLAR3A and (src is None or src.asset_class != ASSET_PILLAR3A):
             keys.setdefault(PILLAR3A, [])
         for key, ids in keys.items():
-            self._add(key, tx, tx.amount_chf, t("Account transfer"), ids)
+            self._add(key, tx, tx.amount_chf, acc_svc.route_label(src, dst), ids)  # "Bank → Pillar 3a"
 
     def dividend(self, trade: Trade, booked: list[Transaction]) -> None:
         holding = self.ctx.store.holdings.get(trade.holding_id)

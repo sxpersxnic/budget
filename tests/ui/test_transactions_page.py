@@ -11,6 +11,7 @@ from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
 
 from budget_app import i18n
+from budget_app.services import accounts as acc_svc
 from budget_app.services import items as items_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.items import ItemInput
@@ -146,10 +147,13 @@ async def test_rows_show_category_accounts_and_advances(user: User, ctx, demo, s
     by_id = {r["id"]: r for r in rows(user)}
 
     receipt = by_id[shop["receipt"].id]
-    assert receipt["category"] == "01.1 Food" and receipt["from"] == "Bank (CHF)"
+    assert receipt["category"] == "01.1 Groceries" and receipt["from"] == "Bank (CHF)"
+    assert receipt["_category_tip"] == "COICOP 01.1 Food"  # the official name, on hover
     assert receipt["items"] == 2 and receipt["type"] == "Expenditure" and receipt["comment"] == "Saturday market"
     exchange = by_id[shop["exchange"].id]
-    assert exchange["category"] == "Currency exchange" and exchange["to"] == "Euro account (EUR) (+110.50 EUR)"
+    assert exchange["category"] == "Bank (CHF) → Euro account (EUR)"  # from → to, with both currencies
+    assert exchange["type"] == "Currency exchange" and exchange["to"] == "Euro account (EUR) (+110.50 EUR)"
+    assert exchange["_category_tip"] == ""
     assert exchange["items"] is None
     assert by_id[shop["advance"].id]["advance"] == "45.00 · Clara"
     repay = by_id[shop["repay"].id]
@@ -159,6 +163,32 @@ async def test_rows_show_category_accounts_and_advances(user: User, ctx, demo, s
 
 
 # ------------------------------------------------------------------ filters
+async def test_a_transfer_shows_its_accounts_and_the_category_column_its_tooltip(user: User, ctx, setup) -> None:
+    savings = acc_svc.add_account(ctx, "Savings", "CHF")
+    moved = tx_svc.save(
+        ctx,
+        TransactionInput(
+            date=date(2026, 10, 2),
+            type="transfer",
+            amount=800,
+            currency="CHF",
+            from_account=setup["chf"].id,
+            to_account=savings.id,
+        ),
+    )
+    await user.open("/transactions")
+    [row] = [r for r in rows(user) if r["id"] == moved.id]
+    assert (row["category"], row["type"], row["from"], row["to"]) == (
+        "Bank → Savings",
+        "Account transfer",
+        "Bank (CHF)",
+        "Savings (CHF)",
+    )
+    assert "savings" in row["_search"]
+    [column] = [c for c in the_grid(user).options["columnDefs"] if c.get("field") == "category"]
+    assert column["tooltipField"] == "_category_tip" and the_grid(user).options["tooltipShowDelay"] == 400
+
+
 async def test_filters_narrow_the_list(user: User, ctx, demo, shop) -> None:
     await user.open("/transactions")
     total = len(ctx.store.transactions.all())

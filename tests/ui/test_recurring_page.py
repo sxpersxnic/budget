@@ -16,7 +16,7 @@ from budget_app.services.recurring import RecurringInput
 from budget_app.services.transactions import TransactionInput
 from budget_app.ui import layout
 
-RENT = "04.1 Actual rental payments made for housing"
+RENT = "04.1 Rent"
 SELECTED = re.compile(r".*getSelectedRows")
 
 

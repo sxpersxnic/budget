@@ -28,17 +28,34 @@ class Category:
     children: list[str] = field(default_factory=list)
 
     @property
-    def display_name(self) -> str:
-        """The name in the interface language (COICOP names have their own translation file)."""
+    def official_name(self) -> str:
+        """The COICOP name in the interface language (COICOP names have their own translation file)."""
         if self.code in PSEUDO_NAMES:
             return t(self.name)
         return coicop_names(i18n.language()).get(self.name, self.name)
 
     @property
+    def display_name(self) -> str:
+        """The name the app shows: the everyday name ("Groceries" for 01.1 Food, F08) where the category has one,
+        otherwise the official name."""
+        from budget_app.domain.everyday import everyday_name  # noqa: PLC0415 - everyday builds on this module
+
+        return everyday_name(self.code, i18n.language()) or self.official_name
+
+    @property
     def label(self) -> str:
+        """The one label of a category in lists, reports, charts and the picker: code, then the everyday name
+        ("01.1 Groceries"); Taxes and Advance payments have no code."""
         if self.code in PSEUDO_NAMES:
             return self.display_name
         return f"{self.code} {self.display_name}"
+
+    @property
+    def official_label(self) -> str:
+        """Code and official COICOP name ("01.1 Food"), for the Categories page and tooltips."""
+        if self.code in PSEUDO_NAMES:
+            return self.official_name
+        return f"{self.code} {self.official_name}"
 
 
 class Coicop:
@@ -60,8 +77,17 @@ class Coicop:
         return self.categories.get(code)
 
     def label(self, code: str) -> str:
+        """The category's label ("01.1 Groceries", see `Category.label`); `code` itself when unknown."""
         cat = self.categories.get(code)
         return cat.label if cat else code
+
+    def tooltip(self, code: str) -> str:
+        """The official COICOP code and name ("COICOP 01.1 Food") where the label shows an everyday name;
+        empty where the label already is the official name, or for codes outside COICOP."""
+        cat = self.categories.get(code)
+        if cat is None or cat.code in PSEUDO_NAMES or cat.display_name == cat.official_name:
+            return ""
+        return f"COICOP {cat.official_label}"
 
     def ancestors(self, code: str) -> list[str]:
         """The code itself followed by all of its parents up to the division."""

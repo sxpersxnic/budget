@@ -79,7 +79,7 @@ async def test_the_form_suggests_a_category_and_fills_it_only_when_clicked(user:
     category, account = newest(user, ui.select, "Category"), newest(user, ui.select, "From Account")
     assert category.value is None and account.value is None  # shown, never filled in on its own
 
-    click(user, button(user, "Use Groceries · 01.1"))
+    click(user, button(user, "Use 01.1 Groceries"))
     assert (category.value, account.value) == ("01.1", setup["chf"].id)
     await user.should_not_see("Used 2 times for this payee")
     click(user, button(user, "Add Transaction"))
@@ -114,7 +114,7 @@ async def test_a_rule_can_match_the_note(user: User, ctx, setup) -> None:
     rules_svc.save(ctx, RuleInput(match="Wocheneinkauf", category="01.1"))
     await user.open("/add-transaction")
     put(user, newest(user, PayeeInput, "Payee"), "Market Stall")
-    await user.should_not_see("Use Groceries · 01.1")
+    await user.should_not_see("Use 01.1 Groceries")
     put(user, newest(user, ui.textarea, "Note"), "wocheneinkauf am Samstag")
     await user.should_see("Rule: contains “Wocheneinkauf”")
 
@@ -125,7 +125,7 @@ async def test_the_edit_sheet_offers_always_categorize_like_this(user: User, ctx
     await select(user, tx.id)
     click(user, button(user, "Edit"))
     await user.should_see("Edit Transaction")
-    await user.should_not_see("Use Groceries · 01.1")  # editing shows no suggestions
+    await user.should_not_see("Use 01.1 Groceries")  # editing shows no suggestions
     form_category, make_rule = newest(user, ui.select, "Category"), button(user, "Always Categorize Like This…")
     click(user, make_rule)
     await user.should_see("Always Categorize Like This")
@@ -158,7 +158,7 @@ async def test_the_selection_bar_makes_a_rule_and_warns_about_the_same_text(user
 
     await select(user, coop.id)
     click(user, button(user, "Always Categorize Like This…"))
-    await user.should_see("A rule for “COOP” already exists (Groceries · 01.1). Saving replaces it.")
+    await user.should_see("A rule for “COOP” already exists (01.1 Groceries). Saving replaces it.")
     assert button(user, "Replace Rule").enabled
     put(user, newest(user, ui.input, "Text contains"), "Coop Pronto")
     await user.should_not_see("Saving replaces it.")
@@ -224,7 +224,7 @@ async def test_the_rules_page_lists_edits_and_deletes(user: User, ctx, setup, th
     migros, sbb, _ = three_rules
     await user.open("/rules")
     await user.should_see("Contains “Migros”")
-    await user.should_see("Groceries · 01.1 · Bank (CHF)")
+    await user.should_see("01.1 Groceries · Bank (CHF)")
     await user.should_see("Contains “Lohn”")
     await user.should_see("3 rules")
     active = {link.props["href"] for link in user.find(kind=ui.link).elements if "active" in link.classes}
@@ -235,7 +235,7 @@ async def test_the_rules_page_lists_edits_and_deletes(user: User, ctx, setup, th
     await user.should_see("Edit Rule")
     assert newest(user, ui.input, "Text contains").value == "Migros"
     put(user, newest(user, ui.input, "Text contains"), "SBB")  # the other rule's text
-    await user.should_see("A rule for “SBB” already exists (Public transport · 07.3). Saving replaces it.")
+    await user.should_see("A rule for “SBB” already exists (07.3 Public transport). Saving replaces it.")
     put(user, newest(user, ui.input, "Text contains"), "Migros Bank")
     click(user, button(user, "Save Rule"))
     assert notified(user, "Saved the rule for “Migros Bank”")
@@ -291,8 +291,8 @@ async def test_the_import_preview_marks_suggestions_until_they_are_changed(user:
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
     await settle()
     assert [(r["payee"], r["category"], r["suggested"], r["reason"]) for r in rows(user)] == [
-        ("Migros", "Groceries · 01.1", True, "Rule: contains “migros”"),
-        ("Brezelkönig", "11.1 Food and beverage serving services", True, "Used 1 time for this payee"),
+        ("Migros", "01.1 Groceries", True, "Rule: contains “migros”"),
+        ("Brezelkönig", "11.1 Eating out", True, "Used 1 time for this payee"),
         ("Papeterie Zumstein", "", False, ""),
     ]
     [grid] = user.find(kind=ui.aggrid).elements
@@ -314,9 +314,9 @@ async def test_the_import_preview_marks_suggestions_until_they_are_changed(user:
     edit_cell(user, 2, "payee", "Migros")
     edit_cell(user, 1, "payee", "Migros")
     assert [(r["category"], r["suggested"]) for r in rows(user)] == [
-        ("Groceries · 01.1", True),
-        ("Restaurants and cafés · 11.1.1", False),
-        ("Groceries · 01.1", True),
+        ("01.1 Groceries", True),
+        ("11.1.1 Restaurants and cafés", False),
+        ("01.1 Groceries", True),
     ]
     edit_cell(user, 2, "payee", "Somebody Else")
     assert rows(user)[2]["category"] == "" and not rows(user)[2]["suggested"]
@@ -324,7 +324,7 @@ async def test_the_import_preview_marks_suggestions_until_they_are_changed(user:
     click(user, clear)
     assert [(r["category"], r["suggested"]) for r in rows(user)] == [
         ("", False),
-        ("Restaurants and cafés · 11.1.1", False),
+        ("11.1.1 Restaurants and cafés", False),
         ("", False),
     ]
     assert not clear.visible
@@ -357,6 +357,6 @@ async def test_a_camt_statement_gets_the_same_suggestions(user: User, ctx, setup
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
     await settle()
     assert [(r["category"], r["reason"]) for r in rows(user)][:2] == [
-        ("Groceries · 01.1", "Rule: contains “migros”"),
+        ("01.1 Groceries", "Rule: contains “migros”"),
         ("Income · Salary", "Rule: contains “lohn”"),
     ]

@@ -67,7 +67,7 @@ async def test_reminders_grouped_with_links_and_the_badge(user: User, ctx, setup
     await user.should_see("Balances to record · 1")
     await user.should_see(f"No balance for {months.label(prev)} · last 1'200.00 CHF")
     await user.should_see("Recurring transactions due · 2")
-    await user.should_see("Landlord · 04.1 Actual rental payments made for housing")
+    await user.should_see("Landlord · 04.1 Rent")
     await user.should_see("Bills due · 1")
     await user.should_see("Swisscom")
     await user.should_see("89.90 CHF")

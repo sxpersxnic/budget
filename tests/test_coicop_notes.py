@@ -199,7 +199,7 @@ def test_note_words_leave_out_excludes_codes_and_punctuation() -> None:
     assert coicop.note_words("01", "en") == "" and coicop.note_words(TAX, "de") == ""
 
 
-@pytest.mark.parametrize(("query", "code"), [("teff", "01.1.1.1"), ("quinoa", "01.1.1.1"), ("funicular", "07.3.6")])
+@pytest.mark.parametrize(("query", "code"), [("teff", "01.1.1.1"), ("quinoa", "01.1.1.1"), ("porters", "07.3.6")])
 def test_a_word_only_in_the_notes_finds_the_category(query: str, code: str) -> None:
     options = ev.category_options()
     hit = next(o for o in options if o.code == code)
@@ -233,7 +233,7 @@ def test_french_note_words_find_the_category() -> None:
 def test_matches_by_name_come_before_matches_by_notes() -> None:
     options = ev.category_options()
     found = [o.code for o in ev.search(options, "bread")]
-    assert found[0] == "01.1.1.3"  # "Bread and bakery products"
+    assert found[:2] == ["01.1.1", "01.1.1.3"]  # "Bread and cereals" (everyday), "Bread and bakery products"
     by_name = [o for o in options if all(w in o.search for w in fold("bread").split())]
     assert found[: len(by_name)] == [o.code for o in by_name]
     assert len(found) > len(by_name)  # more come from the notes, after

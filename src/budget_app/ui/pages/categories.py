@@ -1,5 +1,8 @@
 """Categories (F37): the COICOP 2018 tree with codes and names in the interface language, and a search.
 
+Each row shows the official COICOP name, and beside it the everyday name the rest of the app shows ("01.1 Food ·
+Groceries", F08); the search finds a category by either.
+
 The whole tree is one Quasar QTree that is built once. Searching sets the tree's `filter` prop to the codes
 that match (Quasar hides the other nodes and keeps the ancestors of every match) and its `expanded` prop (so
 the matches are open), instead of rebuilding ~600 elements on every keystroke. The search runs in Python, so
@@ -38,13 +41,15 @@ from budget_app.services.context import Context
 from budget_app.ui.layout import fmt, frame
 from budget_app.ui.pages.settings import income_group
 
-# The row: code, name (divisions bold) with the notes button, number of subcategories, amount spent this year;
-# below it the notes once opened. Clicks inside the notes neither open nor close the node.
+# The row: code, official name (divisions bold) and the everyday name the app shows, the notes button, the number
+# of subcategories, amount spent this year; below it the notes once opened. Clicks inside the notes neither open
+# nor close the node.
 ROW = """
 <div class="cat-item">
   <div class="cat-node" :class="'lvl-' + props.node.level">
     <span class="code">{{ props.node.id }}</span>
-    <span class="name">{{ props.node.name }}</span>
+    <span class="name">{{ props.node.name }}<span class="everyday" v-if="props.node.everyday"
+      > · {{ props.node.everyday }}</span></span>
     <q-btn v-if="props.node.has_notes" flat round dense size="sm" class="notes-btn"
       :icon="props.node.notes ? 'expand_less' : 'info_outline'" aria-label="%(show)s" title="%(show)s"
       :aria-expanded="props.node.notes ? 'true' : 'false'"
@@ -75,13 +80,14 @@ def spent_this_year(ctx: Context, today: date | None = None) -> dict[str, float]
 
 
 def _node(coicop: Coicop, cat: Category, spent: dict[str, float], lang: str) -> dict:
-    name = cat.display_name
+    name, everyday = cat.official_name, cat.display_name
     n = len(cat.children)
     amount = spent.get(cat.code, 0.0)
     node: dict = {
         "id": cat.code,
         "label": f"{cat.code} {name}",
         "name": name,
+        "everyday": everyday if everyday != name else "",
         "level": cat.level,
         "sub": tn("{n} subcategory", "{n} subcategories", n) if n else "",
         "spent": fmt(amount) if abs(amount) >= 0.005 else "",
@@ -103,10 +109,11 @@ def all_nodes(nodes: list[dict]) -> list[dict]:
 
 
 def search_index(coicop: Coicop, lang: str | None = None) -> dict[str, tuple[str, str]]:
-    """Code -> (folded code and names, in the interface language and in English; the words of its notes)."""
+    """Code -> (folded code and names: official in the interface language and in English, everyday; the words of
+    its notes)."""
     lang = lang or i18n.language()
     return {
-        cat.code: (fold(f"{cat.code} {cat.display_name} {cat.name}"), note_words(cat.code, lang))
+        cat.code: (fold(f"{cat.code} {cat.official_name} {cat.name} {cat.display_name}"), note_words(cat.code, lang))
         for cat in coicop.categories.values()
         if cat.code not in PSEUDO_NAMES
     }

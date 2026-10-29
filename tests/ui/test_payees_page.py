@@ -231,7 +231,7 @@ async def test_the_recurring_sheet_has_a_payee(user: User, ctx, setup) -> None:
     assert notified(user, "Recurring transaction added")
     [series] = ctx.store.recurring.all()
     assert series.payee == "Swisscom"
-    await user.should_see("Swisscom · 08.3 Information and communication services")
+    await user.should_see("Swisscom · 08.3 Phone and internet")
 
 
 # ------------------------------------------------------------------ the Transactions page
