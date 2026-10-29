@@ -15,3 +15,4 @@ htmlcov/
 .claude/worktrees/
 /demo-data/
 .env
+coverage.xml

@@ -63,6 +63,14 @@ typecheck:
 # Everything CI cares about: lint, types, tests with coverage
 check: lint typecheck cov
 
+# Exactly the CI job (.github/workflows/ci.yml): locked install, lint, formatting, types, tests with coverage and coverage.xml
+ci:
+    uv sync --locked --group dev
+    uv run ruff check .
+    uv run ruff format --check .
+    uv run mypy --ignore-missing-imports src
+    uv run pytest -q --cov --cov-report=term --cov-report=xml
+
 # Build the installer for this OS (macOS: .dmg; Windows: Setup.exe, needs Inno Setup 6; Linux: .tar.gz)
 [macos]
 build:
