@@ -889,22 +889,24 @@ months per category, as a starting point the user edits. A one-sheet action on B
 
 **Status:** ☑ Done (2026-10-28)
 
-**As built** (architecture §7, decision 33): a **Subscriptions** page (`/subscriptions`, in the sidebar after
-Recurring) with three groups. *Detected* lists the payees that charge again and again: expenditure is grouped by
+**As built** (architecture §7, decision 33; since 1.0 on the Recurring tab, decision NEW-DUE): *Found in Your
+Transactions* on **Transactions → Recurring** (`/recurring`, below *Due* and *Your Series*; `/subscriptions` leads
+there) lists the payees that charge again and again: expenditure is grouped by
 payee (F09, compared by its lookup key, so "MIGROS" and "Migros" are one; a row without a payee by its note) and
 currency, and a group is a subscription when its latest charges make a run: going back from the last charge, every
 gap fits one rhythm (every month, two months, quarter, half year or year, within 4 days plus one per month of the
 rhythm) and every charge is within 20 % or 2.00 of the median; a skipped or late charge, an irregular one or an
 old price ends the run, so long imported histories still find today's subscription. The run needs at least three
-charges (two for half-yearly and yearly rhythms), and its last one must be no older than two rhythms. Each row says what it costs a year, how much and how often, how many charges since
-when, the last and the expected next date; the header sums the detected subscriptions per year in the display
-currency. **Make Recurring…** opens F05's series sheet prefilled from the last charge (its payee, note, tags, the
+charges (two for half-yearly and yearly rhythms), and its last one must be no older than two rhythms. Each row says
+two facts, how much and how often with the expected next date ("49.90 CHF · Every month · next around 15 Nov
+2026"), and what it costs a year; how many charges since when and the last one are its tooltip. The header sums the
+detected subscriptions per year in the display currency. **Make Recurring…** opens F05's series sheet prefilled from the last charge (its payee, note, tags, the
 most frequent category and account, the detected rhythm, the last charge as the series' first booking, so the
 next occurrence is due a rhythm later); **Ignore** takes a group off the list for good (`subscription_ignores.csv`,
 one undo step), and the closed *Ignored* group offers **Watch Again**. Rows a series booked (F05) are never
 counted, and a group whose payee already has a running expenditure series is left out, so a subscription made
-recurring disappears from *Detected* and appears under *Recurring Transactions*, which lists the running
-expenditure series of F05 with their yearly cost and total. Nothing is booked by the page; the thresholds are
+recurring disappears from the list and appears under *Your Series*, whose header gives the yearly cost of the
+running expenditure series of F05. Nothing is booked by the page; the thresholds are
 fixed and explained in `domain.subscriptions` (the README names them). In the demo data the rent, health
 insurance, rail pass, phone and a quarterly card fee are detected, and a doctor's note seen twice half a year
 apart (what *Ignore* is for); its streaming charges vary too much and are not. Not built: detecting price changes as a separate
@@ -1325,17 +1327,22 @@ and the Budget page lead there), a folder picker.
 
 **Status:** ☑ Done (2026-10-28), in the app only
 
-**As built** (architecture §7, decision 31): a **Reminders** page (`/reminders`, sidebar after Bills, icon
-`o_notifications_none`, with a badge counting its items) lists, while the app runs, what wants doing or looking at,
-grouped by kind and each row a link to where it is dealt with: **balances to record** (regular accounts without a
-balance for last month whose last balance isn't zero, the Budget page's rule; links to that month), **recurring
-transactions due** (one per due occurrence, F05; "Due since …" in red), **bills due** (open QR bills overdue or due
-within a week, F03), **budgets exceeded or about to be** (the exceeded and on-pace items of *Notable this month*,
-F18's rules and thresholds; links to the category on the Budget page) and **goals behind or overdue** (F14; "Behind:
-… short of the plan line", "Overdue since … · … to go"). *Settings → Reminders* has one switch per kind (all on;
-`settings.json` → `reminders_off`); a kind turned off leaves the page and the badge. Everything is computed from
-the records when a page opens or data changes; nothing is stored per reminder, nothing is sent anywhere – no e-mail,
-no system notification, no network, no background helper while the app is closed. Not built: desktop notifications,
+**As built** (architecture §7, decision 31; since 1.0 the Overview's Due list, decision NEW-DUE): the **Due** card
+on the Overview (`/`, after the wealth card, before *Notable this month*; `/reminders` leads there) lists, while the
+app runs, what wants doing, what is overdue first, one row each with an icon, title, when (red once overdue), the
+amount and the action that settles it: **balances to record** (regular accounts without a balance for last month
+whose last balance isn't zero, the Budget page's rule; *Record…* opens the balance sheet at that month),
+**recurring transactions due** (F05, one row per series, "3 occurrences due since …" when several are; *Book* books
+the earliest at the series' amount), **bills due** (open QR bills overdue or due within a week, F03; *Pay…* opens
+the payment sheet), **loan payments due** (F22, one row per loan; *Book* books the earliest with the schedule's
+interest and repayment) and **goals behind or overdue** (F14; "Behind: … short of the plan line", "Overdue since …
+· … to go"; *Open*). The title links to the page where the item can be changed first. More than six rows fold the
+rest behind *Show n more*; nothing due is one quiet line. The sidebar's one badge, beside Overview, counts the
+rows. Budgets exceeded or on pace to be are no reminder any more: they are *Notable this month* on the same page
+(F18). *Settings → Reminders* has one switch per kind (all on; `settings.json` → `reminders_off`); a kind turned off
+leaves the list and the badge, and with every kind off the card is gone. Everything is computed from the records
+when a page opens or data changes; nothing is stored per reminder, nothing is sent anywhere – no e-mail, no system
+notification, no network, no background helper while the app is closed. Not built: desktop notifications,
 reminders while the app is closed, snoozing or dismissing a reminder (deal with the item or turn the kind off).
 
 Desktop notifications, all optional:
