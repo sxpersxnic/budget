@@ -325,7 +325,17 @@ The app opens in its own window and keeps all data in your user folder:
    click it for its history, where trades and prices can be edited or deleted. The page also sums
    the Swiss withholding tax you can reclaim with your tax return, per year. Pillar 2,
    pillar 3a, real estate and other assets keep their recorded month-end balances.
-10. **Year in Review** (sidebar): a year's income, spending, savings and wealth against the year
+10. **Subscriptions** (sidebar, after Recurring): charges that come back at the same rhythm for
+    about the same amount, found in your transactions and grouped by payee: streaming, phone, gym,
+    insurance, rent. A payee is listed once its latest charges came three times at one rhythm (every
+    month, two months, quarter, half year or year, give or take a few days; twice for half-yearly and
+    yearly charges), each within 20 % (or 2.00) of the usual amount, and the last charge is no older
+    than two rhythms. A pause, a late payment or a price rise only restarts the count. Each row says what it costs a year, how many charges since when, the last and the
+    expected next date. **Make Recurring…** opens the recurring-transaction sheet prefilled from the last
+    charge, so the next one is due a rhythm later; **Ignore** hides a payee you don't consider a
+    subscription (undo, or *Watch Again* in the Ignored list). Below, your recurring transactions are
+    listed with what they cost a year. Nothing is booked for you.
+11. **Year in Review** (sidebar): a year's income, spending, savings and wealth against the year
     before. Last year opens by default; this year is shown *so far* (January to the current month,
     compared with the same months of last year). You see what you saved and your savings rate, how
     your wealth moved since the end of the year before, income and expenditure month by month as a
@@ -333,7 +343,7 @@ The app opens in its own window and keeps all data in your user folder:
     five biggest payments (a button opens each). The figures are the monthly statements added up, so
     they agree with the Budget page; wealth is your recorded month-end balances. The share button
     saves the review as **PDF** (with the chart) or **Excel**.
-11. **Tax Summary** (sidebar, once a year): the amounts for your tax declaration, last year by
+12. **Tax Summary** (sidebar, once a year): the amounts for your tax declaration, last year by
     default, in CHF, in sections for professional expenses, pillar 3a payments, insurance premiums,
     medical and dental costs, donations, childcare, debt interest, the withholding tax to reclaim
     and the dividends and interest for the securities list. A section finds its transactions by

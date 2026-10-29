@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18 and F19 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18, F19 and F17 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22, F19 year in review on 2026-10-28). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22, F19 year in review and F17 subscription detection on 2026-10-28). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19 (done), F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19 (done), F17 (done), F30, F32, F31, F22, F23, F33, F34, F15, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -170,7 +170,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F14 | ☑ Done | Savings goals | Planning | M | Local | – |
 | F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
 | F16 | ☑ Done | Budget from history | Planning | S | Local | – |
-| F17 | ☐ Open | Subscription and recurring-spend detection | Insight | M | Local | F09 |
+| F17 | ☑ Done | Subscription and recurring-spend detection | Insight | M | Local | F09 |
 | F18 | ☑ Done | Trends and unusual spending | Insight | M | Local | – |
 | F19 | ☑ Done | Year in review | Insight | M | Local | – |
 | F20 | ☑ Done | Swiss tax summary | Insight | M | Local | F10 |
@@ -828,7 +828,28 @@ months per category, as a starting point the user edits. A one-sheet action on B
 
 #### F17 · Subscription and recurring-spend detection
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §7, decision NEW-F17): a **Subscriptions** page (`/subscriptions`, in the sidebar after
+Recurring) with three groups. *Detected* lists the payees that charge again and again: expenditure is grouped by
+payee (F09, compared by its lookup key, so "MIGROS" and "Migros" are one; a row without a payee by its note) and
+currency, and a group is a subscription when its latest charges make a run: going back from the last charge, every
+gap fits one rhythm (every month, two months, quarter, half year or year, within 4 days plus one per month of the
+rhythm) and every charge is within 20 % or 2.00 of the median; a skipped or late charge, an irregular one or an
+old price ends the run, so long imported histories still find today's subscription. The run needs at least three
+charges (two for half-yearly and yearly rhythms), and its last one must be no older than two rhythms. Each row says what it costs a year, how much and how often, how many charges since
+when, the last and the expected next date; the header sums the detected subscriptions per year in the display
+currency. **Make Recurring…** opens F05's series sheet prefilled from the last charge (its payee, note, tags, the
+most frequent category and account, the detected rhythm, the last charge as the series' first booking, so the
+next occurrence is due a rhythm later); **Ignore** takes a group off the list for good (`subscription_ignores.csv`,
+one undo step), and the closed *Ignored* group offers **Watch Again**. Rows a series booked (F05) are never
+counted, and a group whose payee already has a running expenditure series is left out, so a subscription made
+recurring disappears from *Detected* and appears under *Recurring Transactions*, which lists the running
+expenditure series of F05 with their yearly cost and total. Nothing is booked by the page; the thresholds are
+fixed and explained in `domain.subscriptions` (the README names them). In the demo data the rent, health
+insurance, rail pass, phone and a quarterly card fee are detected, and a doctor's note seen twice half a year
+apart (what *Ignore* is for); its streaming charges vary too much and are not. Not built: detecting price changes as a separate
+event, grouping across currencies, half-month or weekly rhythms, and a notification when a subscription stops.
 
 Find charges that repeat with similar amounts (streaming, phone, gym) and list them with
 the yearly total. One click turns a detected subscription into a recurring transaction (F05).
