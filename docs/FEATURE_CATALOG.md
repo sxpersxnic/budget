@@ -490,7 +490,7 @@ Every Swiss invoice carries a QR code with the amount, currency, creditor and re
 
 **Status:** ☑ Done (2026-10-28)
 
-**As built (decision 29):** **Receipt…** in the Transactions toolbar (before *Import…*) opens the *Receipt* sheet:
+**As built (decision 29):** **Receipt…** in the Transactions toolbar's *More* menu (after *Import…*) opens the *Receipt* sheet:
 a drop zone for one PDF or photo (JPEG, PNG, WebP; HEIC asks for JPEG or PNG), then the receipt on the left and a new
 expenditure on the right. The receipt is read **on the computer** by RapidOCR (PP-OCRv6 multilingual models, bundled
 in its wheel, so nothing is downloaded) on ONNX Runtime; the libraries are the optional extra `budget-app[ocr]`,
@@ -1161,7 +1161,7 @@ Advance payments already record money paid for others. Build on that:
 
 **Status:** ☑ Done (2026-10-19)
 
-**As built:** a share button on Transactions and Budget Plan exports the rows the filters show,
+**As built:** *More* on Transactions and the share button on Budget Plan export the rows the filters show,
 in the list's column order, as CSV or Excel. *Settings → Data → Export as JSON…* writes every
 record into one document (`format: budget-app/export`, `version: 1`). Decided: the JSON export is
 for other programs and is not imported back; full backups (F25) are the restore format.
@@ -1398,8 +1398,8 @@ Settings; the README's privacy note then needs one more line.
 
 **Status:** ☑ Done (2026-10-28)
 
-**As built (decision 39):** **Settings → Profiles** lists the profiles, each a name and a data folder of its
-own, with *Open*, *Rename* and *Remove* (which only forgets the profile: its folder and records stay where they
+**As built (decision 39):** **Settings → Profiles** lists the profiles (with only one, the group is the *Add Profile…*
+row; the open folder shows under *Data Folder*), each a name and a data folder of its own, with *Open*, *Rename* and *Remove* (which only forgets the profile: its folder and records stay where they
 are; the open profile can't be removed). *Add Profile…* asks for a name and, optionally, a folder: left empty, the
 app makes `profiles/<name>` beside its own folder; a folder that already holds records (another computer's, a
 cloud folder) is opened as it is; another profile's folder, a file or a folder directly inside the app's own is
