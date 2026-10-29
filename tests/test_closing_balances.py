@@ -61,14 +61,14 @@ def test_a_file_without_balance_offers_nothing():
     assert ib.from_rows(rows) == ib.BalanceOffer()
 
 
-def test_profiles_saved_before_the_balance_column_still_load(tmp_path):
+def test_profiles_saved_before_the_balance_column_still_load(ctx):
     old = {"name": "Old bank", "delimiter": ";", "date_col": "Datum", "amount_col": "Betrag", "text_cols": ["Text"]}
-    (tmp_path / importer.PROFILES_FILE).write_text(json.dumps([old]), encoding="utf-8")
-    [profile] = importer.load_profiles(tmp_path)
+    (ctx.store.data_dir / importer.PROFILES_FILE).write_text(json.dumps([old]), encoding="utf-8")
+    [profile] = importer.load_profiles(ctx.store)
     assert (profile.name, profile.balance_col) == ("Old bank", "")
     profile.balance_col = "Saldo"
-    importer.save_profile(tmp_path, profile)
-    assert importer.load_profiles(tmp_path)[0].balance_col == "Saldo"
+    importer.save_profile(ctx.store, profile)
+    assert importer.load_profiles(ctx.store)[0].balance_col == "Saldo"
 
 
 def test_balance_cells_that_are_empty_or_unreadable_are_left_out():

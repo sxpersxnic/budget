@@ -113,12 +113,12 @@ def test_manual_entry_on_the_same_day_is_flagged(ctx, setup):
     assert rows[1].status == rows[2].status == importer.NEW
 
 
-def test_profiles_are_saved_and_recognised(tmp_path):
+def test_profiles_are_saved_and_recognised(ctx):
     parsed = importer.read_file("ubs.csv", UBS)
     profile = importer.guess_profile(parsed)
     profile.name, profile.invert = "UBS", True
-    importer.save_profile(tmp_path, profile)
-    loaded = importer.load_profiles(tmp_path)
+    importer.save_profile(ctx.store, profile)
+    loaded = importer.load_profiles(ctx.store)
     assert [p.name for p in loaded] == ["UBS"]
     assert importer.guess_profile(parsed, loaded).invert  # same header -> saved settings
 

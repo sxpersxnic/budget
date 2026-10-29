@@ -173,9 +173,36 @@ The app opens in its own window and keeps all data in your user folder:
   the app also asks GitHub once a day for the number of the newest release and links to it in the
   sidebar when it is newer; it never downloads or installs anything, and the request carries
   nothing about you or your data.
-- **Privacy:** the app only accepts connections from your own computer. Nothing is uploaded.
+- **Privacy:** the app only accepts connections from your own computer, unless you turn on
+  **Quick Add from a Phone** (below). Nothing is uploaded.
+- **App lock:** **Settings → Security → Set Password…** makes the app ask for a password before it
+  opens (and again after **Lock Now**, the padlock at the bottom of the sidebar). Without more, your
+  files stay plain CSV; if you forget the password, quit the app and delete `security.json` from the
+  data folder. **Encrypt Records → Turn On…** rewrites the record files so that only your password
+  opens them, and shows a **recovery key** once: write it down and keep it apart from the computer.
+  It is the only other way in if you forget the password; without either, the records are lost.
+  Attached files (receipts, bills) are not encrypted. A backup from **Back Up Now…** is written in
+  plain text, so it restores without the password; keep it somewhere safe.
 - **One window at a time:** opening the app a second time while it is running does nothing.
   Switch to the window that is already open.
+- **Profiles:** to keep separate budgets apart (yours, a joint household, an association), add them
+  under **Settings → Profiles → Add Profile…**. Each profile has its own folder, accounts, settings and
+  password; switch between them at the top of the sidebar. **Remove** only takes a profile off the
+  list: its folder and records stay where they are. The list itself is `profiles.json` in the data
+  folder above.
+- **Quick add from a phone:** with the app lock on, **Settings → Security → Quick Add from a Phone ·
+  Turn On…** lets a phone on your home network record expenses. **Pair a Phone…** shows an address and a
+  QR code to open on the phone, and a six-digit code to type there; the phone can then add expenses and
+  see nothing else. The connection is not encrypted, so use it at home only. **Turn Off** or **Lock Now**
+  ends it for every phone; after a restart of the app, pair again. Your firewall may ask once whether
+  Budget may accept connections: allow it for private networks only.
+- **Two computers (cloud folder):** **Settings → Data → Data Folder · Move…** copies your records to
+  another folder, for example `iCloud Drive/Budget`, `Dropbox/Budget` or `OneDrive/Budget`, and
+  uses them there; the old folder is left as it was. On the other computer, add the same folder
+  under **Settings → Profiles → Add Profile…**. Use one computer at a time: while Budget is open on
+  the other one, every page says so, and records changed there are read again after a few seconds,
+  but changes made on both at the same time are not merged. Budget itself never connects to the
+  cloud service; your sync app copies the files.
 
 ## First steps
 
@@ -493,6 +520,8 @@ types, tests and coverage before each push.
 
 - The COICOP notes (`src/budget_app/resources/coicop_notes.json`) are rebuilt from the UN workbook
   with `scripts/coicop_notes.py` (usage in the script); see [Sources](#sources).
+- Encryption at rest (F27) uses the [cryptography](https://cryptography.io) package (scrypt and Fernet);
+  the app implements no cryptographic primitive of its own.
 - The specification is in [docs/Description_Budgeting_App.md](docs/Description_Budgeting_App.md).
 - The implementation (data model, formulas, decisions) is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Code layout: `src/budget_app/{domain,storage,services,ui}`.

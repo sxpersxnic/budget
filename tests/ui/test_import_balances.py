@@ -104,7 +104,7 @@ async def test_the_balance_column_is_saved_with_the_settings(user: User, ctx, se
     name = next(e for e in user.find(kind=ui.input).elements if e.props.get("placeholder") == "Name, e.g. UBS Private")
     put(user, name, "Bank")
     click(user, next(b for b in user.find(kind=ui.button).elements if b.text == "Save Settings"))
-    [profile] = importer.load_profiles(ctx.store.data_dir)
+    [profile] = importer.load_profiles(ctx.store)
     assert profile.balance_col == "Saldo"
 
 

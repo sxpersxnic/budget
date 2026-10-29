@@ -1,4 +1,4 @@
-"""Settings: budget horizon, display currency, accounts, advance accounts, income categories, data."""
+"""Settings: budget horizon, display currency, accounts, advance accounts, income categories, security, data."""
 
 from __future__ import annotations
 
@@ -21,12 +21,13 @@ from budget_app.domain.models import (
 )
 from budget_app.i18n import N_, t, tn
 from budget_app.services import accounts as acc_svc
-from budget_app.services import archive
+from budget_app.services import archive, phone, security, sync
 from budget_app.services import budget as budget_svc
 from budget_app.services import demo as demo_svc
 from budget_app.services import export as export_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services import loans as loan_svc
+from budget_app.services import profiles as profiles_svc
 from budget_app.services import reminders as rem_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import updates as updates_svc
@@ -36,8 +37,10 @@ from budget_app.ui.layout import (
     error,
     fmt,
     frame,
+    lock_now,
     month_options,
     named,
+    open_profile,
     refresh_due_badge,
     save_file,
     sheet,
@@ -51,6 +54,11 @@ from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select
 
 ROW_ACTION = "flat dense round size=sm"
+
+
+def _icon_button(icon: str, label: str, on_click, classes: str = "text-primary") -> ui.button:
+    """A row's icon-only button; its tooltip is also its accessible name (F32)."""
+    return named(ui.button(icon=icon, on_click=on_click).props(ROW_ACTION).classes(classes), label)
 
 
 def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
@@ -384,6 +392,373 @@ def _sample_row(ctx: Context) -> None:
             load.set_enabled(demo_svc.is_empty(ctx))
 
 
+# ------------------------------------------------------------------ profiles (F34)
+def _profile_sheet(refresh, profile=None) -> None:
+    """Add a profile (profile=None) or rename one."""
+    with sheet(t("Rename Profile") if profile else t("New Profile"), width="28rem") as dlg:
+        if profile is None:
+            ui.label(
+                t(
+                    "A profile is a budget of its own, with its own accounts, settings and password, in a folder "
+                    "of its own: for example a joint household or an association."
+                )
+            ).classes("footnote")
+        name = (
+            ui.input(t("Name"), value=profile.name if profile else "")
+            .props("dense outlined autofocus")
+            .classes("w-full")
+        )
+        folder = ui.input(t("Folder (optional)")).props("dense outlined").classes("w-full mono")
+        folder.set_visibility(profile is None)
+        if profile is None:
+            ui.label(
+                t(
+                    "Leave it empty for a new folder beside the app’s own. A folder that already holds records, "
+                    "for example in a cloud folder, is opened as it is."
+                )
+            ).classes("caption -mt-2")
+
+        def save() -> None:
+            try:
+                if profile is None:
+                    added = profiles_svc.add(name.value or "", folder.value or "")
+                    success(t("Added {name}", name=added.name))
+                else:
+                    profiles_svc.rename(profile.id, name.value or "")
+            except ValidationError as exc:
+                error(str(exc))
+                return
+            dlg.close()
+            refresh()
+
+        sheet_buttons(dlg, t("Save") if profile else t("Add"), save)
+        name.on("keydown.enter", save)
+
+
+def _profiles_group() -> None:
+    @ui.refreshable
+    def body() -> None:
+        reg = profiles_svc.load()
+        with ui.element("div").classes("group"):
+            for p in reg.profiles:
+                current = p.id == reg.current
+                with ui.element("div").classes("group-row"):
+                    with ui.column().classes("gap-0 flex-1 min-w-0"):
+                        ui.label(p.name + (f" · {t('open')}" if current else "")).classes("truncate")
+                        ui.label(p.path).classes("caption break-all")
+                    if not current:
+                        ui.button(t("Open"), on_click=lambda p=p: open_profile(p.id)).props(
+                            "flat dense no-caps"
+                        ).classes("text-primary")
+                    with ui.row().classes("row-actions gap-0 no-wrap"):
+                        _icon_button("o_edit", t("Rename"), lambda p=p: _profile_sheet(body.refresh, p))
+                        if not current:
+
+                            def remove(p=p) -> None:
+                                def do() -> None:
+                                    try:
+                                        profiles_svc.remove(p.id)
+                                    except ValidationError as exc:
+                                        error(str(exc))
+                                        return
+                                    success(t("Removed {name}", name=p.name))
+                                    body.refresh()
+
+                                confirm(
+                                    t("Remove “{name}”?", name=p.name),
+                                    do,
+                                    action=t("Remove"),
+                                    detail=t(
+                                        "The profile leaves this list; its folder and records stay where they "
+                                        "are: {folder}",
+                                        folder=p.path,
+                                    ),
+                                )
+
+                            _icon_button("o_delete", t("Remove"), remove, "text-negative")
+            with ui.element("div").classes("group-row"):
+                ui.button(t("Add Profile…"), on_click=lambda: _profile_sheet(body.refresh)).props(
+                    "flat dense no-caps"
+                ).classes("link-btn -ml-2")
+
+    with ui.column().classes("w-full gap-0"):
+        ui.label(t("Profiles")).classes("group-header")
+        body()
+        ui.label(
+            t("Separate budgets in separate folders, switched from the top of the sidebar. Each has its own lock.")
+        ).classes("caption px-2 pt-1")
+
+
+# ------------------------------------------------------------------ security (F27)
+def _password_field(label: str) -> ui.input:
+    return ui.input(label, password=True, password_toggle_button=True).props("dense outlined").classes("w-full")
+
+
+def _recovery_sheet(key: str, title: str, refresh) -> None:
+    """Show a recovery key once; it is not stored anywhere."""
+    with sheet(title, width="26rem") as dlg:
+        ui.label(
+            t(
+                "Write this recovery key down and keep it apart from the computer. It is the only other way to open "
+                "your records if you forget the password, and it is not shown again."
+            )
+        ).classes("footnote")
+        ui.label(key).classes("recovery-key w-full")
+        with ui.row().classes("w-full items-center gap-2"):
+            ui.button(t("Copy"), icon="o_content_copy", on_click=lambda: ui.clipboard.write(key)).props(
+                "flat dense no-caps"
+            ).classes("text-primary")
+            ui.space()
+            noted = ui.checkbox(t("I have written it down")).props("dense")
+            done = ui.button(t("Done"), on_click=lambda: (dlg.close(), refresh())).props("unelevated")
+            done.set_enabled(False)
+            noted.on_value_change(lambda e: done.set_enabled(bool(e.value)))
+
+
+def _password_sheet(ctx: Context, mode: str, refresh) -> None:
+    """set: turn the lock on · change · off: turn the lock off · encrypt · decrypt · recovery: a new recovery key."""
+    titles = {
+        "set": t("Set Password"),
+        "change": t("Change Password"),
+        "off": t("Turn the Lock Off"),
+        "encrypt": t("Encrypt Records"),
+        "decrypt": t("Turn Encryption Off"),
+        "recovery": t("New Recovery Key"),
+    }
+    notes = {
+        "set": t("The app asks for it before it opens. At least {n} characters.", n=security.MIN_PASSWORD),
+        "encrypt": t(
+            "The record files are rewritten so that only your password or a recovery key opens them. "
+            "This takes a moment and can be turned off again."
+        ),
+        "decrypt": t("The record files are written as plain CSV again."),
+        "off": t("The app opens without a password again."),
+    }
+    with sheet(titles[mode], width="26rem") as dlg:
+        if mode in notes:
+            ui.label(notes[mode]).classes("footnote")
+        asks_current, asks_new = mode != "set", mode in ("set", "change")
+        current = _password_field(t("Current password") if mode == "change" else t("Password"))
+        current.set_visibility(asks_current)
+        new = _password_field(t("New password"))
+        new.set_visibility(asks_new)
+        repeat = _password_field(t("Repeat the password"))
+        repeat.set_visibility(asks_new)
+        last = repeat if asks_new else current
+
+        def save() -> None:
+            try:
+                if mode == "set":
+                    nonce = security.set_password(new.value or "", repeat.value or "")
+                    dlg.close()
+                    ui.navigate.to(f"/unlock/{nonce}")  # this browser gets its session; the page returns here
+                    return
+                if mode == "change":
+                    security.change_password(current.value or "", new.value or "", repeat.value or "")
+                    success(t("Password changed"))
+                elif mode == "off":
+                    security.remove_password(current.value or "")
+                    success(t("The lock is off"))
+                elif mode == "encrypt":
+                    key = security.enable_encryption(current.value or "")
+                    dlg.close()
+                    _recovery_sheet(key, t("Your Recovery Key"), refresh)
+                    return
+                elif mode == "decrypt":
+                    security.disable_encryption(current.value or "")
+                    success(t("The records are plain files again"))
+                else:
+                    key = security.new_recovery_key(current.value or "")
+                    dlg.close()
+                    _recovery_sheet(key, t("Your New Recovery Key"), refresh)
+                    return
+            except ValidationError as exc:
+                error(str(exc))
+                return
+            dlg.close()
+            refresh()
+
+        sheet_buttons(dlg, titles[mode] if mode != "set" else t("Set Password"), save)
+        last.on("keydown.enter", save)
+
+
+def _pair_sheet(refresh) -> None:
+    """F35: a fresh pairing code, the address a phone opens, and a QR code of it."""
+    code = security.pairing_code()
+    addresses = phone.urls()
+    with sheet(t("Pair a Phone"), width="24rem") as dlg:
+        ui.label(
+            t(
+                "On the phone, open this address or scan the code, then type the pairing code. "
+                "The code works once, for ten minutes."
+            )
+        ).classes("footnote")
+        if addresses:
+            ui.image(phone.qr_data_url(addresses[0])).classes("pairing-qr self-center").props(
+                f'alt="{t("QR code of the address")}"'
+            )
+            for url in addresses:
+                ui.label(url).classes("mono select-all text-center break-all")
+        else:
+            ui.label(t("This computer has no address on a home network right now.")).classes("caption")
+        ui.label(f"{code[:3]} {code[3:]}").classes("pairing-code self-center")
+        with ui.row().classes("w-full justify-end pt-1"):
+            ui.button(t("Done"), on_click=lambda: (dlg.close(), refresh())).props("unelevated")
+
+
+def _phone_row(refresh) -> None:
+    """F35, decision 21: quick add from a phone on the home network, behind the lock and a pairing code."""
+    on = security.phone_enabled()
+
+    def turn_on() -> None:
+        try:
+            security.set_phone(True)
+        except ValidationError as exc:
+            error(str(exc))
+            return
+        refresh()
+
+    def turn_off() -> None:
+        security.set_phone(False)
+        success(t("Phones can no longer reach Budget"))
+        refresh()
+
+    with ui.element("div").classes("group-row"):
+        with ui.column().classes("gap-0 flex-1 min-w-0"):
+            ui.label(t("Quick Add from a Phone"))
+            if on:
+                ui.label(
+                    t(
+                        "On. A phone on your home network opens {address} and pairs with a code; it can only add "
+                        "expenses. Paired phones: {n}.",
+                        address=next(iter(phone.urls()), t("this computer’s address")),
+                        n=security.phone_sessions(),
+                    )
+                ).classes("caption break-all")
+            else:
+                ui.label(
+                    t(
+                        "Lets a phone on your home network add expenses once you pair it with a code. "
+                        "Budget then also listens on the home network."
+                    )
+                ).classes("caption")
+        if on:
+            ui.button(t("Pair a Phone…"), on_click=lambda: _pair_sheet(refresh)).props("flat dense no-caps").classes(
+                "text-primary"
+            )
+            ui.button(t("Turn Off"), on_click=turn_off).props("flat dense no-caps").classes("text-primary")
+        else:
+            ui.button(
+                t("Turn On…"),
+                on_click=lambda: confirm(
+                    t("Let phones on your home network add expenses?"),
+                    turn_on,
+                    action=t("Turn On"),
+                    detail=t(
+                        "Budget listens on your home network for the quick-add page. A phone needs a pairing code "
+                        "you show here, and sees nothing but the accounts and categories to choose from. The "
+                        "connection is not encrypted, so use it at home only."
+                    ),
+                ),
+            ).props("flat dense no-caps").classes("text-primary")
+
+
+def _security_group(ctx: Context) -> None:
+    @ui.refreshable
+    def body() -> None:
+        locked = security.required()
+        encrypted = security.encrypted()
+        with ui.element("div").classes("group"):
+            with ui.element("div").classes("group-row"):
+                with ui.column().classes("gap-0 flex-1 min-w-0"):
+                    ui.label(t("App Lock"))
+                    ui.label(
+                        t("On. The app asks for the password before it opens.")
+                        if locked
+                        else t("Asks for a password before the app opens.")
+                    ).classes("caption")
+                if locked:
+                    ui.button(t("Change…"), on_click=lambda: _password_sheet(ctx, "change", body.refresh)).props(
+                        "flat dense no-caps"
+                    ).classes("text-primary")
+                    ui.button(t("Turn Off…"), on_click=lambda: _password_sheet(ctx, "off", body.refresh)).props(
+                        "flat dense no-caps"
+                    ).classes("text-primary")
+                else:
+                    ui.button(t("Set Password…"), on_click=lambda: _password_sheet(ctx, "set", body.refresh)).props(
+                        "flat dense no-caps"
+                    ).classes("text-primary")
+            if locked:
+                with ui.element("div").classes("group-row"):
+                    with ui.column().classes("gap-0 flex-1 min-w-0"):
+                        ui.label(t("Encrypt Records"))
+                        ui.label(
+                            t(
+                                "On. The records on disk open only with your password or the recovery key; "
+                                "a backup from Back Up Now is written in plain text."
+                            )
+                            if encrypted
+                            else t(
+                                "The records on disk can then be read only with your password or a recovery key. "
+                                "Attachment files stay as they are."
+                            )
+                        ).classes("caption")
+                    if encrypted:
+                        ui.button(
+                            t("New Recovery Key…"), on_click=lambda: _password_sheet(ctx, "recovery", body.refresh)
+                        ).props("flat dense no-caps").classes("text-primary")
+                        ui.button(t("Turn Off…"), on_click=lambda: _password_sheet(ctx, "decrypt", body.refresh)).props(
+                            "flat dense no-caps"
+                        ).classes("text-primary")
+                    else:
+                        ui.button(t("Turn On…"), on_click=lambda: _password_sheet(ctx, "encrypt", body.refresh)).props(
+                            "flat dense no-caps"
+                        ).classes("text-primary")
+                with ui.element("div").classes("group-row"):
+                    with ui.column().classes("gap-0 flex-1 min-w-0"):
+                        ui.label(t("Lock Now"))
+                        ui.label(t("Asks for the password again, here and on paired phones.")).classes("caption")
+                    ui.button(t("Lock Now"), on_click=lock_now).props("flat dense no-caps").classes("text-primary")
+                _phone_row(body.refresh)
+
+    with ui.column().classes("w-full gap-0"):
+        ui.label(t("Security")).classes("group-header")
+        body()
+
+
+def _move_sheet() -> None:
+    """F26: copy the open profile's records to another folder, for example a cloud folder, and use them there."""
+    with sheet(t("Move the Records"), width="30rem") as dlg:
+        ui.label(
+            t(
+                "The records, attachments and automatic backups are copied to a new or empty folder and used from "
+                "there; the old folder is left as it is. In a cloud folder (iCloud Drive, OneDrive, Dropbox) they can "
+                "be used on another computer too, one at a time: there, add the folder under Profiles."
+            )
+        ).classes("footnote")
+        folder = ui.input(t("New folder")).props("dense outlined autofocus").classes("w-full mono")
+        clouds = sync.cloud_folders()
+        if clouds:
+            with ui.row().classes("gap-2 flex-wrap"):
+                for name, path in clouds:
+                    ui.chip(name, icon="o_cloud", on_click=lambda p=path: folder.set_value(str(p / "Budget"))).props(
+                        "outline clickable"
+                    )
+
+        def save() -> None:
+            try:
+                moved = profiles_svc.move(profiles_svc.active().id, folder.value or "")
+            except ValidationError as exc:
+                error(str(exc))
+                return
+            dlg.close()
+            success(t("The records are now in {folder}. The old folder is left as it was.", folder=moved.path))
+            ui.navigate.reload()
+
+        sheet_buttons(dlg, t("Move"), save)
+        folder.on("keydown.enter", save)
+
+
 def _data_group(ctx: Context) -> None:
     async def export_json() -> None:
         await save_file(export_svc.everything_json(ctx), f"budget-export_{date.today().isoformat()}.json")
@@ -448,9 +823,11 @@ def _data_group(ctx: Context) -> None:
                 ui.button(t("Show…"), on_click=lambda: ui.navigate.to("/history")).props("flat dense no-caps").classes(
                     "text-primary"
                 )
-            with ui.element("div").classes("group-row"), ui.column().classes("gap-0 flex-1 min-w-0"):
-                ui.label(t("Data Folder"))
-                ui.label(str(ctx.store.data_dir)).classes("caption break-all select-all")
+            with ui.element("div").classes("group-row"):
+                with ui.column().classes("gap-0 flex-1 min-w-0"):
+                    ui.label(t("Data Folder"))
+                    ui.label(str(ctx.store.data_dir)).classes("caption break-all select-all")
+                ui.button(t("Move…"), on_click=_move_sheet).props("flat dense no-caps").classes("text-primary")
             _sample_row(ctx)
 
     saved = archive.saved_backups(ctx)
@@ -649,5 +1026,7 @@ def page() -> None:
         _accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"))
         _income_group(ctx)
         _reminders_group(ctx)
+        _profiles_group()
+        _security_group(ctx)
         _data_group(ctx)
         _updates_group(ctx)

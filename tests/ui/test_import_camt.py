@@ -58,7 +58,7 @@ async def test_a_statement_goes_straight_to_review(user: User, ctx, setup) -> No
         (date(2026, 9, 25), 7800.0, "CHF"),
     ]
     assert all(tx.import_ref.startswith(f"camt:{IBAN}:") for tx in stored)
-    assert camt.remembered_account(ctx.store.data_dir, IBAN) == setup["chf"].id
+    assert camt.remembered_account(ctx.store, IBAN) == setup["chf"].id
 
 
 async def test_the_next_statement_finds_its_account_and_skips_what_is_imported(user: User, ctx, setup) -> None:

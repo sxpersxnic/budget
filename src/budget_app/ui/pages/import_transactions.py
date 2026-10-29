@@ -77,7 +77,7 @@ def page() -> None:
         subtitle=t("Bring in a CSV export or a camt statement from your bank or credit card"),
         narrow=False,
     ) as (ctx, _):
-        profiles = importer.load_profiles(ctx.store.data_dir)
+        profiles = importer.load_profiles(ctx.store)
         # parsed: the CSV file; statement: the camt file (one of them is set); problem: why it can't be imported
         # balances: month-end balances the file offers; balance_problem: why its balances are not offered
         state: dict = {
@@ -299,7 +299,7 @@ def page() -> None:
             review_title.set_text(t("2 · Review"))
             statement_row.set_visibility(True)
             account.move(statement_row, 0)
-            remembered = camt.remembered_account(ctx.store.data_dir, statement.iban)
+            remembered = camt.remembered_account(ctx.store, statement.iban)
             known = bool(remembered and ctx.store.accounts.get(remembered))
             account_hint.set_text(
                 t("Account remembered from the last import of this IBAN.")
@@ -565,8 +565,8 @@ def page() -> None:
             if not profile.name:
                 error(t("Enter a name for these settings"))
                 return
-            importer.save_profile(ctx.store.data_dir, profile)
-            profiles[:] = importer.load_profiles(ctx.store.data_dir)
+            importer.save_profile(ctx.store, profile)
+            profiles[:] = importer.load_profiles(ctx.store)
             profile_sel.set_options({p.name: p.name for p in profiles}, value=profile.name)
             success(t("Saved “{name}”", name=profile.name))
 

@@ -21,13 +21,11 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import json
 import re
 import xml.etree.ElementTree as ET
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
-from pathlib import Path
 from typing import NoReturn
 from xml.parsers import expat
 
@@ -37,6 +35,7 @@ from budget_app.services import importer
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.importer import ERROR, MAX_BYTES, ImportFileError, ImportRow
 from budget_app.services.undo import recorded
+from budget_app.storage.store import Store
 
 ACCOUNTS_FILE = "import_accounts.json"  # statement IBAN -> account id
 _MESSAGE = re.compile(r"camt\.\d{3}(?:\.\d{3}\.\d{2})?")
@@ -321,26 +320,19 @@ def commit(ctx: Context, statement: Statement, rows: list[ImportRow], account_id
         raise ValidationError(problem)
     saved = importer.commit(ctx, rows, account_id)
     if statement.iban:
-        remember_account(ctx.store.data_dir, statement.iban, account_id)
+        remember_account(ctx.store, statement.iban, account_id)
     return saved
 
 
-def _load_accounts(data_dir: Path) -> dict[str, str]:
-    path = data_dir / ACCOUNTS_FILE
-    if not path.exists():
-        return {}
-    raw = json.loads(path.read_text(encoding="utf-8"))
+def _load_accounts(store: Store) -> dict[str, str]:
+    raw = store.read_json(ACCOUNTS_FILE)
     return {str(k): str(v) for k, v in raw.items()} if isinstance(raw, dict) else {}
 
 
-def remembered_account(data_dir: Path, iban: str) -> str:
+def remembered_account(store: Store, iban: str) -> str:
     """The account last used for statements of this IBAN ('' if none)."""
-    return _load_accounts(data_dir).get(iban, "") if iban else ""
+    return _load_accounts(store).get(iban, "") if iban else ""
 
 
-def remember_account(data_dir: Path, iban: str, account_id: str) -> None:
-    accounts = _load_accounts(data_dir) | {iban: account_id}
-    path = data_dir / ACCOUNTS_FILE
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(accounts, indent=2, sort_keys=True), encoding="utf-8")
-    tmp.replace(path)
+def remember_account(store: Store, iban: str, account_id: str) -> None:
+    store.write_json(ACCOUNTS_FILE, _load_accounts(store) | {iban: account_id})

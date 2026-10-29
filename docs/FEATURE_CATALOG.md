@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19 (done), F30 (done), F32 (done), F31 (done), F22 (done), F23 (done), F33 (done), F34, F15 (done), F17 (done), F27, F26, F04 (done), F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19 (done), F30 (done), F32 (done), F31 (done), F22 (done), F23 (done), F33 (done), F34 (done), F15 (done), F17 (done), F27 (done), F26 (done), F04 (done), F35 (quick add built) | – |
 
 ### Bugs
 
@@ -147,7 +147,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
     detected and reloaded; no merging.
 20. ☑ **F27:** decided — an app lock (password, or Touch ID / Windows Hello where available)
     before the app opens, and encryption at rest as an opt-in on top, with a recovery key; without
-    the opt-in the files stay readable CSV.
+    the opt-in the files stay readable CSV. Built with a password (architecture §7, decision 38).
 21. ☑ **F35:** decided — a phone-friendly *quick add* page on the home network, behind the app
     lock and a pairing code; no entries from away from home, no cloud service.
 
@@ -180,16 +180,16 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F23 | ☑ Done | Who owes what (shared expenses) | Wealth | M | Local | – |
 | F24 | ☑ Done | Export to CSV and JSON | Data out | S–M | Local | – |
 | F25 | ☑ Done | Full backup and restore | Data out | S | Local | – |
-| F26 | ☐ Open | Sync through a cloud folder | Data out | L | Optional | F28 |
-| F27 | ☐ Open | Encryption and app lock | Security | L | Local | – |
+| F26 | ☑ Done | Sync through a cloud folder | Data out | L | Optional | F28 |
+| F27 | ☑ Done | Encryption and app lock | Security | L | Local | – |
 | F28 | ☑ Done | Undo and change history | Security | M | Local | – |
 | F29 | ☑ Done | Multi-language support | Experience | L | Local | – |
 | F30 | ☑ Done | Onboarding and demo data | Experience | M | Local | – |
 | F31 | ☑ Done | Reminders and alerts | Experience | M | Local | – |
 | F32 | ☑ Done | Keyboard shortcuts and accessibility | Experience | M | Local | – |
 | F33 | ☑ Done | In-app update check | Experience | S | Optional | – |
-| F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
-| F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
+| F34 | ☑ Done | Several households or profiles | Experience | M | Local | – |
+| F35 | ◐ Partly | Phone companion | Experience | XL | Optional | F27 |
 | F36 | ☑ Done | Closing balance from bank files | Data in | M | Local | F01 |
 | F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 added the notes) |
 | F38 | ☑ Done | Exchange-rate chart | Insight | S | Local | – |
@@ -1183,7 +1183,22 @@ every table must load), and the current records go to `backups/<timestamp>_befor
 
 #### F26 · Sync through a cloud folder
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision 19, decision 40):** *Settings → Data → Data Folder · Move…* copies the open profile's
+folder (records, attachments, automatic backups, the lock's `security.json`) to a new or empty folder and opens it
+from there; the cloud folders found on the computer (iCloud Drive, Dropbox, OneDrive, Google Drive) are offered as
+`<cloud>/Budget`. The old folder is left as it was. Another profile's folder, a folder inside the current one and
+a folder that is not empty are refused; a copy that fails leaves the profile where it was. On the second computer,
+*Settings → Profiles → Add Profile…* with the same folder opens it as it is. While a folder is open, the app keeps
+`.in-use.<computer>.json` in it, refreshed every minute and removed on closing; a fresh one from another computer
+(seen within ten minutes) shows a warning on every page: *Budget is open on … too, since …*. Every five seconds the
+app compares the record files with what it last read or wrote itself; files another computer changed are read
+again, in place, once they are the same on two checks in a row (a sync client still copying is waited for), and
+every open page is told and refreshes. A file that can't be read yet (half synced) is skipped until it changes
+again. Not built: merging (decision 19: one computer at a time; a change made on both between two checks keeps the
+one written last), conflict copies made by the sync clients (they are ignored), and moving another profile's
+folder from its own row (*Move…* moves the open one).
 
 Use the app on two computers by keeping the data folder in iCloud Drive, OneDrive or
 Dropbox.
@@ -1196,7 +1211,30 @@ Dropbox.
 
 #### F27 · Encryption and app lock
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision 20):** **Settings → Security.** *App Lock · Set Password…* (at least 8 characters, typed twice)
+turns the lock on: from then on every page, and the attachment file route, answers with the lock page until the
+password is typed; the browser that set the password is let in at once. The lock page asks for the password only;
+a wrong one is reported, and from the fourth wrong try on the answer waits 1, 2, 4 … up to 30 seconds. A session
+lasts until *Lock Now* (the padlock at the bottom of the sidebar, or the Security row) or until the app is
+started again; nothing about it is written to disk. *Change…* and *Turn Off…* ask for the current password.
+**Encrypt Records · Turn On…** (only with the lock on) asks for the password, rewrites every record file – the
+CSV tables, `settings.json`, the import memory files and `history.jsonl`, in the data folder and in the app's own
+copies under `backups/` – as an opaque file (a marker line and a Fernet token, `cryptography`), and shows the
+**recovery key** once: 32 letters and digits in groups of four, with *Copy* and a checkbox before *Done*. The
+files are encrypted with one random data key, which is wrapped with a key stretched from the password (scrypt)
+and again with one stretched from the recovery key; `security.json` holds the salts, a verifier and the two
+wrapped keys, never a secret. Changing the password rewraps the key; the files are not rewritten. *Forgot your
+password?* on the lock page takes the recovery key and a new password (without encryption it explains that
+deleting `security.json` removes the lock, since the files are readable anyway). *New Recovery Key…* retires the
+old one; *Turn Off…* decrypts the files again, and the lock can be turned off only after that. A folder whose
+records are encrypted opens its store only after the unlock; rates and automatic bookings follow then. *Back Up
+Now* writes the records in plain text (the caption says so), so a backup stays restorable without the password;
+restoring into an encrypted folder encrypts the restored files; a backup that carries a `security.json` is
+refused. Not built: Touch ID / Windows Hello (no vetted library for all three systems in the lockfile), an
+idle timeout, encryption of attachment files and of the ECB rates (attachments are served and opened as files;
+the rates are public), and a lock per profile window (the lock is per data folder; F34 switches folders).
 
 The CSV files are readable by anyone with access to the computer.
 
@@ -1353,7 +1391,22 @@ Settings; the README's privacy note then needs one more line.
 
 #### F34 · Several households or profiles
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision 39):** **Settings → Profiles** lists the profiles, each a name and a data folder of its
+own, with *Open*, *Rename* and *Remove* (which only forgets the profile: its folder and records stay where they
+are; the open profile can't be removed). *Add Profile…* asks for a name and, optionally, a folder: left empty, the
+app makes `profiles/<name>` beside its own folder; a folder that already holds records (another computer's, a
+cloud folder) is opened as it is; another profile's folder, a file or a folder directly inside the app's own is
+refused. With two profiles or more, the top of the sidebar shows the open profile's name with a menu of the others
+(and *Profiles…*); the choice reopens the app on that folder, with its own settings and language, lock and
+encryption (F27), and every open page starts over on its Overview. A folder that another Budget window has open is
+refused, and nothing changes. The lock page names the locked profile and offers *Open Another Profile*, since each
+lock guards one folder only. The registry `profiles.json` lives in the app's home folder (the OS data folder, or
+`--data-dir`), which is also the first profile's folder, so an installation without profiles is unchanged; the app
+reopens the profile that was open last. Not built: one window per profile at the same time (the app has one open
+folder per process; a second window on another folder is a second `--data-dir` start), and per-profile colours or
+icons.
 
 Separate budgets (personal, joint household, a small association) in separate data folders,
 switchable from the sidebar. Builds on the existing `--data-dir` support; mainly a picker and
@@ -1361,7 +1414,21 @@ per-profile settings.
 
 #### F35 · Phone companion
 
-**Status:** ☐ Open
+**Status:** ◐ Partly (2026-10-28): the smallest step, quick add on the home network, is built; the phone app is not
+
+**As built (decision 21, decision 41):** *Settings → Security → Quick Add from a Phone · Turn On…* (only with
+the app lock on, after a confirmation that says the connection is not encrypted) lets Budget listen on the home
+network too, on port 8484 (or a free one); the app's own server stays on `127.0.0.1`. *Pair a Phone…* shows the
+address (`http://<computer>:8484/pair`), a QR code of it and a six-digit code that works once, for ten minutes and
+five tries. On the phone, the pairing page takes the code and the phone gets a session of its own; the quick-add
+page then records an expense: amount, account (the last one used first), category (the recent and everyday ones,
+searchable), payee, date and note, and lists what it saved. A phone sees nothing else: every other page, the
+attachment files and the lock page are refused to other devices, requests from outside the home network (public
+addresses) are refused, and so is everything while phones are off. *Turn Off*, *Lock Now*, turning the lock off,
+switching profile and quitting end every phone session; a phone pairs again after each start of the app, since
+sessions live in memory (F27). Not built: the phone app that queues entries offline (the larger step), income and
+transfers from the phone, HTTPS (a self-signed certificate makes phone browsers refuse or warn; the connection is
+plain HTTP on the home network, which the confirmation says), and remembering a paired phone across restarts.
 
 Record expenses on the phone where they happen.
 

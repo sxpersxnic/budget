@@ -39,8 +39,8 @@ storage/    typed CSV tables + settings JSON
 
 | Module | Responsibility |
 | --- | --- |
-| `main.py` | CLI entry (`uv run budget`). Registers pages, refreshes ECB rates at startup and every 30 min, then books what automatic recurring transactions have due, then runs the update check if the user turned it on (F33). |
-| `config.py` | Base currency `CHF`, ECB URL, the GitHub repository and its releases URLs (F33), data/resource paths (`BUDGET_DATA_DIR` env override). |
+| `main.py` | CLI entry (`uv run budget`). `register_pages` puts every page behind the app lock's guard (F27) and adds the lock page; `register_routes` adds the attachment, unlock and notes routes; `open_folder` closes the open folder and opens another (the profile switch, F34: folder lock first, then the folder's own lock state and store); `open_data` opens the folder (at startup, or after the unlock when it is encrypted); `refresh` loads ECB rates at startup and every 30 min, then books what automatic recurring transactions have due, then runs the update check if the user turned it on (F33). |
+| `config.py` | Base currency `CHF`, ECB URL, the GitHub repository and its releases URLs (F33), data/resource paths. `home_dir()` is the app's home folder (`BUDGET_DATA_DIR` / `--data-dir`, the OS user data folder for installed builds, `./data` otherwise); `data_dir()` is the folder to open at startup, the current profile's (F34, from `storage.profiles`): the one place that decides it. |
 | `domain/months.py` | `YYYY-MM` month arithmetic and the "month complete" rule. |
 | `domain/fx.py` | `FxRates` (parse ECB CSV, rate lookup with date fallback, cross-rate conversion, `history()` for the rate chart) and `FxService` (daily download, atomic file replacement). |
 | `domain/coicop.py` | COICOP tree (ancestors, children, labels) plus pseudo-categories `TAX` and `ADV`; `fold()` makes text case- and accent-insensitive for searching. F40: `notes(code, lang)` → `Notes` (tuples of items for `includes`, `also_includes`, `excludes`, and `translated`) or None, read on first use and cached; a language whose file is missing or marked `_untranslated` gets English, and so does a text the translation lacks. `note_words(code, lang)`: the folded words of includes and also includes, in the language and in English, each once (excludes is never searched). `match_words(query, primary, secondary)`: whether every word occurs in either, and whether in the first. `notes_payload(lang)` / `notes_version(lang)`: all notes for the browser and a short hash of them. |
@@ -62,7 +62,7 @@ storage/    typed CSV tables + settings JSON
 | `domain/receipts.py` | F04, pure. `TextBox` (a text the engine read, with its top-left corner and height), `rows(boxes)` (boxes within half a height of a row's first box form one row, joined left to right), `amounts` (`11.45`, `1'234.50`, `1 234,50`, trailing or leading minus; never a date or a time), `find_date` (day first, two- or four-digit year, ISO, also glued to a time; not in the future, not before 2000), `find_currency` (CHF, Fr., SFr., EUR, €), `parse(rows, today, default_currency)` → `Receipt` (merchant, date, total, currency, `ReceiptLine`s, rows; `empty`): the total from the last row naming one (`TOTAL_WORDS`, de/fr/it/en) that is not a subtotal, tax, change or payment row (`NOT_TOTAL_WORDS`), else the largest amount; the merchant the first row of words before the total that is not a date, amount, phone number or bookkeeping (`NOT_MERCHANT_WORDS`); the lines between them that end in an amount, only when they add up to the total. See §7, decision 29. |
 | `domain/qrbill.py` | F03, pure. The Swiss QR-bill payload (SIX Implementation Guidelines 2.3, version `0200`): `parse(text)` → `QrBill` (IBAN, creditor and debtor `Address` of type S or K, amount as `Decimal` or None, currency, reference type and reference, message, bill information, alternative procedures) or `QrBillError` (an `N_` message with its values, `translated()`); the checks `iban_valid` (CH/LI, mod 97), `is_qr_iban` (institution id 30000–31999), `qr_reference_valid` / `mod10_check_digit` (recursive mod 10), `creditor_reference_valid` (ISO 11649); `is_payload`, `format_iban`, `format_reference`; `swico(bill_info)` (Swico S1: invoice number and date, customer reference, VAT number, payment terms; `\/` escapes) and `due_date` (invoice date + the 0 % term). See §7, decision 22. |
 | `storage/csv_store.py` | Generic `CsvTable[T]`: in-memory records, atomic rewrite (temp file, fsync, rename) on every change. Unknown columns are kept and written back. |
-| `storage/store.py` | `Store` bundling all tables and settings. Unknown settings keys are kept. |
+| `storage/store.py` | `Store` bundling all tables and settings. Unknown settings keys are kept. `reload()` reads every file again into the same object (F26). |
 | `services/attachments.py` | Attachments (F12): `check` (empty, over 20 MB, type), `add` (file first, then the record), `add_to_bill` (a QR bill's file, F03), `remove`, `remove_for` (with a deleted transaction; a bill's file goes back to its bill instead), `remove_for_bills`, each one undoable action; `list_for_bill`, `ids_ok` (plain ids for the folder and the file), `list_for`, `counts` and `names_by_transaction` (the Transactions list), `path` (built from plain ids, inside `attachments/` or None), `read`, `exists`, `kind`, `size_label`, `system_open` (`open`, `xdg-open` or `os.startfile`) and `cleanup` (files no record and no undo can bring back; at startup). |
 | `services/items.py` | Product lists of transactions: validation (blank lines ignored, half-filled lines rejected, a line's category must be a COICOP code or `TAX`), `check_split` (lines with their own category or tags may not exceed the amount, F11), replace (a line keeps its category and tags only on an expenditure; new tag names become tags), totals, counts and names for the Transactions list. |
 | `services/qrcodes.py` | F03. `texts(name, data)`: the QR codes of a PDF (every page up to 20, rendered grayscale at scale 3, about 216 dpi, then once more at scale 6 when none was found) or a photo (JPEG, PNG, WebP; EXIF orientation), in page order, each once, decoded as UTF-8; HEIC and other types are refused with a message. The libraries are imported when a file is read, not at startup. |
@@ -70,9 +70,18 @@ storage/    typed CSV tables + settings JSON
 | `services/receipts.py` | F04. `prepare(name, data)` → `Prepared` (the file checked like an attachment, PDF or photo only; the pictures for the engine, the first three pages of a PDF at about 216 dpi in RGB, a photo turned upright; the `preview` at most 1200 px; a PDF's own text rows when they hold an amount), in the event loop; `pdf_text`; `read(prepared, recognizer, today, default_currency)` → `Receipt` or None without any engine, raising `ValidationError` when the engine fails, meant for a worker thread; `prefill(ctx, receipt, today)` → the `TransactionInput` (date, amount, currency, the merchant resolved through `payees.resolve`) and the `ItemInput`s. |
 | `services/bills.py` | F03 (decision 15). `read` (the valid bills of a file and the reasons for refused codes; a notice of 0.00 is refused), `scan` (adds new bills with the file as attachment; refuses a file without a usable or new bill), `from_payload`, `bill_key` (duplicates), `open_bills` (by due date, undated last), `closed_bills`, `due` / `due_count` (overdue or due within 7 days, the sidebar badge), `payee` (`payees.resolve` of the creditor), `note`, `payment_input` (the sheet's prefill), `suggestion` (F07), `mark_paid`, `check_payment` / `paid_with` (the sheet's way), `release` (a deleted payment opens its bill again), `dismiss`, `reopen`, `set_due`, `delete`, `payment`; every write one undoable action. |
 | `storage/backup.py` | On the first start of a new app version, copies the data files to `<data>/backups/` before the store loads them, and hard-links the attachment files there (copies where links fail; they never change once written). The version that last opened the folder is in `<data>/.app_version`. |
-| `storage/lock.py` | Single-instance lock on `<data>/.lock`, so two processes cannot overwrite each other's files. |
+| `storage/lock.py` | Single-instance lock on `<data>/.lock`, so two processes cannot overwrite each other's files; `switch(folder)` locks another folder first and lets go of the old one only then (F34, F26). |
+| `storage/claim.py` | F26. Which computers have a folder open: `.in-use.<host>.json` per computer (`write` as the heartbeat, `release`, `others` = other computers' claims seen within `STALE`, 10 minutes); not a record file. |
+| `storage/watch.py` | F26. The size and change time of every record file as this app last read or wrote it (`note`, called by `encryption.read_text` / `write_text`; `baseline`); `changed(paths)` = files someone else wrote. |
+| `storage/profiles.py` | F34. The profile registry `profiles.json` in the home folder: `Profile` (name, absolute folder, id), `Registry` (`current`, `find`, `active`), `load` (a missing or damaged registry is the single profile *Budget* in the home folder), `save` (temp file, fsync, rename), `current_dir(home)`. Not a record file: never backed up, restored or encrypted. |
+| `storage/encryption.py` | F27. `Codec`: the record files' form on disk, plain text or (with a Fernet key) a marker line and a Fernet token; `read_text` / `write_text` (whole file, fsync, rename) used by every table, the settings, the history and the import memory files; `reencode(folder, codec, write)` rewrites a folder's record files in another form. A codec with a key reads plain files too. |
+| `storage/vault.py` | F27. `Vault`: `<data>/security.json` – the password's salt, scrypt parameters and verifier; while encryption is on, the data key wrapped with the password's and with the recovery key's stretched key; the phone-companion flag (F35). `set_password`, `verify`, `change_password`, `remove_password`, `enable_encryption` (returns the data key and the recovery key), `unlock`, `unlock_with_recovery`, `reset_password`, `new_recovery_key`, `disable_encryption`. Primitives from `cryptography` only. |
 | `storage/history.py` | Change history and undo (F28): every table write records the record before and after (as written to the CSV file); changes made together form one *action* (`history.action(label)`, nested ones join the outer). Undo reverts an action in reverse order after checking every record still looks as the action left it. Kept in `history.jsonl` (the newest 500 actions), not part of backups. |
-| `services/context.py` | `Context` (store + FX), conversion helpers, budget horizon, `ValidationError`. |
+| `services/context.py` | `Context` (store + FX), conversion helpers, budget horizon, `ValidationError`. `init_context(data_dir, codec)` opens a folder (also after the unlock of an encrypted one); `is_open()`, `close_context()`. |
+| `services/security.py` | F27, F35. The process-wide lock state: the open folder's `Vault`, its `Codec` (the key once unlocked) and the sessions, random tokens in the `budget_session` cookie, kind `desktop` (password) or `phone` (pairing code), kept in memory only. `allowed` / `redirect_for` for the page guard; `unlock` and `recover` (wrong answers slowed from the fourth on), handed over as one-time nonces that the `/unlock/<nonce>` route turns into the cookie; `lock`; the Settings actions (`set_password`, `change_password`, `remove_password`, `enable_encryption`, `disable_encryption`, `new_recovery_key`), which re-encode the data folder and its `backups/` copies; `opener` opens the store after the unlock of an encrypted folder. |
+| `services/profiles.py` | F34. The profile rules: `add` (name unique ignoring case; folder typed or `<home>/profiles/<name>`, never another profile's, the home folder, a folder directly inside it or a file), `rename`, `remove` (forgets; not the open one), `switch` (opens the folder through `opener`, set by `main.open_folder`, before the registry changes); `move` (F26: copies a folder, without the lock, claim, registry and temp files, to a new or empty one and reopens the open profile there as the same records). |
+| `services/sync.py` | F26, decision 19. `start(folder)` claims the open folder and takes its files as seen, `stop()` releases it, `others()` lists other computers with it open, `tick()` (every `INTERVAL`, 5 s, from `main.check_folder`) refreshes the claim once a minute and reloads the store (`Store.reload`, in place) when record files changed elsewhere and are the same on two checks; `cloud_folders()` for the Move sheet. |
+| `services/phone.py` | F35, decision 21. `Gate` (ASGI middleware on every server: from another device only `/pair`, `/quick`, the unlock route and NiceGUI's files and socket, only from a private address, only while phones are allowed; else 403 or a closed socket), `admitted(host, path)`, the home-network listener (`start` / `stop` / `sync_listener`: a second uvicorn server on the same app, all interfaces, port 8484 or a free one, inside the app's loop), `addresses()` / `urls()` (the computer's private IPv4 addresses) and `qr_data_url` (zxing-cpp). |
 | `services/accounts.py` | Accounts (with their asset class, F21; `add_loan_account` for F22, the class `loan` is refused otherwise and kept while the loan exists), advance-payment accounts and income categories, with their deletion rules. |
 | `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement; deleting releases the QR bills a deleted transaction paid (F03); `recent_categories()` (the last ten distinct expenditure categories, for the category picker). An edit is `prepare_edit` (validate and build the new record, nothing saved) then `store_edit` (save it, keeping an exchange's spread booking in step); `save` does both. |
 | `services/bulk.py` | Bulk edit (F13): `BulkChanges` (expenditure category, income category, payee, account, tags to add and to remove (F10), note mode and text; `None` or an empty list leaves a field as it is), which field applies to which row (`takes_*`, `is_spread`), `plan()` (every selected row as form input with the changes applied, checked with `prepare_edit`; rows the changes leave as they are drop out, also when the built record equals the stored one) and `bulk_edit()`, all or nothing (`BulkEditError` names the failing rows by date and amount) as one recorded action. Adding a field means one attribute, one `takes_*` rule and one line in `apply()`. |
@@ -114,6 +123,7 @@ storage/    typed CSV tables + settings JSON
 | `ui/widgets/notable.py` | F18. `notable_card(ctx, currency)`, the Overview's *Notable This Month* card: one link row per item (icon, title, reason, amount, chevron) to `link(item, month)`; `texts(item, notable)` words each kind. |
 | `ui/widgets/attachments.py` | F12. `AttachmentList`, the *Attachments* section of the transaction form (see §6), and the route `/attachment/{id}` (`register`, `serve`, `url`); `add_pending` starts a new transaction with a file (F04). |
 | `ui/widgets/receipt.py` | F04. `open_receipt_sheet(ctx, on_saved)`: the *Receipt* sheet (drop zone, "Reading the receipt…", then the picture beside a `TransactionForm` started with `receipts.prefill`, its `items` and the file as `files`); `summary(receipt)` is the caption above the form. |
+| `ui/pages/quick_add.py` | F35. The phone's pages, without the sidebar: `pair_page` (`/pair`, outside the lock: the pairing code) and `page` (`/quick`, behind the lock for a phone session: one expense with amount, account, category, payee, date and note). |
 | `ui/pages/welcome.py` | F30. The first-start screen (`/welcome`), without the sidebar: language, display currency, data folder, *Open Settings* and *Load Sample Data* (`load_sample`, shared with Settings: runs `demo.load` in a worker thread with the button in its loading state, then opens the Budget page). |
 | `ui/pages/` | One module per page (see §6). |
 
@@ -147,6 +157,7 @@ ECB date of the rate used** (`fx_date`).
 | `prices.csv` | `holding_id, date, price, id` – a price typed in or pasted (F21), one per holding and day. |
 | `loans.csv` | `account_id, principal, start, rate, first_due, next_due, recur_months, amortization, cash_account, interest_category, lender, fixed_until, comment, id` – one row per loan or mortgage (F22): its liability account, the debt on `start` (0 when the payout is booked as a transfer from the account), the rate in percent a year, the first payment date and the first one not yet booked or skipped, the rhythm in months, the repayment per payment (0: interest only), the regular account the payments come from, the COICOP code (or `TAX`) of the interest, the lender (a payee name), `fixed_until` (`YYYY-MM-DD` or empty). |
 | `settings.json` | `budget_horizon, display_currency, last_fx_download, language, onboarding_done, sample_data, update_check, update_checked, update_latest, reminders_off, projection` – `onboarding_done` and `sample_data` (F30): whether the welcome screen was passed, and whether the folder holds the sample set; `update_check` (F33, off by default), the day of the last check and the tag it answered with `reminders_off` (F31): the kinds of reminders turned off, a list of keys of `services.reminders.KINDS`; missing in older files, so every kind is on. `projection` (decision 36): how the projection estimates a month without balances, `higher` (F47, also for files from before the setting) or `budget`. |
+| `security.json` | F27, plain JSON, never backed up or encrypted: `version`; `password` (`salt`, `n`, `r`, `p`, `verifier`); while encryption is on, `encryption.password.wrapped` and `encryption.recovery` (`salt`, `n`, `r`, `p`, `verifier`, `wrapped`); `phone.enabled` (F35). Absent while the lock is off. With encryption on, every other record file (the tables, `settings.json`, `history.jsonl`, `import_*.json`, also in `backups/`) is `BUDGET-ENCRYPTED-1\n` followed by a Fernet token. |
 | `attachments/<transaction or bill id>/<id>.<ext>` | The attachment files (F12; a QR bill's in the bill's folder, F03), named by the app, never by the user. |
 | `ecb/eurofxref-hist.csv` | Latest ECB file (replaced daily) |
 
@@ -625,7 +636,8 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 7. **Chart PNGs** are rendered in the browser (Plotly `downloadImage`), so no headless
    Chrome or Kaleido is required.
 8. **Default budget horizon:** December of next year, until it is changed in Settings.
-9. **Localhost only.** The server binds to `127.0.0.1` because the app has no login. Use
+9. **Localhost only.** The server binds to `127.0.0.1` because the app has no login (F35 adds a second
+   listener only while phones are allowed; see decision 41). Use
    `--host 0.0.0.0` only on a trusted network.
 10. **Exports are formula-safe.** Text cells in Excel and CSV exports that start with `=`,
     `+`, `-`, `@`, a tab or a carriage return are prefixed with `'`. A name like
@@ -1017,6 +1029,83 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     `theme.CSS`; where one colour cannot serve as both text on dark surfaces and the fill under white text (the dark
     accent), filled buttons get their own token (`--accent-strong`, `--negative-strong`). Tag chip colours are
     outside the check: their text sits on the tag's own shade and is decorative next to the name.
+38. **The lock is a password; encryption is a key the password and a recovery key wrap** (F27,
+    decision 20). The lock is a session cookie granted after the password, not a check on the process: the server
+    also answers phones once F35 is on, so each browser proves itself, and every start of the app locks again
+    because sessions live in memory only. The guard runs before a page is built (`main._guarded` returns a
+    redirect), since a page's HTML carries the records; the attachment route checks the same session. Pages set
+    no cookie after they are sent, hence the one-time nonce and the `/unlock/<nonce>` route. The password is
+    stretched with scrypt (`cryptography`; parameters stored per entry so they can be raised) into a verifier
+    that is stored and a wrapping key that is not. Encryption uses one random data key, so changing the password
+    rewraps a few bytes instead of rewriting the folder, and the recovery key (160 bits, base32 in groups of
+    four, shown once) is a second wrapping of the same key: no secret is ever written in the clear, and a
+    forgotten password without the recovery key means the records are gone, which Settings says. Fernet (AES-CBC
+    with HMAC, IV and timestamp in the token) was chosen over a hand-assembled AES-GCM because it is the
+    library's own "recipe" layer; nothing cryptographic is implemented in this app. Files keep their names and
+    gain a marker line, so backups, restore, the version copies and the file list code are unchanged; the codec
+    reads plain files even with a key, so a folder may be mixed while encryption is turned on or off, right after
+    a restore, or after a crash in between, and `reencode` finishes the job. *Back Up Now* writes plain text on
+    purpose: a backup is for a disk that died, when the `security.json` is gone with it, and it must restore
+    without anything but itself; the Settings caption says so. The app's own copies in `backups/` are inside the
+    data folder and are encrypted or decrypted with it, so a `before-restore` copy stays restorable. A backup
+    is refused if it carries `security.json`, so a crafted archive cannot replace the key material. An
+    encrypted folder cannot be read at startup, so the store opens after the unlock (`security.opener`), and
+    the rate refresh and automatic bookings follow then. Wrong passwords are answered more slowly from the fourth
+    try (1, 2, 4 … 30 s, process-wide): the lock also faces the home network once F35 is on. Touch ID and Windows
+    Hello were left out: no vetted library covers all three systems from the lockfile. Attachment files are not
+    encrypted; they are served and opened as files, and the README says so.
+39. **A profile is a data folder; the registry is the only thing outside it** (F34). Each profile keeps its
+    records, settings, lock and encryption in its own folder, so a profile is complete wherever it lies (a cloud
+    folder, F26, another disk), can be opened with `--data-dir` alone, and backups, restore and the version copies
+    work per folder unchanged. The registry `profiles.json` sits in the home folder, which stays the first
+    profile's folder, so existing installations need no migration and `--data-dir` still names one folder: the
+    home folder whose registry decides what opens (`config.data_dir()`). The app has one open folder per process
+    (decision 13's single-instance lock, the process-wide context and security state), so switching closes one
+    folder and opens the other rather than opening a second window; the lock on the new folder is taken before the
+    old one is released, so a folder another window has open is refused without anything changing. A switch
+    starts every open page over: a page holds its context, and a stale page writing into the other folder is
+    worse than a reload. Each profile has its own lock, which is why the lock page may switch to another profile:
+    it does not open the locked one, and an unlocked profile is readable on disk anyway. *Remove* forgets a profile
+    and never deletes a folder: deleting records is a file-manager action the app does not need. Profile folders
+    without a typed path go to `<home>/profiles/<name>`, not directly into the home folder, where they would sit
+    beside `attachments/` and `backups/` of the first profile.
+40. **A cloud folder is used one computer at a time: claims warn, changed files are read again, nothing is
+    merged** (F26, decision 19). The app never talks to iCloud, OneDrive or Dropbox; their sync clients copy the
+    folder, so the feature stays local and needs no account. Moving copies instead of moving, and leaves the old
+    folder alone: a cloud folder that turns out to be wrong costs nothing, and deleting records is the file
+    manager's job. The OS lock (decision 13) holds on one computer only, so each computer also writes a claim
+    file of its own: one file per computer, because sync clients merge two files written on two computers well
+    and one file written on both badly (conflict copies). A claim is a warning, not a lock: a computer that
+    crashed or sleeps must not lock the other one out, so a claim counts for ten minutes after its last
+    heartbeat, and both computers show the warning while both are open. Change detection compares the size and
+    change time with what the app itself last read or wrote (every record file passes `encryption.read_text` /
+    `write_text`, so no hashing and no second copy), every five seconds; a change is read only once it is the same
+    on two checks, because a sync client writes an action's files one by one, and the store is read again in
+    place so pages holding it see the new records. Merging per record (F28's history would allow it) was left out
+    by decision 19: it needs an answer for every conflict, and one computer at a time needs none. Each computer
+    keeps its own profile list, since the paths differ; the second computer adds the cloud folder as a profile.
+41. **Phones reach the app through a second listener that exists only while phones are allowed, behind a
+    gate, the lock and a pairing code** (F35, decision 21; decision 9). The app's own server keeps binding to
+    `127.0.0.1`, so with phones off nothing on the network can connect, exactly as before. Turning *Quick Add from a
+    Phone* on requires the lock (F27) and a confirmation, and starts a second uvicorn server for the same app on all
+    interfaces, port 8484 (a free one when taken); turning it off, turning the lock off, switching to a profile
+    without it and quitting stop it (`security.on_phone_change` → `phone.sync_listener`). Three checks stand
+    between another device and the records: the `Gate` middleware runs before every route on both servers and lets
+    a non-local client reach only `/pair`, `/quick`, the cookie route and NiceGUI's own files and socket, only from a
+    private address (RFC 1918, link-local, ULA; "no entries from away from home"), and only while phones are
+    allowed; the page guard then wants a phone session for `/quick`; and that session only comes from the six-digit
+    pairing code shown in Settings on the computer (once, ten minutes, five tries, compared in constant time, from
+    `secrets`). A phone session never opens another page, and the lock page and the password are never offered to
+    other devices, so a phone can't reach the desktop session even with the password. The server is not bound to the
+    home address alone because addresses change (DHCP, Wi-Fi and cable); the gate checks the client instead. Plain
+    HTTP, not HTTPS: a self-signed certificate (which `cryptography` could make) makes phone browsers refuse or warn
+    on every visit, and a home network is the boundary decision 21 chose; the confirmation and the README say the
+    connection is not encrypted. What a phone sees is minimal (the account and category names to choose from, and
+    what it saved itself), and what it can do is add an expense, which the history (F28) can undo. Phone sessions
+    live in memory like the desktop's, so a phone pairs again after each start. Starting the app with `--host` on
+    another interface is the user's explicit choice and keeps its old meaning (`security.trust_network`: every client
+    counts as this computer, the lock's password still applies). The phone app with an offline queue (the catalog's
+    larger step) is not built.
 
 ## 8. Testing
 
@@ -1174,6 +1263,17 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     text and PDF and its file name; the page in the simulated client (the empty page and its place in the sidebar,
     rows and their order, folding the items out and opening one, the settle-up sheet in one and two currencies with
     its preview and errors, the summary sheet with copy, PDF and text, a refresh after a change elsewhere);
+  - app lock and encryption (F27): the codec (plain and encrypted round trips, a tampered file, the wrong key,
+    reading plain files with a key, re-encoding a folder's record files and nothing else), the vault (short and
+    repeated passwords, wrong ones, change and removal, recovery keys and their normalization, one data key
+    behind password and recovery key, reset, a retired recovery key, turning encryption off), an encrypted store
+    and its JSON files, backups that stay plain and restore into an encrypted folder, the app's own copies read
+    through the key, a backup carrying `security.json` refused, sessions through one-time nonces, safe next
+    paths, slowed wrong attempts, stale nonces, re-encoding the folder and its copies, the store opening after
+    the unlock, the attachment route behind the lock; in the simulated client the lock page (redirect, wrong and
+    right password, the cookie holding across pages, Lock Now, the recovery key) and the Security group in
+    Settings (set, change and turn off the password, encryption on with the recovery key shown once, a new
+    recovery key, off again);
   - investments (F21): the booked value staying at quantity × price after buys, sales between two
     prices, back-dated trades and prices, edits, moves and deletes (also 40 random events with
     random edits and deletes), oversold sales refused, fees, dividends and their category, one undo
