@@ -119,7 +119,8 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 6px; margin-right: 3p
   border-right: 0.5px solid var(--separator) !important; }
 body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 .sidebar .brand { font-size: 13px; font-weight: 600; color: var(--label-2); letter-spacing: 0; }
-.nav-item { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 7px;
+.nav-item { display: flex; align-self: stretch; align-items: center; gap: 10px; height: 32px; padding: 0 10px;
+  border-radius: 7px;
   color: var(--label); font-size: 14px; cursor: pointer; text-decoration: none; user-select: none; }
 .nav-item:hover { background: var(--fill-2); }
 .nav-item.active { background: var(--fill); font-weight: 600; }

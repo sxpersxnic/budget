@@ -19,7 +19,7 @@ from budget_app.services import accounts as acc_svc
 from budget_app.services import camt, categorize, import_balances, importer
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, fmt, frame, segmented, success
+from budget_app.ui.layout import error, fmt, frame, picks_files, segmented, success
 from budget_app.ui.widgets.grid import date_col, make_grid, num_col
 from budget_app.ui.widgets.selects import CategorySelect, account_options
 
@@ -109,9 +109,7 @@ def page() -> None:
                 .classes("hidden")
             )
             with ui.row().classes("items-center gap-3"):
-                ui.button(
-                    t("Choose File…"), icon="o_upload_file", on_click=lambda: upload.run_method("pickFiles")
-                ).props("unelevated")
+                picks_files(ui.button(t("Choose File…"), icon="o_upload_file").props("unelevated"), upload)
                 file_info = ui.label().classes("caption")
 
         # ---------------------------------------------------------- 2 · columns

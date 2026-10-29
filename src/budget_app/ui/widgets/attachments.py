@@ -26,7 +26,7 @@ from budget_app.i18n import t, tn
 from budget_app.services import attachments as attachments_svc
 from budget_app.services import security
 from budget_app.services.context import Context, ValidationError, get_ctx
-from budget_app.ui.layout import error, named, save_file, undoable
+from budget_app.ui.layout import error, named, picks_files, save_file, undoable
 
 ROUTE = "/attachment/{attachment_id}"
 ICONS = {"pdf": "o_picture_as_pdf", "image": "o_image", "office": "o_description", "text": "o_article"}
@@ -106,9 +106,7 @@ class AttachmentList:
             )
             add_files = f"getElement({self.upload.id}).$refs.qRef.addFiles(e.dataTransfer.files)"
             with (
-                ui.element("div")
-                .classes("attach-drop")
-                .on("click", lambda: self.upload.run_method("pickFiles"))
+                picks_files(ui.element("div").classes("attach-drop"), self.upload)
                 .on("dragover.prevent", js_handler="() => {}")
                 .on("drop.prevent", js_handler=f"(e) => {add_files}")
             ):

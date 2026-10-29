@@ -341,5 +341,9 @@ async def test_an_empty_file_is_refused(user: User) -> None:
 
 async def test_the_choose_button_opens_the_file_dialog(user: User) -> None:
     await user.open("/import")
-    click(user, button(user, "Choose File…"))  # handled by the browser; must not fail
+    choose = button(user, "Choose File…")
+    click(user, choose)  # handled by the browser; must not fail
     await user.should_see("1 · File")
+    # in the browser, during the click: a round trip to the server first loses the right to open the dialog (WebKit)
+    [listener] = [lst for lst in choose._event_listeners.values() if lst.type == "click"]
+    assert "'pickFiles'" in listener.js_handler and listener.handler is None
