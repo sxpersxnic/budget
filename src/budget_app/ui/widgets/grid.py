@@ -220,6 +220,15 @@ def confirm(message: str, on_yes, action: str | None = None, detail: str = "") -
 
 def export_menu(name: str, title: str, columns: Callable[[], list[dict]], rows: Callable[[], list[dict]]) -> None:
     """Share button with CSV and Excel exports of a list page's rows as currently filtered (F24)."""
+    with (
+        named(ui.button(icon="ios_share").props("flat round").classes("text-primary"), t("Export the list")),
+        ui.menu().props("auto-close"),
+    ):
+        export_items(name, title, columns, rows)
+
+
+def export_items(name: str, title: str, columns: Callable[[], list[dict]], rows: Callable[[], list[dict]]) -> None:
+    """The CSV and Excel export items, in the menu being built (a page's *More* menu, or the share button's)."""
 
     async def export(kind: str) -> None:
         try:
@@ -230,9 +239,5 @@ def export_menu(name: str, title: str, columns: Callable[[], list[dict]], rows: 
             return
         await save_file(data, f"{name}_{date.today().isoformat()}.{kind}")
 
-    with (
-        named(ui.button(icon="ios_share").props("flat round").classes("text-primary"), t("Export the list")),
-        ui.menu().props("auto-close"),
-    ):
-        ui.menu_item(t("Export as CSV…"), on_click=lambda: export("csv"))
-        ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))
+    ui.menu_item(t("Export as CSV…"), on_click=lambda: export("csv"))
+    ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))

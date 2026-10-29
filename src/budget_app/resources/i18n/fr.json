@@ -8,6 +8,7 @@
  "A QR reference needs a QR-IBAN": "Une référence QR nécessite un QR-IBAN",
  "A QR-IBAN needs a QR reference": "Un QR-IBAN nécessite une référence QR",
  "A bill is paid with an expenditure": "Une facture se paie par une dépense",
+ "A budget entry is an amount you plan to earn or spend in a category: once, every month or every few months, until a month or for as long as the plan runs. The Budget page compares it with what happened.": "Un poste budgétaire est un montant que vous prévoyez de gagner ou de dépenser dans une catégorie : une fois, chaque mois ou tous les quelques mois, jusqu’à un mois donné ou sans limite. La page Budget le compare à ce qui s’est réellement passé.",
  "A gain of {amount}": "Un gain de {amount}",
  "A goal called “{name}” already exists": "Un objectif «{name}» existe déjà",
  "A holding with trades or prices stays in its account": "Une position avec des opérations ou des cours reste dans son compte",
@@ -354,6 +355,7 @@
  "Debtor": "Débiteur",
  "Delete": "Supprimer",
  "Delete Holding…": "Supprimer la position…",
+ "Delete a budget": "Supprimer un budget",
  "Delete a holding": "Supprimer une position",
  "Delete a loan": "Supprimer un prêt",
  "Delete a price": "Supprimer un cours",
@@ -370,6 +372,7 @@
  "Delete categorization rules": "Supprimer des règles de catégorisation",
  "Delete payees": "Supprimer des bénéficiaires",
  "Delete tags": "Supprimer des étiquettes",
+ "Delete the budget for {category}?": "Supprimer le budget pour {category} ?",
  "Delete the rule for “{match}”?": "Supprimer la règle pour «{match}» ?",
  "Delete this bill?": "Supprimer cette facture ?",
  "Delete this price?": "Supprimer ce cours ?",
@@ -386,6 +389,7 @@
  ],
  "Delete “{name}”?": "Supprimer «{name}» ?",
  "Deleted the bill of {creditor}": "Facture de {creditor} supprimée",
+ "Deleted the budget for {category}": "Budget pour {category} supprimé",
  "Deleted the rule for “{match}”": "Règle pour «{match}» supprimée",
  "Deleted {name}": "Supprimé : {name}",
  "Deleted {n} budget entry": [
@@ -396,6 +400,7 @@
   "{n} transaction supprimée",
   "{n} transactions supprimées"
  ],
+ "Delete…": "Supprimer…",
  "Description": "Description",
  "Details": "Détails",
  "Detected": "Détectés",
@@ -696,6 +701,7 @@
  "Monthly totals or chosen categories": "Totaux mensuels ou catégories choisies",
  "Months": "Mois",
  "Months of Spending": "Mois de dépenses",
+ "More": "Plus",
  "Mortgages and loans: the debt counts against your wealth, and when a payment is due it is listed here with the interest on the outstanding debt and the repayment. Book it, or change the amounts to what the bank charged.": "Hypothèques et prêts: la dette vient en déduction de votre fortune, et chaque échéance due apparaît ici avec les intérêts sur la dette restante et l’amortissement. Comptabilisez-la, ou corrigez les montants selon ce que la banque a facturé.",
  "Move": "Déplacer",
  "Move the Records": "Déplacer les données",
@@ -793,6 +799,7 @@
  "Nothing matches these filters.": "Aucune entrée ne correspond à ces filtres.",
  "Nothing open": "Rien d’ouvert",
  "Nothing open.": "Rien d’ouvert.",
+ "Nothing planned yet": "Rien de prévu pour l’instant",
  "Nothing put in": "Aucun argent investi",
  "Nothing recorded": "Rien de saisi",
  "Nothing recorded in {month}": "Rien d’enregistré en {month}",
@@ -810,6 +817,7 @@
  "On. A phone on your home network opens {address} and pairs with a code; it can only add expenses. Paired phones: {n}.": "Activé. Un téléphone sur votre réseau domestique ouvre {address} et se couple avec un code ; il peut seulement saisir des dépenses. Téléphones couplés : {n}.",
  "On. The app asks for the password before it opens.": "Activé. L’app demande le mot de passe avant de s’ouvrir.",
  "On. The records on disk open only with your password or the recovery key; a backup from Back Up Now is written in plain text.": "Activé. Les données sur le disque ne s’ouvrent qu’avec votre mot de passe ou la clé de récupération ; une sauvegarde faite avec « Sauvegarder maintenant » est écrite en clair.",
+ "Once": "Une fois",
  "Once a day, Budget asks GitHub for the number of the newest release. Nothing is downloaded or installed, and the request carries nothing about you or your data. Off by default; besides the ECB rates it is the only connection the app makes.": "Une fois par jour, Budget demande à GitHub le numéro de la version la plus récente. Rien n’est téléchargé ni installé, et la requête ne contient rien sur vous ni sur vos données. Désactivé par défaut ; avec les taux de la BCE, c’est la seule connexion de l’app.",
  "One amount column": "Une colonne de montant",
  "One line per price: date, holding (name, ISIN or symbol) and price, separated by tabs, semicolons or commas, as copied from a bank or broker price list. A price already recorded for that day is replaced.": "Une ligne par cours : date, position (nom, ISIN ou symbole) et cours, séparés par des tabulations, des points-virgules ou des virgules, tels que copiés d’une liste de cours de la banque ou du courtier. Un cours déjà saisi pour ce jour est remplacé.",
@@ -886,7 +894,6 @@
  "Plan": "Plan",
  "Plan Until": "Planifier jusqu’à",
  "Planned Payments": "Échéances prévues",
- "Planned income and spending, month by month": "Revenus et dépenses prévus, mois par mois",
  "Planning until {month}": "Planification jusqu’à {month}",
  "Planning until {month}, {n} budget entry added": [
   "Planification jusqu’à {month}, {n} poste budgétaire ajouté",
@@ -1270,6 +1277,7 @@
  "The loan and its account are removed. A loan with transactions can’t be deleted.": "Le prêt et son compte sont supprimés. Un prêt avec des transactions ne peut pas être supprimé.",
  "The lock is off": "Le verrouillage est désactivé",
  "The message and the bill information are longer than 140 characters": "Le message et les informations de facture dépassent 140 caractères",
+ "The months before {month} keep their values.": "Les mois avant {month} gardent leurs montants.",
  "The next file with the same columns is recognised automatically.": "Le prochain fichier avec les mêmes colonnes sera reconnu automatiquement.",
  "The notes are those of the UN's COICOP 2018 publication; translations of them are the app's own and unofficial.": "Les notes sont celles de la publication COICOP 2018 de l'ONU ; leurs traductions sont propres à l'application et non officielles.",
  "The order of the lines can’t be told from the file (newest or oldest first), so no month-end balances are offered.": "L’ordre des lignes (les plus récentes ou les plus anciennes d’abord) ne ressort pas du fichier, aucun solde de fin de mois n’est donc proposé.",
@@ -1490,6 +1498,7 @@
  "foreign|Withholding tax": "Impôt à la source",
  "from {date}": "dès le {date}",
  "from {month} to the end of the plan": "de {month} à la fin du plan",
+ "from {month}, forever": "dès {month}, sans limite",
  "heading|Expenditure": "Dépenses",
  "heading|Income": "Revenus",
  "including {amount} from exchange-rate changes": "dont {amount} dus aux variations de change",
@@ -1553,6 +1562,7 @@
  "{amount} outstanding": "{amount} restant dû",
  "{amount} over budget": "{amount} au-dessus du budget",
  "{amount} over the {budget} budget": "Dépassement de {amount} sur un budget de {budget}",
+ "{amount} planned for {month}": "{amount} prévus pour {month}",
  "{amount} repayment": "{amount} d’amortissement",
  "{amount} still expected of {budget}": "Encore attendu : {amount} sur {budget}",
  "{amount} to go": "encore {amount}",
@@ -1659,6 +1669,10 @@
  "{n} month": [
   "{n} mois",
   "{n} mois"
+ ],
+ "{n} month differs": [
+  "{n} mois diffère",
+  "{n} mois diffèrent"
  ],
  "{n} month of spending at {amount}": [
   "{n} mois de dépenses à {amount}",

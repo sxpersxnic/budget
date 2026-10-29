@@ -8,6 +8,7 @@
  "A QR reference needs a QR-IBAN": "Un riferimento QR richiede un QR-IBAN",
  "A QR-IBAN needs a QR reference": "Un QR-IBAN richiede un riferimento QR",
  "A bill is paid with an expenditure": "Una fattura si paga con un’uscita",
+ "A budget entry is an amount you plan to earn or spend in a category: once, every month or every few months, until a month or for as long as the plan runs. The Budget page compares it with what happened.": "Una voce di budget è un importo che prevede di guadagnare o spendere in una categoria: una volta, ogni mese oppure ogni alcuni mesi, fino a un certo mese o senza scadenza. La pagina Budget lo confronta con quanto è realmente avvenuto.",
  "A gain of {amount}": "Un utile di {amount}",
  "A goal called “{name}” already exists": "Esiste già un obiettivo «{name}»",
  "A holding with trades or prices stays in its account": "Una posizione con operazioni o corsi resta nel suo conto",
@@ -354,6 +355,7 @@
  "Debtor": "Debitore",
  "Delete": "Elimina",
  "Delete Holding…": "Elimina posizione…",
+ "Delete a budget": "Eliminare un budget",
  "Delete a holding": "Eliminare una posizione",
  "Delete a loan": "Eliminare un prestito",
  "Delete a price": "Eliminare un corso",
@@ -370,6 +372,7 @@
  "Delete categorization rules": "Elimina regole di categorizzazione",
  "Delete payees": "Elimina beneficiari",
  "Delete tags": "Elimina etichette",
+ "Delete the budget for {category}?": "Eliminare il budget per {category}?",
  "Delete the rule for “{match}”?": "Eliminare la regola per «{match}»?",
  "Delete this bill?": "Eliminare questa fattura?",
  "Delete this price?": "Eliminare questo corso?",
@@ -386,6 +389,7 @@
  ],
  "Delete “{name}”?": "Eliminare «{name}»?",
  "Deleted the bill of {creditor}": "Fattura di {creditor} eliminata",
+ "Deleted the budget for {category}": "Budget per {category} eliminato",
  "Deleted the rule for “{match}”": "Regola per «{match}» eliminata",
  "Deleted {name}": "Eliminato: {name}",
  "Deleted {n} budget entry": [
@@ -396,6 +400,7 @@
   "{n} transazione eliminata",
   "{n} transazioni eliminate"
  ],
+ "Delete…": "Elimina…",
  "Description": "Descrizione",
  "Details": "Dettagli",
  "Detected": "Rilevati",
@@ -696,6 +701,7 @@
  "Monthly totals or chosen categories": "Totali mensili o categorie scelte",
  "Months": "Mesi",
  "Months of Spending": "Mesi di spese",
+ "More": "Altro",
  "Mortgages and loans: the debt counts against your wealth, and when a payment is due it is listed here with the interest on the outstanding debt and the repayment. Book it, or change the amounts to what the bank charged.": "Ipoteche e prestiti: il debito riduce il tuo patrimonio, e ogni rata in scadenza appare qui con gli interessi sul debito residuo e l’ammortamento. Registrala, oppure correggi gli importi secondo quanto addebitato dalla banca.",
  "Move": "Sposta",
  "Move the Records": "Sposta i dati",
@@ -793,6 +799,7 @@
  "Nothing matches these filters.": "Nessuna voce corrisponde a questi filtri.",
  "Nothing open": "Niente in sospeso",
  "Nothing open.": "Niente in sospeso.",
+ "Nothing planned yet": "Ancora nulla di pianificato",
  "Nothing put in": "Nessun denaro investito",
  "Nothing recorded": "Niente registrato",
  "Nothing recorded in {month}": "Nulla registrato a {month}",
@@ -810,6 +817,7 @@
  "On. A phone on your home network opens {address} and pairs with a code; it can only add expenses. Paired phones: {n}.": "Attivo. Un telefono nella tua rete domestica apre {address} e si associa con un codice; può solo inserire spese. Telefoni associati: {n}.",
  "On. The app asks for the password before it opens.": "Attivo. L’app chiede la password prima di aprirsi.",
  "On. The records on disk open only with your password or the recovery key; a backup from Back Up Now is written in plain text.": "Attivo. I dati sul disco si aprono solo con la tua password o la chiave di recupero; un backup da «Esegui backup ora» è scritto in chiaro.",
+ "Once": "Una volta",
  "Once a day, Budget asks GitHub for the number of the newest release. Nothing is downloaded or installed, and the request carries nothing about you or your data. Off by default; besides the ECB rates it is the only connection the app makes.": "Una volta al giorno Budget chiede a GitHub il numero della versione più recente. Nulla viene scaricato o installato e la richiesta non contiene nulla su di lei o sui suoi dati. Disattivato per impostazione predefinita; oltre ai tassi della BCE è l’unica connessione dell’app.",
  "One amount column": "Una colonna importo",
  "One line per price: date, holding (name, ISIN or symbol) and price, separated by tabs, semicolons or commas, as copied from a bank or broker price list. A price already recorded for that day is replaced.": "Una riga per corso: data, posizione (nome, ISIN o simbolo) e corso, separati da tabulazioni, punti e virgola o virgole, come copiati da un elenco dei corsi della banca o del broker. Un corso già registrato per quel giorno viene sostituito.",
@@ -886,7 +894,6 @@
  "Plan": "Piano",
  "Plan Until": "Pianificare fino a",
  "Planned Payments": "Rate previste",
- "Planned income and spending, month by month": "Entrate e uscite pianificate, mese per mese",
  "Planning until {month}": "Pianificazione fino a {month}",
  "Planning until {month}, {n} budget entry added": [
   "Pianificazione fino a {month}, {n} voce di budget aggiunta",
@@ -1270,6 +1277,7 @@
  "The loan and its account are removed. A loan with transactions can’t be deleted.": "Il prestito e il suo conto vengono rimossi. Un prestito con transazioni non può essere eliminato.",
  "The lock is off": "Il blocco è disattivato",
  "The message and the bill information are longer than 140 characters": "Il messaggio e le informazioni di fattura superano i 140 caratteri",
+ "The months before {month} keep their values.": "I mesi prima di {month} mantengono i loro importi.",
  "The next file with the same columns is recognised automatically.": "Il prossimo file con le stesse colonne viene riconosciuto automaticamente.",
  "The notes are those of the UN's COICOP 2018 publication; translations of them are the app's own and unofficial.": "Le note sono quelle della pubblicazione COICOP 2018 dell'ONU; le loro traduzioni sono proprie dell'app e non ufficiali.",
  "The order of the lines can’t be told from the file (newest or oldest first), so no month-end balances are offered.": "L’ordine delle righe (prima le più recenti o le più vecchie) non si ricava dal file, quindi non viene proposto alcun saldo di fine mese.",
@@ -1490,6 +1498,7 @@
  "foreign|Withholding tax": "Imposta alla fonte",
  "from {date}": "dal {date}",
  "from {month} to the end of the plan": "da {month} alla fine del piano",
+ "from {month}, forever": "da {month}, senza scadenza",
  "heading|Expenditure": "Uscite",
  "heading|Income": "Entrate",
  "including {amount} from exchange-rate changes": "di cui {amount} da variazioni del cambio",
@@ -1553,6 +1562,7 @@
  "{amount} outstanding": "{amount} in sospeso",
  "{amount} over budget": "{amount} oltre il budget",
  "{amount} over the {budget} budget": "{amount} oltre il budget di {budget}",
+ "{amount} planned for {month}": "{amount} previsti per {month}",
  "{amount} repayment": "{amount} di ammortamento",
  "{amount} still expected of {budget}": "{amount} ancora attesi su {budget}",
  "{amount} to go": "mancano {amount}",
@@ -1659,6 +1669,10 @@
  "{n} month": [
   "{n} mese",
   "{n} mesi"
+ ],
+ "{n} month differs": [
+  "{n} mese è diverso",
+  "{n} mesi sono diversi"
  ],
  "{n} month of spending at {amount}": [
   "{n} mese di spese a {amount}",

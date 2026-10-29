@@ -1,7 +1,9 @@
-"""Budget Plan list (filters, edit, delete) and the New Budget Entry form (page and sheet)."""
+"""Budget Plan: the Series view (one row per budget: change, delete), the Months grid (filters, edit, delete), and
+the New Budget Entry form (page and sheet)."""
 
 import asyncio
 import re
+from datetime import date
 
 from nicegui import ui
 from nicegui.testing import User
@@ -9,9 +11,13 @@ from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
 
 from budget_app.domain import months
+from budget_app.domain.models import BudgetEntry
+from budget_app.services import accounts as acc_svc
 from budget_app.services import budget as budget_svc
+from budget_app.services import undo as undo_svc
 from budget_app.services.budget import BudgetInput
 from budget_app.ui.pages.add_budget import FOREVER, until_options
+from budget_app.ui.pages.budget_entries import category_label
 
 
 # ------------------------------------------------------------------ helpers
@@ -94,10 +100,336 @@ def series(ctx, category: str):
     return sorted((b for b in ctx.store.budget.all() if b.category == category), key=lambda b: b.month)
 
 
-# ------------------------------------------------------------------ Budget Plan list
+def label(code: str) -> str:
+    """A category's name as the plan shows it (so a change to how categories are named needs no test edits)."""
+    return category_label(None, BudgetEntry("", "expenditure", code, 0, "", 0, date.today()))  # type: ignore[arg-type]
+
+
+def series_rows(user: User) -> list[ui.element]:
+    with user:
+        return sorted(
+            (e for e in user.client.elements.values() if "series-row" in e.classes and e.visible), key=lambda e: e.id
+        )
+
+
+def row_texts(row: ui.element) -> list[str]:
+    return [e.text for e in row.descendants() if isinstance(e, ui.label)]
+
+
+def series_row(user: User, name: str) -> ui.element:
+    found = [r for r in series_rows(user) if row_texts(r)[0] == name]
+    assert found, f"no series row {name!r}"
+    return found[0]
+
+
+def open_row(user: User, name: str) -> ui.dialog:
+    """Click a series row's text: it opens the series sheet."""
+    main = next(e for e in series_row(user, name).descendants() if "cursor-pointer" in e.classes)
+    UserInteraction(user, {main}, None).click()
+    return top_dialog(user)
+
+
+def row_button(user: User, name: str, label: str) -> UserInteraction:
+    found = {e for e in series_row(user, name).descendants() if e.props.get("aria-label") == label}
+    assert found, f"no {label!r} button on {name!r}"
+    return UserInteraction(user, found, label)
+
+
+def view_toggle(user: User) -> ui.toggle:
+    with user:
+        return next(e for e in user.client.elements.values() if isinstance(e, ui.toggle))
+
+
+def months_view(user: User) -> None:
+    set_value(user, view_toggle(user), "months")
+
+
+async def search(user: User, text: str) -> None:
+    """Type into the search field and let the refreshed list render (refreshing runs as a task)."""
+    set_value(user, search_field(user), text)
+    await asyncio.sleep(0.05)
+
+
+def search_field(user: User) -> ui.input:
+    return next(
+        e for e in page_root(user).descendants() if isinstance(e, ui.input) and e.props.get("placeholder") == "Search"
+    )
+
+
+def by_class(user: User, cls: str) -> ui.element:
+    with user:
+        return next(e for e in user.client.elements.values() if cls in e.classes)
+
+
+# ------------------------------------------------------------------ Budget Plan · Series
+async def test_series_view_shows_one_row_per_budget(user: User, ctx, demo) -> None:
+    await user.open("/budget-entries")
+    cm, start = months.current_month(), months.add_months(months.current_month(), -6)
+    assert view_toggle(user).value == "series"
+    assert [row_texts(r)[0] for r in series_rows(user)] == [
+        "Salary",
+        label("01.1"),
+        label("04.1"),
+        label("07.3"),
+    ]
+    since = f"Every month · from {months.label(start)}, forever"
+    assert row_texts(series_row(user, "Salary")) == ["Salary", since, "+6'200.00 CHF"]
+    assert row_texts(series_row(user, label("01.1")))[1:] == [since, "700.00 CHF"]
+    assert "text-pos" in [e for e in series_row(user, "Salary").descendants() if isinstance(e, ui.label)][-1].classes
+    await user.should_see(f"+6'200.00 CHF planned for {months.label(cm)}")
+    await user.should_see(f"2'750.00 CHF planned for {months.label(cm)}")
+    await user.should_see("Income")
+    await user.should_see("Expenditure")
+    assert len(rows(user)) == len(ctx.store.budget.all())  # the Months grid is there, hidden
+    assert not grid(user).parent_slot.parent.visible
+    assert not by_class(user, "selection-bar").visible
+    with user:
+        filters_btn = next(e for e in user.client.elements.values() if isinstance(e, ui.button) and e.text == "Filters")
+    assert not filters_btn.visible  # the filters belong to the Months view
+
+
+async def test_series_captions(user: User, ctx, setup) -> None:
+    cm = months.current_month()
+    nxt, past = months.add_months(cm, 1), months.add_months(cm, -3)
+    budget_svc.create(ctx, BudgetInput(start_month=nxt, end_month=nxt, currency="EUR", amount=50, category="07.3"))
+    budget_svc.create(
+        ctx,
+        BudgetInput(
+            start_month=cm,
+            end_month=months.add_months(cm, 6),
+            recur_months=3,
+            type="income",
+            currency="CHF",
+            amount=100,
+            category=setup["salary"].id,
+            comment="quarterly bonus",
+        ),
+    )
+    bonus = acc_svc.add_income_category(ctx, "Allowance")
+    budget_svc.create(
+        ctx,
+        BudgetInput(start_month=cm, end_month=cm, type="income", currency="CHF", amount=1, category=bonus.id),
+    )
+    rent = budget_svc.create(
+        ctx, BudgetInput(start_month=past, end_month=nxt, currency="CHF", amount=1900, category="04.1")
+    )
+    budget_svc.update_entry(ctx, rent[1].id, 2000)
+    budget_svc.create(
+        ctx,
+        BudgetInput(start_month=past, end_month=months.add_months(cm, -1), currency="CHF", amount=5, category="01.1"),
+    )
+    await user.open("/budget-entries")
+    names = [row_texts(r)[0] for r in series_rows(user)]
+    assert names == [  # income by name, then expenditure in COICOP order with the ended budget last
+        "Allowance",
+        "Salary",
+        label("04.1"),
+        label("07.3"),
+        label("01.1"),
+    ]
+    assert row_texts(series_row(user, "Salary")) == [
+        "Salary",
+        f"Every quarter · {months.label(cm)} – {months.label(months.add_months(cm, 6))}",
+        "quarterly bonus",
+        "+100.00 CHF",
+    ]
+    assert row_texts(series_row(user, label("07.3")))[1:] == [
+        f"Once · {months.label(nxt)}",
+        "50.00 EUR",
+    ]
+    assert row_texts(series_row(user, label("04.1")))[1] == (
+        f"Every month · {months.label(past)} – {months.label(nxt)} · 1 month differs"
+    )
+    ended = [e for e in series_row(user, label("01.1")).descendants() if isinstance(e, ui.label)]
+    assert "text-2" in ended[0].classes and "text-2" in ended[-1].classes
+    await user.should_see(f"+101.00 CHF planned for {months.label(cm)}")
+
+    ctx.store.income_categories.delete([bonus.id])  # a category removed behind the app's back shows its id
+    await user.open("/budget-entries")
+    assert bonus.id in [row_texts(r)[0] for r in series_rows(user)]
+
+
+async def test_search_applies_to_both_views(user: User, ctx, demo) -> None:
+    cm = months.current_month()
+    budget_svc.create(
+        ctx, BudgetInput(start_month=cm, end_month=cm, currency="CHF", amount=5, category="09.4", comment="Café")
+    )
+    await user.open("/budget-entries")
+    await search(user, " cafe ")
+    assert [row_texts(r)[0] for r in series_rows(user)] == [label("09.4")]
+    assert [r["amount"] for r in rows(user)] == [5]
+    await search(user, "salary")
+    assert [row_texts(r)[0] for r in series_rows(user)] == ["Salary"]
+    await user.should_see(f"+6'200.00 CHF planned for {months.label(cm)}")
+    await user.should_not_see("Expenditure")
+    await search(user, "no such thing")
+    assert series_rows(user) == []
+    await user.should_see("Nothing matches these filters.")
+
+
+async def test_switch_between_series_and_months(user: User, ctx, demo) -> None:
+    await user.open("/budget-entries")
+    series_box = series_rows(user)[0].parent_slot.parent.parent_slot.parent.parent_slot.parent
+    months_view(user)
+    assert grid(user).parent_slot.parent.visible and not series_box.visible
+    user.find("Filters").click()
+    with user:
+        filters = field(page_root(user), ui.select, "From").parent_slot.parent
+    assert filters.visible
+    set_value(user, view_toggle(user), "series")
+    assert series_box.visible and not grid(user).parent_slot.parent.visible
+    assert not filters.visible  # the Months filters close with their view
+
+
+async def test_series_sheet_changes_a_budget_from_this_month(user: User, ctx, demo) -> None:
+    await user.open("/budget-entries")
+    cm = months.current_month()
+    food = series(ctx, "01.1")
+    dlg = open_row(user, label("01.1"))
+    assert label("01.1") in labels(dlg)
+    assert f"Every month · from {months.label(food[0].month)}, forever" in labels(dlg)
+    start, until = field(dlg, ui.select, "From"), field(dlg, ui.select, "Until")
+    assert (start.value, until.value, field(dlg, ui.select, "Repeat").value) == (cm, FOREVER, 1)
+    assert field(dlg, ui.number, "Amount").value == 700
+    assert f"The months before {months.label(cm)} keep their values." in labels(dlg)
+    n = len(months.month_range(cm, ctx.horizon()))
+    span = f"{months.label(cm)} – {months.label(ctx.horizon())}"
+    assert f"{n} months, {span}, continued as the plan grows" in labels(dlg)
+    set_value(user, field(dlg, ui.number, "Amount"), 750)
+    set_value(user, field(dlg, ui.textarea, "Note"), " more ")
+    button(user, dlg, "Save").click()
+    await user.should_see("Budget updated")
+    assert not open_dialogs(user)
+    now = series(ctx, "01.1")
+    assert [(b.month, b.amount) for b in now if b.month < cm] == [(b.month, 700) for b in food if b.month < cm]
+    assert all((b.amount, b.comment, b.forever) == (750, "more", True) for b in now if b.month >= cm)
+    assert undo_svc.latest(ctx).label == "Replan a budget"
+    assert row_texts(series_row(user, label("01.1")))[2:] == ["more", "750.00 CHF"]
+    await user.should_see(f"2'800.00 CHF planned for {months.label(cm)}")
+
+
+async def test_series_sheet_replans_the_schedule_from_the_start(user: User, ctx, demo) -> None:
+    await user.open("/budget-entries")
+    first = series(ctx, "07.3")[0].month
+    dlg = open_row(user, label("07.3"))
+    start, until = field(dlg, ui.select, "From"), field(dlg, ui.select, "Until")
+    set_value(user, start, first)
+    assert not [s for s in labels(dlg) if "keep their values" in s]
+    end = months.add_months(first, 6)
+    set_value(user, until, end)
+    set_value(user, field(dlg, ui.select, "Repeat"), 3)
+    assert f"3 months, {months.label(first)} – {months.label(end)}" in labels(dlg)
+    set_value(user, start, months.add_months(first, 7))  # past Until: Until must be chosen again
+    assert until.value is None and end not in until.options
+    assert "Select the final month" in labels(dlg)
+    set_value(user, start, first)
+    set_value(user, until, end)
+    set_value(user, field(dlg, ui.select, "Category"), "07.2")
+    set_value(user, field(dlg, ui.select, "Currency"), "EUR")
+    button(user, dlg, "Save").click()
+    await user.should_see("Budget updated")
+    assert series(ctx, "07.3") == []
+    moved = series(ctx, "07.2")
+    assert [(b.month, b.currency, b.recur_months) for b in moved] == [
+        (m, "EUR", 3) for m in (first, months.add_months(first, 3), end)
+    ]
+    assert row_texts(series_row(user, label("07.2")))[1] == (
+        f"Every quarter · {months.label(first)} – {months.label(end)}"
+    )
+
+
+async def test_series_sheet_of_an_ended_budget_starts_at_its_first_month(user: User, ctx, setup) -> None:
+    cm = months.current_month()
+    past = months.add_months(cm, -4)
+    budget_svc.create(
+        ctx,
+        BudgetInput(start_month=past, end_month=months.add_months(cm, -2), currency="CHF", amount=5, category="01.1"),
+    )
+    await user.open("/budget-entries")
+    dlg = open_row(user, label("01.1"))
+    assert field(dlg, ui.select, "From").value == past
+    assert field(dlg, ui.select, "Until").value == months.add_months(cm, -2)
+
+
+async def test_series_sheet_refuses_an_invalid_amount(user: User, ctx, demo) -> None:
+    await user.open("/budget-entries")
+    dlg = open_row(user, label("04.1"))
+    set_value(user, field(dlg, ui.number, "Amount"), 0)
+    assert "Amount must be a positive number" in labels(dlg)
+    button(user, dlg, "Save").click()
+    await user.should_see("Amount must be a positive number")
+    assert open_dialogs(user) == [dlg]
+    assert {b.amount for b in series(ctx, "04.1")} == {1900}
+
+
+async def test_delete_a_budget_with_undo(user: User, ctx, demo) -> None:
+    await user.open("/budget-entries")
+    n = len(series(ctx, "07.3"))
+    row_button(user, label("07.3"), "Delete").click()
+    await until(lambda: open_dialogs(user), "no confirmation")
+    dlg = top_dialog(user)
+    assert f"Delete the budget for {label('07.3')}?" in labels(dlg)
+    assert any(s.startswith(f"{n} months, ") and s.endswith("continued as the plan grows") for s in labels(dlg))
+    button(user, dlg, "Delete").click()
+    await user.should_see(f"Deleted the budget for {label('07.3')}")
+    assert series(ctx, "07.3") == []
+    assert label("07.3") not in [row_texts(r)[0] for r in series_rows(user)]
+    act = undo_svc.latest(ctx)
+    assert act.label == "Delete a budget"
+    undo_svc.undo(ctx, act.id)
+    assert len(series(ctx, "07.3")) == n
+
+
+async def test_delete_from_the_series_sheet_and_edit_from_the_row(user: User, ctx, demo) -> None:
+    await user.open("/budget-entries")
+    row_button(user, "Salary", "Edit").click()
+    dlg = top_dialog(user)
+    assert field(dlg, ui.select, "Income category").value == demo["salary"].id
+    button(user, dlg, "Delete…").click()
+    await until(lambda: "Delete the budget for Salary?" in labels(top_dialog(user)), "no confirmation")
+    button(user, top_dialog(user), "Delete").click()
+    await user.should_see("Deleted the budget for Salary")
+    assert not [b for b in ctx.store.budget.all() if b.type == "income"]
+
+
+async def test_a_vanished_budget_does_nothing(user: User, ctx, demo) -> None:
+    await user.open("/budget-entries")
+    ctx.store.budget.delete([b.id for b in series(ctx, "01.1")])  # removed behind the page's back
+    UserInteraction(user, {next(iter(row_button(user, label("01.1"), "Edit").elements))}, None).click()
+    row_button(user, label("01.1"), "Delete").click()
+    await asyncio.sleep(0.1)
+    assert not open_dialogs(user)
+
+
+async def test_nothing_planned_explains_a_budget_entry(user: User, ctx, setup) -> None:
+    await user.open("/budget-entries")
+    await user.should_see("Nothing planned yet")
+    await user.should_see("A budget entry is an amount you plan to earn or spend in a category", retries=1)
+    assert not view_toggle(user).parent_slot.parent.visible
+    empty = by_class(user, "group")
+    button(user, empty, "New Budget Entry").click()
+    dlg = top_dialog(user)
+    cm = months.current_month()
+    set_value(user, field(dlg, ui.number, "Amount"), 300)
+    set_value(user, field(dlg, ui.select, "Category"), "09.1")
+    set_value(user, field(dlg, ui.select, "Until"), months.add_months(cm, 2))
+    button(user, dlg, "Add to Budget").click()
+    await user.should_see("Added 3 budget entries")
+    assert not empty.visible and view_toggle(user).parent_slot.parent.visible
+    assert [row_texts(r)[0] for r in series_rows(user)] == [label("09.1")]
+
+
+async def test_propose_from_history_in_the_empty_state(user: User, ctx, setup) -> None:
+    await user.open("/budget-entries")
+    button(user, by_class(user, "group"), "Propose from History…").click()
+    assert "Propose from History" in labels(top_dialog(user))
+
+
+# ------------------------------------------------------------------ Budget Plan · Months
 async def test_lists_every_budget_entry(user: User, ctx, demo) -> None:
     await user.open("/budget-entries")
-    await user.should_see("Planned income and spending, month by month")
+    months_view(user)
+    await user.should_not_see("Planned income and spending, month by month")
     total = len(ctx.store.budget.all())
     assert len(rows(user)) == total
     assert count_text(user) == f"{total} budget entries"
@@ -147,6 +479,7 @@ async def test_one_entry_uses_the_singular(user: User, ctx, setup) -> None:
 
 async def test_filters(user: User, ctx, demo) -> None:
     await user.open("/budget-entries")
+    months_view(user)
     with user:
         filters = field(page_root(user), ui.select, "From").parent_slot.parent
     assert not filters.visible
@@ -300,6 +633,7 @@ async def test_double_click_on_a_vanished_entry_does_nothing(user: User, ctx, de
 
 async def test_selection_bar_edit_and_delete(user: User, ctx, demo) -> None:
     await user.open("/budget-entries")
+    months_view(user)
     food = series(ctx, "01.1")
     picked = [{"id": food[0].id}, {"id": food[1].id}]
     select_rows(user, picked)
@@ -313,7 +647,7 @@ async def test_selection_bar_edit_and_delete(user: User, ctx, demo) -> None:
     await until(lambda: open_dialogs(user), "no confirmation")
     dlg = top_dialog(user)
     assert "Delete 2 budget entries?" in labels(dlg)
-    assert "This can’t be undone." in labels(dlg)
+    assert "This can’t be undone." not in labels(dlg)  # it can (F28)
     before = len(ctx.store.budget.all())
     button(user, dlg, "Delete").click()
     await user.should_see("Deleted 2 budget entries")
@@ -330,6 +664,7 @@ async def test_selection_bar_edit_and_delete(user: User, ctx, demo) -> None:
 
 async def test_delete_one_entry_and_delete_without_selection(user: User, ctx, demo) -> None:
     await user.open("/budget-entries")
+    months_view(user)
     entry = series(ctx, "07.3")[0]
     select_rows(user, [{"id": entry.id}])
     await user.should_see("1 selected")
