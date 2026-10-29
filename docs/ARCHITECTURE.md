@@ -499,6 +499,24 @@ currency dropdowns list every currency the ECB quoted on its latest date, plus E
 
 ## 6. Pages
 
+**Places and tabs** (decision 42, the UX review before 1.0, `docs/UX_REVIEW.md`). The sidebar lists seven places;
+a place with several pages shows them as tabs under the title (`layout.SECTIONS`), and a page that is no tab
+highlights the tab it belongs to (`layout.TAB_PARENT`):
+
+| Place | Tabs |
+| --- | --- |
+| Overview (`/`) | – |
+| Budget (`/budget`) | – |
+| Transactions | Transactions (`/transactions`) · Recurring (`/recurring`) · Bills (`/bills`); Import (`/import`) and New Transaction (`/add-transaction`) belong to the first |
+| Plan | Budget Plan (`/budget-entries`) · Goals (`/goals`) · Scenarios (`/scenarios`) |
+| Wealth | Accounts (`/accounts`) · Investments (`/investments`) · Loans (`/loans`) · Shared Expenses (`/shared`) |
+| Reports | Year in Review (`/review`) · Tax Summary (`/tax`) |
+| Settings | General (`/settings`) · Categories (`/categories`, with the income categories) · Payees (`/payees`, with its Rules, `/rules`) · Tags (`/tags`) |
+
+The sidebar shows one badge, beside Overview: what is due. The counts of due recurring transactions, bills and
+loan payments sit on their tabs. Every page uses the same column, so the title doesn't move between pages; a
+narrow page keeps its lists to 46 rem, left-aligned under the title.
+
 | Route | Page | Notes |
 | --- | --- | --- |
 | `/` | Overview (start page) | Current wealth and the projection at the horizon in one hero card; below it, once any account has another asset class than cash, *By Asset Class* (F21): wealth at the end of last month as one bar split by class, with each class's amount and share; then the *Goals* card (F14, see `/goals`). Chart builder ("Add Chart" menu): wealth line (recorded, then dotted projection, and with goals reserved in the projection a dashed *Free after goals* line, F14, and one dashed line per scenario marked *shown*, from the last recorded value, F15), income/expenditure bars or lines with category multi-select and optional budget, waterfall of per-account change, ECB exchange rates of chosen currencies in the display currency (daily or month end, optionally indexed to 100), wealth by asset class (stacked bars per month, F21), spending by tag (one bar per tag in its colour, the own share of tagged expenditure between two months, most first, F10). Below the wealth card, *Notable This Month* (F18, `ui/widgets/notable.py`): up to five items of the current month (exceeded budgets, large payments, categories well above their usual level, budgets on pace to be exceeded), each a link to the Budget page or the filtered Transactions; hidden when nothing stands out, a caption instead while fewer than three months are recorded. Each chart's "…" menu saves a PNG, exports CSV or Excel, or removes it. |
@@ -1106,6 +1124,19 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     another interface is the user's explicit choice and keeps its old meaning (`security.trust_network`: every client
     counts as this computer, the lock's password still applies). The phone app with an offline queue (the catalog's
     larger step) is not built.
+
+42. **Seven places, with tabs for the pages of a place** (UX review before 1.0, `docs/UX_REVIEW.md`). The sidebar
+    had grown to eighteen places, one per feature, and several answered the same question in different ways. A place
+    now stands for one question (where am I, this month, what happened, what's planned, what do I own, how was the
+    year), and its pages are tabs under the title, so a feature added later joins a place instead of the sidebar.
+    The routes stay, so links, shortcuts and tests keep working, and a page that is no tab (Import, Rules) highlights
+    the tab it belongs to. Accounts left Settings: they are records, not preferences, and the first thing a new
+    user adds, so the welcome screen opens them; income categories joined the COICOP categories, and Settings keeps
+    preferences only. The sidebar keeps one badge, the Overview's count of what is due; the other counts moved to
+    their tabs, so a number in the sidebar always means "something to do". Pages share one column so the title stays
+    in place; narrow lists stay readable at 46 rem, left-aligned rather than centred, so the eye doesn't jump.
+    Alternatives weighed: collapsible groups in the sidebar (still eighteen entries to scan, and a click to open a
+    group), and a command palette (useful, but a search box doesn't tell a new user what the app has).
 
 ## 8. Testing
 
