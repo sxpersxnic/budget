@@ -30,16 +30,21 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18, F30, F33, F04, F15, F31, F19, F17, F22 and F23 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 done except F35, of which the quick add and the pairing are built (F10, F12, F11, F03, F14, F16, F20, F18, F19, F17, F15, F31, F22, F23, F30, F33, F27, F34, F26, F04 and F32 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
-| Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
+| Engineering: tests and hooks | ☑ Done | @@TESTS@@ tests, coverage @@COV@@ %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
 
 ## Open now
 
-State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
-[Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22, F30 onboarding and demo data and F33 update check, F04 receipt scanning, F15 what-if scenarios, F31 reminders, F19 year in review and F17 subscriptions on 2026-10-28). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+State on 2026-10-29: milestones 1–5, the follow-up fixes and steps 19–24 are done (see
+[Done](#done)), and every decision is made. Step 25 is done but for part of F35: F10 tags, F12 attachments, F11 split
+transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends on
+2026-10-22; F19 year in review, F17 subscriptions, F15 what-if scenarios, F31 reminders, F22 loans, F23 who owes
+what, F30 onboarding, F33 update check, F27 app lock and encryption, F34 profiles, F26 sync through a cloud folder,
+F04 receipt scanning and F32 keyboard and accessibility on 2026-10-28/29, with the product owner's change to the
+projection (decision 36 of the architecture). F35 has its quick add and pairing; the phone app itself is open.
+45 of 47 features are done, F35 partly, F39 dropped. Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -1400,7 +1405,7 @@ app makes `profiles/<name>` beside its own folder; a folder that already holds r
 cloud folder) is opened as it is; another profile's folder, a file or a folder directly inside the app's own is
 refused. With two profiles or more, the top of the sidebar shows the open profile's name with a menu of the others
 (and *Profiles…*); the choice reopens the app on that folder, with its own settings and language, lock and
-encryption (F27), and every open page starts over on its Overview. A folder that another Budget window has open is
+encryption (F27), and every open page starts over on its Overview (a new, empty profile on the first-start screen of F30). A folder that another Budget window has open is
 refused, and nothing changes. The lock page names the locked profile and offers *Open Another Profile*, since each
 lock guards one folder only. The registry `profiles.json` lives in the app's home folder (the OS data folder, or
 `--data-dir`), which is also the first profile's folder, so an installation without profiles is unchanged; the app

@@ -86,7 +86,8 @@ async def test_profiles_are_added_renamed_opened_and_removed(user: User, ctx, op
     await settle(20)
     assert opened == [club.folder] and profiles.active().id == club.id
     assert user.notify.contains("Opened Sports club")
-    await user.should_see("Overview")
+    await user.should_see("Welcome")  # a new profile's folder is empty: it starts with the first-start screen (F30)
+    await user.open("/settings")  # a page with the sidebar
     with user:
         [brand] = [
             e for e in user.client.elements.values() if isinstance(e, ui.button) and "profile-button" in e.classes
@@ -138,4 +139,4 @@ async def test_the_lock_page_names_the_profile_and_opens_another(user: User, ctx
     menu_item(user, "Club").click()
     await settle(20)
     assert opened == [club.folder]
-    await user.should_see("Overview")  # the club has no password
+    await user.should_see("Welcome")  # the club has no password, and its empty folder starts with F30's screen
