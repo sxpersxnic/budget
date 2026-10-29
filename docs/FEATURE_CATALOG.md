@@ -32,7 +32,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
 | After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 done except F35, of which the quick add and the pairing are built (F10, F12, F11, F03, F14, F16, F20, F18, F19, F17, F15, F31, F22, F23, F30, F33, F27, F34, F26, F04 and F32 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
-| Engineering: tests and hooks | ☑ Done | @@TESTS@@ tests, coverage @@COV@@ %, gate at 87 % |
+| Engineering: tests and hooks | ☑ Done | 1746 tests, coverage 99.5 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
 
 ## Open now
