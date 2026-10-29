@@ -145,15 +145,18 @@ def account_options(
     exclude_currency: str | None = None,
     holdings: bool = False,
     converted: bool = False,
+    loans: bool = True,
 ) -> dict[str, str]:
     """Accounts for a dropdown; securities and crypto accounts (valued from holdings, F21) only with `holdings`, and
     those converted from an account with history (decision 13) with `converted`: they still take transactions and
-    balances before their conversion month."""
+    balances before their conversion month. Loan accounts (F22) take transfers, so they are listed unless `loans`
+    is off (where a balance is recorded)."""
     return {
         a.id: acc_svc.account_label(a)
         for a in acc_svc.accounts(ctx, kind, currency)
         if (exclude_currency is None or a.currency != exclude_currency)
         and (holdings or not a.holds_securities or (converted and bool(a.invest_from)))
+        and (loans or not a.is_loan)
     }
 
 

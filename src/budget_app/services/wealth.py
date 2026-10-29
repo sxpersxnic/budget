@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date
 
@@ -11,9 +12,13 @@ from budget_app.domain.models import ACCOUNT_REGULAR, ASSET_CASH, ASSET_CLASSES,
 from budget_app.i18n import N_, t
 from budget_app.services import accounts as acc_svc
 from budget_app.services import investments as inv_svc
+from budget_app.services import loans as loan_svc
 from budget_app.services.aggregates import projected_net
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
+
+# a month's expected net: `aggregates.projected_net` for the plan; a what-if scenario (F15) passes its own
+NetFn = Callable[[Context, str, str], float]
 
 
 @dataclass
@@ -27,7 +32,7 @@ class AccountRow:
     flows: float = 0.0  # the month's recorded movements, in the account's currency
     unexplained: float | None = None  # change minus flows (F46); only with a balance recorded for this month
     fx_gain: float = 0.0  # value change from exchange-rate moves, in the view currency (decision 4)
-    valued: bool = False  # valued from its holdings this month (F21), not from a recorded balance
+    valued: bool = False  # computed this month, from its holdings (F21) or its loan (F22), not a recorded balance
 
     @property
     def change(self) -> float | None:
@@ -47,10 +52,13 @@ def balance_entry(ctx: Context, account_id: str, month: str) -> AccountEntry | N
 
     A securities or crypto account has no recorded entries: its balance is computed from its holdings (F21). One
     converted from an account with history (decision 13) keeps its recorded balances before the conversion month.
+    A loan account's balance is minus its outstanding debt (F22).
     """
     acc = ctx.store.accounts.get(account_id)
     if acc is not None and acc.holds_in(month):
         return inv_svc.value_entry(ctx, acc, month)
+    if acc is not None and acc.is_loan:
+        return loan_svc.value_entry(ctx, acc, month)
     best = None
     for e in ctx.store.account_entries.all():
         if e.account_id == account_id and e.month <= month and (best is None or e.month > best.month):
@@ -67,6 +75,8 @@ def upsert_entry(ctx: Context, account_id: str, month: str, amount: float | None
         raise ValidationError(t("Select a month"))
     if amount is None:
         raise ValidationError(t("Enter the amount"))
+    if acc.is_loan:
+        raise ValidationError(t("A loan account's balance is its outstanding debt, computed from the loan's bookings"))
     if acc.holds_in(month):
         if acc.invest_from:
             raise ValidationError(
@@ -105,6 +115,8 @@ def first_recorded_month(ctx: Context) -> str | None:
     ms = [e.month for e in ctx.store.account_entries.all()]
     if held := inv_svc.first_month(ctx):
         ms.append(held)
+    if owed := loan_svc.first_month(ctx):
+        ms.append(owed)
     return min(ms) if ms else None
 
 
@@ -122,7 +134,7 @@ def account_rows(ctx: Context, month: str, view_cur: str) -> list[AccountRow]:
         if entry is None:
             continue
         has = entry.month == month
-        valued = acc.holds_in(month)
+        valued = acc.holds_in(month) or acc.is_loan
         rows.append(
             AccountRow(
                 acc,
@@ -165,6 +177,29 @@ def _first_activity_month(ctx: Context) -> str | None:
     return min(found) if found else None
 
 
+def revalue_entries(ctx: Context) -> int:
+    """Value every recorded balance at the ECB rate of its month's end (the last rate within the month).
+
+    The counterpart of `transactions.revalue_to_transaction_dates` for account entries: catches up a balance of the
+    current month recorded before the month's last rate, and corrects entries an older version valued otherwise.
+    Returns the number of entries changed; does nothing without exchange rates (decision 36).
+    """
+    if ctx.fx.latest_date() is None:
+        return 0
+    changed = []
+    for entry in ctx.store.account_entries.all():
+        rate_date = ctx.fx.rate_date_on_or_before(months.last_day(entry.month))
+        if rate_date is None:
+            continue
+        amount_chf = round(ctx.convert_on(entry.amount, entry.currency, BASE_CURRENCY, rate_date), 6)
+        if rate_date == entry.fx_date and abs(amount_chf - entry.amount_chf) < 1e-6:
+            continue
+        changed.append(replace(entry, amount_chf=amount_chf, fx_date=rate_date))
+    if changed:
+        ctx.store.account_entries.update_many(changed)
+    return len(changed)
+
+
 def _projection_start(ctx: Context, view_cur: str) -> tuple[str | None, float]:
     """First projected month and the wealth it builds on (last recorded month's wealth)."""
     last = last_recorded_month(ctx)
@@ -173,11 +208,12 @@ def _projection_start(ctx: Context, view_cur: str) -> tuple[str | None, float]:
     return months.add_months(last, 1), wealth(ctx, last, view_cur)
 
 
-def projected_wealth(ctx: Context, month: str, view_cur: str) -> float:
+def projected_wealth(ctx: Context, month: str, view_cur: str, net: NetFn = projected_net) -> float:
     """Wealth of the last recorded month plus the expected net of every month after it up to `month`.
 
     A month's expected net takes, per category, the higher of recorded and budgeted amounts
-    (`aggregates.projected_net`); this holds for months that are over but have no balances yet too.
+    (`aggregates.projected_net`); this holds for months that are over but have no balances yet too. A scenario
+    (F15) passes its own `net`, which lays its changes over the plan's budgets.
     """
     last = last_recorded_month(ctx)
     if last is not None and month <= last:
@@ -185,7 +221,7 @@ def projected_wealth(ctx: Context, month: str, view_cur: str) -> float:
     start, base = _projection_start(ctx, view_cur)
     if start is None or start > month:
         return base
-    return base + sum(projected_net(ctx, m, view_cur) for m in months.month_range(start, month))
+    return base + sum(net(ctx, m, view_cur) for m in months.month_range(start, month))
 
 
 def current_wealth(ctx: Context, view_cur: str, today: date | None = None) -> float:
@@ -194,9 +230,10 @@ def current_wealth(ctx: Context, view_cur: str, today: date | None = None) -> fl
 
 
 def wealth_series(
-    ctx: Context, view_cur: str, end: str | None = None, today: date | None = None
+    ctx: Context, view_cur: str, end: str | None = None, today: date | None = None, net: NetFn = projected_net
 ) -> list[tuple[str, float, bool]]:
-    """(month, wealth, is_projection) from the first recorded month to `end` (default: horizon)."""
+    """(month, wealth, is_projection) from the first recorded month to `end` (default: horizon); the projection
+    with the plan's budgets, or with a scenario's `net` (F15)."""
     end = end or ctx.horizon()
     last = last_recorded_month(ctx)
     out: list[tuple[str, float, bool]] = []
@@ -208,6 +245,6 @@ def wealth_series(
         start = min(start or months.current_month(today), months.current_month(today))
     if start is not None:
         for m in months.month_range(start, end):
-            running += projected_net(ctx, m, view_cur)
+            running += net(ctx, m, view_cur)
             out.append((m, running, True))
     return out

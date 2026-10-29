@@ -14,5 +14,5 @@ uv sync --locked --group build --group dev
 uv run pytest -q
 uv run --group build python packaging/build.py
 echo
-echo "Package ready:"
-ls -1 dist/*.tar.gz
+echo "Package ready (attach it and its .sha256 to the release):"
+ls -1 dist/*.tar.gz dist/*.tar.gz.sha256

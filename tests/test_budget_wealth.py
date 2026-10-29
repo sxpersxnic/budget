@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME
+from budget_app.domain.models import PROJECTION_BUDGET, PROJECTION_HIGHER, TX_EXPENDITURE, TX_INCOME
 from budget_app.services import budget as budget_svc
 from budget_app.services import reports
 from budget_app.services import transactions as tx_svc
@@ -202,8 +202,9 @@ def test_wealth_projection_and_unaccounted(ctx, setup):
     assert oct_rep.projected_wealth == pytest.approx(1594 + 910)
 
 
-def test_projection_takes_the_higher_of_recorded_and_budget(ctx, setup):
-    """F47: per category, recorded overspending or extra income counts; an unused budget still counts."""
+def _recorded_beside_the_plan(ctx, setup) -> None:
+    """Balances to August; budgets food 100, transport 200, salary 1000 from September; September food 300 spent,
+    October food 50 spent and salary 1200 received."""
     chf, salary = setup["chf"].id, setup["salary"].id
     wealth_svc.upsert_entry(ctx, chf, "2026-08", 1000)  # the last recorded balances
     for cat, amount in (("01", 100), ("07", 200)):
@@ -236,6 +237,11 @@ def test_projection_takes_the_higher_of_recorded_and_budget(ctx, setup):
             date=date(2026, 10, 1), type=TX_INCOME, amount=1200, currency="CHF", category=salary, to_account=chf
         ),
     )
+
+
+def test_projection_takes_the_higher_of_recorded_and_budget(ctx, setup):
+    """F47: per category, recorded overspending or extra income counts; an unused budget still counts."""
+    _recorded_beside_the_plan(ctx, setup)
     sept = 1000 - (300 + 200)
     october = 1200 - (100 + 200)
     november = 1000 - (100 + 200)
@@ -244,6 +250,46 @@ def test_projection_takes_the_higher_of_recorded_and_budget(ctx, setup):
     series = {m: v for m, v, projected in wealth_svc.wealth_series(ctx, "CHF", "2026-11", TODAY) if projected}
     assert series["2026-10"] == pytest.approx(1000 + sept + october)
     assert reports.month_report(ctx, "2026-10", "CHF", TODAY).projected_wealth == pytest.approx(1000 + sept + october)
+
+
+def test_projection_with_the_budgets_alone(ctx, setup):
+    """Option 1 in Settings: every projected month adds its budgeted income minus its budgeted expenditure."""
+    _recorded_beside_the_plan(ctx, setup)
+    ctx.store.settings.projection = PROJECTION_BUDGET
+    month = 1000 - (100 + 200)  # what is recorded doesn't count, above or below its budget
+    assert wealth_svc.projected_wealth(ctx, "2026-09", "CHF") == pytest.approx(1000 + month)
+    assert wealth_svc.projected_wealth(ctx, "2026-11", "CHF") == pytest.approx(1000 + 3 * month)
+    series = {m: v for m, v, projected in wealth_svc.wealth_series(ctx, "CHF", "2026-11", TODAY) if projected}
+    assert series["2026-10"] == pytest.approx(1000 + 2 * month)
+    ctx.store.settings.projection = PROJECTION_HIGHER  # back to F47's rule
+    assert wealth_svc.projected_wealth(ctx, "2026-09", "CHF") == pytest.approx(1000 + 1000 - (300 + 200))
+
+
+def test_revalue_entries_values_balances_at_their_month_end(ctx, setup):
+    eur, chf = setup["eur"].id, setup["chf"].id
+    entry = wealth_svc.upsert_entry(ctx, eur, "2026-09", 1000)
+    plain = wealth_svc.upsert_entry(ctx, chf, "2026-09", 500)
+    month_end = ctx.month_rate_date("2026-09")
+    right = round(ctx.convert_on(1000, "EUR", "CHF", month_end), 6)
+    assert entry.amount_chf == pytest.approx(right) and wealth_svc.revalue_entries(ctx) == 0
+    # as an older version or a hand-edited file left them: the wrong rate, or the right date with another amount
+    entry.amount_chf, entry.fx_date = 900.0, date(2026, 8, 29)
+    plain.amount_chf = 499.0
+    ctx.store.account_entries.update_many([entry, plain])
+    assert wealth_svc.revalue_entries(ctx) == 2
+    fixed = {e.id: e for e in ctx.store.account_entries.all()}
+    assert fixed[entry.id].fx_date == month_end and fixed[entry.id].amount_chf == pytest.approx(right)
+    assert fixed[plain.id].amount_chf == pytest.approx(500)
+    assert wealth_svc.revalue_entries(ctx) == 0
+
+
+def test_revalue_entries_needs_rates(ctx, setup, monkeypatch):
+    wealth_svc.upsert_entry(ctx, setup["eur"].id, "2026-09", 1000)
+    monkeypatch.setattr(ctx.fx, "latest_date", lambda: None)
+    assert wealth_svc.revalue_entries(ctx) == 0
+    monkeypatch.undo()
+    monkeypatch.setattr(ctx.fx, "rate_date_on_or_before", lambda d: None)  # a month before the first rate
+    assert wealth_svc.revalue_entries(ctx) == 0
 
 
 def test_projection_without_any_balances_starts_with_the_first_activity(ctx, setup):

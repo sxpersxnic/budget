@@ -277,13 +277,13 @@ async def test_saved_settings_recognise_the_next_file(user: User, ctx, setup) ->
     put(user, field(user, ui.select, "Date format"), "%d.%m.%Y")
     click(user, button(user, "Save Settings"))
     assert notified(user, "Enter a name for these settings")
-    assert importer.load_profiles(ctx.store.data_dir) == []
+    assert importer.load_profiles(ctx.store) == []
 
     name = next(e for e in user.find(kind=ui.input).elements if e.props.get("placeholder") == "Name, e.g. UBS Private")
     put(user, name, "  UBS Private ")
     click(user, button(user, "Save Settings"))
     assert notified(user, "Saved “UBS Private”")
-    [profile] = importer.load_profiles(ctx.store.data_dir)
+    [profile] = importer.load_profiles(ctx.store)
     assert (profile.name, profile.account_id, profile.debit_col, profile.header_row) == (
         "UBS Private",
         setup["chf"].id,
@@ -304,9 +304,9 @@ async def test_choosing_saved_settings_rereads_the_file(user: User, ctx, setup) 
     parsed = importer.read_file("ubs.csv", UBS)
     profile = importer.guess_profile(parsed)
     profile.name = "UBS"
-    importer.save_profile(ctx.store.data_dir, profile)
+    importer.save_profile(ctx.store, profile)
     other = importer.ImportProfile(name="Other bank", delimiter=",", signature="other")
-    importer.save_profile(ctx.store.data_dir, other)
+    importer.save_profile(ctx.store, other)
 
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
@@ -328,7 +328,7 @@ async def test_save_settings_without_a_file_does_nothing(user: User, ctx) -> Non
         [hidden] = [b for b in ElementFilter(kind=ui.button, local_scope=False) if b.text == "Save Settings"]
     click(user, hidden)
     assert user.notify.messages == []
-    assert importer.load_profiles(ctx.store.data_dir) == []
+    assert importer.load_profiles(ctx.store) == []
 
 
 # ------------------------------------------------------------------ bad files

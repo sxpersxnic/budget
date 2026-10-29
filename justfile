@@ -14,29 +14,29 @@ default:
 
 # Install the app and dev dependencies into .venv, and the git hooks (lefthook.yml)
 setup:
-    uv sync --group dev
+    uv sync --group dev --extra ocr
     uv run lefthook install
 
 # Start the desktop app and restart it whenever a file in src/ changes
 dev:
-    uv run --extra native --with watchfiles watchfiles --filter python "budget --native --data-dir {{ data }}" src
+    uv run --extra native --extra ocr --with watchfiles watchfiles --filter python "budget --native --data-dir {{ data }}" src
 
 # Same as dev, but serve to the browser instead of a native window
 dev-web port="8080":
-    uv run --with watchfiles watchfiles --filter python "budget --no-show --port {{ port }} --data-dir {{ data }}" src
+    uv run --extra ocr --with watchfiles watchfiles --filter python "budget --no-show --port {{ port }} --data-dir {{ data }}" src
 
 # Start the app once in the browser (no auto-restart)
 run port="8080":
-    uv run budget --port {{ port }} --data-dir {{ data }}
+    uv run --extra ocr budget --port {{ port }} --data-dir {{ data }}
 
 # Start the app in a native window, as the installed builds do
 native:
-    uv run --extra native budget --native --data-dir {{ data }}
+    uv run --extra native --extra ocr budget --native --data-dir {{ data }}
 
 # Start the app in a native window on a year of example data, for manual testing (demo-data/ is rebuilt each run)
 demo:
     uv run python scripts/demo_data.py demo-data
-    uv run --extra native budget --native --data-dir demo-data
+    uv run --extra native --extra ocr budget --native --data-dir demo-data
 
 # Run the tests (extra arguments go to pytest, e.g. `just test -k fx`)
 test *args:
@@ -123,7 +123,7 @@ runners-enable *platforms:
 runners-disable *platforms:
     {{ runners }} disable {{ platforms }}
 
-# Remove build output and tool caches (keeps data/ and installers/)
+# Remove build output and tool caches (keeps data/)
 [unix]
 clean:
     rm -rf build dist .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov

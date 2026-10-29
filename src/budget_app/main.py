@@ -6,20 +6,28 @@ Installed builds (PyInstaller) open in a native window by default and store data
 from __future__ import annotations
 
 import argparse
+import inspect
 import logging
 import multiprocessing
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
-from nicegui import app, native, ui
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import RedirectResponse
+from nicegui import app, background_tasks, native, ui
 
 from budget_app import config, i18n
+from budget_app.i18n import t
 from budget_app.services import attachments as attachments_svc
-from budget_app.services.context import init_context
+from budget_app.services import context as context_module
+from budget_app.services import phone, profiles, security, sync
+from budget_app.services.context import Context, ValidationError, get_ctx, init_context
 from budget_app.storage import lock as instance_lock
 from budget_app.ui import theme
-from budget_app.ui.layout import book_recurring, refresh_rates
+from budget_app.ui.layout import book_recurring, check_updates, records_reloaded, refresh_rates
 from budget_app.ui.pages import (
     add_budget,
     add_transaction,
@@ -31,14 +39,23 @@ from budget_app.ui.pages import (
     history,
     import_transactions,
     investments,
+    loans,
+    lock,
     overview,
     payees,
+    quick_add,
     recurring,
+    reminders,
+    review,
     rules,
+    scenarios,
     settings,
+    shared,
+    subscriptions,
     tags,
     tax,
     transactions,
+    welcome,
 )
 from budget_app.ui.widgets import attachments as attachments_ui
 from budget_app.ui.widgets import selects
@@ -49,38 +66,158 @@ PAGES = {
     "/add-transaction": add_transaction.page,
     "/transactions": transactions.page,
     "/recurring": recurring.page,
+    "/subscriptions": subscriptions.page,
     "/bills": bills.page,
+    "/reminders": reminders.page,
     "/import": import_transactions.page,
     "/add-budget": add_budget.page,
     "/budget-entries": budget_entries.page,
     "/goals": goals.page,
+    "/scenarios": scenarios.page,
     "/categories": categories.page,
     "/payees": payees.page,
     "/tags": tags.page,
     "/investments": investments.page,
+    "/review": review.page,
+    "/loans": loans.page,
+    "/shared": shared.page,
     "/tax": tax.page,
     "/rules": rules.page,
     "/settings": settings.page,
     "/history": history.page,
+    "/welcome": welcome.page,  # F30: the first-start screen; the Overview opens it while nothing is recorded
 }
+# Pages outside the lock (F27): the lock page itself, and the phone's pairing page (F35).
+OPEN_PAGES = {
+    "/lock": lock.page,
+    "/pair": quick_add.pair_page,
+}
+# Pages a paired phone may see (F35), behind the lock like the others.
+PHONE_PAGES = {
+    "/quick": quick_add.page,
+}
+UNLOCK_ROUTE = "/unlock/{nonce}"
+
+
+def _guarded(path: str, builder: Callable[..., None], phone_ok: bool = False) -> Callable[..., RedirectResponse | None]:
+    """The page behind the app lock: without a session the request is redirected before anything is built.
+
+    The wrapper keeps the builder's parameters (NiceGUI fills them from the query string) and asks for the
+    request on top; the page asked for, query included, is where the unlock leads back to.
+    """
+    params = list(inspect.signature(builder).parameters.values())
+    takes_request = any(p.name == "request" for p in params)
+    if not takes_request:
+        params.append(inspect.Parameter("request", inspect.Parameter.KEYWORD_ONLY, annotation=Request))
+
+    def page(**kwargs: Any) -> RedirectResponse | None:
+        request: Request = kwargs["request"] if takes_request else kwargs.pop("request")
+        wanted = f"{path}?{request.url.query}" if request.url.query else path
+        target = security.redirect_for(request, wanted, phone_ok)
+        if target is not None:
+            return RedirectResponse(target)
+        builder(**kwargs)
+        return None
+
+    page.__signature__ = inspect.Signature(params)  # type: ignore[attr-defined]
+    page.__name__ = builder.__name__
+    return page
+
+
+def register_pages() -> None:
+    """Every page of the app (each sets its translated title in layout.frame)."""
+    for path, builder in PAGES.items():
+        ui.page(path, title="Budget")(_guarded(path, builder))
+    for path, builder in PHONE_PAGES.items():
+        ui.page(path, title="Budget")(_guarded(path, builder, phone_ok=True))
+    for path, builder in OPEN_PAGES.items():
+        ui.page(path, title="Budget")(builder)
+
+
+def _unlock_route(nonce: str) -> Response:
+    """Turn the nonce the lock page got into the session cookie, then go on to the page that was asked for."""
+    granted = security.consume(nonce)
+    if granted is None:
+        return RedirectResponse("/lock", status_code=303)
+    token, target = granted
+    response = RedirectResponse(target, status_code=303)
+    response.set_cookie(security.COOKIE, token, httponly=True, samesite="strict", path="/")
+    return response
+
+
+def register_routes(api: FastAPI) -> None:
+    api.add_middleware(phone.Gate)  # F35: other devices reach the phone pages only, and only while allowed
+    attachments_ui.register(api)  # serves attachment files to the page, by record id
+    api.add_api_route(UNLOCK_ROUTE, _unlock_route, methods=["GET"], include_in_schema=False)
+    selects.add_notes_route()
+
+
+def open_data(data_dir: Path) -> Context:
+    """Open the data folder: the store (through the codec when it is encrypted, F27), then what a start does."""
+    ctx = init_context(data_dir, security.codec())
+    attachments_svc.cleanup(ctx)  # files whose removal can no longer be undone (F12)
+    i18n.set_language(ctx.store.settings.language)
+    return ctx
+
+
+async def refresh() -> None:
+    """Rates and automatic bookings; nothing while an encrypted folder waits for its password."""
+    if not context_module.is_open():
+        return
+    ctx = get_ctx()
+    await refresh_rates(ctx)
+    book_recurring(ctx)  # at the rates of the day
+    await check_updates(ctx)  # F33: only when turned on, once a day
+
+
+def _open_and_refresh(data_dir: Path) -> None:
+    open_data(data_dir)
+    background_tasks.create(refresh(), name="refresh after unlock")
+
+
+def open_folder(folder: Path, moved: bool = False) -> None:
+    """Close the open data folder and open `folder`: another profile (F34), or the same records moved to a new place
+    (`moved`, F26: the same lock and key, so the browser stays unlocked). Refused, with nothing changed, when another
+    Budget window has the folder open."""
+    try:
+        instance_lock.switch(folder)
+    except instance_lock.AlreadyRunningError as exc:
+        raise ValidationError(t("The folder {folder} is open in another Budget window", folder=folder)) from exc
+    sync.stop()
+    context_module.close_context()
+    if moved:
+        security.relocate(folder)
+    else:
+        security.configure(folder)
+    phone.sync_listener()  # the other folder's phone setting (F35)
+    if security.can_open_without_password() or security.codec().encrypting:
+        _open_and_refresh(folder)
+    sync.start(folder)
+
+
+def check_folder() -> None:
+    """F26: reload records another computer changed, and tell the open pages."""
+    if sync.tick():
+        records_reloaded()
 
 
 def setup(data_dir: Path) -> None:
-    ctx = init_context(data_dir)
-    attachments_svc.cleanup(ctx)  # files whose removal can no longer be undone (F12)
-    i18n.set_language(ctx.store.settings.language)
+    security.configure(data_dir)
+    security.opener = _open_and_refresh
+    security.on_phone_change = phone.sync_listener
+    profiles.opener = open_folder
     theme.install()
-    attachments_ui.register(app)  # serves attachment files to the page, by record id
-    for path, builder in PAGES.items():
-        ui.page(path, title="Budget")(builder)  # each page sets its translated title in layout.frame
-    selects.add_notes_route()
-
-    async def refresh() -> None:
-        await refresh_rates(ctx)
-        book_recurring(ctx)  # at the rates of the day
-
+    register_routes(app)
+    register_pages()
+    if security.can_open_without_password():
+        open_data(data_dir)
+    sync.start(data_dir)
     app.on_startup(refresh)
+    app.on_startup(phone.sync_listener)  # F35: listens on the home network only while phones are allowed
+    app.on_shutdown(sync.stop)
+    app.on_shutdown(phone.stop)
     app.timer(30 * 60, refresh, immediate=False)  # keeps rates current, and books what falls due overnight
+    app.timer(sync.INTERVAL, check_folder, immediate=False)  # F26: changes from another computer
 
 
 def _redirect_missing_streams(data_dir: Path) -> None:
@@ -120,6 +257,7 @@ def run() -> None:
     except instance_lock.AlreadyRunningError as exc:
         logging.getLogger(__name__).error("%s", exc)
         sys.exit(1)
+    security.trust_network = args.host not in ("127.0.0.1", "localhost", "::1")  # an explicit choice (F35)
     setup(data)
     if args.native:
         # The app's own exports use the save dialog (layout.save_file); this covers any other download link.

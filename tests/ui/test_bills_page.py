@@ -66,7 +66,8 @@ async def drop(user: User, *named: tuple[str, bytes]) -> None:
 def bills_badge(user: User) -> ui.badge:
     with user:  # hidden ones too, which `find` leaves out
         badges = [e for e in user.client.elements.values() if isinstance(e, ui.badge) and "nav-badge" in e.classes]
-    return max(badges, key=lambda b: b.id)  # the sidebar adds Recurring's first, then Bills'
+    # the sidebar adds Recurring's first, then Bills', then Reminders' (F31) and Loans' (F22)
+    return sorted(badges, key=lambda b: b.id)[1]
 
 
 def history_for(ctx, setup, payee: str, times: int = 2) -> None:

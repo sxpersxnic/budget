@@ -16,12 +16,10 @@ import csv
 import dataclasses
 import hashlib
 import io
-import json
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from pathlib import Path
 
 from budget_app.domain.coicop import TAX, get_coicop
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, Transaction
@@ -32,6 +30,7 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.transactions import TransactionInput
 from budget_app.services.undo import recorded
+from budget_app.storage.store import Store
 
 PROFILES_FILE = "import_profiles.json"
 ENCODINGS = ("utf-8-sig", "cp1252", "latin-1")  # Swiss bank exports are often Windows-1252
@@ -475,19 +474,15 @@ def commit(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Transac
 
 
 # ------------------------------------------------------------------ profiles
-def load_profiles(data_dir: Path) -> list[ImportProfile]:
-    path = data_dir / PROFILES_FILE
-    if not path.exists():
+def load_profiles(store: Store) -> list[ImportProfile]:
+    raw = store.read_json(PROFILES_FILE)
+    if not isinstance(raw, list):
         return []
     known = {f.name for f in dataclasses.fields(ImportProfile)}
-    raw = json.loads(path.read_text(encoding="utf-8"))
     return [ImportProfile(**{k: v for k, v in p.items() if k in known}) for p in raw]
 
 
-def save_profile(data_dir: Path, profile: ImportProfile) -> None:
+def save_profile(store: Store, profile: ImportProfile) -> None:
     """Add or replace (by name) a profile."""
-    profiles = [p for p in load_profiles(data_dir) if p.name != profile.name] + [profile]
-    path = data_dir / PROFILES_FILE
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps([dataclasses.asdict(p) for p in profiles], indent=2), encoding="utf-8")
-    tmp.replace(path)
+    profiles = [p for p in load_profiles(store) if p.name != profile.name] + [profile]
+    store.write_json(PROFILES_FILE, [dataclasses.asdict(p) for p in profiles])

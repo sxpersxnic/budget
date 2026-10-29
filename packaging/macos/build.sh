@@ -14,5 +14,5 @@ uv sync --locked --group build --group dev
 uv run pytest -q
 uv run --group build python packaging/build.py
 echo
-echo "Installer ready (commit it to publish it):"
-ls -1 installers/macos/*.dmg
+echo "Installer ready (attach it and its .sha256 to the release):"
+ls -1 dist/*.dmg dist/*.dmg.sha256

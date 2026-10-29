@@ -657,8 +657,11 @@ async def test_native_export_reports_write_errors(user: User, demo, native, tmp_
     await user.should_see("Could not save statement.pdf")
 
 
-async def test_refresh_rates_records_the_download(user: User, ctx) -> None:
+async def test_refresh_rates_records_the_download(user: User, ctx, setup) -> None:
     calls = []
+    stale = wealth_svc.upsert_entry(ctx, setup["eur"].id, "2026-09", 1000)
+    stale.amount_chf = 1.0  # as an older version might have stored it
+    ctx.store.account_entries.update_many([stale])
 
     def refresh_if_stale(last):
         calls.append(last)
@@ -669,6 +672,10 @@ async def test_refresh_rates_records_the_download(user: User, ctx) -> None:
     await layout.refresh_rates(ctx)
     assert calls == ["2026-01-01"]
     assert ctx.store.settings.last_fx_download == date.today().isoformat()
+    # the first start of a new version values every balance at its month-end rate again
+    assert ctx.store.account_entries.get(stale.id).amount_chf == pytest.approx(
+        ctx.convert_on(1000, "EUR", "CHF", ctx.month_rate_date("2026-09"))
+    )
 
 
 async def test_refresh_rates_without_a_service_does_nothing(ctx) -> None:

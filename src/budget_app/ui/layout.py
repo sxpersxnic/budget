@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 
-from nicegui import app, run, ui
+from nicegui import app, events, run, ui
 from nicegui.client import Client
 from nicegui.events import KeyEventArguments
 
@@ -18,9 +18,15 @@ from budget_app import config, i18n
 from budget_app.domain import months
 from budget_app.i18n import N_, t
 from budget_app.services import bills as bills_svc
+from budget_app.services import loans as loan_svc
+from budget_app.services import profiles as profiles_svc
 from budget_app.services import recurring as recurring_svc
+from budget_app.services import reminders as reminders_svc
+from budget_app.services import security, sync
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
+from budget_app.services import updates as updates_svc
+from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError, get_ctx
 from budget_app.ui import theme
 
@@ -32,14 +38,21 @@ NAV = [
     ("/budget", N_("Budget"), "o_donut_large"),
     ("/transactions", N_("Transactions"), "o_receipt_long"),
     ("/recurring", N_("Recurring"), "o_event_repeat"),
+    ("/subscriptions", N_("Subscriptions"), "o_subscriptions"),  # F17: what repeats without a series yet
     ("/bills", N_("Bills"), "o_request_quote"),
+    ("/reminders", N_("Reminders"), "o_notifications_none"),  # F31: due things, overruns and goals in one list
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
     ("/goals", N_("Goals"), "o_flag"),
+    ("/scenarios", N_("Scenarios"), "o_alt_route"),  # F15: what-if futures beside the plan
     ("/categories", N_("Categories"), "o_account_tree"),
     ("/payees", N_("Payees"), "o_storefront"),
     ("/tags", N_("Tags"), "o_sell"),
     ("/investments", N_("Investments"), "o_show_chart"),
-    ("/tax", N_("Tax Summary"), "o_account_balance"),  # F20: once a year, so last; it draws on all the others
+    ("/loans", N_("Loans"), "o_credit_score"),  # F22
+    ("/shared", N_("Shared Expenses"), "o_group"),  # F23: who owes what
+    # the two yearly pages close the list: both draw on all the others and are opened a few times a year
+    ("/review", N_("Year in Review"), "o_auto_stories"),  # F19
+    ("/tax", N_("Tax Summary"), "o_account_balance"),  # F20: once a year, so last
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")
 # Routes that are not in the sidebar highlight their parent.
@@ -51,12 +64,34 @@ NAV_PARENT = {
     "/rules": "/payees",
 }
 
+# F32: the keys the shortcuts sheet lists, in its order. They work wherever the cursor is not in a field.
+SHORTCUTS = [
+    ("N", N_("New Transaction")),
+    ("/", N_("Search this page")),
+    ("← →", N_("Previous or next month")),
+    ("1 – 9", N_("The places in the sidebar, in their order")),
+    (",", N_("Settings")),
+    ("Ctrl/⌘ Enter", N_("Save the open sheet")),
+    ("Esc", N_("Close the open sheet")),
+    ("?", N_("Keyboard Shortcuts")),
+]
+SEARCH_FOCUS = "document.querySelector('.search input')?.focus()"  # every page's search field has the class
+# the sheet keeps its Ctrl/⌘ Enter, so a sheet opened from a form doesn't also save the form
+SAVE_KEYS = (
+    "(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); emit(); } }"
+)
+
 _data_listeners: weakref.WeakKeyDictionary[Client, Callable[[], object]] = weakref.WeakKeyDictionary()
-# per page: the sidebar badges by route (due recurring transactions, bills due soon)
+# per page: the month stepper the arrow keys move (F32), and the sheets (page keys wait while one is open)
+_month_steps: weakref.WeakKeyDictionary[Client, Callable[[int], None]] = weakref.WeakKeyDictionary()
+_sheets: weakref.WeakKeyDictionary[Client, weakref.WeakSet[ui.dialog]] = weakref.WeakKeyDictionary()
+# per page: the sidebar badges by route (due recurring transactions, bills due soon, reminders)
 _due_badges: weakref.WeakKeyDictionary[Client, dict[str, ui.badge]] = weakref.WeakKeyDictionary()
 BADGES = {
     "/recurring": N_("Due recurring transactions"),
     "/bills": N_("Bills due within a week or overdue"),
+    "/reminders": N_("Reminders"),
+    "/loans": N_("Due loan payments"),
 }
 
 
@@ -93,6 +128,14 @@ async def refresh_rates(ctx: Context) -> None:
     changed = await run.io_bound(tx_svc.revalue_to_transaction_dates, ctx)
     if changed:
         log.info("Valued %d transactions at the rate of their date", changed)
+    balances = await run.io_bound(wealth_svc.revalue_entries, ctx)
+    if balances:
+        log.info("Valued %d account balances at the rate of their month's end", balances)
+
+
+async def check_updates(ctx: Context) -> None:
+    """Ask for the newest release when the user has turned the check on and it wasn't done today (F33)."""
+    await run.io_bound(updates_svc.check_if_due, ctx)
 
 
 def book_recurring(ctx: Context) -> int:
@@ -116,11 +159,46 @@ def data_changed() -> None:
     refresh_due_badge()
 
 
+def records_reloaded() -> None:
+    """F26: the records were read again after another computer changed them; every open page is told, and pages
+    that refresh themselves do."""
+    for client in list(Client.instances.values()):
+        if not client.has_socket_connection:
+            continue
+        with client:
+            ui.notify(t("Records changed on another computer were read again."), type="info")
+            callback = _data_listeners.get(client)
+            if callback:
+                callback()
+
+
+def _open_elsewhere() -> None:
+    """F26: a warning while another computer has the same folder open (a cloud folder)."""
+    for other in sync.others():
+        since = other.since_at
+        with ui.row().classes("w-full px-8 pt-4 max-sm:px-4"), ui.element("div").classes("callout"):
+            ui.icon("o_devices")
+            ui.label(
+                t(
+                    "Budget is open on {computer} too, since {time}. Close it there before you change anything here: "
+                    "changes made on two computers at the same time overwrite each other.",
+                    computer=other.host,
+                    time=f"{i18n.date_label(since.date())}, {since:%H:%M}",
+                )
+            )
+
+
 def refresh_due_badge() -> None:
-    """Show the number of due recurring transactions beside "Recurring" and of the open bills due within a week
-    or overdue beside "Bills" (F03) in the sidebar."""
+    """Show the number of due recurring transactions beside "Recurring", of the open bills due within a week or
+    overdue beside "Bills" (F03), of the reminders beside "Reminders" (F31) and of the due loan payments beside
+    "Loans" (F22) in the sidebar."""
     badges = _due_badges.get(ui.context.client, {})
-    counts = {"/recurring": recurring_svc.due_count, "/bills": bills_svc.due_count}
+    counts = {
+        "/recurring": recurring_svc.due_count,
+        "/bills": bills_svc.due_count,
+        "/reminders": reminders_svc.count,
+        "/loans": loan_svc.due_count,
+    }
     for target, badge in badges.items():
         n = counts[target](get_ctx(), date.today())
         badge.set_text(str(n))
@@ -150,12 +228,89 @@ def _new_transaction() -> None:
     open_transaction_sheet(get_ctx(), on_saved=data_changed)
 
 
+def lock_now() -> None:
+    """Lock the app (F27): every browser and phone has to pass the lock again."""
+    security.lock()
+    ui.navigate.to("/lock")
+
+
+def open_profile(profile_id: str) -> None:
+    """Switch to another profile (F34): its folder opens, and every open page starts over on its Overview."""
+    try:
+        profile = profiles_svc.switch(profile_id)
+    except ValidationError as exc:
+        error(str(exc))
+        return
+    for client in list(Client.instances.values()):
+        if client is not ui.context.client and client.has_socket_connection:
+            with client:
+                ui.navigate.to("/")  # pages still showing the other profile's records
+    success(t("Opened {name}", name=profile.name))
+    ui.navigate.to("/")
+
+
+def _brand() -> None:
+    """The app's name above the sidebar; with several profiles (F34), the open profile's name and a menu of the
+    others."""
+    reg = profiles_svc.load()
+    with ui.row().classes("items-center gap-2 px-2 pb-4 no-wrap"):
+        ui.icon("savings", size="22px").classes("text-primary")
+        if len(reg.profiles) < 2:
+            ui.label("Budget").classes("text-[15px] font-semibold")
+            return
+        with (
+            ui.button(reg.active.name)
+            .props("flat dense no-caps align=left icon-right=unfold_more")
+            .classes("profile-button text-[15px] font-semibold min-w-0 flex-1")
+            .tooltip(t("Profiles")),
+            ui.menu().props("auto-close"),
+        ):
+            for p in reg.profiles:
+                with ui.menu_item(on_click=lambda p=p: open_profile(p.id)).classes("items-center gap-2"):
+                    ui.icon("check" if p.id == reg.current else "", size="18px").classes("text-primary w-5")
+                    ui.label(p.name)
+            ui.separator()
+            ui.menu_item(t("Profiles…"), on_click=lambda: ui.navigate.to("/settings"))
+
+
 def _page_shortcut(e: KeyEventArguments) -> None:
-    """N opens a new transaction on every page (F06)."""
+    """The page keys of SHORTCUTS: N opens a new transaction on every page (F06), the others are F32's."""
     mods = e.modifiers
-    plain = not (mods.ctrl or mods.meta or mods.alt)
-    if e.action.keydown and not e.action.repeat and e.key.name in ("n", "N") and plain:
+    if not e.action.keydown or e.action.repeat or mods.ctrl or mods.meta or mods.alt:
+        return
+    client = ui.context.client
+    if any(d.value and not d.is_deleted for d in _sheets.get(client, ())):
+        return  # a sheet has the keys; Quasar closes it with Esc
+    key = e.key.name
+    if key in ("n", "N"):
         _new_transaction()
+    elif key == "/":
+        ui.run_javascript(SEARCH_FOCUS)
+    elif key == "?":
+        open_shortcuts()
+    elif key in ("ArrowLeft", "ArrowRight") and client in _month_steps:
+        _month_steps[client](-1 if key == "ArrowLeft" else 1)
+    elif key.isdigit() and 1 <= int(key) <= len(NAV):
+        ui.navigate.to(NAV[int(key) - 1][0])
+    elif key == ",":
+        ui.navigate.to(SETTINGS[0])
+
+
+def open_shortcuts() -> None:
+    """The keyboard shortcuts, as a sheet (F32)."""
+    with sheet(t("Keyboard Shortcuts"), width="26rem") as dlg:
+        with ui.element("div").classes("shortcuts w-full"):
+            for keys, label in SHORTCUTS:
+                ui.html(" ".join(f"<kbd>{html.escape(k)}</kbd>" for k in keys.split())).classes("keys")
+                ui.label(t(label))
+        with ui.row().classes("w-full justify-end pt-1"):
+            ui.button(t("Done"), on_click=dlg.close).props("unelevated")
+
+
+def named(button: ui.button, label: str) -> ui.button:
+    """Name an icon-only button: the tooltip for the eye, `aria-label` for screen readers (F32)."""
+    button.props["aria-label"] = label
+    return button.tooltip(label)
 
 
 @contextmanager
@@ -168,14 +323,15 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
     theme.apply_colors()
     ui.page_title(f"{title} – Budget")
     ui.keyboard(on_key=_page_shortcut)  # ignores keys typed into fields
+    _month_steps.pop(ui.context.client, None)
+    skip = ui.link(t("Skip to content"), "#").classes("skip-link")
     current = NAV_PARENT.get(path, path)
     with (
-        ui.left_drawer().props("width=232 :breakpoint=1023").classes("sidebar") as drawer,
+        ui.left_drawer().props("width=232 :breakpoint=1023 role=navigation").classes("sidebar") as drawer,
         ui.column().classes("w-full h-full gap-0 px-3 pt-4 pb-3 no-wrap"),
     ):
-        with ui.row().classes("items-center gap-2 px-2 pb-4"):
-            ui.icon("savings", size="22px").classes("text-primary")
-            ui.label("Budget").classes("text-[15px] font-semibold")
+        _brand()
+        drawer.props["aria-label"] = t("Places")
         ui.button(t("New Transaction"), icon="add", on_click=_new_transaction).props("unelevated no-wrap").classes(
             "w-full bg-primary text-white mb-4"
         )
@@ -184,23 +340,54 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
         ui.space()
         _nav_item(*SETTINGS, SETTINGS[0] == current)
         latest = ctx.fx.latest_date()
-        with ui.column().classes("gap-0 px-2 pt-3"):
-            ui.label(f"Budget {config.app_version()}").classes("nav-footer")
-            ui.label(
-                t("ECB rates of {date}", date=i18n.date_label(latest)) if latest else t("No exchange rates yet")
-            ).classes("nav-footer")
+        with ui.row().classes("items-end no-wrap px-2 pt-3 gap-1"):
+            with ui.column().classes("gap-0 flex-1 min-w-0 items-start"):
+                ui.label(f"Budget {config.app_version()}").classes("nav-footer")
+                if ctx.store.settings.sample_data:  # F30: the folder holds the sample set
+                    ui.label(t("Sample data")).classes("nav-footer")
+                ui.label(
+                    t("ECB rates of {date}", date=i18n.date_label(latest)) if latest else t("No exchange rates yet")
+                ).classes("nav-footer")
+                release = updates_svc.available(ctx)  # F33: only after a check the user turned on
+                if release:
+                    ui.link(
+                        t("Budget {version} is available", version=release.version), release.url, new_tab=True
+                    ).classes("nav-footer text-primary").tooltip(
+                        t(
+                            "Opens the release page with the installers and the update steps. "
+                            "Nothing is downloaded by the app."
+                        )
+                    )
+                ui.button(t("Keyboard Shortcuts"), on_click=open_shortcuts).props("flat dense no-caps").classes(
+                    "nav-footer footer-link"
+                )
+            if security.required():  # F27: lock now, from every page
+                named(
+                    ui.button(icon="o_lock", on_click=lock_now)
+                    .props("flat round dense size=sm")
+                    .classes("text-primary"),
+                    t("Lock Now"),
+                )
     with ui.header().classes("mobile-bar lg:hidden px-2 py-1 items-center gap-1"):
-        ui.button(icon="menu", on_click=drawer.toggle).props("flat round dense").classes("text-primary")
+        menu = ui.button(icon="menu", on_click=drawer.toggle).props("flat round dense").classes("text-primary")
+        named(menu, t("Menu"))
         ui.label(title).classes("font-semibold text-[15px]")
         ui.space()
-        ui.button(icon="add", on_click=_new_transaction).props("flat round dense").classes("text-primary").tooltip(
-            t("New Transaction")
+        named(
+            ui.button(icon="add", on_click=_new_transaction).props("flat round dense").classes("text-primary"),
+            t("New Transaction"),
         )
     if ctx.fx_service and ctx.fx_service.last_error:
         with ui.row().classes("w-full px-8 pt-4 max-sm:px-4"), ui.element("div").classes("callout"):
             ui.icon("o_cloud_off")
             ui.label(ctx.fx_service.last_error)
-    with ui.column().classes("page" + (" narrow" if narrow else "") + (" wide" if wide else "")):
+    _open_elsewhere()
+    with (
+        ui.column()
+        .classes("page" + (" narrow" if narrow else "") + (" wide" if wide else ""))
+        .props("role=main tabindex=-1") as main
+    ):
+        skip.props["href"] = f"#{main.html_id}"
         with ui.row().classes("w-full items-end gap-3 flex-wrap"):
             with ui.column().classes("gap-0"):
                 ui.label(title).classes("large-title max-lg:hidden")
@@ -226,18 +413,29 @@ def sheet(title: str, width: str = "30rem"):
     A closed sheet removes itself from the page. That happens on Quasar's 'hide' event, after the
     closing animation, so code that still reads or resets the form right after close() works.
     """
-    with ui.dialog() as dlg, ui.card().classes("sheet").style(f"width: {width}; max-width: 94vw"):
+    with (
+        ui.dialog() as dlg,
+        ui.card().classes("sheet").style(f"width: {width}; max-width: 94vw").props("role=dialog aria-modal=true"),
+    ):
         ui.label(title).classes("sheet-title")
         yield dlg
     dlg.on("hide", dlg.delete)
+    _sheets.setdefault(ui.context.client, weakref.WeakSet()).add(dlg)
     dlg.open()
 
 
 def sheet_buttons(dlg: ui.dialog, label: str, on_click, enabled: bool = True) -> ui.button:
+    """Cancel and the sheet's action; Ctrl/⌘ Enter anywhere in the sheet presses the action (F32)."""
     with ui.row().classes("w-full justify-end gap-2 pt-1"):
         ui.button(t("Cancel"), on_click=dlg.close).props("flat").classes("text-primary")
         btn = ui.button(label, on_click=on_click).props("unelevated")
     btn.set_enabled(enabled)
+
+    def save() -> None:
+        if btn.enabled:
+            events.handle_event(on_click, events.ClickEventArguments(sender=btn, client=btn.client))
+
+    dlg.default_slot.children[0].on("keydown", save, js_handler=SAVE_KEYS)
     return btn
 
 
@@ -264,17 +462,21 @@ def month_stepper(options: dict[str, str], value: str, on_change: Callable[[str]
             sel.value = keys[i]
 
     with ui.row().classes("items-center gap-0 no-wrap"):
-        ui.button(icon="chevron_left", on_click=lambda: step(-1)).props("flat round dense").classes(
-            "text-primary"
-        ).tooltip(t("Previous month"))
+        named(
+            ui.button(icon="chevron_left", on_click=lambda: step(-1)).props("flat round dense").classes("text-primary"),
+            t("Previous month"),
+        )
         sel = (
             ui.select(options, value=value, on_change=lambda e: on_change(e.value))
             .props("borderless dense options-dense hide-dropdown-icon")
             .classes("font-semibold text-[15px] text-center")
         )
-        ui.button(icon="chevron_right", on_click=lambda: step(1)).props("flat round dense").classes(
-            "text-primary"
-        ).tooltip(t("Next month"))
+        sel.props["aria-label"] = t("Month")
+        named(
+            ui.button(icon="chevron_right", on_click=lambda: step(1)).props("flat round dense").classes("text-primary"),
+            t("Next month"),
+        )
+    _month_steps[ui.context.client] = step  # ← and → step it (F32)
     return sel
 
 

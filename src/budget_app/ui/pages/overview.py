@@ -12,12 +12,14 @@ from nicegui import ui
 from budget_app.domain import months
 from budget_app.domain.models import ASSET_CLASSES
 from budget_app.i18n import N_, t
+from budget_app.services import demo as demo_svc
 from budget_app.services import export as export_svc
 from budget_app.services import goals as goal_svc
 from budget_app.services import reports
+from budget_app.services import scenarios as scen_svc
 from budget_app.services import tags as tag_svc
 from budget_app.services import wealth as wealth_svc
-from budget_app.services.context import Context
+from budget_app.services.context import Context, get_ctx
 from budget_app.ui.layout import (
     data_month_range,
     error,
@@ -26,6 +28,7 @@ from budget_app.ui.layout import (
     metric,
     money_html,
     month_options,
+    named,
     on_data_changed,
     save_file,
     segmented,
@@ -77,7 +80,7 @@ class ChartCard:
                     ui.label(t(CHART_HINTS[kind])).classes("caption")
                 ui.space()
                 with (
-                    ui.button(icon="more_horiz").props("flat round dense").classes("text-primary"),
+                    named(ui.button(icon="more_horiz").props("flat round dense").classes("text-primary"), t("Export")),
                     ui.menu().props("auto-close"),
                 ):
                     ui.menu_item(t("Save Image…"), on_click=lambda: self.save_image("png"))
@@ -215,10 +218,13 @@ class ChartCard:
         reserve = {}
         if goal_svc.reserving(self.ctx):
             reserve = goal_svc.reserve_series(self.ctx, [m for m, _ in projected], cur)
+        # F15: every scenario marked "shown", projected with its changes laid over the plan
+        scenarios = [(s, dict(scen_svc.series(self.ctx, s.id, cur))) for s in scen_svc.shown(self.ctx)]
         self.data = pd.DataFrame(
             [
                 {"month": m, "wealth": round(v, 2), "type": "projected" if p else "actual"}
                 | ({"free_after_goals": round(v - reserve[m], 2) if p else None} if reserve else {})
+                | {f"scenario: {s.name}": round(line[m], 2) if p and m in line else None for s, line in scenarios}
                 for m, v, p in series
             ]
         )
@@ -251,8 +257,21 @@ class ChartCard:
                 mode="lines",
                 line=dict(color=NEUTRAL, width=2, dash="dash"),
             )
+        scenario_values: list[float] = []
+        for i, (scenario, line) in enumerate(scenarios):
+            points = [(m, line[m]) for m in [m for m, _ in projected] if m in line]
+            if actual and points:
+                points.insert(0, actual[-1])  # starts where the plan does, at the last recorded value
+            scenario_values += [v for _, v in points]
+            fig.add_scatter(
+                x=[m for m, _ in points],
+                y=[round(v, 2) for _, v in points],
+                name=scenario.name,
+                mode="lines",
+                line=dict(color=SERIES[(i + 2) % len(SERIES)], width=2, dash="dash"),
+            )
         fig = chart_layout(fig, cur)
-        values = [v for _, v, _ in series] + [v for _, v in free]
+        values = [v for _, v, _ in series] + [v for _, v in free] + scenario_values
         if values and min(values) > 0:  # wealth rarely nears zero; a zero baseline flattens the line
             lo, hi = min(values), max(values)
             pad = max((hi - lo) * 0.15, hi * 0.02)
@@ -468,6 +487,9 @@ def class_breakdown(sums: dict[str, float], cur: str) -> None:
 
 
 def page() -> None:
+    if demo_svc.first_run(get_ctx()):  # F30: nothing recorded yet, and the welcome screen not passed
+        ui.navigate.to("/welcome")
+        return
     with frame(t("Overview"), "/") as (ctx, actions):
         currency = {"value": ctx.store.settings.display_currency}
         charts: list[ChartCard] = []

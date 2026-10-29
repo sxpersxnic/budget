@@ -1,12 +1,10 @@
-# Lint, types, tests and coverage on every push and pull request.
-# Also called by installers.yml, so no installer is built from code that fails its checks.
+# Lint, types, tests and coverage on every push and pull request (`just ci` runs the same locally).
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-  workflow_call:
 
 permissions:
   contents: read

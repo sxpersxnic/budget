@@ -5,22 +5,22 @@ A local personal-budgeting app.
 - Data is stored in plain CSV files on your computer.
 - CHF is the fixed base currency.
 - Exchange rates come from the ECB's daily reference rates. A transaction is converted at the
-  rate of its date, an account balance at the last rate of its month.
+  rate of its date, an account balance at the last rate of its month; at every start the app checks
+  every recorded amount against its rate and corrects the CHF value where it differs.
 - Expenditure categories follow COICOP 2018.
 
 The installers bundle everything the app needs. You do **not** need Python, uv or any other tools to use it.
 
 **Download:** the installers are attached to each
-[release on GitHub](https://github.com/sxpersxnic/budget/releases/latest), with a
-`SHA256SUMS.txt` to check them:
+[release on GitHub](https://github.com/sxpersxnic/budget/releases/latest), each with a
+`.sha256` file to check it (`shasum -a 256 -c <file>.sha256`):
 
 - macOS: `Budget-<version>-macOS-arm64.dmg`
 - Windows: `Budget-<version>-Windows-Setup.exe`
 - Linux: `Budget-<version>-Linux-x86_64.tar.gz`
 
-They are built automatically from the code in this repository (see
-[Building the installers](#building-the-installers)). The first macOS installer, 0.1.0, is also
-in the [`installers/`](installers/README.md) folder.
+They are built from the tagged code in this repository (see
+[Building the installers](#building-the-installers)).
 
 - [Install on macOS](#install-on-macos)
 - [Install on Windows](#install-on-windows)
@@ -97,7 +97,9 @@ bundled. Desktop installations have the system libraries it needs; on a minimal 
 
 Your installed version is shown at the bottom of the app's sidebar, for example
 *Budget 0.1.0*. Newer installers are on the
-[releases page](https://github.com/sxpersxnic/budget/releases).
+[releases page](https://github.com/sxpersxnic/budget/releases). To be told about them, turn on
+**Settings → Updates → Check for Updates**: the sidebar then shows *Budget 0.2.0 is available*
+with a link to the release when there is a newer one (see the privacy note below).
 
 **Your data is kept.** Updating replaces only the program. Your records live in the
 [data folder](#your-data-backups-and-uninstalling), which neither installer touches. As an extra
@@ -144,8 +146,8 @@ The app opens in its own window and keeps all data in your user folder:
   file. The app also keeps its own copies under **Automatic Backups**: one before each update and
   one before each restore, the ten most recent. Each can be restored with **Restore…**. A restore
   first copies the current records to the backups folder, so it can be undone the same way.
-- **Attachments:** files you attach to a transaction, and the PDFs and photos of QR bills, are
-  copied into the data folder (`attachments/`), so the backup and the automatic copies include them.
+- **Attachments:** files you attach to a transaction, and the PDFs and photos of QR bills and
+  receipts, are copied into the data folder (`attachments/`), so the backup and the automatic copies include them.
   A removed attachment's file stays there as long as the removal can still be undone, and is deleted
   at a later start.
 - **Undo:** after saving or deleting, the confirmation at the bottom offers **Undo** for a few
@@ -166,12 +168,49 @@ The app opens in its own window and keeps all data in your user folder:
 
   The data folder is kept on purpose. Delete it by hand if you want to remove your data too.
 - **Internet:** only needed for the daily exchange-rate download. Offline, the app uses the
-  last downloaded rates.
-- **Privacy:** the app only accepts connections from your own computer. Nothing is uploaded.
+  last downloaded rates. If you turn on **Settings → Updates → Check for Updates** (off by default),
+  the app also asks GitHub once a day for the number of the newest release and links to it in the
+  sidebar when it is newer; it never downloads or installs anything, and the request carries
+  nothing about you or your data.
+- **Privacy:** the app only accepts connections from your own computer, unless you turn on
+  **Quick Add from a Phone** (below). Nothing is uploaded.
+- **App lock:** **Settings → Security → Set Password…** makes the app ask for a password before it
+  opens (and again after **Lock Now**, the padlock at the bottom of the sidebar). Without more, your
+  files stay plain CSV; if you forget the password, quit the app and delete `security.json` from the
+  data folder. **Encrypt Records → Turn On…** rewrites the record files so that only your password
+  opens them, and shows a **recovery key** once: write it down and keep it apart from the computer.
+  It is the only other way in if you forget the password; without either, the records are lost.
+  Attached files (receipts, bills) are not encrypted. A backup from **Back Up Now…** is written in
+  plain text, so it restores without the password; keep it somewhere safe.
 - **One window at a time:** opening the app a second time while it is running does nothing.
   Switch to the window that is already open.
+- **Profiles:** to keep separate budgets apart (yours, a joint household, an association), add them
+  under **Settings → Profiles → Add Profile…**. Each profile has its own folder, accounts, settings and
+  password; switch between them at the top of the sidebar. **Remove** only takes a profile off the
+  list: its folder and records stay where they are. The list itself is `profiles.json` in the data
+  folder above.
+- **Quick add from a phone:** with the app lock on, **Settings → Security → Quick Add from a Phone ·
+  Turn On…** lets a phone on your home network record expenses. **Pair a Phone…** shows an address and a
+  QR code to open on the phone, and a six-digit code to type there; the phone can then add expenses and
+  see nothing else. The connection is not encrypted, so use it at home only. **Turn Off** or **Lock Now**
+  ends it for every phone; after a restart of the app, pair again. Your firewall may ask once whether
+  Budget may accept connections: allow it for private networks only.
+- **Two computers (cloud folder):** **Settings → Data → Data Folder · Move…** copies your records to
+  another folder, for example `iCloud Drive/Budget`, `Dropbox/Budget` or `OneDrive/Budget`, and
+  uses them there; the old folder is left as it was. On the other computer, add the same folder
+  under **Settings → Profiles → Add Profile…**. Use one computer at a time: while Budget is open on
+  the other one, every page says so, and records changed there are read again after a few seconds,
+  but changes made on both at the same time are not merged. Budget itself never connects to the
+  cloud service; your sync app copies the files.
 
 ## First steps
+
+On the first start the app shows a **welcome screen**: choose the language and the display currency,
+see where your data is kept, and either open Settings for your own data or **Load Sample Data**, a
+year of example records (accounts, a holiday, a renovation, investments, budgets, goals) to explore
+every page with. While the sample data is loaded the sidebar says so; **Settings → Data → Remove
+Sample Data…** empties the folder again (your language and currency stay) and the welcome screen
+comes back. Sample data only goes into an empty data folder.
 
 1. **Settings:**
    - Choose the language (English, Deutsch, Français or Italiano; by default it follows your
@@ -179,14 +218,16 @@ The app opens in its own window and keeps all data in your user folder:
    - Add your accounts, each with its currency.
    - Add your income categories.
    - Choose how far ahead to plan (*Plan Until*) and the display currency.
+   - Choose how the **projected wealth** treats a month without balances (*Projected Wealth*): the budgets
+     alone, or what you've recorded where it is more than the budget (the default).
 2. **Budget → Record Balance:** enter each account's balance at the end of last month.
 3. **New Transaction** (top of the sidebar, available on every page): record expenditures
    (with a COICOP category or taxes), income, transfers, currency exchanges and
    revaluations (a change in an account's value, such as a gain on an investment). Turn on
    *Partly paid for others* when part of a payment was for someone else. Record their
-   repayment later as income with *Repays an advance payment*. Under **Items** you can list
-   what you bought (for example a grocery receipt) with quantity and price; the Transactions
-   search then also finds a purchase by item name. To **split** an expenditure across categories
+   repayment later as income with *Repays an advance payment*, or on the **Shared Expenses**
+   page. Under **Items** you can list what you bought (for example a grocery receipt) with
+   quantity and price; the Transactions search then also finds a purchase by item name. To **split** an expenditure across categories
    (food, detergent and a present on one receipt), click the split button beside a line and give it
    its own category, and tags if you like; the line below the list shows what stays in the
    transaction's category ("Rest in 01.1 Food: 23.40"). Reports, budgets, charts and tag totals then
@@ -202,6 +243,10 @@ The app opens in its own window and keeps all data in your user folder:
    names. Shortcuts: type a sum such as `12.50+8.30`
    into an amount, press **N** for a new transaction and **⌘↩** (Ctrl+Enter) to save, save the
    usual ones as **templates** (bookmark button), or **Duplicate** an existing transaction.
+   Outside a field, **/** jumps to the page's search, **←** **→** change the month, **1**–**9** open the places
+   in the sidebar and **,** opens Settings; press **?** (or **Keyboard Shortcuts** at the foot of the sidebar)
+   to see them all. In any sheet, **⌘↩** (Ctrl+Enter) saves and **Esc** closes it. Every button has a name for
+   screen readers, and text keeps a contrast of at least 4.5:1 in light and dark mode.
    The category field shows everyday names ("Groceries · 01.1") and your recently used
    categories first, and its search also knows shops and brands: type "Migros", "SBB" or "Netflix".
    It also finds a category by what it includes ("quinoa" finds 01.1.1.1 Cereals); hover over a
@@ -233,6 +278,13 @@ The app opens in its own window and keeps all data in your user folder:
    which one **Undo**
    reverts. Rows a change doesn't fit (a transfer has no category) keep what they have; a split
    transaction changes only the category of its rest, its lines keep theirs.
+   **Transactions → Receipt…**: drop the photo or PDF of a till receipt (or click to choose it). The
+   app reads it on your computer – nothing is sent anywhere – and shows the receipt beside a new
+   expenditure filled in with the total, the date, the currency and the shop as payee, plus the item
+   lines when they add up to the total. Check them (reading a crumpled receipt is not perfect), choose
+   the category and account and click **Add Transaction**; the receipt is kept as an attachment. If
+   reading isn't available on your computer (Intel Macs), the sheet says so and you type the amount,
+   date and payee from the picture beside the form.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets. To start from what actually happened, choose **Propose from History…**:
    pick the last 3, 6 or 12 complete months, average or median, the COICOP level (division, group
@@ -254,6 +306,21 @@ The app opens in its own window and keeps all data in your user folder:
    date, then the full target). The projection itself doesn't change. **Archive** a goal you reached
    and spent (it leaves the lists and the reserve; **Restore** brings it back), or delete it. The
    Overview shows your first three goals in a **Goals** card.
+   **Scenarios** (sidebar): try a future without touching the plan. A scenario is a name and a list
+   of **changes**: "Salary 4'960 CHF every month from January", "Car purchase 18'500 CHF in April",
+   or 0 to drop a budget from some months. In the scenario the budget of that category *is* that
+   amount in those months; everything else stays as planned, and what you have already recorded
+   still counts. Each scenario shows where it ends against the plan ("Projected for Dec 2027:
+   48'200 CHF · −9'600 CHF against the plan"), and with *On the Overview* turned on the wealth
+   chart draws it as a dashed line beside the plan, so you can compare several futures. When you
+   decide, **Adopt into Plan…** writes the changes into your budget (replacing the plan's budget for
+   those categories and months) and removes the scenario; one Undo takes it back.
+   **Reminders** (sidebar): one list of what wants doing while the app is open: balances to record
+   for last month, recurring transactions and QR bills that are due, budgets exceeded (or on pace
+   to be) this month, and goals behind their plan or past their date. Each row takes you to the
+   place where you deal with it, and the sidebar counts them. Nothing is sent anywhere, no
+   e-mail and no system notification; in **Settings → Reminders** you switch off the kinds you
+   don't want.
 6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is
    due it is listed for one-click booking (change the amount first if it varies, or skip it);
    turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
@@ -325,7 +392,45 @@ The app opens in its own window and keeps all data in your user folder:
    click it for its history, where trades and prices can be edited or deleted. The page also sums
    the Swiss withholding tax you can reclaim with your tax return, per year. Pillar 2,
    pillar 3a, real estate and other assets keep their recorded month-end balances.
-10. **Tax Summary** (sidebar, once a year): the amounts for your tax declaration, last year by
+   **Loans** (sidebar): add a mortgage or a loan with **New Loan**: the debt at the start, the interest
+   rate, how often you pay (every month, quarter, half year or year), the first payment, the repayment per
+   payment (leave it empty for an interest-only mortgage), the account you pay from and, if you like, the
+   lender and the date the fixed rate ends. The loan gets its own account of the asset class *Loans and
+   mortgages*; its balance is minus what you still owe, so your wealth is net of your debts and *By Asset
+   Class* shows the loans as a negative amount. When a payment is due it is listed at the top with the
+   interest on the outstanding debt and the repayment; check the amounts against your bank's statement,
+   change them if they differ, and **Book**: the repayment is a transfer into the loan account, the interest
+   an expenditure (category 12.2.1, which the tax summary counts as debt interest). Both are ordinary
+   transactions you can edit later. **Skip** a payment you recorded another way. Click a loan to see the
+   planned payments, when it will be paid off and what was booked. If the loan was paid into one of your
+   accounts, enter 0 as the debt at the start and record the payout as a transfer from the loan account.
+   Budget the interest like any other cost; the repayment doesn't change your wealth.
+   **Shared Expenses** (sidebar): who owes you what. Everyone you named as debtor of a payment *partly paid
+   for others* gets a row with what is still open (per currency), how many payments, the oldest one and what
+   came back this year; unfold the row to see the payments and click one to open it. When someone pays you
+   back, **Settle Up…**: enter the amount, the date and the account it went to. The amount settles their
+   oldest payments first (the sheet shows which) and is recorded as repayments, undoable in one step.
+   **Summary…** gives the open payments as text to copy, or as a text or PDF file to save, so you can send it
+   yourself; the app sends nothing. Names count as the same person regardless of upper case and accents.
+10. **Subscriptions** (sidebar, after Recurring): charges that come back at the same rhythm for
+    about the same amount, found in your transactions and grouped by payee: streaming, phone, gym,
+    insurance, rent. A payee is listed once its latest charges came three times at one rhythm (every
+    month, two months, quarter, half year or year, give or take a few days; twice for half-yearly and
+    yearly charges), each within 20 % (or 2.00) of the usual amount, and the last charge is no older
+    than two rhythms. A pause, a late payment or a price rise only restarts the count. Each row says what it costs a year, how many charges since when, the last and the
+    expected next date. **Make Recurring…** opens the recurring-transaction sheet prefilled from the last
+    charge, so the next one is due a rhythm later; **Ignore** hides a payee you don't consider a
+    subscription (undo, or *Watch Again* in the Ignored list). Below, your recurring transactions are
+    listed with what they cost a year. Nothing is booked for you.
+11. **Year in Review** (sidebar): a year's income, spending, savings and wealth against the year
+    before. Last year opens by default; this year is shown *so far* (January to the current month,
+    compared with the same months of last year). You see what you saved and your savings rate, how
+    your wealth moved since the end of the year before, income and expenditure month by month as a
+    chart, spending by category and income by source with the change as ▲/▼ and a percentage, and the
+    five biggest payments (a button opens each). The figures are the monthly statements added up, so
+    they agree with the Budget page; wealth is your recorded month-end balances. The share button
+    saves the review as **PDF** (with the chart) or **Excel**.
+12. **Tax Summary** (sidebar, once a year): the amounts for your tax declaration, last year by
     default, in CHF, in sections for professional expenses, pillar 3a payments, insurance premiums,
     medical and dental costs, donations, childcare, debt interest, the withholding tax to reclaim
     and the dividends and interest for the securities list. A section finds its transactions by
@@ -340,18 +445,13 @@ The app opens in its own window and keeps all data in your user folder:
 
 ## Building the installers
 
-**Automatically (GitHub Actions):** every push to `main` builds all three installers after the
-checks pass; they are attached to the workflow run as artifacts. To publish a release, raise
-`version` in `pyproject.toml`, commit, then tag and push:
+The installers are built by hand, each on its own operating system, and attached to the GitHub
+release of their version; no workflow builds them. To publish a release, raise `version` in
+`pyproject.toml`, tag that commit with the same version (`git tag v0.2.0 && git push origin v0.2.0`),
+build on each system and attach the files: the steps are in
+[packaging/README.md](packaging/README.md#releasing-an-update).
 
-```bash
-git tag v0.2.0 && git push origin v0.2.0
-```
-
-The tag must match the version. The [Installers workflow](.github/workflows/installers.yml) then
-creates the GitHub release with the three installers and `SHA256SUMS.txt`.
-
-**Locally:** each installer is built on its own operating system. A Mac cannot build the Windows
+Each installer is built on its own operating system. A Mac cannot build the Windows
 installer, and Windows cannot build the macOS one. Building needs
 [uv](https://docs.astral.sh/uv/), which downloads Python and every dependency automatically.
 Users of the finished installer do not need it.
@@ -367,8 +467,7 @@ Each build script:
 1. checks the prerequisites;
 2. installs the locked dependencies;
 3. runs the tests;
-4. writes the installer to `dist/`. The macOS and Windows installers are also copied, with a
-   SHA-256 checksum, to `installers/<os>/`.
+4. writes the installer and its SHA-256 checksum (`<installer>.sha256`) to `dist/`.
 
 A build takes 2–5 minutes. The version number comes from `pyproject.toml`. Signing and other
 details are in [packaging/README.md](packaging/README.md).
@@ -378,6 +477,7 @@ details are in [packaging/README.md](packaging/README.md).
 ```bash
 uv sync
 uv run budget                 # opens http://127.0.0.1:8080 in the browser
+uv sync --extra ocr           # also the receipt reader (RapidOCR and ONNX Runtime, about 130 MB)
 ```
 
 | Option | Effect |
@@ -414,6 +514,8 @@ types, tests and coverage before each push.
 
 - The COICOP notes (`src/budget_app/resources/coicop_notes.json`) are rebuilt from the UN workbook
   with `scripts/coicop_notes.py` (usage in the script); see [Sources](#sources).
+- Encryption at rest (F27) uses the [cryptography](https://cryptography.io) package (scrypt and Fernet);
+  the app implements no cryptographic primitive of its own.
 - The specification is in [docs/Description_Budgeting_App.md](docs/Description_Budgeting_App.md).
 - The implementation (data model, formulas, decisions) is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - Code layout: `src/budget_app/{domain,storage,services,ui}`.
@@ -431,14 +533,18 @@ types, tests and coverage before each push.
   the app says beside them.
 - **QR bills:** read according to SIX, *Swiss Implementation Guidelines for the QR-bill*, version 2.3.
 
-### Libraries for QR bills
+### Libraries for QR bills and receipts
 
 | Library | Used for | Licence |
 | --- | --- | --- |
-| [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) with [PDFium](https://pdfium.googlesource.com/pdfium/) | rendering PDF pages to find the QR code | Apache-2.0 or BSD-3-Clause; PDFium BSD-3-Clause, its bundled libraries under their own licences (listed in the package) |
+| [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) with [PDFium](https://pdfium.googlesource.com/pdfium/) | rendering PDF pages to find the QR code, and receipt pages and their text | Apache-2.0 or BSD-3-Clause; PDFium BSD-3-Clause, its bundled libraries under their own licences (listed in the package) |
 | [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp) | finding and decoding QR codes | Apache-2.0 |
 | [Pillow](https://python-pillow.org) | opening photos (already used through reportlab) | MIT-CMU |
+| [RapidOCR](https://github.com/RapidAI/RapidOCR) with its PP-OCRv6 models (optional extra `ocr`) | reading till receipts on the computer (F04) | Apache-2.0; the models Apache-2.0 (`MODEL_LICENSES.md` in the package) |
+| [ONNX Runtime](https://onnxruntime.ai) (optional extra `ocr`) | running the OCR models | MIT |
+| [OpenCV](https://opencv.org) (`opencv-python-headless`, pulled in by RapidOCR) | image handling for the OCR models | Apache-2.0 |
 | [segno](https://github.com/heuer/segno), [qrbill](https://github.com/claudep/swiss-qr-bill) | tests only: QR codes and QR-bill payloads for the test files | BSD-3-Clause, MIT |
 
-All of them come as wheels with their native code for macOS (arm64 and x86_64), Windows and Linux, so
-`uv sync` needs no compiler.
+All of them come as wheels with their native code for macOS, Windows and Linux, so `uv sync` needs no
+compiler. ONNX Runtime has no wheel for Intel Macs on Python 3.13, so there the app runs without the receipt
+reader and the receipt sheet says so.

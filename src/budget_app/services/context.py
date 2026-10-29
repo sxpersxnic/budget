@@ -10,6 +10,7 @@ from budget_app.config import BASE_CURRENCY, app_version
 from budget_app.domain import months
 from budget_app.domain.fx import FxRates, FxService
 from budget_app.storage import backup
+from budget_app.storage.encryption import Codec
 from budget_app.storage.store import Store
 
 
@@ -65,11 +66,23 @@ class Context:
 _ctx: Context | None = None
 
 
-def init_context(data_dir: Path) -> Context:
-    global _ctx  # noqa: PLW0603 - process-wide singleton set once at startup
+def init_context(data_dir: Path, codec: Codec | None = None) -> Context:
+    """Open the data folder: the version backup, then the store (through `codec` when the records are encrypted, F27)
+    and the rates. Called at startup, after the unlock of an encrypted folder, and when the profile changes (F34)."""
+    global _ctx  # noqa: PLW0603 - process-wide singleton: the app has one open data folder
     backup.backup_on_version_change(data_dir, app_version())  # before the store reads or writes anything
-    _ctx = Context(store=Store(data_dir), fx_service=FxService(data_dir))
+    _ctx = Context(store=Store(data_dir, codec), fx_service=FxService(data_dir))
     return _ctx
+
+
+def close_context() -> None:
+    global _ctx  # noqa: PLW0603 - see init_context
+    _ctx = None
+
+
+def is_open() -> bool:
+    """Whether a data folder is open (an encrypted one is not until it is unlocked, F27)."""
+    return _ctx is not None
 
 
 def get_ctx() -> Context:

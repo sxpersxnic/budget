@@ -30,16 +30,21 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20 and F18 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 done except F35, of which the quick add and the pairing are built (F10, F12, F11, F03, F14, F16, F20, F18, F19, F17, F15, F31, F22, F23, F30, F33, F27, F34, F26, F04 and F32 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
-| Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
-| Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
+| Engineering: tests and hooks | ☑ Done | 1746 tests, coverage 99.5 %, gate at 87 % |
+| Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | the CI workflow checks every PR, and `just ci` runs the same checks locally; the installers are built by hand on each system and attached to the GitHub release of their version (the installer workflow was removed on 2026-10-29) |
 
 ## Open now
 
-State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
-[Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+State on 2026-10-29: milestones 1–5, the follow-up fixes and steps 19–24 are done (see
+[Done](#done)), and every decision is made. Step 25 is done but for part of F35: F10 tags, F12 attachments, F11 split
+transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends on
+2026-10-22; F19 year in review, F17 subscriptions, F15 what-if scenarios, F31 reminders, F22 loans, F23 who owes
+what, F30 onboarding, F33 update check, F27 app lock and encryption, F34 profiles, F26 sync through a cloud folder,
+F04 receipt scanning and F32 keyboard and accessibility on 2026-10-28/29, with the product owner's change to the
+projection (decision 36 of the architecture). F35 has its quick add and pairing; the phone app itself is open.
+45 of 47 features are done, F35 partly, F39 dropped. Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +68,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19 (done), F30 (done), F32 (done), F31 (done), F22 (done), F23 (done), F33 (done), F34 (done), F15 (done), F17 (done), F27 (done), F26 (done), F04 (done), F35 (quick add built) | – |
 
 ### Bugs
 
@@ -141,12 +146,13 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 18. ☑ **F15:** decided on 2026-10-22 — any number of named scenarios, each a set of budget changes
     on top of the plan and never written into it; the Overview wealth chart shows the plan and the
     chosen scenarios; *Adopt into Plan* copies a scenario's changes into the budget as one undo step.
+    Built (architecture §7, decision 30).
 19. ☑ **F26:** decided — one computer at a time: the data folder can move into a cloud folder, a
     lock file there warns when another computer has the app open, and files changed elsewhere are
     detected and reloaded; no merging.
 20. ☑ **F27:** decided — an app lock (password, or Touch ID / Windows Hello where available)
     before the app opens, and encryption at rest as an opt-in on top, with a recovery key; without
-    the opt-in the files stay readable CSV.
+    the opt-in the files stay readable CSV. Built with a password (architecture §7, decision 38).
 21. ☑ **F35:** decided — a phone-friendly *quick add* page on the home network, behind the app
     lock and a pairing code; no entries from away from home, no cloud service.
 
@@ -157,7 +163,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F01 | ☑ Done | CSV import of transactions | Data in | M | Local | – |
 | F02 | ☑ Done | Swiss bank statement import (camt.053 / camt.054) | Data in | M | Local | F01 (preview, duplicates) |
 | F03 | ☑ Done | Swiss QR-bill scanning | Data in | M | Local | – |
-| F04 | ☐ Open | Receipt scanning | Data in | L | Optional | F12 |
+| F04 | ☑ Done | Receipt scanning | Data in | L | Local | F12 |
 | F05 | ☑ Done | Recurring transactions | Data in | M | Local | – |
 | F06 | ☑ Done | Faster manual entry | Data in | S–M | Local | – |
 | F07 | ☑ Done | Automatic categorization | Organizing | M–L | Local | F09 |
@@ -168,27 +174,27 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F12 | ☑ Done | Attachments | Organizing | M | Local | – |
 | F13 | ☑ Done | Bulk edit | Organizing | S | Local | – |
 | F14 | ☑ Done | Savings goals | Planning | M | Local | – |
-| F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
+| F15 | ☑ Done | What-if scenarios | Planning | L | Local | – |
 | F16 | ☑ Done | Budget from history | Planning | S | Local | – |
-| F17 | ☐ Open | Subscription and recurring-spend detection | Insight | M | Local | F09 |
+| F17 | ☑ Done | Subscription and recurring-spend detection | Insight | M | Local | F09 |
 | F18 | ☑ Done | Trends and unusual spending | Insight | M | Local | – |
-| F19 | ☐ Open | Year in review | Insight | M | Local | – |
+| F19 | ☑ Done | Year in review | Insight | M | Local | – |
 | F20 | ☑ Done | Swiss tax summary | Insight | M | Local | F10 |
 | F21 | ☑ Done | Investments and asset classes | Wealth | L | Local | – |
-| F22 | ☐ Open | Loans and mortgages | Wealth | M | Local | – |
-| F23 | ☐ Open | Who owes what (shared expenses) | Wealth | M | Local | – |
+| F22 | ☑ Done | Loans and mortgages | Wealth | M | Local | – |
+| F23 | ☑ Done | Who owes what (shared expenses) | Wealth | M | Local | – |
 | F24 | ☑ Done | Export to CSV and JSON | Data out | S–M | Local | – |
 | F25 | ☑ Done | Full backup and restore | Data out | S | Local | – |
-| F26 | ☐ Open | Sync through a cloud folder | Data out | L | Optional | F28 |
-| F27 | ☐ Open | Encryption and app lock | Security | L | Local | – |
+| F26 | ☑ Done | Sync through a cloud folder | Data out | L | Optional | F28 |
+| F27 | ☑ Done | Encryption and app lock | Security | L | Local | – |
 | F28 | ☑ Done | Undo and change history | Security | M | Local | – |
 | F29 | ☑ Done | Multi-language support | Experience | L | Local | – |
-| F30 | ☐ Open | Onboarding and demo data | Experience | M | Local | – |
-| F31 | ☐ Open | Reminders and alerts | Experience | M | Local | – |
-| F32 | ☐ Open | Keyboard shortcuts and accessibility | Experience | M | Local | – |
-| F33 | ☐ Open | In-app update check | Experience | S | Optional | – |
-| F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
-| F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
+| F30 | ☑ Done | Onboarding and demo data | Experience | M | Local | – |
+| F31 | ☑ Done | Reminders and alerts | Experience | M | Local | – |
+| F32 | ☑ Done | Keyboard shortcuts and accessibility | Experience | M | Local | – |
+| F33 | ☑ Done | In-app update check | Experience | S | Optional | – |
+| F34 | ☑ Done | Several households or profiles | Experience | M | Local | – |
+| F35 | ◐ Partly | Phone companion | Experience | XL | Optional | F27 |
 | F36 | ☑ Done | Closing balance from bank files | Data in | M | Local | F01 |
 | F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 added the notes) |
 | F38 | ☑ Done | Exchange-rate chart | Insight | S | Local | – |
@@ -402,6 +408,14 @@ expenditure alike, to the projected wealth on the budget page and to the Overvie
 - **Decide:** months that are over but have no recorded balances yet: budget only (as
   today) or the same rule.
 
+**Changed by the product owner (2026-10-29, decision 36):** the rule is a choice in **Settings → Projected
+Wealth**: *Budget only* sums the month's budgeted income and expenditure (option 1); *Recorded where higher* uses the
+recorded amount where it exceeds the budget, per top-level COICOP category and income category (option 2, the rule
+above, and the default so existing projections don't change). Either applies to every projected month and to the
+what-if scenarios (F15). With the change, every transaction and account balance is valued again at its exchange rate
+at each start (and after each rate check), and its CHF amount recalculated where it differs, so a new version values
+everything already recorded correctly.
+
 ## Backlog
 
 Feature ideas from the first catalog, by area. F01 is done and described under [Done](#done);
@@ -474,7 +488,31 @@ Every Swiss invoice carries a QR code with the amount, currency, creditor and re
 
 #### F04 · Receipt scanning
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision 29):** **Receipt…** in the Transactions toolbar (before *Import…*) opens the *Receipt* sheet:
+a drop zone for one PDF or photo (JPEG, PNG, WebP; HEIC asks for JPEG or PNG), then the receipt on the left and a new
+expenditure on the right. The receipt is read **on the computer** by RapidOCR (PP-OCRv6 multilingual models, bundled
+in its wheel, so nothing is downloaded) on ONNX Runtime; the libraries are the optional extra `budget-app[ocr]`,
+included in the installers. A PDF with its own text (an e-receipt) is read from that text without the engine. From
+the rows that were read (`domain/receipts.py`) the app takes the **total** (the last row that says Total, Summe,
+Montant, Totale, Amount due, … and carries an amount; subtotal, VAT, change, card and payment rows don't count; without
+such a row the largest amount), the **date** (the first plausible one, day first or ISO, also glued to a time), the
+**currency** (CHF or EUR when named, else the display currency) and the **merchant** (the first row of words before
+the total that is not a date, phone number, address or the receipt's own bookkeeping), and offers them as amount,
+date, currency and payee (a known payee keeps its spelling, F09; the category is suggested as for any payee, F07).
+The rows between merchant and total that end in an amount become the **item lines** (F11) when they add up to the
+total, discounts as negative lines; otherwise no lines, so a misread line never makes a wrong split. A caption above
+the form says what was read ("Read from the receipt: Coop Pronto Zürich HB · 28 Oct 2026 · 11.45 CHF. Check it
+before you save.") or that nothing could be; the file waits under *Attachments* ("Attached when you save") and
+**Add Transaction** stores the expenditure, its lines and the file in one undo step. Reading takes one to two seconds
+(the engine loads once, about ten seconds, at the first receipt) in a worker thread with a "Reading the receipt…"
+line meanwhile; PDF pages are rendered in the event loop like QR bills. Without the engine (not installed, or an
+Intel Mac, for which ONNX Runtime has no Python 3.13 wheel) the sheet says so and the user types amount, date and
+payee from the picture beside the form. Not built: online reading (decision 1: never), the camera, HEIC photos, VAT
+and payment method, learning a merchant's layout, and reading several receipts at once. The engine's reading of
+umlauts is imperfect ("Zørich" for "Zürich" in a test picture): the merchant is a proposal the user checks, and a
+known payee's spelling wins.
 
 Photograph or drop a till receipt; the app reads merchant, date, total and, ideally, the
 lines.
@@ -781,7 +819,28 @@ a goal falls behind (F31), contributions booked from the goal, several accounts 
 
 #### F15 · What-if scenarios
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §7, decision 30): `scenarios.csv` holds each scenario (name, note, *shown on the
+Overview*), `scenario_changes.csv` its **changes**: for a category (expenditure or income) an amount in a currency,
+the first month, the rhythm and the last month (or *to the end of the plan*), in the order they were entered. In the
+scenario the budget of that category **is** that amount in those months instead of whatever the plan budgets there;
+**0 takes the budget out** of those months ("drop the gym from March"); everything else stays as in the plan. Where
+two changes of a scenario meet in a month and category, the later one counts. The scenario's projection is the plan's
+(F47) with those budgets laid over: recorded amounts still count where they are higher, so a scenario never undoes
+what has happened. The **Scenarios** page (`/scenarios`, sidebar after Goals, icon `o_alt_route`) lists each
+scenario with "Projected for Dec 2027: 48'200.00 CHF · −9'600.00 CHF against the plan", its changes ("Salary ·
+4'960.00 CHF every month · from Jan 2027 to the end of the plan"), *Add Change…*, a switch *On the Overview*, edit
+and delete; the change sheet (type, amount, currency, category, From, Until or Forever, Repeat, note) says how many
+months it covers and what the plan has for that category in the first month. The **Overview** wealth chart draws
+every shown scenario as a dashed line of its own from the last recorded value, beside the plan and the goals' line,
+and the chart export gets a `scenario: <name>` column each. **Adopt into Plan…** (confirmed) writes the changes into
+the budget as one undo step: per change the plan's entries of that type and category in its months are replaced by a
+series of the change's amount (none for 0), in entry order; every change is checked first, so nothing is written
+when one lies beyond the plan's end; the scenario is then removed, and Undo brings back both the budget and the
+scenario. Nothing is ever written into the plan until then. Not built: changes to recorded transactions or balances,
+one-off amounts added on top of a budget (set the new total instead), scenarios of goals (F14) or of the free-wealth
+line.
 
 Compare futures: "What if I reduce to 80 % work from January?", "Buy a car for 25'000 CHF in
 March".
@@ -828,7 +887,28 @@ months per category, as a starting point the user edits. A one-sheet action on B
 
 #### F17 · Subscription and recurring-spend detection
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §7, decision 33): a **Subscriptions** page (`/subscriptions`, in the sidebar after
+Recurring) with three groups. *Detected* lists the payees that charge again and again: expenditure is grouped by
+payee (F09, compared by its lookup key, so "MIGROS" and "Migros" are one; a row without a payee by its note) and
+currency, and a group is a subscription when its latest charges make a run: going back from the last charge, every
+gap fits one rhythm (every month, two months, quarter, half year or year, within 4 days plus one per month of the
+rhythm) and every charge is within 20 % or 2.00 of the median; a skipped or late charge, an irregular one or an
+old price ends the run, so long imported histories still find today's subscription. The run needs at least three
+charges (two for half-yearly and yearly rhythms), and its last one must be no older than two rhythms. Each row says what it costs a year, how much and how often, how many charges since
+when, the last and the expected next date; the header sums the detected subscriptions per year in the display
+currency. **Make Recurring…** opens F05's series sheet prefilled from the last charge (its payee, note, tags, the
+most frequent category and account, the detected rhythm, the last charge as the series' first booking, so the
+next occurrence is due a rhythm later); **Ignore** takes a group off the list for good (`subscription_ignores.csv`,
+one undo step), and the closed *Ignored* group offers **Watch Again**. Rows a series booked (F05) are never
+counted, and a group whose payee already has a running expenditure series is left out, so a subscription made
+recurring disappears from *Detected* and appears under *Recurring Transactions*, which lists the running
+expenditure series of F05 with their yearly cost and total. Nothing is booked by the page; the thresholds are
+fixed and explained in `domain.subscriptions` (the README names them). In the demo data the rent, health
+insurance, rail pass, phone and a quarterly card fee are detected, and a doctor's note seen twice half a year
+apart (what *Ignore* is for); its streaming charges vary too much and are not. Not built: detecting price changes as a separate
+event, grouping across currencies, half-month or weekly rhythms, and a notification when a subscription stops.
 
 Find charges that repeat with similar amounts (streaming, phone, gym) and list them with
 the yearly total. One click turns a detected subscription into a recurring transaction (F05).
@@ -870,7 +950,27 @@ category's months (the *Income and Expenditure* chart shows that).
 
 #### F19 · Year in review
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §7, decision 32): a **Year in Review** page (`/review`, in the sidebar before Tax
+Summary: the two yearly pages close the list) with a year picker (last year by default when it has data, else
+the latest year with data; this year is always offered as *so far*), the display currency and a share menu. A
+past year is January to December; the current year is reviewed *so far*, January to the current month, and
+compared with the same months of the year before. The metric strip shows income, expenditure, **saved** (the
+hero, with the savings rate and the year before's) and wealth at the end of the last complete month (with the
+change since the end of the year before, and the year before's change); every amount has the year before's
+below it. Then a bar chart of income and expenditure per month, *Spending by Category* (the statement's
+top-level rows: divisions, Taxes, Advance payments, each with the year before, its share of the year's spending
+and the change as ▲/▼ and a percentage, red when spending rose, the amount in the tooltip; *new* and ▼ 100 %
+for what only one year had), *Income* per category (red when it fell), and the five *Biggest Expenses* (the own
+share of a payment, F11; a button opens the transaction). The figures are the monthly statements added up
+(`aggregates`, per part: a split line in its own category, the share paid for others under *Advance payments*
+and its repayments as income), so the year agrees with the Budget page month by month; wealth is the recorded
+month-end wealth, nothing is projected. **Save as PDF…** renders the review with the chart as the browser draws
+it (the Overview's chart export, `toImage`; the PDF does without when that fails) and the tables; **Export as
+Excel…** gives one sheet per part (Summary, Months, Expenditure, Income, Biggest Expenses). Both are
+formula-safe and in the interface language. Not built: a comparison with the budget of the year, revaluations
+as a line of their own (they are in the wealth change), and a review per tag or account.
 
 A yearly report: income, spending by category, savings rate, wealth change, biggest
 expenses, comparison with the previous year. On screen and as a PDF, built on the existing
@@ -991,7 +1091,33 @@ F21 would create them from price changes.
 
 #### F22 · Loans and mortgages
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §4.7, §7 decision 34): a loan is a **liability account** of the new asset class
+*Loans and mortgages* with a repayment schedule (`loans.csv`: principal and start date, interest rate per year,
+payment rhythm, first payment, repayment per payment, paying account, interest category, lender, optional *fixed
+until*, note). The account is added with the loan on the **Loans** page (`/loans`, sidebar after Investments) and
+can't be given that class in Settings. Its balance is **minus the outstanding debt**, computed from the loan's
+bookings (the principal, plus what left the account, minus what came in) like a securities account's value, never
+recorded; it counts against wealth, in *By Asset Class* (negative) and in the asset-class chart. A loan paid into
+one of your accounts starts with a principal of 0 and a transfer from the loan account. **Payments** are due every
+*n* months from the first payment on and are listed on top of the page like recurring transactions (F05): the
+interest on the outstanding debt before the due date (debt × rate × months ÷ 12, half up to the cent) and the
+repayment (the last one takes what is left), both editable, with *Book*, *Skip* and *Book All*; the sidebar counts
+them. Booking writes two ordinary transactions carrying `loan_id`: a transfer of the repayment from the paying
+account into the loan account and an expenditure of the interest in the loan's interest category (default
+**12.2.1**, the code the tax summary counts as debt interest, F20) with the lender as payee; they can be edited and
+deleted like any transaction, and a loan's month reconciles by construction (tested). Each loan shows its debt, a
+bar of the share repaid, its terms, the next payment, the month it is paid off (or *interest only*), *fixed until*
+and *term ended*; a click opens the planned payments (the next 12) and the booked ones (a click opens the
+transaction). A loan is deleted with its account once it has no transactions; a paid-off loan is shown as such.
+`renewals()` lists loans whose fixed term ends within 90 days, for F31. **Decided while building** (34): the
+interest is simple interest per period on the debt before the due date (what Swiss banks quote), amounts are
+edited before booking rather than rebooked from the schedule, the projection stays as it is (amortization moves
+money between two accounts, interest is budgeted like any cost), no automatic booking, and the principal is the
+opening debt (its payout is not a transaction of the app). Not built: annuity loans with a fixed total payment
+(enter the repayment per payment instead), an interest schedule for the projection, rate changes dated in the
+future (edit the rate when it changes), a renewal reminder (F31 can use `renewals()`).
 
 Liabilities with interest rate and repayment plan; interest payments are categorized
 automatically. Projected wealth includes amortization; a mortgage renewal date can trigger
@@ -999,7 +1125,29 @@ a reminder (F31).
 
 #### F23 · Who owes what (shared expenses)
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §3 *Advance payments*, §7 decision 35): the **Shared Expenses** page (`/shared`,
+sidebar after Loans) reads the existing advance payments per **person**, with no new data file and no new field:
+a person is the *debtor* of an expenditure *partly paid for others*, names compared folded (case and accents
+ignored), shown as last written; a repayment counts for the person of the advance it settles. One row per person
+who owes something, oldest open item first: what is open per currency ("40.00 CHF + 45.00 EUR open"), the number
+of open items, the date of the oldest, and what came back this calendar year; the open items fold out below the
+row (date, payee or category with the note, "40.00 of 60.00 CHF open"; a click opens the transaction). People who
+owe nothing are listed folded under *Settled*. **Settle Up…** opens a sheet for one person: the currency (when they
+owe in more than one), the amount received (prefilled with all that is open in it), the date, the account it went
+to (regular accounts in that currency, preselected when there is one) and a note; the caption lists which items
+the amount settles, **oldest first**, the last one partly, and an amount above what is open is refused there.
+*Record Repayment* books one ordinary repayment per item it covers (an income with *Repays an advance payment*,
+so every rule of repayments holds), as **one undoable action**. **Summary…** shows the person's open items as text
+(heading with the date, one line per item, the totals per currency and what was settled this year) with *Copy*,
+*Save as Text…* and *Save as PDF…*: you send it yourself, the app sends nothing. **Decided while building**
+(35): the settle-up is a repayment, not a transfer (decision 1: advances sit outside wealth and repayments
+are income); one amount received is spread over the open items oldest first; totals stay per currency, not
+converted; *this year* is the calendar year of the repayment's date. Not built: one payment shared by several
+people (an advance has one debtor; record such a payment as one expenditure per person, or name them together
+as one debtor), money *you* owe others (record it as an ordinary expenditure when you pay), a separate list of
+people (the debtor field is the list), sending the summary, and reminders (F31 can use `shared.people()`).
 
 Advance payments already record money paid for others. Build on that:
 
@@ -1040,7 +1188,22 @@ every table must load), and the current records go to `backups/<timestamp>_befor
 
 #### F26 · Sync through a cloud folder
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision 19, decision 40):** *Settings → Data → Data Folder · Move…* copies the open profile's
+folder (records, attachments, automatic backups, the lock's `security.json`) to a new or empty folder and opens it
+from there; the cloud folders found on the computer (iCloud Drive, Dropbox, OneDrive, Google Drive) are offered as
+`<cloud>/Budget`. The old folder is left as it was. Another profile's folder, a folder inside the current one and
+a folder that is not empty are refused; a copy that fails leaves the profile where it was. On the second computer,
+*Settings → Profiles → Add Profile…* with the same folder opens it as it is. While a folder is open, the app keeps
+`.in-use.<computer>.json` in it, refreshed every minute and removed on closing; a fresh one from another computer
+(seen within ten minutes) shows a warning on every page: *Budget is open on … too, since …*. Every five seconds the
+app compares the record files with what it last read or wrote itself; files another computer changed are read
+again, in place, once they are the same on two checks in a row (a sync client still copying is waited for), and
+every open page is told and refreshes. A file that can't be read yet (half synced) is skipped until it changes
+again. Not built: merging (decision 19: one computer at a time; a change made on both between two checks keeps the
+one written last), conflict copies made by the sync clients (they are ignored), and moving another profile's
+folder from its own row (*Move…* moves the open one).
 
 Use the app on two computers by keeping the data folder in iCloud Drive, OneDrive or
 Dropbox.
@@ -1053,7 +1216,30 @@ Dropbox.
 
 #### F27 · Encryption and app lock
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision 20):** **Settings → Security.** *App Lock · Set Password…* (at least 8 characters, typed twice)
+turns the lock on: from then on every page, and the attachment file route, answers with the lock page until the
+password is typed; the browser that set the password is let in at once. The lock page asks for the password only;
+a wrong one is reported, and from the fourth wrong try on the answer waits 1, 2, 4 … up to 30 seconds. A session
+lasts until *Lock Now* (the padlock at the bottom of the sidebar, or the Security row) or until the app is
+started again; nothing about it is written to disk. *Change…* and *Turn Off…* ask for the current password.
+**Encrypt Records · Turn On…** (only with the lock on) asks for the password, rewrites every record file – the
+CSV tables, `settings.json`, the import memory files and `history.jsonl`, in the data folder and in the app's own
+copies under `backups/` – as an opaque file (a marker line and a Fernet token, `cryptography`), and shows the
+**recovery key** once: 32 letters and digits in groups of four, with *Copy* and a checkbox before *Done*. The
+files are encrypted with one random data key, which is wrapped with a key stretched from the password (scrypt)
+and again with one stretched from the recovery key; `security.json` holds the salts, a verifier and the two
+wrapped keys, never a secret. Changing the password rewraps the key; the files are not rewritten. *Forgot your
+password?* on the lock page takes the recovery key and a new password (without encryption it explains that
+deleting `security.json` removes the lock, since the files are readable anyway). *New Recovery Key…* retires the
+old one; *Turn Off…* decrypts the files again, and the lock can be turned off only after that. A folder whose
+records are encrypted opens its store only after the unlock; rates and automatic bookings follow then. *Back Up
+Now* writes the records in plain text (the caption says so), so a backup stays restorable without the password;
+restoring into an encrypted folder encrypts the restored files; a backup that carries a `security.json` is
+refused. Not built: Touch ID / Windows Hello (no vetted library for all three systems in the lockfile), an
+idle timeout, encryption of attachment files and of the ECB rates (attachments are served and opened as files;
+the rates are public), and a lock per profile window (the lock is per data folder; F34 switches folders).
 
 The CSV files are readable by anyone with access to the computer.
 
@@ -1109,7 +1295,27 @@ which already speaks English, German and French.
 
 #### F30 · Onboarding and demo data
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §7, decision 27): the sample set of `scripts/demo_data.py` moved into the package
+(`services/demo.py`), so the installed app can write it: six accounts (bank, savings, a EUR account, a securities
+depot, a crypto wallet and a pillar 3a account), a year of salary, rent, groceries with receipts, a holiday in
+Italy, a bathroom renovation, a split receipt, dividends and prices, month-end balances, budgets, templates, tags
+with budgets, goals and tax sections, dated relative to today and written through the services like typed-in
+records; the script is a thin wrapper that empties a folder and calls it (`just demo`). **Welcome screen**
+(`/welcome`, no sidebar): the Overview opens it while the data folder holds no record and it was not passed before
+(`settings.onboarding_done`), so a folder with records never sees it. It has the language (applied at once), the
+display currency, the data folder (its path and how to change it: `--data-dir` or `BUDGET_DATA_DIR`) and two
+ways in: **Open Settings** (accounts and income categories; the Budget page then records the balances) or **Load
+Sample Data**, which writes the set (a moment, in a worker thread) and opens the Budget page. The folder is marked
+(`settings.sample_data`): the sidebar footer says *Sample data*, and **Settings → Data → Sample Data** offers
+*Remove Sample Data…*, which deletes every record, attachment and the change history (language and currency stay)
+and brings the welcome screen back; the same row loads the set into an empty folder. Without exchange rates
+(offline on the first start) the set is CHF only. **Decided:** the sample data lives in the data folder itself,
+and only while the folder is empty, rather than in a second folder: the app has one store, one lock and one
+backup marker per folder, and switching folders is what profiles (F34) are for; a user with records tries the
+sample set with `--data-dir`. Not built: a step-by-step guide for accounts, balances and the horizon (Settings
+and the Budget page lead there), a folder picker.
 
 - A first-start guide: language, display currency, accounts with their current balance,
   income categories, plan horizon. It ends on the Budget page with something to see.
@@ -1117,7 +1323,20 @@ which already speaks English, German and French.
 
 #### F31 · Reminders and alerts
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28), in the app only
+
+**As built** (architecture §7, decision 31): a **Reminders** page (`/reminders`, sidebar after Bills, icon
+`o_notifications_none`, with a badge counting its items) lists, while the app runs, what wants doing or looking at,
+grouped by kind and each row a link to where it is dealt with: **balances to record** (regular accounts without a
+balance for last month whose last balance isn't zero, the Budget page's rule; links to that month), **recurring
+transactions due** (one per due occurrence, F05; "Due since …" in red), **bills due** (open QR bills overdue or due
+within a week, F03), **budgets exceeded or about to be** (the exceeded and on-pace items of *Notable this month*,
+F18's rules and thresholds; links to the category on the Budget page) and **goals behind or overdue** (F14; "Behind:
+… short of the plan line", "Overdue since … · … to go"). *Settings → Reminders* has one switch per kind (all on;
+`settings.json` → `reminders_off`); a kind turned off leaves the page and the badge. Everything is computed from
+the records when a page opens or data changes; nothing is stored per reminder, nothing is sent anywhere – no e-mail,
+no system notification, no network, no background helper while the app is closed. Not built: desktop notifications,
+reminders while the app is closed, snoozing or dismissing a reminder (deal with the item or turn the kind off).
 
 Desktop notifications, all optional:
 
@@ -1130,15 +1349,45 @@ Shown when the app runs; reminders while it's closed would need a small backgrou
 
 #### F32 · Keyboard shortcuts and accessibility
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
 
 - Shortcuts: new transaction, save, search, previous/next month (`←` `→`), switch pages.
 - Screen-reader labels, visible focus, logical tab order, sufficient contrast in both
   appearances (the colour tokens make the contrast checkable).
 
+**As built (decision 37):** Wherever the cursor is not in a field, **N** opens a new transaction (F06),
+**/** puts the cursor in the page's search, **←** and **→** step the month on pages with a month stepper, **1**–**9**
+open the places of the sidebar in their order and **,** opens Settings; **?** (or *Keyboard Shortcuts* at the foot
+of the sidebar) shows them all in a sheet. While a sheet is open the page keys wait: **Esc** closes it and
+**Ctrl/⌘ Enter** presses its action from any field (every sheet with *Cancel* and an action; the transaction form
+and bulk edit keep their own). The key stays in the sheet, so saving a template from the transaction form no longer
+also saves the transaction. Every icon-only button has a name for screen readers (`aria-label`, the same text as
+its tooltip), the sidebar is a navigation landmark and the page a main landmark, a *Skip to content* link appears on
+the first Tab, focus shows as a ring in the accent colour, and nothing takes a positive tab index, so the tab order
+follows the page. A test opens every page and fails on an unnamed icon button. **Colour contrast:** a test reads
+the colour tokens of both appearances and checks every text colour on the page, card and raised surfaces for WCAG
+AA (4.5:1) and white on filled buttons; that moved a few tokens: secondary and tertiary text, the light accent and
+positive green are a little darker, and in dark mode the tertiary text, accent text and red are lighter while filled
+buttons use a darker blue and red (`--accent-strong`, `--negative-strong`) so their white label keeps its contrast.
+
 #### F33 · In-app update check
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §7, decision 28): **off by default**. **Settings → Updates → Check for Updates** is
+a switch whose caption says what it does and what it never does: once a day, when on, the app reads the newest
+release's version number from GitHub's releases API for this repository (`services/updates.py`, the same kind of
+read-only request as the ECB rates, capped at 1 MB); nothing is downloaded or installed, and the request carries
+nothing about the user or the data. Turning it on checks at once; *Check Now* checks again; the row below says
+*Not checked yet* or "Checked on 28 Oct 2026: the newest release is 0.2.0" and links to the releases page. When
+the release is newer than the running app, the sidebar footer of every page and the Settings row link **Budget
+0.2.0 is available** to that release's page (installers and update steps), opened in the browser. The check runs
+with the rate refresh (startup, then every 30 minutes) but asks at most once a day; a failed request is logged and
+tried again at the next refresh, never shown. Turning the switch off forgets the result. Only a tag of the form
+`v1.2.3` is accepted and the link is built from it, never taken from the answer; a dev build is never "behind".
+**Decided:** the check stays off until the user turns it on (cross-cutting decision 1: nothing leaves the computer
+on its own), and the README's privacy note names it as the one optional connection besides the ECB rates. Not
+built: downloading or installing the update, release notes in the app.
 
 Once a day, read the latest version number from the GitHub repository (the same kind of
 read-only request as the ECB download). If it's newer, the sidebar shows "Budget 0.2.0 is
@@ -1147,7 +1396,22 @@ Settings; the README's privacy note then needs one more line.
 
 #### F34 · Several households or profiles
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision 39):** **Settings → Profiles** lists the profiles, each a name and a data folder of its
+own, with *Open*, *Rename* and *Remove* (which only forgets the profile: its folder and records stay where they
+are; the open profile can't be removed). *Add Profile…* asks for a name and, optionally, a folder: left empty, the
+app makes `profiles/<name>` beside its own folder; a folder that already holds records (another computer's, a
+cloud folder) is opened as it is; another profile's folder, a file or a folder directly inside the app's own is
+refused. With two profiles or more, the top of the sidebar shows the open profile's name with a menu of the others
+(and *Profiles…*); the choice reopens the app on that folder, with its own settings and language, lock and
+encryption (F27), and every open page starts over on its Overview (a new, empty profile on the first-start screen of F30). A folder that another Budget window has open is
+refused, and nothing changes. The lock page names the locked profile and offers *Open Another Profile*, since each
+lock guards one folder only. The registry `profiles.json` lives in the app's home folder (the OS data folder, or
+`--data-dir`), which is also the first profile's folder, so an installation without profiles is unchanged; the app
+reopens the profile that was open last. Not built: one window per profile at the same time (the app has one open
+folder per process; a second window on another folder is a second `--data-dir` start), and per-profile colours or
+icons.
 
 Separate budgets (personal, joint household, a small association) in separate data folders,
 switchable from the sidebar. Builds on the existing `--data-dir` support; mainly a picker and
@@ -1155,7 +1419,21 @@ per-profile settings.
 
 #### F35 · Phone companion
 
-**Status:** ☐ Open
+**Status:** ◐ Partly (2026-10-28): the smallest step, quick add on the home network, is built; the phone app is not
+
+**As built (decision 21, decision 41):** *Settings → Security → Quick Add from a Phone · Turn On…* (only with
+the app lock on, after a confirmation that says the connection is not encrypted) lets Budget listen on the home
+network too, on port 8484 (or a free one); the app's own server stays on `127.0.0.1`. *Pair a Phone…* shows the
+address (`http://<computer>:8484/pair`), a QR code of it and a six-digit code that works once, for ten minutes and
+five tries. On the phone, the pairing page takes the code and the phone gets a session of its own; the quick-add
+page then records an expense: amount, account (the last one used first), category (the recent and everyday ones,
+searchable), payee, date and note, and lists what it saved. A phone sees nothing else: every other page, the
+attachment files and the lock page are refused to other devices, requests from outside the home network (public
+addresses) are refused, and so is everything while phones are off. *Turn Off*, *Lock Now*, turning the lock off,
+switching profile and quitting end every phone session; a phone pairs again after each start of the app, since
+sessions live in memory (F27). Not built: the phone app that queues entries offline (the larger step), income and
+transfers from the phone, HTTPS (a self-signed certificate makes phone browsers refuse or warn; the connection is
+plain HTTP on the home network, which the confirmation says), and remembering a paired phone across restarts.
 
 Record expenses on the phone where they happen.
 
@@ -1183,7 +1461,8 @@ Record expenses on the phone where they happen.
 These come up in several features; deciding them once keeps the features consistent.
 
 1. **AI and online services** (F04, F07, F21, F33): decided on 2026-10-21 — **never for now**;
-   everything stays local, and features that need a service stay in the backlog until revisited.
+   everything stays local, and features that need a service stay in the backlog until revisited. F04 reads
+   receipts with a local OCR engine (RapidOCR) instead.
 2. **Exchange rate of transactions** (F01, F02, F03, F05, B03): decided — every transaction
    uses the ECB rate of its date (the last earlier rate on weekends and holidays); account
    balances use the last rate of the month; budget entries use the latest rate. Changed by
@@ -1259,8 +1538,11 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | F12 · Attachments | ☑ Done | Receipts and invoices with their transaction, in the data folder and in backups; details under F12. |
 | Item lists on transactions | ☑ Done | Name, quantity and unit price per expenditure or income; search finds item names. F11 added a category and tags per line; gives F04 a place for receipt lines. |
 | F03 · Swiss QR-bill scanning | ☑ Done | QR bills from PDFs and photos into a Bills list with due dates, paid through the transaction sheet; details under F03. |
+| F04 · Receipt scanning | ☑ Done | A till receipt's PDF or photo read on the computer (RapidOCR) into a prefilled expenditure with its lines and the file attached; details under F04. |
+| F30 · Onboarding and demo data | ☑ Done | A welcome screen on the first start (language, currency, data folder) and a year of sample data to load and remove; details under F30. |
+| F33 · In-app update check | ☑ Done | Off by default; when on, reads the newest release's version from GitHub once a day and links to it, never downloads; details under F33. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
-| CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
+| CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request (`just ci` locally). The installers are built by hand on each system and attached to the GitHub release of their version; the workflow that built them (first runs on 2026-10-19) was removed on 2026-10-29. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
 
 #### F01 · CSV import of transactions
 

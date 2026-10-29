@@ -6,11 +6,12 @@ import dataclasses
 import io
 import json
 from datetime import date, datetime
+from xml.sax.saxutils import escape
 
 import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
@@ -207,6 +208,46 @@ def statement_pdf(rep: MonthReport) -> bytes:
     return buf.getvalue()
 
 
+# ------------------------------------------------------------------ shared PDF pieces (tax summary, year in review)
+def money(value: float) -> str:
+    """1'234.50, the Swiss format of the app (with a plain hyphen, which the PDF's font has)."""
+    return f"{round(value, 2) + 0.0:,.2f}".replace(",", "'")
+
+
+def pdf_styles() -> dict[str, ParagraphStyle]:
+    base = getSampleStyleSheet()
+    cell = ParagraphStyle("cell", parent=base["Normal"], fontName="Helvetica", fontSize=8, leading=10)
+    return {
+        "title": base["Title"],
+        "h2": base["Heading2"],
+        "normal": base["Normal"],
+        "small": ParagraphStyle("small", parent=base["Normal"], fontSize=8.5, leading=11, textColor="#555555"),
+        "cell": cell,
+        "num": ParagraphStyle("num", parent=cell, alignment=2),
+        "head": ParagraphStyle("head", parent=cell, fontName="Helvetica-Bold"),
+        "head_num": ParagraphStyle("head_num", parent=cell, fontName="Helvetica-Bold", alignment=2),
+        "bold": ParagraphStyle("bold", parent=cell, fontName="Helvetica-Bold"),
+        "bold_num": ParagraphStyle("bold_num", parent=cell, fontName="Helvetica-Bold", alignment=2),
+        "indent": ParagraphStyle("indent", parent=cell, leftIndent=12),
+    }
+
+
+def para(text: str, style: ParagraphStyle) -> Paragraph:
+    return Paragraph(escape(text), style)
+
+
+ROW_TINT = colors.HexColor("#f6f8fb")
+PDF_TABLE_STYLE = [
+    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8eef6")),
+    ("LINEBELOW", (0, 0), (-1, 0), 0.6, colors.HexColor("#8aa0b8")),
+    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, ROW_TINT]),
+    ("LINEABOVE", (0, -1), (-1, -1), 0.6, colors.HexColor("#8aa0b8")),
+    ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+    ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
+]
+
+
 def chart_pdf(png: bytes, title: str, subtitle: str = "") -> bytes:
     """One chart image on a landscape A4 page, under its title."""
     buf = io.BytesIO()
@@ -295,6 +336,10 @@ def everything_json(ctx: Context) -> bytes:
         "tags": table(sorted(store.tags.all(), key=lambda g: (g.name.lower(), g.id))),
         "bills": table(sorted(store.bills.all(), key=lambda b: (b.added, b.id))),  # F03
         "goals": table(sorted(store.goals.all(), key=lambda g: (g.start, g.id))),  # F14
+        "scenarios": table(sorted(store.scenarios.all(), key=lambda s: (s.name.lower(), s.id))),  # F15
+        "scenario_changes": table(sorted(store.scenario_changes.all(), key=lambda c: (c.scenario_id, c.seq, c.id))),
         "tax_sections": table(sorted(store.tax_sections.all(), key=lambda s: s.id)),  # F20
+        "subscription_ignores": table(sorted(store.subscription_ignores.all(), key=lambda s: (s.key, s.id))),  # F17
+        "loans": table(sorted(store.loans.all(), key=lambda ln: (ln.start, ln.id))),  # F22
     }
     return json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8")

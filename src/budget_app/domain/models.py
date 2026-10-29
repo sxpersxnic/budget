@@ -48,6 +48,7 @@ ASSET_PILLAR3A = "pillar3a"
 ASSET_REAL_ESTATE = "real_estate"
 ASSET_CRYPTO = "crypto"
 ASSET_OTHER = "other"
+ASSET_LOAN = "loan"  # F22: a liability; its balance is the debt a `Loan` tracks, negative
 ASSET_CLASSES = {
     ASSET_CASH: N_("Cash and accounts"),
     ASSET_SECURITIES: N_("Securities"),
@@ -56,6 +57,7 @@ ASSET_CLASSES = {
     ASSET_REAL_ESTATE: N_("Real estate"),
     ASSET_CRYPTO: N_("Crypto"),
     ASSET_OTHER: N_("Other assets"),
+    ASSET_LOAN: N_("Loans and mortgages"),
 }
 # accounts of these classes are valued from their holdings (quantity × price), not from recorded balances
 HOLDING_CLASSES = (ASSET_SECURITIES, ASSET_CRYPTO)
@@ -90,6 +92,12 @@ class Account:
         """Valued from its holdings at the end of `month`: a securities or crypto account, from the month it was
         converted on (before it, its recorded balances count)."""
         return self.holds_securities and (not self.invest_from or month >= self.invest_from)
+
+    @property
+    def is_loan(self) -> bool:
+        """A loan's liability account (F22): its balance is the outstanding debt, negative, computed from the
+        loan and the transactions on the account; no balances are recorded for it."""
+        return self.asset_class == ASSET_LOAN
 
 
 @dataclass
@@ -127,6 +135,7 @@ class Transaction:
     # booked by the Investments page (F21): the id of the `Trade` or `Price` the row belongs to
     invest_id: str = ""
     tags: str = ""  # F10: ids of `Tag`s, separated by "|" (domain.tags.split / join); empty in older files
+    loan_id: str = ""  # F22: the `Loan` whose payment booked the row (repayment or interest); empty in older files
     id: str = field(default_factory=new_id)
 
 
@@ -289,6 +298,17 @@ class TaxSection:
     id: str = field(default_factory=new_id)
 
 
+@dataclass
+class SubscriptionIgnore:
+    """A detected subscription the user told the Subscriptions page to leave out (F17): the group it was found
+    by, `key` (a payee's lookup key, or `note:` and the folded note) with its `currency`, and the `name` shown."""
+
+    key: str
+    currency: str
+    name: str = ""
+    id: str = field(default_factory=new_id)
+
+
 BILL_OPEN = "open"
 BILL_PAID = "paid"
 BILL_DISMISSED = "dismissed"
@@ -355,6 +375,41 @@ class Goal:
     @property
     def due(self) -> dt.date | None:
         return dt.date.fromisoformat(self.target_date) if self.target_date else None
+
+
+@dataclass
+class Scenario:
+    """A what-if scenario (F15, decision 18): a named set of budget changes laid over the plan, never written into
+    it. `shown` draws it on the Overview's wealth chart beside the plan."""
+
+    name: str
+    comment: str = ""
+    shown: bool = True
+    created: dt.date = field(default_factory=dt.date.today)
+    id: str = field(default_factory=new_id)
+
+
+@dataclass
+class ScenarioChange:
+    """One change of a scenario: in the scenario, the budget of `category` (of `type`, expenditure or income) is
+    `amount` in every month from `start_month`, every `recur_months` months, up to `end_month` (empty: the end of the
+    plan), instead of whatever the plan budgets there. An `amount` of 0 takes the budget out of those months. Where
+    two changes of a scenario meet in a month and category, the one entered later (`seq`) counts. `amount_chf` is
+    at the latest rate when the change was saved; displays convert like budget entries, at the latest rate."""
+
+    scenario_id: str
+    type: str
+    category: str
+    amount: float
+    currency: str
+    amount_chf: float
+    fx_date: dt.date
+    start_month: str
+    end_month: str = ""
+    recur_months: int = 1
+    comment: str = ""
+    seq: int = 0
+    id: str = field(default_factory=new_id)
 
 
 @dataclass
@@ -463,9 +518,55 @@ class Price:
     id: str = field(default_factory=new_id)
 
 
+# How a month the projection estimates (no recorded balance yet) adds to the projected wealth (decision 36)
+PROJECTION_BUDGET = "budget"  # option 1: the month's budgeted income minus its budgeted expenditure
+PROJECTION_HIGHER = "higher"  # option 2 (F47): per top-level category, recorded where it exceeds the budget
+PROJECTION_RULES = (PROJECTION_BUDGET, PROJECTION_HIGHER)
+
+
+@dataclass
+class Loan:
+    """A loan or mortgage (F22): a liability account with a repayment schedule.
+
+    The account (`account_id`, asset class `loan`) owes `principal` on `start`; what is transferred into the
+    account pays the debt off, what leaves it adds to the debt, so its balance is always minus the outstanding
+    debt (`services.loans.debt`). Every `recur_months` months from `first_due` a payment is due: interest on the
+    outstanding debt (`rate` % a year, simple interest for the period) as an expenditure in `interest_category`,
+    and `amortization` as a transfer from `cash_account` (0 for an interest-only mortgage). `next_due` is the
+    first payment not yet booked or skipped. `fixed_until` ('YYYY-MM-DD' or empty) is when the rate or the
+    term ends (a mortgage renewal); it is shown, nothing more.
+    """
+
+    account_id: str
+    principal: float
+    start: dt.date
+    rate: float  # percent a year
+    first_due: dt.date
+    next_due: dt.date
+    recur_months: int = 1
+    amortization: float = 0.0  # per payment, in the account's currency
+    cash_account: str = ""  # the regular account the payments come from
+    interest_category: str = "12.2.1"  # domain.loans.INTEREST_CATEGORY
+    lender: str = ""  # the payee of the interest (F09); optional
+    fixed_until: str = ""
+    comment: str = ""
+    id: str = field(default_factory=new_id)
+
+    @property
+    def fixed_until_date(self) -> dt.date | None:
+        return dt.date.fromisoformat(self.fixed_until) if self.fixed_until else None
+
+
 @dataclass
 class Settings:
     budget_horizon: str = ""
     display_currency: str = "CHF"
     last_fx_download: str = ""
     language: str = ""  # "" = follow the system; otherwise a key of i18n.LANGUAGES
+    onboarding_done: bool = False  # F30: the welcome screen was passed (or the folder already had records)
+    sample_data: bool = False  # F30: the folder holds the sample set, which Settings can remove again
+    update_check: bool = False  # F33: ask GitHub for the newest release once a day; off until the user turns it on
+    update_checked: str = ""  # F33: the day of the last successful check (ISO date)
+    update_latest: str = ""  # F33: the tag it answered with ("v0.2.0")
+    reminders_off: list[str] = field(default_factory=list)  # kinds of reminders turned off (F31, `reminders.KINDS`)
+    projection: str = PROJECTION_HIGHER  # PROJECTION_RULES; files from before the setting keep F47's rule

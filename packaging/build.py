@@ -4,11 +4,10 @@
     Windows -> dist/Budget-<version>-Windows-Setup.exe     (per-user install, Start menu entry, uninstaller)
     Linux   -> dist/Budget-<version>-Linux-<arch>.tar.gz   (app folder + install.sh: per-user install, menu entry)
 
-The finished macOS and Windows installers are also copied to installers/<os>/ (replacing older
-versions) together with a SHA-256 checksum. All three are attached to GitHub releases by CI.
+Each installer gets its SHA-256 checksum beside it (<installer>.sha256). Installers are built by
+hand and attached to the GitHub release of their version (packaging/README.md, *Releasing an update*).
 
-PyInstaller cannot cross-compile: build each installer on its own operating system (the GitHub
-Actions workflow .github/workflows/installers.yml does all three). The wrappers
+PyInstaller cannot cross-compile: build each installer on its own operating system. The wrappers
 packaging/macos/build.sh, packaging/windows/build.bat and packaging/linux/build.sh check the
 prerequisites, run the tests and then call this script.
 
@@ -37,7 +36,6 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGING = ROOT / "packaging"
 DIST = ROOT / "dist"
 WORK = ROOT / "build"
-INSTALLERS = ROOT / "installers"
 NAME = "Budget"
 BUNDLE_ID = "app.budget.local"
 # NiceGUI ships JavaScript bundles for every element; these are never used by the app and are only
@@ -95,6 +93,12 @@ def pyinstaller() -> Path:
         # the app reads its version from the package metadata (see budget_app.config.app_version)
         "--copy-metadata",
         "budget-app",
+        # receipt scanning (F04): RapidOCR loads its modules by name and reads its models and YAML files from the
+        # package folder, which the import analysis alone would not bundle (hooks exist for cv2 and onnxruntime)
+        "--collect-submodules",
+        "rapidocr",
+        "--collect-data",
+        "rapidocr",
         "--exclude-module",
         "tkinter",
     ]
@@ -125,16 +129,11 @@ def strip_unused(app: Path) -> None:
                 print(f"  removed unused plotly/{name}")
 
 
-def publish(installer: Path, platform_dir: str, pattern: str) -> Path:
-    """Copy the installer to installers/<platform_dir>/, replacing older ones, and write its checksum."""
-    dest = INSTALLERS / platform_dir
-    dest.mkdir(parents=True, exist_ok=True)
-    for old in dest.glob(pattern):
-        old.unlink()
-    target = dest / installer.name
-    shutil.copy2(installer, target)
-    digest = hashlib.sha256(target.read_bytes()).hexdigest()
-    (dest / "SHA256SUMS.txt").write_text(f"{digest}  {target.name}\n", encoding="utf-8")
+def checksum(installer: Path) -> Path:
+    """Write <installer>.sha256 beside the installer, in the format `shasum -c` / `sha256sum -c` read."""
+    digest = hashlib.sha256(installer.read_bytes()).hexdigest()
+    target = installer.with_name(installer.name + ".sha256")
+    target.write_text(f"{digest}  {installer.name}\n", encoding="utf-8")
     return target
 
 
@@ -207,7 +206,7 @@ def check_linux_libraries(app_dir: Path) -> None:
     """Fail when a Qt WebEngine library can't be resolved: the package would start without a window.
 
     PyInstaller bundles the libraries it finds on the build machine; the ones it can't find
-    (installed by the CI's "Qt libraries for the build" step) are missing at runtime too.
+    (see "Linux" in packaging/README.md for the packages to install) are missing at runtime too.
     """
     internal = app_dir / "_internal"
     qt = internal / "PyQt6" / "Qt6"
@@ -246,12 +245,12 @@ def main() -> None:
     app = pyinstaller()
     strip_unused(app)
     if sys.platform == "darwin":
-        out = publish(build_macos(app), "macos", f"{NAME}-*-macOS-*.dmg")
+        out = build_macos(app)
     elif sys.platform == "win32":
-        out = publish(build_windows(app), "windows", f"{NAME}-*-Windows-Setup.exe")
+        out = build_windows(app)
     else:
-        out = build_linux(app)  # Qt WebEngine makes it too large to commit; published as a release asset only
-    print(f"\nBuilt {out}")
+        out = build_linux(app)
+    print(f"\nBuilt {out}\n      {checksum(out)}")
 
 
 if __name__ == "__main__":

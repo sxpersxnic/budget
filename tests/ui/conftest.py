@@ -11,6 +11,7 @@ from nicegui.testing.user_simulation import user_simulation
 from budget_app.domain import months
 from budget_app.services import budget as budget_svc
 from budget_app.services import context as context_module
+from budget_app.services import security
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.budget import BudgetInput
@@ -72,7 +73,9 @@ def demo(ctx, setup):
 async def user(ctx, caplog: pytest.LogCaptureFixture) -> AsyncGenerator[User]:
     """A simulated user on the app's pages; fails the test if a page logged an error."""
     ctx.store.settings.budget_horizon = months.add_months(months.current_month(), 12)
+    ctx.store.settings.onboarding_done = True  # the welcome screen (F30) is tested on its own
     context_module._ctx = ctx
+    security.configure(ctx.store.data_dir)  # the app lock (F27): off unless the test sets a password
     try:
         async with user_simulation(main_file=MAIN) as u:
             yield u

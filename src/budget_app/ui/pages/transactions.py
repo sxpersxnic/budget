@@ -36,6 +36,7 @@ from budget_app.ui.pages.add_budget import recurrence_label
 from budget_app.ui.pages.recurring import open_recurring_sheet
 from budget_app.ui.widgets.bulk_edit import open_bulk_edit_sheet
 from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
+from budget_app.ui.widgets.receipt import open_receipt_sheet
 from budget_app.ui.widgets.rule_sheet import always_like_this
 from budget_app.ui.widgets.selects import expenditure_category_select, set_options
 from budget_app.ui.widgets.tags import CHIPS_RENDERER, TagSelect, grid_cells
@@ -198,6 +199,9 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
                 ui.icon("search", size="18px").classes("text-3")
             filter_btn = ui.button(t("Filters"), icon="o_filter_list").props("flat").classes("text-primary")
             export_menu("transactions", t("Transactions"), _columns, lambda: shown)
+            ui.button(
+                t("Receipt…"), icon="o_document_scanner", on_click=lambda: open_receipt_sheet(ctx, apply_filters)
+            ).props("flat").classes("text-primary")  # F04
             ui.button(t("Import…"), icon="o_file_upload", on_click=lambda: ui.navigate.to("/import")).props(
                 "flat"
             ).classes("text-primary")
