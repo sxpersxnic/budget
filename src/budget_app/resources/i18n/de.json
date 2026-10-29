@@ -640,6 +640,7 @@
  "Language": "Sprache",
  "Last price": "Letzter Kurs",
  "Last recorded balance: {amount} at the end of {month}.": "Letzter erfasster Saldo: {amount} Ende {month}.",
+ "Leave Out Rows Without a Category": "Zeilen ohne Kategorie weglassen",
  "Leave Until empty to repeat without an end.": "«Bis» leer lassen, um ohne Ende zu wiederholen.",
  "Leave it empty for a new folder beside the app’s own. A folder that already holds records, for example in a cloud folder, is opened as it is.": "Leer lassen für einen neuen Ordner neben dem der App. Ein Ordner, der schon Buchungen enthält, zum Beispiel in einem Cloud-Ordner, wird so geöffnet, wie er ist.",
  "Leave the repayment empty for an interest-only mortgage.": "Lassen Sie die Rückzahlung leer für eine Hypothek ohne Amortisation.",
@@ -870,6 +871,7 @@
  "Pay Bill": "Rechnung bezahlen",
  "Pay a bill": "Rechnung bezahlen",
  "Payee": "Gegenpartei",
+ "Payee contains “{word}”": "Gegenpartei enthält «{word}»",
  "Payee not found": "Gegenpartei nicht gefunden",
  "Payees": "Gegenparteien",
  "Paying Account": "Zahlendes Konto",
@@ -1018,6 +1020,7 @@
  "Rule: contains “{match}”": "Regel: enthält «{match}»",
  "Rules…": "Regeln …",
  "Same as the transaction": "Wie die Buchung",
+ "Same payee as a row you chose": "Gleiche Gegenpartei wie eine Zeile, die Sie gewählt haben",
  "Sample Data": "Beispieldaten",
  "Sample data": "Beispieldaten",
  "Sample data can only be loaded into an empty data folder.": "Beispieldaten lassen sich nur in einen leeren Datenordner laden.",
@@ -1673,6 +1676,10 @@
   "{n} Saldo am Monatsende erfasst",
   "{n} Salden am Monatsende erfasst"
  ],
+ "{n} more row with the same payee got this category": [
+  "{n} weitere Zeile mit derselben Gegenpartei hat diese Kategorie erhalten",
+  "{n} weitere Zeilen mit derselben Gegenpartei haben diese Kategorie erhalten"
+ ],
  "{n} new": [
   "{n} neu",
   "{n} neu"
@@ -1729,9 +1736,9 @@
   "{n} Buchung ist nach Artikeln aufgeteilt: Nur der Rest in ihrer eigenen Kategorie ändert sich",
   "{n} Buchungen sind nach Artikeln aufgeteilt: Nur der Rest in ihrer eigenen Kategorie ändert sich"
  ],
- "{n} row needs a category: select rows, choose a category and click Apply.": [
-  "{n} Zeile braucht eine Kategorie: Zeilen auswählen, Kategorie wählen und «Anwenden» klicken.",
-  "{n} Zeilen brauchen eine Kategorie: Zeilen auswählen, Kategorie wählen und «Anwenden» klicken."
+ "{n} row needs a category: select rows, choose one and click Apply, or leave it out and import it later from the same file.": [
+  "{n} Zeile braucht eine Kategorie: Zeilen auswählen, Kategorie wählen und «Anwenden» klicken, oder sie weglassen und später aus derselben Datei importieren.",
+  "{n} Zeilen brauchen eine Kategorie: Zeilen auswählen, Kategorie wählen und «Anwenden» klicken, oder sie weglassen und später aus derselben Datei importieren."
  ],
  "{n} row skipped: that category is for money coming in only": [
   "{n} Zeile übersprungen: Diese Kategorie gilt nur für Einnahmen",

@@ -178,3 +178,36 @@ def test_recent_categories_stop_at_ten(ctx, setup) -> None:
     for day, code in enumerate(used, start=1):
         expense(ctx, setup, date(2026, 9, day), code)
     assert tx_svc.recent_categories(ctx) == used[::-1][:10]
+
+
+# ------------------------------------------------------------------ suggestions from search words (F07)
+@pytest.mark.parametrize(
+    ("payee", "code", "word"),
+    [
+        ("Migros", "01.1", "Migros"),
+        ("MIGROS", "01.1", "Migros"),  # case ignored
+        ("SBB", "07.3.1", "SBB"),  # listed under 07.3 and 07.3.1: the more specific one
+        ("Swisscom", "08.3", "Swisscom"),  # listed under three telecom codes: the category containing them
+        ("Allianz", "12.1", "Allianz"),
+        ("Coop Vitality", "06.1.1", "Coop Vitality"),  # the longest search word, not "Coop"
+        ("Baeckerei Mueller", "01.1", "Bäckerei"),  # umlauts spelled out, as in bank texts
+        ("Steueramt", TAX, "Steueramt"),
+        ("Zurich Airport Parking", "07.2.4.1", "parking"),  # the town is not the insurer
+    ],
+)
+def test_a_search_word_in_the_payee_names_its_category(payee: str, code: str, word: str) -> None:
+    assert ev.keyword_category(payee) == (code, word)
+
+
+@pytest.mark.parametrize("payee", ["Landi", "Coopers", "Hans Muster", "", "Café Zürich Bahnhofstrasse"])
+def test_unrelated_or_partial_words_suggest_nothing(payee: str) -> None:
+    # Landi: groceries or garden; Café: drinks or restaurant; Coopers is not Coop
+    assert ev.keyword_category(payee) is None
+
+
+def test_every_search_word_points_to_one_existing_category() -> None:
+    index = ev._keyword_index()
+    assert len(index) > 1500
+    for code, word in index.values():
+        assert code == TAX or get_coicop().get(code) is not None
+        assert any(word in e.keywords for e in ev.everyday().values())  # a parent (08.1) may have no entry

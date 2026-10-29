@@ -6,18 +6,22 @@ in `resources/everyday_categories.json`. Every other category keeps its translat
 
 The search also finds a category by what its COICOP notes say it includes (F40), after the categories found
 by name.
+
+The same search words suggest a category for a payee nobody has categorized yet (F07, `keyword_category`).
 """
 
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from functools import cache
 
 from budget_app import i18n
 from budget_app.config import RESOURCES_DIR
-from budget_app.domain.coicop import ADV, PSEUDO_NAMES, Category, fold, get_coicop, match_words, note_words
+from budget_app.domain.coicop import ADV, PSEUDO_NAMES, TAX, Category, fold, get_coicop, match_words, note_words
+from budget_app.domain.payees import key
 
 EVERYDAY_FILE = RESOURCES_DIR / "everyday_categories.json"
 
@@ -117,3 +121,70 @@ def search(options: Iterable[CategoryOption], query: str) -> list[CategoryOption
         if found:
             (by_name if named else by_notes).append(option)
     return by_name + by_notes
+
+
+# ------------------------------------------------------------------ suggestions
+_UMLAUTS = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue"})
+
+
+@cache
+def _keyword_index() -> dict[tuple[str, ...], tuple[str, str]]:
+    """Search word, as the words of its payee key -> (code, the word as written), for `keyword_category`.
+
+    A word listed under several codes keeps the most specific one when the others contain it ("SBB": 07.3 and
+    07.3.1 → 07.3.1), else the closest category containing them all below the top level ("Swisscom": mobile and
+    internet → 08.3 communication services), and is left out when they are unrelated ("Landi": groceries or
+    garden). Swiss bank texts often spell umlauts as "ae", "oe", "ue", so "Bäckerei" is found as "Baeckerei" too.
+    """
+    index = {}
+    for words, by_code in _search_words().items():
+        if (code := _common(list(by_code))) is not None:
+            index[words] = (code, by_code.get(code) or next(iter(by_code.values())))
+    return index
+
+
+def _search_words() -> dict[tuple[str, ...], dict[str, str]]:
+    """Search word, as payee key words -> code -> the word as written, for every code that lists it."""
+    codes = get_coicop()
+    found: dict[tuple[str, ...], dict[str, str]] = defaultdict(dict)
+    for code, entry in everyday().items():
+        if code != TAX and codes.get(code) is None:
+            continue
+        for word in entry.keywords:
+            for spelling in dict.fromkeys((word, word.translate(_UMLAUTS))):
+                if words := tuple(key(spelling).split()):
+                    found[words].setdefault(code, word)
+    return found
+
+
+def _common(codes: list[str]) -> str | None:
+    """The most specific of `codes` when it lies inside all the others, else the deepest category containing them
+    all below the top level, else None."""
+    deepest = max(codes, key=lambda c: c.count("."))
+    if all(deepest == c or deepest.startswith(c + ".") for c in codes):
+        return deepest
+    shared: list[str] = []
+    for level in zip(*(c.split(".") for c in codes), strict=False):
+        if len(set(level)) > 1:
+            break
+        shared.append(level[0])
+    code = ".".join(shared)
+    return code if len(shared) >= 2 and get_coicop().get(code) is not None else None
+
+
+def keyword_category(payee: str) -> tuple[str, str] | None:
+    """The category a search word in `payee` points to, and that word as written ("Migros" → 01.1), or None.
+
+    Words are compared whole ("Coopers" is not "Coop"); the longest search word found wins ("Coop Vitality"
+    before "Coop"), between equally long ones the first in the payee.
+    """
+    index = _keyword_index()
+    words = key(payee).split()
+    best: tuple[str, str] | None = None
+    longest = 0
+    for start in range(len(words)):
+        for end in range(len(words), start + longest, -1):
+            if hit := index.get(tuple(words[start:end])):
+                best, longest = hit, end - start
+                break
+    return best

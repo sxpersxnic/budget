@@ -640,6 +640,7 @@
  "Language": "Langue",
  "Last price": "Dernier cours",
  "Last recorded balance: {amount} at the end of {month}.": "Dernier solde saisi : {amount} à fin {month}.",
+ "Leave Out Rows Without a Category": "Laisser de côté les lignes sans catégorie",
  "Leave Until empty to repeat without an end.": "Laisser «Jusqu’à» vide pour répéter sans fin.",
  "Leave it empty for a new folder beside the app’s own. A folder that already holds records, for example in a cloud folder, is opened as it is.": "Laissez vide pour un nouveau dossier à côté de celui de l’app. Un dossier qui contient déjà des écritures, par exemple dans un dossier cloud, est ouvert tel quel.",
  "Leave the repayment empty for an interest-only mortgage.": "Laissez l’amortissement vide pour une hypothèque sans amortissement.",
@@ -870,6 +871,7 @@
  "Pay Bill": "Payer la facture",
  "Pay a bill": "Payer une facture",
  "Payee": "Bénéficiaire",
+ "Payee contains “{word}”": "Le bénéficiaire contient «{word}»",
  "Payee not found": "Bénéficiaire introuvable",
  "Payees": "Bénéficiaires",
  "Paying Account": "Compte payeur",
@@ -1018,6 +1020,7 @@
  "Rule: contains “{match}”": "Règle : contient «{match}»",
  "Rules…": "Règles…",
  "Same as the transaction": "Comme la transaction",
+ "Same payee as a row you chose": "Même bénéficiaire qu’une ligne que vous avez choisie",
  "Sample Data": "Données d’exemple",
  "Sample data": "Données d’exemple",
  "Sample data can only be loaded into an empty data folder.": "Les données d’exemple ne se chargent que dans un dossier de données vide.",
@@ -1673,6 +1676,10 @@
   "{n} solde de fin de mois saisi",
   "{n} soldes de fin de mois saisis"
  ],
+ "{n} more row with the same payee got this category": [
+  "{n} autre ligne du même bénéficiaire a reçu cette catégorie",
+  "{n} autres lignes du même bénéficiaire ont reçu cette catégorie"
+ ],
  "{n} new": [
   "{n} nouvelle",
   "{n} nouvelles"
@@ -1729,9 +1736,9 @@
   "{n} transaction est ventilée par articles : seul le reste dans sa propre catégorie change",
   "{n} transactions sont ventilées par articles : seul le reste dans leur propre catégorie change"
  ],
- "{n} row needs a category: select rows, choose a category and click Apply.": [
-  "{n} ligne n’a pas de catégorie : sélectionner les lignes, choisir une catégorie et cliquer sur «Appliquer».",
-  "{n} lignes n’ont pas de catégorie : sélectionner les lignes, choisir une catégorie et cliquer sur «Appliquer»."
+ "{n} row needs a category: select rows, choose one and click Apply, or leave it out and import it later from the same file.": [
+  "{n} ligne n’a pas de catégorie : sélectionner les lignes, choisir une catégorie et cliquer sur «Appliquer», ou la laisser de côté et l’importer plus tard depuis le même fichier.",
+  "{n} lignes n’ont pas de catégorie : sélectionner les lignes, choisir une catégorie et cliquer sur «Appliquer», ou les laisser de côté et les importer plus tard depuis le même fichier."
  ],
  "{n} row skipped: that category is for money coming in only": [
   "{n} ligne ignorée : cette catégorie est réservée aux revenus",

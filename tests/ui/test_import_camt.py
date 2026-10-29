@@ -91,7 +91,7 @@ async def test_a_statement_in_another_currency_is_refused(user: User, ctx, setup
     assert all(r["amount"] for r in rows(user))  # still shown, so the user sees what the file holds
 
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
-    assert status(user).startswith("6 rows need a category")
+    assert status(user).startswith("2 rows need a category")  # the others name a shop
 
 
 async def test_a_csv_file_after_a_statement_brings_the_columns_back(user: User, ctx, setup) -> None:

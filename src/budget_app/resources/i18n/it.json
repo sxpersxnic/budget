@@ -640,6 +640,7 @@
  "Language": "Lingua",
  "Last price": "Ultimo corso",
  "Last recorded balance: {amount} at the end of {month}.": "Ultimo saldo registrato: {amount} a fine {month}.",
+ "Leave Out Rows Without a Category": "Tralascia le righe senza categoria",
  "Leave Until empty to repeat without an end.": "Lasciare vuoto «Fino a» per ripetere senza fine.",
  "Leave it empty for a new folder beside the app’s own. A folder that already holds records, for example in a cloud folder, is opened as it is.": "Lascia vuoto per una nuova cartella accanto a quella dell’app. Una cartella che contiene già registrazioni, per esempio in una cartella cloud, viene aperta così com’è.",
  "Leave the repayment empty for an interest-only mortgage.": "Lascia vuoto l’ammortamento per un’ipoteca senza ammortamento.",
@@ -870,6 +871,7 @@
  "Pay Bill": "Paga la fattura",
  "Pay a bill": "Pagare una fattura",
  "Payee": "Beneficiario",
+ "Payee contains “{word}”": "Il beneficiario contiene «{word}»",
  "Payee not found": "Beneficiario non trovato",
  "Payees": "Beneficiari",
  "Paying Account": "Conto pagante",
@@ -1018,6 +1020,7 @@
  "Rule: contains “{match}”": "Regola: contiene «{match}»",
  "Rules…": "Regole…",
  "Same as the transaction": "Come la transazione",
+ "Same payee as a row you chose": "Stesso beneficiario di una riga che hai scelto",
  "Sample Data": "Dati di esempio",
  "Sample data": "Dati di esempio",
  "Sample data can only be loaded into an empty data folder.": "I dati di esempio si caricano solo in una cartella dei dati vuota.",
@@ -1673,6 +1676,10 @@
   "{n} saldo di fine mese registrato",
   "{n} saldi di fine mese registrati"
  ],
+ "{n} more row with the same payee got this category": [
+  "{n} altra riga con lo stesso beneficiario ha ricevuto questa categoria",
+  "{n} altre righe con lo stesso beneficiario hanno ricevuto questa categoria"
+ ],
  "{n} new": [
   "{n} nuova",
   "{n} nuove"
@@ -1729,9 +1736,9 @@
   "{n} transazione è suddivisa per articoli: cambia solo il resto nella sua categoria",
   "{n} transazioni sono suddivise per articoli: cambia solo il resto nella loro categoria"
  ],
- "{n} row needs a category: select rows, choose a category and click Apply.": [
-  "{n} riga richiede una categoria: selezionare le righe, scegliere una categoria e fare clic su «Applica».",
-  "{n} righe richiedono una categoria: selezionare le righe, scegliere una categoria e fare clic su «Applica»."
+ "{n} row needs a category: select rows, choose one and click Apply, or leave it out and import it later from the same file.": [
+  "{n} riga richiede una categoria: selezionare le righe, scegliere una categoria e fare clic su «Applica», oppure tralasciarla e importarla più tardi dallo stesso file.",
+  "{n} righe richiedono una categoria: selezionare le righe, scegliere una categoria e fare clic su «Applica», oppure tralasciarle e importarle più tardi dallo stesso file."
  ],
  "{n} row skipped: that category is for money coming in only": [
   "{n} riga ignorata: questa categoria vale solo per le entrate",

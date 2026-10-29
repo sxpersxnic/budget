@@ -2,9 +2,11 @@
 
 Flow: `read_file` detects encoding, delimiter and header line; `guess_profile` maps the columns;
 `parse_rows` turns lines into signed amounts; `analyse` marks duplicates, finds payees and suggests categories
-(`categorize.py`: rules, then the payee's history);
-`commit` saves the chosen rows. Column settings can be saved per bank as a profile. A running-balance
-column, when the profile names one, is read into each row; `import_balances` turns it into month-end balances.
+(`categorize.py`: rules, then the payee's history, then shops and brands in the payee); `spread` passes a category
+chosen in the preview on to the other rows of the same payee; `commit` saves the chosen rows. Rows left out are
+not saved, so importing the same file again offers just them (the others show as already imported). Column
+settings can be saved per bank as a profile. A running-balance column, when the profile names one, is read into
+each row; `import_balances` turns it into month-end balances.
 camt.053 / camt.054 statements (`camt.py`) produce the same rows and go through `analyse` and `commit` too.
 
 Like every transaction, imported rows are valued at the ECB rate of their booking date.
@@ -23,6 +25,7 @@ from datetime import date, datetime
 
 from budget_app.domain.coicop import TAX, get_coicop
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, Transaction
+from budget_app.domain.payees import key as payee_key
 from budget_app.i18n import N_, t
 from budget_app.services import categorize
 from budget_app.services import payees as payee_svc
@@ -417,6 +420,21 @@ def suggest(suggester: categorize.Suggester, row: ImportRow, account_id: str) ->
     hit = suggester.suggest(row.type, row.payee, row.text, account=account_id)
     if hit is not None:
         row.category, row.suggested, row.reason = hit.category, True, hit.reason
+
+
+def spread(rows: list[ImportRow], chosen: list[ImportRow]) -> int:
+    """Suggest the category just chosen for `chosen` to the file's other rows with the same payee and type that
+    have no category or only a suggestion; a category chosen by hand stays. The number of rows filled in."""
+    by_payee = {(r.type, payee_key(r.payee)): r.category for r in chosen if r.category and payee_key(r.payee)}
+    picked = {id(r) for r in chosen}
+    filled = 0
+    for row in rows:
+        category = by_payee.get((row.type, payee_key(row.payee)))
+        if category is None or id(row) in picked or row.status == ERROR or (row.category and not row.suggested):
+            continue
+        row.category, row.suggested, row.reason = category, True, t("Same payee as a row you chose")
+        filled += 1
+    return filled
 
 
 def clear_suggestions(rows: list[ImportRow]) -> int:
