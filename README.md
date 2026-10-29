@@ -263,6 +263,12 @@ The app opens in its own window and keeps all data in your user folder:
    chart draws it as a dashed line beside the plan, so you can compare several futures. When you
    decide, **Adopt into Plan…** writes the changes into your budget (replacing the plan's budget for
    those categories and months) and removes the scenario; one Undo takes it back.
+   **Reminders** (sidebar): one list of what wants doing while the app is open: balances to record
+   for last month, recurring transactions and QR bills that are due, budgets exceeded (or on pace
+   to be) this month, and goals behind their plan or past their date. Each row takes you to the
+   place where you deal with it, and the sidebar counts them. Nothing is sent anywhere, no
+   e-mail and no system notification; in **Settings → Reminders** you switch off the kinds you
+   don't want.
 6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is
    due it is listed for one-click booking (change the amount first if it varies, or skip it);
    turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a

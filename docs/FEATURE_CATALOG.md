@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18 and F15 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18, F15 and F31 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22; F15 what-if scenarios on 2026-10-28). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22; F15 what-if scenarios and F31 reminders on 2026-10-28). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F15 (done), F19, F30, F32, F31, F22, F23, F33, F34, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F15 (done), F31 (done), F19, F30, F32, F22, F23, F33, F34, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -185,7 +185,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F28 | ☑ Done | Undo and change history | Security | M | Local | – |
 | F29 | ☑ Done | Multi-language support | Experience | L | Local | – |
 | F30 | ☐ Open | Onboarding and demo data | Experience | M | Local | – |
-| F31 | ☐ Open | Reminders and alerts | Experience | M | Local | – |
+| F31 | ☑ Done | Reminders and alerts | Experience | M | Local | – |
 | F32 | ☐ Open | Keyboard shortcuts and accessibility | Experience | M | Local | – |
 | F33 | ☐ Open | In-app update check | Experience | S | Optional | – |
 | F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
@@ -1139,7 +1139,20 @@ which already speaks English, German and French.
 
 #### F31 · Reminders and alerts
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28), in the app only
+
+**As built** (architecture §7, decision NEW-F31): a **Reminders** page (`/reminders`, sidebar after Bills, icon
+`o_notifications_none`, with a badge counting its items) lists, while the app runs, what wants doing or looking at,
+grouped by kind and each row a link to where it is dealt with: **balances to record** (regular accounts without a
+balance for last month whose last balance isn't zero, the Budget page's rule; links to that month), **recurring
+transactions due** (one per due occurrence, F05; "Due since …" in red), **bills due** (open QR bills overdue or due
+within a week, F03), **budgets exceeded or about to be** (the exceeded and on-pace items of *Notable this month*,
+F18's rules and thresholds; links to the category on the Budget page) and **goals behind or overdue** (F14; "Behind:
+… short of the plan line", "Overdue since … · … to go"). *Settings → Reminders* has one switch per kind (all on;
+`settings.json` → `reminders_off`); a kind turned off leaves the page and the badge. Everything is computed from
+the records when a page opens or data changes; nothing is stored per reminder, nothing is sent anywhere – no e-mail,
+no system notification, no network, no background helper while the app is closed. Not built: desktop notifications,
+reminders while the app is closed, snoozing or dismissing a reminder (deal with the item or turn the kind off).
 
 Desktop notifications, all optional:
 
