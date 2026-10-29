@@ -8,6 +8,7 @@ Records go through the services, as if entered in the app, so they pass the same
 
 from __future__ import annotations
 
+import io
 import random
 import shutil
 import sys
@@ -22,6 +23,7 @@ from budget_app.domain.models import (
     ASSET_CRYPTO,
     ASSET_PILLAR3A,
     ASSET_SECURITIES,
+    GOAL_MONTHS,
     REVAL_INVEST,
     TRADE_BUY,
     TRADE_DIVIDEND,
@@ -33,15 +35,19 @@ from budget_app.domain.models import (
     TX_TRANSFER,
 )
 from budget_app.services import accounts as acc_svc
+from budget_app.services import attachments as att_svc
 from budget_app.services import budget as budget_svc
+from budget_app.services import goals as goal_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services import items as items_svc
 from budget_app.services import tags as tag_svc
+from budget_app.services import tax as tax_svc
 from budget_app.services import templates as tpl_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.budget import BudgetInput
 from budget_app.services.context import Context
+from budget_app.services.goals import GoalInput
 from budget_app.services.investments import TradeInput
 from budget_app.services.items import ItemInput
 from budget_app.services.transactions import TransactionInput
@@ -78,6 +84,22 @@ def install_rates(folder: Path) -> None:
         download_ecb_csv(target)
 
 
+def receipt(title: str, lines: list[str]) -> bytes:
+    """A one-page PDF receipt, to show attachments as proofs in the tax summary (F20)."""
+    from reportlab.lib.pagesizes import A5  # noqa: PLC0415 - only the demo needs it
+    from reportlab.pdfgen import canvas  # noqa: PLC0415
+
+    buf = io.BytesIO()
+    pdf = canvas.Canvas(buf, pagesize=A5)
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(40, 540, title)
+    pdf.setFont("Helvetica", 10)
+    for i, line in enumerate(lines):
+        pdf.drawString(40, 510 - 16 * i, line)
+    pdf.save()
+    return buf.getvalue()
+
+
 def seed(ctx: Context) -> None:
     rng = random.Random(42)  # noqa: S311 - not for security; same amounts on every run
     today = date.today()
@@ -89,6 +111,8 @@ def seed(ctx: Context) -> None:
     euro = acc_svc.add_account(ctx, "Euro account", "EUR")
     salary = acc_svc.add_income_category(ctx, "Salary")
     side_job = acc_svc.add_income_category(ctx, "Side job")
+    interest = acc_svc.add_income_category(ctx, "Interest")  # F20: counts for the securities list
+    refunds = acc_svc.add_income_category(ctx, "Refunds")
 
     # Month-end balances follow the bookings, so most months reconcile exactly
     # F21: a securities account and a crypto wallet valued from their holdings, and a pillar 3a account
@@ -105,14 +129,23 @@ def seed(ctx: Context) -> None:
     holiday = tag_svc.add(ctx, "Holiday Italy", "green")
     renovation = tag_svc.add(ctx, "Renovation", "orange")
     business = tag_svc.add(ctx, "Business", "blue")
+    # F20: tags linked to sections of the tax summary
+    work = tag_svc.add(ctx, "Work", "teal")
+    loan = tag_svc.add(ctx, "Loan interest", "purple")
+    refund = tag_svc.add(ctx, "Health refund", "red")
+    tax_svc.set_links(ctx, {"professional": [work.id], "debt_interest": [loan.id], "medical": [refund.id]})
 
     balance = {bank.id: 5000.0, savings.id: 20000.0, euro.id: 300.0, pillar.id: 18000.0}
     flows: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
 
-    def book(inp: TransactionInput, items: list[ItemInput] | None = None) -> None:
+    def book(
+        inp: TransactionInput, items: list[ItemInput] | None = None, proof: tuple[str, bytes] | None = None
+    ) -> None:
         if inp.date is None or inp.date > today:
             return
         tx = tx_svc.save(ctx, inp)
+        if proof:
+            att_svc.add(ctx, tx.id, *proof)
         if items:
             items_svc.replace(ctx, tx.id, items)
         m = inp.date.strftime("%Y-%m")
@@ -192,6 +225,78 @@ def seed(ctx: Context) -> None:
             spend(day(n), rng.uniform(25, 90), "11.1", payee=rng.choice(["Restaurant Hirschen", "tibits", "Holy Cow"]))
         if mo in (3, 9):
             spend(day(8), rng.uniform(120, 260), "06.2", comment="Doctor")
+        # F20: deductible items for the tax summary, with receipts as proofs
+        spend(day(1), 412.60, "12.1.2", comment="Health insurance premium", payee="CSS")
+        if mo in (1, 4, 7, 10):
+            spend(
+                day(30),
+                96.50,
+                "12.2.9.9",
+                comment="Car loan interest",
+                payee="Cembra",
+                tags=(loan.id,),
+            )
+        if mo in (3, 11):
+            doctor = round(rng.uniform(180, 320), 2)
+            book(
+                TransactionInput(
+                    date=day(16),
+                    type=TX_EXPENDITURE,
+                    amount=doctor,
+                    currency="CHF",
+                    category="06.2.2",
+                    from_account=bank.id,
+                    comment="Dental check-up",
+                    payee="Zahnarztpraxis Muster",
+                ),
+                proof=(
+                    "Invoice dentist.pdf",
+                    receipt("Zahnarztpraxis Muster", ["Dental check-up", f"CHF {doctor:.2f}"]),
+                ),
+            )
+        if mo == 12:
+            book(
+                TransactionInput(
+                    date=day(5),
+                    type=TX_EXPENDITURE,
+                    amount=150,
+                    currency="CHF",
+                    category="14.5",
+                    from_account=bank.id,
+                    comment="Winter appeal",
+                    payee="Glückskette",
+                ),
+                proof=("Donation receipt.pdf", receipt("Glückskette", ["Thank you for your donation", "CHF 150.00"])),
+            )
+            book(
+                TransactionInput(
+                    date=day(31),
+                    type=TX_INCOME,
+                    amount=23.40,
+                    currency="CHF",
+                    category=interest.id,
+                    to_account=savings.id,
+                    comment="Interest on savings",
+                    payee="Bank",
+                )
+            )
+        if k == 2:
+            spend(day(4), 640, "10.5", comment="Excel course", payee="Klubschule Migros")
+            spend(day(19), 129, "13.2.9.1", comment="Laptop bag for work", payee="Digitec", tags=(work.id,))
+        if mo == 11:
+            book(
+                TransactionInput(
+                    date=day(28),
+                    type=TX_INCOME,
+                    amount=120,
+                    currency="CHF",
+                    category=refunds.id,
+                    to_account=bank.id,
+                    comment="Refund of the dentist bill",
+                    payee="CSS",
+                    tags=[refund.id],
+                )
+            )
         if mo == 5:
             spend(day(20), 380, "07.2", comment="Car service")
         if k == 3:  # a week in Italy
@@ -225,6 +330,8 @@ def seed(ctx: Context) -> None:
                     ItemInput("Birthday card", 1, 4.90, "09.2.1", [gift.id]),
                 ],
             )
+        if k == 0:  # F18: something notable this month, a large payment in a category that is usually empty
+            spend(day(min(today.day, 8)), 1290, "05.3.1.2", comment="Washing machine", payee="Fust")
         if k in (2, 1):  # the bathroom
             redo = (renovation.id,)
             spend(day(7), rng.uniform(900, 1300), "04.3.1", comment="Tools and tiles", payee="Jumbo", tags=redo)
@@ -412,6 +519,22 @@ def seed(ctx: Context) -> None:
         ctx,
         "To savings",
         TransactionInput(type=TX_TRANSFER, amount=800, currency="CHF", from_account=bank.id, to_account=savings.id),
+    )
+
+    # F14: a holiday saved for by hand and reserved in the projection, and an emergency fund on the savings account
+    goal_svc.add(
+        ctx,
+        GoalInput(
+            name="Holiday Japan",
+            currency="CHF",
+            target=6000,
+            target_date=months.last_day(months.add_months(cm, 8)),
+            saved=1500,
+            reserve=True,
+        ),
+    )
+    goal_svc.add(
+        ctx, GoalInput(name="Emergency fund", currency="CHF", kind=GOAL_MONTHS, months=6, account_id=savings.id)
     )
 
 

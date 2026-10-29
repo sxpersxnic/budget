@@ -7,7 +7,8 @@ import html
 from nicegui import ui
 
 from budget_app.domain import months
-from budget_app.domain.coicop import ADV
+from budget_app.domain import trends as trend_rules
+from budget_app.domain.coicop import ADV, get_coicop
 from budget_app.domain.models import (
     BUDGET_EXPENDITURE,
     BUDGET_INCOME,
@@ -21,6 +22,7 @@ from budget_app.services import accounts as acc_svc
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
 from budget_app.services import reports
+from budget_app.services import trends as trends_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.budget import BudgetInput
 from budget_app.services.context import Context, ValidationError
@@ -37,6 +39,7 @@ from budget_app.ui.layout import (
     month_stepper,
     on_data_changed,
     save_file,
+    segmented,
     sheet,
     sheet_buttons,
     undoable,
@@ -253,16 +256,57 @@ def _meter(actual: float, budget: float, lg: bool = False) -> None:
                 ui.element("div").style(f"width: {min(ratio, 1) * 100:.1f}%")
 
 
+def _change_cell(change: trend_rules.Change, is_exp: bool, currency: str) -> None:
+    """F18: the change against the compared month as ▲/▼ and a percentage; the amount is in the tooltip."""
+    if change.empty:
+        ui.label("—").classes("r c-diff text-3")
+        return
+    ratio = change.ratio
+    if ratio is None:
+        text = t("new")
+    elif abs(ratio) < 0.005:
+        text = "0 %"
+    else:
+        text = ("▲ " if ratio > 0 else "▼ ") + trend_rules.percent(ratio)
+    worse = change.delta > EPS if is_exp else change.delta < -EPS
+    cell = ui.label(text).classes("r c-diff " + ("text-neg" if worse else "text-2"))
+    cell._props["title"] = (fmt_signed(change.delta) or fmt(0)) + f" {currency}"
+
+
+def _compare_summary(change: trend_rules.Change, month: str, currency: str) -> str:
+    """The ledger total against the compared month, in words."""
+    label = months.label(month)
+    if change.ratio is None:
+        return t("Nothing recorded in {month}", month=label)
+    if abs(change.ratio) < 0.005:
+        return t("The same as in {month}", month=label)
+    pct, amount = trend_rules.percent(change.ratio), fmt(change.reference, currency)
+    if change.ratio > 0:
+        return t("{pct} more than in {month} ({amount})", pct=pct, month=label, amount=amount)
+    return t("{pct} less than in {month} ({amount})", pct=pct, month=label, amount=amount)
+
+
 # --------------------------------------------------------------------- page
-def page() -> None:
+def page(month: str = "", category: str = "") -> None:
+    """`month` (YYYY-MM) and `category` (a code whose row is opened and marked) are query parameters, from the
+    Overview's *Notable this month* (F18)."""
     with frame(t("Budget"), "/budget", wide=True) as (ctx, actions):
         first, last = data_month_range(ctx)
+        options = month_options(first, last)
+        target = category if category and get_coicop().get(category) else ""
         state = {
-            "month": months.current_month(),
+            "month": month if month in options else months.current_month(),
             "currency": ctx.store.settings.display_currency,
-            "expanded": set(),
+            "expanded": set(get_coicop().ancestors(target)[1:]),  # the target's row in sight
             "show_empty": False,
+            "compare": trends_svc.COMPARE_BUDGET,  # F18: what the third column shows
+            "target": target,
+            "scrolled": False,
         }
+
+        def change_month(m: str) -> None:
+            state.update(month=m, target="")
+            content.refresh()
 
         async def export(kind: str) -> None:
             name = f"statement_{state['month']}_{state['currency']}.{kind}"
@@ -275,9 +319,7 @@ def page() -> None:
             await save_file(data, name)
 
         with actions:
-            month_stepper(
-                month_options(first, last), state["month"], lambda m: (state.update(month=m), content.refresh())
-            )
+            month_stepper(options, state["month"], change_month)
             currency_select(
                 ctx,
                 state["currency"],
@@ -342,15 +384,20 @@ def page() -> None:
 
             if rep.complete:
                 reconciliation_card(rep)
+            cmp = trends_svc.compare(ctx, rep, state["compare"])
+            compare_bar(rep, cmp)
             # side by side on wide windows, stacked on narrow ones (B08, decision 1)
             with ui.element("div").classes("ledger-pair-wrap"), ui.element("div").classes("ledger-pair"):
-                ledger_card(rep, tc("heading", "Income"), rep.total_income, BUDGET_INCOME, lambda: income_rows(rep))
+                ledger_card(
+                    rep, tc("heading", "Income"), rep.total_income, BUDGET_INCOME, lambda: income_rows(rep, cmp), cmp
+                )
                 ledger_card(
                     rep,
                     tc("heading", "Expenditure"),
                     rep.total_expenditure,
                     BUDGET_EXPENDITURE,
-                    lambda: expenditure_rows(rep),
+                    lambda: expenditure_rows(rep, cmp),
+                    cmp,
                 )
             if rep.complete or any(abs(line.actual) > EPS for line in rep.revaluation_lines):
                 revaluations_card(rep)
@@ -414,28 +461,67 @@ def page() -> None:
                                 "r " + ("text-neg" if line.actual < -EPS else "")
                             )
 
+        # ------------------------------------------------------------ comparison (F18)
+        def compare_bar(rep: reports.MonthReport, cmp: trends_svc.Comparison | None) -> None:
+            """Budget, the month before or the same month last year: what the ledgers' third column shows."""
+            choices = {
+                trends_svc.COMPARE_BUDGET: t("Budget"),
+                trends_svc.COMPARE_MONTH: months.label(months.add_months(rep.month, -1)),
+                trends_svc.COMPARE_YEAR: months.label(months.add_months(rep.month, -12)),
+            }
+            with ui.row().classes("w-full items-center gap-x-3 gap-y-1 compare-bar"):
+                ui.label(t("Compare with")).classes("text-[13px] text-2")
+                segmented(
+                    choices,
+                    state["compare"],
+                    on_change=lambda e: (state.update(compare=e.value), content.refresh()),
+                )
+                if cmp is not None and not rep.complete:
+                    so_far = t(
+                        "{month} so far, against all of {reference}",
+                        month=months.label(rep.month),
+                        reference=months.label(cmp.month),
+                    )
+                    ui.label(so_far).classes("caption")
+
         # ------------------------------------------------------------ ledger
-        def ledger_card(rep: reports.MonthReport, title: str, total: reports.Line, type_: str, rows) -> None:
+        def ledger_card(
+            rep: reports.MonthReport,
+            title: str,
+            total: reports.Line,
+            type_: str,
+            rows,
+            cmp: trends_svc.Comparison | None = None,
+        ) -> None:
             is_exp = type_ == BUDGET_EXPENDITURE
             with ui.element("div").classes("surface"):
                 with ui.row().classes("w-full items-end gap-3 no-wrap pb-1"):
                     with ui.column().classes("gap-0 min-w-0"):
                         ui.label(title).classes("section-title")
-                        ui.label(_summary(total, is_exp, rep.currency)).classes("caption")
+                        summary = (
+                            _summary(total, is_exp, rep.currency)
+                            if cmp is None
+                            else _compare_summary(cmp.change(total, income=not is_exp), cmp.month, rep.currency)
+                        )
+                        ui.label(summary).classes("caption")
                     ui.space()
                     ui.label(fmt(total.actual, rep.currency)).classes("text-[20px] font-semibold num whitespace-nowrap")
-                if total.budget > EPS:
+                if total.budget > EPS and cmp is None:
                     with ui.element("div").classes("pb-3 pt-1"):
                         ratio = total.actual / total.budget
                         with ui.element("div").classes("meter lg" + (" over" if is_exp and ratio > 1 else "")):
                             ui.element("div").style(f"width: {min(ratio, 1) * 100:.1f}%")
-                with ui.element("div").classes("ledger"):
+                with ui.element("div").classes("ledger" + (" compare" if cmp is not None else "")):
                     with ui.element("div").classes("ledger-row head"):
                         ui.label(t("Category"))
                         ui.element("div").classes("c-bar")
                         ui.label(t("Actual")).classes("r")
-                        ui.label(t("Budget")).classes("r")
-                        ui.label(t("Difference")).classes("r c-diff")
+                        if cmp is None:
+                            ui.label(t("Budget")).classes("r")
+                            ui.label(t("Difference")).classes("r c-diff")
+                        else:
+                            ui.label(months.label(cmp.month)).classes("r c-ref")
+                            ui.label(t("Change")).classes("r c-diff")
                         ui.element("div")
                     rows()
                 if is_exp:
@@ -447,11 +533,25 @@ def page() -> None:
                             on_change=lambda e: (state.update(show_empty=e.value), content.refresh()),
                         ).props("dense").classes("text-[13px] text-2")
 
-        def line_row(rep: reports.MonthReport, line: reports.Line, type_: str, depth: int = 0, children=None) -> None:
+        def line_row(
+            rep: reports.MonthReport,
+            line: reports.Line,
+            type_: str,
+            depth: int = 0,
+            children=None,
+            cmp: trends_svc.Comparison | None = None,
+        ) -> None:
             expanded = line.key in state["expanded"]
-            empty = _is_zero(line.actual) and _is_zero(line.budget)
-            editable = not rep.complete and line.editable and line.key != "TOTAL"
-            with ui.element("div").classes("ledger-row" + (" dim" if empty else "")):
+            is_exp = type_ == BUDGET_EXPENDITURE
+            change = cmp.change(line, income=not is_exp) if cmp is not None else None
+            empty = _is_zero(line.actual) and (change.empty if change is not None else _is_zero(line.budget))
+            editable = not rep.complete and line.editable and line.key != "TOTAL" and cmp is None
+            marked = " target" if line.key == state["target"] else ""
+            with ui.element("div").classes("ledger-row" + (" dim" if empty else "") + marked) as row:
+                if marked and not state["scrolled"]:  # once, when the page opens at it
+                    state["scrolled"] = True
+                    script = f'getHtmlElement({row.id}).scrollIntoView({{block: "center"}})'
+                    ui.timer(0.2, lambda: ui.run_javascript(script), once=True)
                 label_cell = ui.element("div").classes("cell-label").style(f"padding-left: {depth * 18}px")
                 with label_cell:
                     if children:
@@ -462,12 +562,18 @@ def page() -> None:
                     code_html = f'<span class="code">{html.escape(code)}</span>' if code else ""
                     lbl = ui.html(code_html + html.escape(name), tag="span").classes("name")
                     lbl._props["title"] = line.label  # full name on hover; long COICOP names are truncated
-                _meter(line.actual, line.budget)
-                _amount(line.actual)
-                _amount(line.budget)
-                diff = None if empty else line.diff
-                over = diff is not None and (diff > EPS if type_ == BUDGET_EXPENDITURE else diff < -EPS)
-                ui.label(fmt_signed(diff)).classes("r c-diff " + ("text-neg" if over else "text-2"))
+                if change is not None:  # F18: the compared month instead of the budget
+                    ui.element("div").classes("c-bar")
+                    _amount(line.actual)
+                    _amount(change.reference, " c-ref")
+                    _change_cell(change, is_exp, rep.currency)
+                else:
+                    _meter(line.actual, line.budget)
+                    _amount(line.actual)
+                    _amount(line.budget)
+                    diff = None if empty else line.diff
+                    over = diff is not None and (diff > EPS if is_exp else diff < -EPS)
+                    ui.label(fmt_signed(diff)).classes("r c-diff " + ("text-neg" if over else "text-2"))
                 if editable:
                     ui.button(
                         icon="o_edit",
@@ -485,10 +591,10 @@ def page() -> None:
 
                 label_cell.classes(add="cursor-pointer").on("click", toggle)
 
-        def expenditure_rows(rep: reports.MonthReport) -> None:
+        def expenditure_rows(rep: reports.MonthReport, cmp: trends_svc.Comparison | None = None) -> None:
             def walk(line: reports.Line, depth: int) -> None:
                 children = rep.children(line.key, include_empty=state["show_empty"]) if line.key != ADV else []
-                line_row(rep, line, BUDGET_EXPENDITURE, depth, children)
+                line_row(rep, line, BUDGET_EXPENDITURE, depth, children, cmp)
                 if line.key in state["expanded"]:
                     for child in children:
                         walk(child, depth + 1)
@@ -496,12 +602,12 @@ def page() -> None:
             for code in rep.top_expenditure:
                 walk(rep.expenditure_tree[code], 0)
 
-        def income_rows(rep: reports.MonthReport) -> None:
+        def income_rows(rep: reports.MonthReport, cmp: trends_svc.Comparison | None = None) -> None:
             if not rep.income_lines:
                 ui.label(t("No income this month.")).classes("caption px-1 py-2")
             for line in rep.income_lines:
-                line_row(rep, line, BUDGET_INCOME)
-            if not rep.complete:
+                line_row(rep, line, BUDGET_INCOME, cmp=cmp)
+            if not rep.complete and cmp is None:
                 opts = {
                     c.id: c.name
                     for c in acc_svc.income_categories(ctx)

@@ -184,12 +184,13 @@ def _rewrite_in[T: _Tagged](table: CsvTable[T], replace: dict[str, str]) -> list
 
 
 def _rewrite(ctx: Context, replace: dict[str, str]) -> int:
-    """Rewrite the tags of every transaction, item line (F11), template and series; returns the number of
-    transactions changed, on themselves or on one of their lines."""
+    """Rewrite the tags of every transaction, item line (F11), template, series and tax section (F20); returns the
+    number of transactions changed, on themselves or on one of their lines."""
     changed = {tx.id for tx in _rewrite_in(ctx.store.transactions, replace)}
     changed |= {item.transaction_id for item in _rewrite_in(ctx.store.transaction_items, replace)}
     _rewrite_in(ctx.store.templates, replace)
     _rewrite_in(ctx.store.recurring, replace)
+    _rewrite_in(ctx.store.tax_sections, replace)  # the tags linked to the tax summary's sections (F20)
     return len(changed)
 
 

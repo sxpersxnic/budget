@@ -34,10 +34,12 @@ NAV = [
     ("/recurring", N_("Recurring"), "o_event_repeat"),
     ("/bills", N_("Bills"), "o_request_quote"),
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
+    ("/goals", N_("Goals"), "o_flag"),
     ("/categories", N_("Categories"), "o_account_tree"),
     ("/payees", N_("Payees"), "o_storefront"),
     ("/tags", N_("Tags"), "o_sell"),
     ("/investments", N_("Investments"), "o_show_chart"),
+    ("/tax", N_("Tax Summary"), "o_account_balance"),  # F20: once a year, so last; it draws on all the others
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")
 # Routes that are not in the sidebar highlight their parent.
@@ -314,6 +316,7 @@ MEDIA_TYPES = {
     ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ".pdf": "application/pdf",
     ".png": "image/png",
+    ".zip": "application/zip",
 }
 
 

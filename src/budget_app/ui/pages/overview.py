@@ -13,6 +13,7 @@ from budget_app.domain import months
 from budget_app.domain.models import ASSET_CLASSES
 from budget_app.i18n import N_, t
 from budget_app.services import export as export_svc
+from budget_app.services import goals as goal_svc
 from budget_app.services import reports
 from budget_app.services import tags as tag_svc
 from budget_app.services import wealth as wealth_svc
@@ -29,6 +30,7 @@ from budget_app.ui.layout import (
     save_file,
     segmented,
 )
+from budget_app.ui.pages.goals import goals_card
 from budget_app.ui.theme import (
     CHART_GRID,
     NEGATIVE,
@@ -39,6 +41,7 @@ from budget_app.ui.theme import (
     chart_layout,
     figure_dict,
 )
+from budget_app.ui.widgets.notable import notable_card
 from budget_app.ui.widgets.selects import currency_select
 
 CHART_TYPES = {
@@ -204,15 +207,23 @@ class ChartCard:
 
     def _fig_wealth(self, cur: str) -> go.Figure:
         series = wealth_svc.wealth_series(self.ctx, cur)
-        self.data = pd.DataFrame(
-            [{"month": m, "wealth": round(v, 2), "type": "projected" if p else "actual"} for m, v, p in series]
-        )
-        fig = go.Figure()
         actual = [(m, v) for m, v, p in series if not p]
         projected = [(m, v) for m, v, p in series if p]
-        recorded_name = t("Recorded")
         if actual and projected:
             projected.insert(0, actual[-1])  # connect the projection to the last actual value
+        # F14: the projection less what goals marked "reserve in the projection" hold then; the plan line stays
+        reserve = {}
+        if goal_svc.reserving(self.ctx):
+            reserve = goal_svc.reserve_series(self.ctx, [m for m, _ in projected], cur)
+        self.data = pd.DataFrame(
+            [
+                {"month": m, "wealth": round(v, 2), "type": "projected" if p else "actual"}
+                | ({"free_after_goals": round(v - reserve[m], 2) if p else None} if reserve else {})
+                for m, v, p in series
+            ]
+        )
+        fig = go.Figure()
+        recorded_name = t("Recorded")
         if actual:
             fig.add_scatter(
                 x=[m for m, _ in actual],
@@ -231,8 +242,17 @@ class ChartCard:
                 mode="lines",
                 line=dict(color=SERIES[0], width=2, dash="dot"),
             )
+        free = [(m, v - reserve[m]) for m, v in projected] if reserve else []
+        if free:
+            fig.add_scatter(
+                x=[m for m, _ in free],
+                y=[round(v, 2) for _, v in free],
+                name=t("Free after goals"),
+                mode="lines",
+                line=dict(color=NEUTRAL, width=2, dash="dash"),
+            )
         fig = chart_layout(fig, cur)
-        values = [v for _, v, _ in series]
+        values = [v for _, v, _ in series] + [v for _, v in free]
         if values and min(values) > 0:  # wealth rarely nears zero; a zero baseline flattens the line
             lo, hi = min(values), max(values)
             pad = max((hi - lo) * 0.15, hi * 0.02)
@@ -477,17 +497,24 @@ def page() -> None:
                     ui.label(
                         t("{amount} by the end of the plan", amount=f"{'+' if change >= 0 else ''}{fmt(change, cur)}")
                     ).classes("metric-sub " + ("text-pos" if change >= 0 else "text-neg"))
+            notable_card(ctx, cur)  # F18: hidden when nothing stands out
             if wealth_svc.uses_classes(ctx):
                 class_breakdown(wealth_svc.by_class(ctx, months.previous_month(), cur), cur)
+
+        @ui.refreshable
+        def goals() -> None:
+            goals_card(ctx, currency["value"])  # F14; hidden without goals
 
         def set_currency(e) -> None:
             currency["value"] = e.value
             kpis.refresh()
+            goals.refresh()
             for c in charts:
                 c.render()
 
         def refresh_all() -> None:
             kpis.refresh()
+            goals.refresh()
             for c in charts:
                 c.render()
 
@@ -499,6 +526,7 @@ def page() -> None:
                         ui.label(t(title))
                         ui.label(t(CHART_HINTS[key])).classes("caption")
         kpis()
+        goals()
         grid = ui.element("div").classes("w-full grid grid-cols-1 xl:grid-cols-2 gap-5")
 
         def remove(chart: ChartCard) -> None:

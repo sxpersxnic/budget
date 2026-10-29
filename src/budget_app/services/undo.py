@@ -6,6 +6,7 @@ import functools
 from collections.abc import Callable
 from typing import ParamSpec, TypeVar
 
+from budget_app.domain.tax import BY_KEY
 from budget_app.i18n import N_, t, tn
 from budget_app.services.context import Context, ValidationError
 from budget_app.storage.history import Action, UndoConflict
@@ -86,6 +87,8 @@ TABLE_NAMES = {
     "prices": N_("Price"),
     "tags": N_("Tag"),
     "bills": N_("Bill"),
+    "goals": N_("Savings goal"),
+    "tax_sections": N_("Tax summary section"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 
@@ -108,6 +111,9 @@ def describe_change(ctx: Context, change) -> str:
         what = f"{raw.get('date', '')} · {raw.get('kind', '')} · {raw.get('quantity', '')} × {raw.get('price', '')}"
     elif change.table == "bills":
         what = f"{raw.get('creditor', '')} · {raw.get('amount', '')} {raw.get('currency', '')}"
+    elif change.table == "tax_sections":
+        section = BY_KEY.get(raw.get("id", ""))
+        what = t(section.title) if section else raw.get("id", "")
     elif change.table == "prices":
         what = f"{raw.get('date', '')} · {raw.get('price', '')}"
     else:

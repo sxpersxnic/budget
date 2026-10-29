@@ -170,6 +170,15 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .class-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 6px 24px;
   width: 100%; }
 .class-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+/* notable this month (Overview, F18): icon · title over its reason · amount · chevron, each row a link */
+.nicegui-link.notable-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 18px; column-gap: 10px;
+  align-items: center; padding: 7px 6px; margin: 0 -6px; border-radius: 8px; color: var(--label);
+  text-decoration: none; }
+.nicegui-link.notable-row:hover { background: var(--fill-2); opacity: 1; }
+.notable-row .n-title { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notable-row .n-sub { font-size: 12px; color: var(--label-2); line-height: 1.35; }
+.notable-row .n-amount { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.notable-warn { color: var(--warning); }
 
 /* callout */
 .callout { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border-radius: 10px;
@@ -204,6 +213,14 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
   .ledger-row { grid-template-columns: minmax(0, 1fr) 6rem 6rem 6rem 1.75rem; }
   .ledger-row .c-bar { display: none; }
 }
+/* F18: compared with another month, the budget column shows that month and the difference the change in %;
+   narrow tables keep the change instead of the other month's amount */
+@container (max-width: 560px) {
+  .ledger.compare .ledger-row { grid-template-columns: minmax(0, 1fr) auto 4.5rem 1.5rem; }  /* changes align */
+  .ledger.compare .ledger-row .c-diff { display: block; }
+  .ledger.compare .ledger-row .c-ref { display: none; }
+}
+.ledger-row.target { background: var(--accent-fill); }  /* the row a link from the Overview opened */
 /* income and expenditure side by side once each table gets about 750 px, stacked below that (B08, decision 1);
    narrower halves would cut the category names short */
 .ledger-pair-wrap { width: 100%; container-type: inline-size; }
@@ -277,6 +294,10 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .meter { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; width: 100%; }
 .meter > div { height: 100%; border-radius: 3px; background: var(--accent); }
 .meter.over > div { background: var(--negative); }
+.meter.done > div { background: var(--positive); }
+/* savings goals (F14): the amounts beside a goal's name, and the Overview card's goals side by side when wide */
+.goal-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.goal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 14px 28px; width: 100%; }
 .meter.lg { height: 8px; border-radius: 4px; }
 
 /* ---------------------------------------------------------------- controls */
@@ -342,6 +363,16 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
 .due-soon { color: var(--warning); }
 .bill-amount { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 500; }
 .closed-bills .nicegui-expansion-content { padding: 0; gap: 0; align-items: stretch; }
+
+/* tax summary (F20) */
+.tax-section + .tax-section { border-top: 0.5px solid var(--separator); }
+.tax-section .q-item { padding: 6px 16px; }
+.tax-section .nicegui-expansion-content { padding: 0 0 4px; gap: 0; align-items: stretch; }
+.tax-section .group-row { padding-left: 28px; }
+.tax-section .group-row + .group-row::before { left: 28px; }
+.tax-tags { min-height: 36px; flex-wrap: wrap; gap: 6px; }
+.tax-note { align-items: flex-start; }
+.tax-links { max-height: 62vh; overflow-y: auto; padding-right: 4px; }
 
 /* attachments in the transaction form (F12) */
 .attach-drop { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;

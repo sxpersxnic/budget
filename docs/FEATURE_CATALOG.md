@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11 and F03 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20 and F18 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions and F03 QR bills done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20, F16, F18, F14, F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F27, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -92,7 +92,7 @@ the Linux build.
 ### Decisions for the product owner
 
 Collected from the entries below. Decisions 2–5 were made on 2026-10-19, each as recommended, decision 6 on 2026-10-20,
-decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All decisions are made; none is open.
+decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All decisions are made; none is open.
 
 1. ☑ **B08:** decided — the income and expenditure tables sit side by side on wide windows and
    stack on narrow ones. Built: side by side once each table gets about 750 px (windows from about 1,800 px;
@@ -138,6 +138,17 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
     Built (architecture §7, decision 20).
 17. ☑ **F10:** decided — the first version has tags with filter, totals and chart, and a budget per
     tag (amount, optional period) with actual against budget. Built (see F10).
+18. ☑ **F15:** decided on 2026-10-22 — any number of named scenarios, each a set of budget changes
+    on top of the plan and never written into it; the Overview wealth chart shows the plan and the
+    chosen scenarios; *Adopt into Plan* copies a scenario's changes into the budget as one undo step.
+19. ☑ **F26:** decided — one computer at a time: the data folder can move into a cloud folder, a
+    lock file there warns when another computer has the app open, and files changed elsewhere are
+    detected and reloaded; no merging.
+20. ☑ **F27:** decided — an app lock (password, or Touch ID / Windows Hello where available)
+    before the app opens, and encryption at rest as an opt-in on top, with a recovery key; without
+    the opt-in the files stay readable CSV.
+21. ☑ **F35:** decided — a phone-friendly *quick add* page on the home network, behind the app
+    lock and a pairing code; no entries from away from home, no cloud service.
 
 ## All features
 
@@ -156,13 +167,13 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–17 on 2026-10-22. All d
 | F11 | ☑ Done | Split transactions | Organizing | M | Local | – |
 | F12 | ☑ Done | Attachments | Organizing | M | Local | – |
 | F13 | ☑ Done | Bulk edit | Organizing | S | Local | – |
-| F14 | ☐ Open | Savings goals | Planning | M | Local | – |
+| F14 | ☑ Done | Savings goals | Planning | M | Local | – |
 | F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
-| F16 | ☐ Open | Budget from history | Planning | S | Local | – |
+| F16 | ☑ Done | Budget from history | Planning | S | Local | – |
 | F17 | ☐ Open | Subscription and recurring-spend detection | Insight | M | Local | F09 |
-| F18 | ☐ Open | Trends and unusual spending | Insight | M | Local | – |
+| F18 | ☑ Done | Trends and unusual spending | Insight | M | Local | – |
 | F19 | ☐ Open | Year in review | Insight | M | Local | – |
-| F20 | ☐ Open | Swiss tax summary | Insight | M | Local | F10 |
+| F20 | ☑ Done | Swiss tax summary | Insight | M | Local | F10 |
 | F21 | ☑ Done | Investments and asset classes | Wealth | L | Local | – |
 | F22 | ☐ Open | Loans and mortgages | Wealth | M | Local | – |
 | F23 | ☐ Open | Who owes what (shared expenses) | Wealth | M | Local | – |
@@ -636,7 +647,7 @@ tagged income other than repayments counts as received; a tag's budget compares 
 period, income does not reduce it. Deleting a tag in use is allowed: it is taken off every transaction, template
 and series in one undoable action, and the confirmation says how many transactions lose it. The German word is
 *Schlagwort* ("Tag" means day), French *étiquette*, Italian *etichetta*. Tags per item line came with F11 (a line's
-tag counts that line's part). Not built: budgets per tag and month, and the tax summary's use of tags (F20).
+tag counts that line's part). Not built: budgets per tag and month. Since F20, tags can be linked to sections of the tax summary.
 
 Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
@@ -737,7 +748,30 @@ bar on the Transactions page already exists; this adds an *Edit* sheet for sever
 
 #### F14 · Savings goals
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built** (architecture §7, decision 23): `goals.csv` holds each goal: name, currency, a target amount or, for
+an emergency fund, a number of **months of spending** (the target is N × the average recorded spending of the last
+12 complete months, own share without advances, taxes included, counted from the first month with a transaction,
+so it follows the spending), an optional target date, an optional linked account (else an amount *saved so far*
+typed in), *reserve in the projection*, archived, and where the on-track line starts (the day it was added, or
+linked to another account or given another currency, and what it held then). A linked account's balance is its
+latest month-end balance plus what was booked on it since, up to today (holdings for securities and crypto
+accounts), converted at the latest rate. Progress in `domain/goals.py`: the percentage (never 100 % before the
+target), the **monthly amount needed** (what is left over the whole months to the target date, one less when the
+date's day comes before today's, at least one; rounded up to the cent), *Reached*, *Overdue since …*, and **on
+track / behind** against the straight line from the start to the target on its date; without a date "… to go · no
+target date". The **Goals** page (`/goals`, sidebar after Budget Plan, icon `o_flag`) lists the goals by date with
+a bar (green once reached), the plan line and the source; a sheet adds and edits (the months-of-spending target is
+worked out live), rows archive and delete, archived goals can be restored; each change is one undoable step. The
+**Overview** has a **Goals** card with the first three goals not archived (those still to reach first) and, when a
+goal reserves, "Projected for Dec 2027: … free after … reserved for goals"; the card is left out without goals.
+**Reserve:** the projection (F47) is unchanged; the *Wealth Over Time* chart adds a dashed *Free after goals* line
+(and a `free_after_goals` column in its export): projected wealth minus what each reserving goal is to hold at that
+month on its plan, today's amount plus the monthly amount needed per month and the full target from the month the
+plan reaches it; a goal without a date reserves what it holds, an overdue or reached one its target. A goal's money
+reserved stays reserved until the goal is archived, so a goal spent should be archived. Not built: reminders when
+a goal falls behind (F31), contributions booked from the goal, several accounts per goal.
 
 "Holiday 4'000 CHF by June", "Emergency fund 3 months of spending".
 
@@ -754,11 +788,40 @@ March".
 
 - A scenario is a set of budget changes applied on top of the plan, never written into it.
 - The Overview wealth chart shows the plan and each scenario as separate lines.
-- **Decide:** how many scenarios to keep; whether a scenario can be adopted into the plan.
+- **Decided** (decision 18): any number of scenarios, each can be adopted into the plan.
 
 #### F16 · Budget from history
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built:** *Propose from History…* on Budget Plan (beside *New Budget Entry*) opens one sheet. **Inputs:** the
+last 3, 6 or 12 complete months (default 6), *Average* or *Median*, the COICOP level of the expenditure rows
+(division, group (default) or class), the rounding (to the cent, 1, 5, 10 (default), 50 or 100 CHF), and From
+(this month to the plan's end) and Until (a month or *Forever*, as in the New Budget Entry form). **Rows:** every
+expenditure category with money in those months, in COICOP order with Taxes last, then the income categories by
+name; each has a checkbox with the category, the months' values in whole francs (a tooltip names the months), the
+budget it already has in the chosen months, and the proposed monthly amount, which can be edited (typed amounts
+survive a change of From or Until, a new calculation replaces them). **How it counts** (`domain.proposal`,
+`services.budget_history`; architecture §4.4, decision 24): in CHF at each transaction's own rate, whatever the
+display currency; split lines in their own category (F11); the advance share and advance repayments left out;
+transfers, exchanges and revaluations ignored; a month without spending counts as 0; months before the first
+expenditure or income are left out, and the caption says so ("Your records start in Aug 2026, so 2 months
+count"); the median of an even number of months is the mean of the middle two; rounding is half up and never
+below 0. **Conflicts:** a row whose category already has a budget in the chosen months is unticked and marked
+"Has a budget in 15 of these months. Tick to replace it."; ticking it replaces that budget in those months (the
+form's *Replace*), earlier months keep theirs. A budget for a category inside or above the row's (01.1.1 under
+01.1, or 01) is named as an overlap ("both would count"); the row starts unticked, and ticking it adds alongside.
+A row that rounds to 0 starts unticked too. **Recurring:** a running series (F05) that books in the category is
+named under the row ("Booked by a recurring transaction: Landlord AG · 04.1.1 …, 1'900.00 CHF (Every month)"); the
+row stays ticked, because its bookings are part of the history and the projection does not use series, so nothing
+is counted twice. **Creating:** the status line sums the ticked rows ("910.00 CHF spending and 140.00 CHF income a
+month from Oct 2026, continued as the plan grows"); *Create Budget for N Categories* makes one monthly CHF series per
+ticked row, with the note "From history: average of Apr 2026 – Sep 2026", all or nothing, as one action in the
+change history (*Add budget entries from history*); the toast "Created N budget entries" (one per month and
+category) offers Undo. On a phone each row stacks its amount below the category, and the buttons stay at the bottom
+of the sheet while the rows scroll. Not built: a yearly series (insurance once a year) is proposed as a monthly
+twelfth, which the projection's "higher of recorded and budget" (F47) then counts on top of the month it is paid;
+plan such costs in their own month with New Budget Entry.
 
 Propose a budget from what actually happened: the average (or median) of the last 3, 6 or 12
 months per category, as a starting point the user edits. A one-sheet action on Budget Plan.
@@ -772,7 +835,34 @@ the yearly total. One click turns a detected subscription into a recurring trans
 
 #### F18 · Trends and unusual spending
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built:** **Budget page:** *Compare with* above the two ledgers is a segmented control *Budget · Sep 2026 ·
+Oct 2025* (the month before and the same month a year earlier, named). It changes the meaning of the existing
+columns instead of adding any, so the ledgers keep their B08 layout: the *Budget* column becomes that month's
+amount and *Difference* becomes *Change*, "▲ 25 %" / "▼ 100 %" / "new" (red when spending rose or income fell;
+the amount in the cell's tooltip), and the ledger caption says "17 % less than in Sep 2026 (4'793.15 CHF)".
+Below 560 px, where the difference column was hidden, compare mode shows the change instead of the other
+month's amount (a fixed column, so the changes align). The budget meters and the pencil are hidden while
+comparing; for the current month a caption says "Oct 2026 so far, against all of Sep 2026". A category or
+income recorded only in the compared month gets its own row, so a stop shows as ▼ 100 %. Amounts are in the
+page's currency and count per part (F11): a split line in its own category, the share paid for others in
+*Advance payments*. **Overview:** a *Notable This Month* card after the wealth card lists at most five items,
+exceeded budgets first, then large payments, categories well above their usual level and budgets on pace to be
+exceeded; each row links to `/budget?month=…&category=…` (the month, the category's division opened and the row
+marked and scrolled into view) or to `/transactions?month=…&category=…` (From and To set to the month, and a new
+*Category* filter that includes subcategories and split lines). The card hides when nothing stands out (and
+when nothing is recorded); with fewer than three recorded months it checks only budgets and says "Comparisons
+with your usual spending start once 3 months are recorded." **Rules** (`domain.trends`, architecture §7,
+decision 26; the README explains them): the usual level is the median of the last six complete months since the
+first recorded expenditure; a group (COICOP level 2) is *well above usual* at 1.5 times it and 100 CHF more,
+unless its budget covers it or one large payment explains half the excess; a payment is *large* from 250 CHF
+when it is four times the median payment of its group (with three or more earlier payments), else from a
+quarter of a usual month; a budget is *exceeded* 10 CHF above it and *on pace* when, from the 7th and with three
+payments or more, spent ÷ day × days of the month ends 10 CHF above it (the most specific of nested budgets is
+listed). CHF thresholds are converted to the display currency at the latest rate. The demo data has a washing
+machine this month. Not built: notable items for past months, income trends on the Overview, and a chart of a
+category's months (the *Income and Expenditure* chart shows that).
 
 - Month-over-month and year-over-year change per category on the Budget page.
 - A short "Notable this month" list on the Overview: categories well above their usual
@@ -788,7 +878,28 @@ statement export.
 
 #### F20 · Swiss tax summary
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-22)
+
+**As built** (architecture §7, decision 25): a **Tax Summary** page (`/tax`, last in the sidebar: used once a year,
+it draws on categories, tags and investments) with a year picker (last year by default) and nine sections, each
+with its total in CHF and, opened, its rows (payee or note, date, category, amount, the tags that brought a row in,
+the attachments as links, a button that opens the transaction): *professional expenses* (07.3 itself, rail, bus,
+fare network passes; workplace canteens; post-secondary, tertiary and other education), *pillar 3a payments*
+(transfers into an account of the asset class pillar 3a from one of another class), *insurance premiums* (12.1
+itself, life and accident, health), *medical and dental costs* (06, and 14.2, 15.2), *donations* (14 itself, 14.5,
+14.6), *childcare* (13.3.0.1), *debt interest* (12.2.1, mostly by tag), *withholding tax to reclaim* (the tax of
+dividends in CHF accounts, F21) and *dividends and interest* for the securities list (every dividend gross with the
+tax withheld, ISIN in the payee, and income in a category named Dividends or Interest in any language). Split
+lines (F11) count in their own category, the share paid for others doesn't count. **Sections…** links tags to
+sections (`tax_sections.csv`, a tag in one section at most, new names become tags, one undo step); a tagged
+expenditure part, income or transfer then counts there too, income in a spending section as a refund (negative).
+Sections can overlap only by a tag, and the page says so (and how many transactions do). Exports: **PDF** (a
+summary page with the note that cantonal rules differ, then a table per section with date, payee, category, amount
+and the attachment names as *Proof*), **CSV** (one row per section row, formula-safe) and **Proofs as ZIP…** (the
+PDF, the CSV and the attachment files in one folder per section, each read through F12's check; files that fail
+it are left out and named). Not built: other deductions (property maintenance, alimony, the second-earner
+deduction), amounts per canton, and a link from a section to Transactions. To confirm with the product owner: the
+narrow code lists (professional expenses, insurance and donations leave out what is rarely deductible).
 
 Help with the annual tax declaration, without trying to file it:
 
@@ -938,7 +1049,7 @@ Dropbox.
 - The single-instance lock only works on one computer. Two computers editing at the same
   time can overwrite each other's files, so the app needs change detection and a merge
   strategy (per-record changes, which F28's change log enables).
-- **Decide:** "one computer at a time" with a warning (simple), or real merging (large).
+- **Decided** (decision 19): one computer at a time, with a warning and reload; no merging.
 
 #### F27 · Encryption and app lock
 
@@ -950,6 +1061,8 @@ The CSV files are readable by anyone with access to the computer.
 - **Encryption at rest:** data files encrypted with a key derived from the password.
 - **Trade-off:** encrypted files can no longer be opened in Excel, and a forgotten password
   means lost data, so a recovery key is needed.
+- **Decided** (decision 20): the lock for everyone who sets a password; encryption at rest as an
+  opt-in, with a recovery key.
 
 #### F28 · Undo and change history
 
@@ -1050,8 +1163,7 @@ Record expenses on the phone where they happen.
   reachable on the home network. Needs the app lock (F27), because the server would then
   accept connections from other devices.
 - **Larger step:** a phone app that queues entries offline and syncs with the computer.
-- **Decide:** whether entries made away from home matter (then a sync service is needed,
-  which conflicts with local first).
+- **Decided** (decision 21): quick add on the home network only, behind the app lock.
 
 ## Reference
 

@@ -28,6 +28,7 @@ from budget_app.ui.pages.add_budget import (
     recurrence_options,
     until_options,
 )
+from budget_app.ui.pages.budget_proposal import open_proposal_sheet
 from budget_app.ui.widgets.grid import confirm, export_menu, make_grid, money_col, month_col, num_col
 from budget_app.ui.widgets.selects import currency_select, expenditure_category_select, income_category_select
 
@@ -156,6 +157,11 @@ def page() -> None:
                 ui.icon("search", size="18px").classes("text-3")
             filter_btn = ui.button(t("Filters"), icon="o_filter_list").props("flat").classes("text-primary")
             export_menu("budget-plan", t("Budget Plan"), _columns, lambda: shown)
+            ui.button(
+                t("Propose from History…"),
+                icon="o_auto_awesome",
+                on_click=lambda: open_proposal_sheet(ctx, apply_filters),
+            ).props("flat").classes("text-primary")
             ui.button(t("New Budget Entry"), icon="add", on_click=lambda: open_budget_sheet(ctx, apply_filters)).props(
                 "unelevated"
             )

@@ -234,7 +234,26 @@ The app opens in its own window and keeps all data in your user folder:
    reverts. Rows a change doesn't fit (a transfer has no category) keep what they have; a split
    transaction changes only the category of its rest, its lines keep theirs.
 5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
-   for open-ended budgets.
+   for open-ended budgets. To start from what actually happened, choose **Propose from History…**:
+   pick the last 3, 6 or 12 complete months, average or median, the COICOP level (division, group
+   or class) and the rounding (for example to 10 CHF). Each category you spent or received money in
+   gets a row with its months, the budget it already has and a proposed monthly amount in CHF, which
+   you can change. Rows that already have a budget in the chosen months start unticked; ticking one
+   replaces that budget there. Rows booked by a recurring transaction say so. **Create Budget**
+   adds the ticked rows as monthly budgets in one step, which one **Undo** reverts.
+   **Goals** (sidebar): save towards something ("Holiday 4'000 CHF by June") with **New Goal**: a
+   target amount, or for an emergency fund a number of **months of spending** (the target is then
+   that many times your average monthly spending over the last 12 complete months, and follows it).
+   The target date is optional. Link the goal to an account and its balance (converted at the latest
+   rate when the currencies differ) is the progress, or type in what you have saved so far. Each goal
+   shows a bar, what you still need to put aside **each month** to reach it on time (rounded up to
+   the cent), and whether it is **on track** or **behind** a straight line from where it started to
+   the target; past its date it says **overdue**. Turn on **Reserve in the projection** and the
+   Overview's wealth chart gets a second, dashed line *Free after goals*: the projected wealth minus
+   what the goal is to hold by then (what it holds now, plus the monthly amount until the target
+   date, then the full target). The projection itself doesn't change. **Archive** a goal you reached
+   and spent (it leaves the lists and the reserve; **Restore** brings it back), or delete it. The
+   Overview shows your first three goals in a **Goals** card.
 6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is
    due it is listed for one-click booking (change the amount first if it varies, or skip it);
    turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
@@ -269,6 +288,25 @@ The app opens in its own window and keeps all data in your user folder:
    charts, and export statements as Excel or PDF (share button on the Budget page).
    Once an account has an asset class other than cash, the Overview shows your wealth **by asset
    class**, and *Add Chart → Wealth by Asset Class* shows it month by month.
+   **Compare with** above the Budget page's tables switches their third column from the budget to the
+   month before or the same month last year: that month's amount per category and the change as
+   ▲/▼ and a percentage (hover it for the amount; narrow windows show the change instead of the
+   amount). Split lines count in their own category, and the part paid for others in *Advance
+   payments*, as everywhere on the page.
+   **Notable this month** on the Overview lists up to five things that stand out in the current month,
+   each linking to the Budget page or to the matching transactions. It stays hidden when nothing
+   stands out, and until three months are recorded it only checks budgets. The rules (amounts in CHF,
+   converted to the display currency):
+   - **Budget exceeded:** spending in a budgeted category is 10 CHF or more above its budget.
+   - **On pace to exceed:** from the 7th of the month, a budgeted category with three or more payments
+     this month would end 10 CHF or more above its budget at the pace so far (spent ÷ day × days of
+     the month). A bill paid once, such as the rent, is never projected.
+   - **Large payment:** a payment of 250 CHF or more that is four times the usual size in its
+     category (the median of its payments in the last six months, with at least three of them), or,
+     in a category with fewer earlier payments, a quarter of a usual month's spending or more.
+   - **Well above usual:** a category (COICOP group, such as *01.1 Food*) at 1.5 times its usual
+     month (the median of the last six complete months) and at least 100 CHF above it, unless its
+     budget covers the amount or one large payment explains it.
 9. **Investments** (sidebar, optional): give an account the asset class *Securities* or *Crypto*
    in **Settings** (edit the account), then add its holdings (name, optional ISIN or symbol) on the
    Investments page. An account that already has transactions or balances is **converted**: choose
@@ -287,6 +325,18 @@ The app opens in its own window and keeps all data in your user folder:
    click it for its history, where trades and prices can be edited or deleted. The page also sums
    the Swiss withholding tax you can reclaim with your tax return, per year. Pillar 2,
    pillar 3a, real estate and other assets keep their recorded month-end balances.
+10. **Tax Summary** (sidebar, once a year): the amounts for your tax declaration, last year by
+    default, in CHF, in sections for professional expenses, pillar 3a payments, insurance premiums,
+    medical and dental costs, donations, childcare, debt interest, the withholding tax to reclaim
+    and the dividends and interest for the securities list. A section finds its transactions by
+    category (a split receipt counts each line in its own), pillar 3a payments are transfers to an
+    account of the asset class *Pillar 3a*, and the last two come from the Investments page. Open a
+    section to see its transactions and their attachments. **Sections…** links tags to sections, so
+    for example everything tagged *Work* counts as professional expenses too; a refund tagged for a
+    section lowers it. The app lists amounts and does not judge what you may deduct: cantonal rules
+    differ. The share button saves the summary as **PDF** (a summary page and a table per section,
+    with the attached files named as proof) or **CSV**, or **Proofs as ZIP…**: the PDF, the CSV and
+    the attached files, in one folder per section.
 
 ## Building the installers
 

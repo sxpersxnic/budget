@@ -27,6 +27,7 @@ from budget_app.ui.pages import (
     budget_entries,
     budget_overview,
     categories,
+    goals,
     history,
     import_transactions,
     investments,
@@ -36,6 +37,7 @@ from budget_app.ui.pages import (
     rules,
     settings,
     tags,
+    tax,
     transactions,
 )
 from budget_app.ui.widgets import attachments as attachments_ui
@@ -51,10 +53,12 @@ PAGES = {
     "/import": import_transactions.page,
     "/add-budget": add_budget.page,
     "/budget-entries": budget_entries.page,
+    "/goals": goals.page,
     "/categories": categories.page,
     "/payees": payees.page,
     "/tags": tags.page,
     "/investments": investments.page,
+    "/tax": tax.page,
     "/rules": rules.page,
     "/settings": settings.page,
     "/history": history.page,
