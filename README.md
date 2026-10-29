@@ -5,7 +5,8 @@ A local personal-budgeting app.
 - Data is stored in plain CSV files on your computer.
 - CHF is the fixed base currency.
 - Exchange rates come from the ECB's daily reference rates. A transaction is converted at the
-  rate of its date, an account balance at the last rate of its month.
+  rate of its date, an account balance at the last rate of its month; at every start the app checks
+  every recorded amount against its rate and corrects the CHF value where it differs.
 - Expenditure categories follow COICOP 2018.
 
 The installers bundle everything the app needs. You do **not** need Python, uv or any other tools to use it.
@@ -191,6 +192,8 @@ comes back. Sample data only goes into an empty data folder.
    - Add your accounts, each with its currency.
    - Add your income categories.
    - Choose how far ahead to plan (*Plan Until*) and the display currency.
+   - Choose how the **projected wealth** treats a month without balances (*Projected Wealth*): the budgets
+     alone, or what you've recorded where it is more than the budget (the default).
 2. **Budget → Record Balance:** enter each account's balance at the end of last month.
 3. **New Transaction** (top of the sidebar, available on every page): record expenditures
    (with a COICOP category or taxes), income, transfers, currency exchanges and

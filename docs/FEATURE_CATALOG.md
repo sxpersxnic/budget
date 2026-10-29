@@ -403,6 +403,14 @@ expenditure alike, to the projected wealth on the budget page and to the Overvie
 - **Decide:** months that are over but have no recorded balances yet: budget only (as
   today) or the same rule.
 
+**Changed by the product owner (2026-10-29, decision NEW-PROJ):** the rule is a choice in **Settings → Projected
+Wealth**: *Budget only* sums the month's budgeted income and expenditure (option 1); *Recorded where higher* uses the
+recorded amount where it exceeds the budget, per top-level COICOP category and income category (option 2, the rule
+above, and the default so existing projections don't change). Either applies to every projected month and to the
+what-if scenarios (F15). With the change, every transaction and account balance is valued again at its exchange rate
+at each start (and after each rate check), and its CHF amount recalculated where it differs, so a new version values
+everything already recorded correctly.
+
 ## Backlog
 
 Feature ideas from the first catalog, by area. F01 is done and described under [Done](#done);
