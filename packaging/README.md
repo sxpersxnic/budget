@@ -77,7 +77,7 @@ release; it is the only place it is set.
 
 ## Releasing an update
 
-1. Raise `version` in `pyproject.toml`, for example `0.1.0` → `0.2.0`, run `uv sync`, and merge
+1. Raise `version` in `pyproject.toml`, for example `1.0.0` → `1.1.0`, run `uv sync`, and merge
    the change into `main` through a pull request.
 2. Tag that commit with the same version and push the tag:
    `git tag v0.2.0 && git push origin v0.2.0`. The tag must match `[project] version`; the
@@ -100,7 +100,7 @@ What makes the new installer an update rather than a second copy:
   its volume ("Budget 0.2.0"), `Info.plist`, the Windows Setup file and its *Installed apps* entry.
 - **Windows** (`windows/budget.iss`). The fixed `AppId` finds the existing installation, whose
   folder, language and tasks are reused. The tasks page is skipped and the Ready page states
-  *Budget 0.1.0 will be replaced by version 0.2.0*. `CloseApplications` asks to close a running
+  *Budget 1.0.0 will be replaced by version 1.1.0*. `CloseApplications` asks to close a running
   Budget (Windows Restart Manager). `[InstallDelete]` removes the old `_internal` folder first:
   PyInstaller's file set changes between versions, and stale libraries must not survive.
 - **macOS.** `Budget.app` keeps its bundle identifier (`app.budget.local`), so dragging the new
@@ -162,6 +162,8 @@ app must say "Read from the receipt: …", never download anything, and the log 
 "The OCR engine could not be loaded").
 
 ## Signing (optional)
+
+Budget 1.0 ships unsigned (the product owner's decision of 2026-10-29); the steps below are for a later release.
 
 - **macOS:** the build is ad-hoc signed by default. Users confirm the first launch once with
   **System Settings → Privacy & Security → Open Anyway**. To avoid that prompt, sign with an

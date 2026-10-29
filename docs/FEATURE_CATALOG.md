@@ -1434,7 +1434,7 @@ per-profile settings.
 
 #### F35 · Phone companion
 
-**Status:** ◐ Partly (2026-10-28): the smallest step, quick add on the home network, is built; the phone app is not
+**Status:** ◐ Partly (2026-10-28; ships in 1.0 as built, the product owner's decision of 2026-10-29): the smallest step, quick add on the home network, is built; the phone app is not
 
 **As built (decision 21, decision 41):** *Settings → Security → Quick Add from a Phone · Turn On…* (only with
 the app lock on, after a confirmation that says the connection is not encrypted) lets Budget listen on the home

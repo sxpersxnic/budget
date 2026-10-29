@@ -1082,7 +1082,7 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     date, the account entry's month end) and stored where the CHF amount or the rate date differ. Comparing the
     recomputed amount, and not only the rate date as before, also repairs rows whose amount doesn't match their
     date's rate; account entries were never revalued before, so a balance of the running month recorded early kept
-    an older rate. Budget entries keep the latest rate when saved (§4.1), outside the owner's change.
+    an older rate. Budget entries keep the latest rate when saved (§4.1), outside the owner's change. Confirmed by the product owner on 2026-10-29: option 2 stays the default, and under option 1 advances count nothing.
 37. **Keys are single letters outside fields; sheets keep theirs; contrast is a test, not a review** (F32).
     Page keys (`N`, `/`, `←` `→`, `1`–`9`, `,`, `?`) take no modifier, so they never clash with the browser's or the
     system's shortcuts, and `ui.keyboard` ignores them while the cursor is in a field; they also wait while a sheet
@@ -1172,7 +1172,7 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     live in memory like the desktop's, so a phone pairs again after each start. Starting the app with `--host` on
     another interface is the user's explicit choice and keeps its old meaning (`security.trust_network`: every client
     counts as this computer, the lock's password still applies). The phone app with an offline queue (the catalog's
-    larger step) is not built.
+    larger step) is not built. Confirmed by the product owner on 2026-10-29.
 42. **Seven places, with tabs for the pages of a place** (UX review before 1.0, `docs/UX_REVIEW.md`). The sidebar
     had grown to eighteen places, one per feature, and several answered the same question in different ways. A place
     now stands for one question (where am I, this month, what happened, what's planned, what do I own, how was the
