@@ -96,9 +96,9 @@ bundled. Desktop installations have the system libraries it needs; on a minimal 
 ## Update to a new version
 
 Your installed version is shown at the bottom of the app's sidebar, for example
-*Budget 0.1.0*. Newer installers are on the
+*Budget 1.0.0*. Newer installers are on the
 [releases page](https://github.com/sxpersxnic/budget/releases). To be told about them, turn on
-**Settings → Updates → Check for Updates**: the sidebar then shows *Budget 0.2.0 is available*
+**Settings → Updates → Check for Updates**: the sidebar then shows *Budget 1.1.0 is available*
 with a link to the release when there is a newer one (see the privacy note below).
 
 **Your data is kept.** Updating replaces only the program. Your records live in the
@@ -110,7 +110,7 @@ recent of these copies are kept.
 **macOS**
 
 1. Quit Budget (**Budget → Quit** or ⌘Q). A running app can't be replaced.
-2. Open the new `.dmg`. The window title shows its version, for example *Budget 0.2.0*.
+2. Open the new `.dmg`. The window title shows its version, for example *Budget 1.1.0*.
 3. Drag **Budget** onto **Applications** and click **Replace**.
 4. Eject the disk and open Budget. macOS treats every new version as a new download, so
    confirm it once more with **Open Anyway**, as on the [first launch](#install-on-macos).
@@ -120,8 +120,8 @@ recent of these copies are kept.
 1. Run the new `Budget-<version>-Windows-Setup.exe`. If Budget is open, Setup offers to
    close it.
 2. Setup recognises the existing installation and keeps its folder, language and shortcuts.
-   The last page before installing says *Update: Budget 0.1.0 will be replaced by
-   version 0.2.0*. Click **Install**, then **Finish**.
+   The last page before installing says *Update: Budget 1.0.0 will be replaced by
+   version 1.1.0*. Click **Install**, then **Finish**.
 
 **Linux**
 
