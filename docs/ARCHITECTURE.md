@@ -39,7 +39,7 @@ storage/    typed CSV tables + settings JSON
 
 | Module | Responsibility |
 | --- | --- |
-| `main.py` | CLI entry (`uv run budget`). `register_pages` puts every page behind the app lock's guard (F27) and adds the lock page; `register_routes` adds the attachment, unlock and notes routes, and `REDIRECTS` for retired pages (`/reminders` → `/`, `/subscriptions` → `/recurring`); `open_folder` closes the open folder and opens another (the profile switch, F34: folder lock first, then the folder's own lock state and store); `open_data` opens the folder (at startup, or after the unlock when it is encrypted); `refresh` loads ECB rates at startup and every 30 min, then books what automatic recurring transactions have due, then runs the update check if the user turned it on (F33). |
+| `main.py` | CLI entry (`uv run budget`). `register_pages` registers the window's shell (`_shell`, NEW-SPA) for every route of `PAGES`, so a reload or a bookmark opens that page directly, and the pages without the sidebar (`LONE_PAGES`: the welcome screen; `PHONE_PAGES`; `OPEN_PAGES`: the lock and pairing pages) as pages of their own; everything but the open pages is behind the app lock's guard (F27): `_shell` and `_guarded` before a document is built, `_sub_page` before each page the shell swaps in, which also hands the builder the query parameters it takes; `register_routes` adds the attachment, unlock and notes routes, and `REDIRECTS` for retired pages (`/reminders` → `/`, `/subscriptions` → `/recurring`); `open_folder` closes the open folder and opens another (the profile switch, F34: folder lock first, then the folder's own lock state and store); `open_data` opens the folder (at startup, or after the unlock when it is encrypted); `refresh` loads ECB rates at startup and every 30 min, then books what automatic recurring transactions have due, then runs the update check if the user turned it on (F33). |
 | `config.py` | Base currency `CHF`, ECB URL, the GitHub repository and its releases URLs (F33), data/resource paths. `home_dir()` is the app's home folder (`BUDGET_DATA_DIR` / `--data-dir`, the OS user data folder for installed builds, `./data` otherwise); `data_dir()` is the folder to open at startup, the current profile's (F34, from `storage.profiles`): the one place that decides it. |
 | `domain/months.py` | `YYYY-MM` month arithmetic and the "month complete" rule. |
 | `domain/fx.py` | `FxRates` (parse ECB CSV, rate lookup with date fallback, cross-rate conversion, `history()` for the rate chart) and `FxService` (daily download, atomic file replacement). |
@@ -116,8 +116,8 @@ storage/    typed CSV tables + settings JSON
 | `services/importer.py` | CSV import: encoding, separator and header detection, column mapping and bank profiles, duplicate marking, category suggestions (`categorize`, marked on the row with their reason; `clear_suggestions`), saving in one write. |
 | `services/camt.py` | camt.053 / camt.054 statements (any version) read into the importer's rows; the account remembered per IBAN. |
 | `services/import_balances.py` | Month-end balances from a bank file (F36): the order of a CSV balance column (newest or oldest first) and the balance after each month's last booking, or a camt closing balance; compared with recorded balances and saved with `wealth.upsert_entry`. |
-| `ui/theme.py` | Design tokens (light and dark), Quasar and AG Grid overrides, chart styling. See `docs/DESIGN_REVIEW.md`. Text tokens keep WCAG AA contrast on every surface in both appearances, checked by `tests/test_contrast.py` (F32). `FIRST_PAINT` goes into the HTML of every page (`ui.add_head_html`): the page background and, in dark mode, the dark tokens, which `ui.add_css` and Quasar's `body--dark` only bring once the page has loaded, so a page change no longer flashes white; and cross-document view transitions, which keep the old page on screen while the next one loads. |
-| `ui/layout.py` | Sidebar frame, sheets (dialogs), segmented control, month stepper, metrics, formatting (`1'234.50 CHF`), date picker. Keyboard (F32): `SHORTCUTS` (the list the shortcuts sheet shows), the page keys of `frame()`, Ctrl/⌘ Enter in `sheet_buttons`, `open_shortcuts()`, and `named()`, which gives an icon-only button its tooltip and `aria-label`. |
+| `ui/theme.py` | Design tokens (light and dark), Quasar and AG Grid overrides, chart styling. See `docs/DESIGN_REVIEW.md`. Text tokens keep WCAG AA contrast on every surface in both appearances, checked by `tests/test_contrast.py` (F32). `FIRST_PAINT` goes into the HTML of every page (`ui.add_head_html`): the page background and, in dark mode, the dark tokens, which `ui.add_css` and Quasar's `body--dark` only bring once the page has loaded, so a page load no longer flashes white; and cross-document view transitions, which keep the old page on screen while the next one loads (page changes in a window load no document since NEW-SPA; these cover the loads that remain). |
+| `ui/layout.py` | The window's shell (NEW-SPA): `shell(routes)` builds the page keys, the skip link, the sidebar and the phone header once per window, then the content area (`ui.sub_pages`); `frame()` builds a page's part (callouts, title row, tabs, page column) in it and brings the shell along (`_Shell.show`: the marked place and `aria-current`, the document and header titles, the brand, the footer, the badges); `new_page()` drops what the page before left for the window (data listener, month stepper, open sheets, its tabs' badges); `page_area()` is the content area, for sheets that outlive a list's refresh; `full_load(path)` opens a new document (lock, welcome screen, unlock route, a profile switch). Sheets (dialogs), segmented control, month stepper, metrics, formatting (`1'234.50 CHF`), date picker. Keyboard (F32): `SHORTCUTS` (the list the shortcuts sheet shows), the page keys of the shell, Ctrl/⌘ Enter in `sheet_buttons`, `open_shortcuts()`, and `named()`, which gives an icon-only button its tooltip and `aria-label`. |
 | `ui/widgets/` | Searchable selects, the payee field (`selects.PayeeInput`: a `ui.input` with the component `resources/payee_input.js`, a Quasar select used as text autocomplete, so the typed text is the value and the known payees, recently used first, are suggested while typing, matched anywhere and ignoring case and accents), transaction form (page, add sheet and edit sheet), AG Grid helpers (`grid.make_grid`: sortable columns without filter menus, the page's search and *Filters* panel filter, decision 46; the select-all checkbox is named *Select all rows*; `export_items` / `export_menu` the CSV and Excel exports, `more_menu` a page's *More* button). `selects.CategorySelect` is the category picker (F08): a `ui.select` subclass whose component `resources/category_select.js` (NiceGUI's `select.js` with another filter and option template) filters on each option's pre-folded `search` text in the browser, so typing is instant and needs no round trip; options show the official name as a second line and a history icon when recently used. F40: the filter also accepts the option's `note_search` words and lists those matches after the matches by name (the test helper `offered()` in `tests/ui/test_category_picker.py` mirrors it); the component loads the notes once per page from `notes-url` (`/coicop-notes/<lang>?v=<hash>`, served by `selects.add_notes_route()`, cached immutably) when the picker first opens, shared by every picker on the page, and shows an option's notes in a `q-tooltip` on hover (after 350 ms) or when the arrow keys reach it; on touch screens (`$q.platform.has.touch`) an info button in the option opens them inside the option instead, and stops its tap from selecting. Used by the transaction form, both budget forms, the Budget Plan edit sheet, the bulk edit sheet and the import page (with the income categories as extra options). The value stays the COICOP code (or `TAX`). `bulk_edit.BulkEditSheet` is the bulk edit sheet (F13): one method per field, re-planned with `bulk.plan` on every change. `rule_sheet.open_rule_sheet` adds or edits a categorization rule (F07), `always_like_this` opens it from a transaction. |
 | `ui/widgets/tags.py` | F10. `TagSelect`: a multiple `ui.select` whose chosen tags are chips in their colour (Quasar slots `selected-item` and `option`), a name typed with Enter added as it is (a new tag once saved; a typed name of an existing tag picks it, ignoring case); `chip`, `ColourPicker` (one swatch per palette colour) and `CHIPS_RENDERER`, the AG Grid cell renderer that builds the chips as elements from the row's `_tags`, so names are never HTML. |
 | `ui/widgets/due.py` | F31. `due_card(ctx, currency)`, the Overview's *Due* card: one `row` per `reminders.due_list` item (icon in the tone's colour, title and when as a link to `item.link`, amount, the action button `ACTIONS[kind]`), the first `SHOWN` (6) and *Show n more*; one quiet line when nothing is due, nothing with every kind off. `act` runs the action: *Record…* (`budget_overview.account_entry_dialog` at the month), *Book* (`recurring.book` or `loans.book` of the earliest, as planned), *Pay…* (the transaction sheet with `bills.payment_input`, refused for a bill no longer open), *Open* (the goal's page); every change calls `layout.data_changed`. |
@@ -517,6 +517,14 @@ If the download fails, the previous file stays in use and a warning banner is sh
 currency dropdowns list every currency the ECB quoted on its latest date, plus EUR and CHF.
 
 ## 6. Pages
+
+**Navigation** (NEW-SPA): a window loads one document. The shell (`layout.shell`) holds the sidebar and the phone
+header; the pages below swap in its content area (`ui.sub_pages`), on a link, `ui.navigate.to`, a digit key, and
+the browser's or window's back and forward, so the sidebar never goes blank. Each route below is also a URL of
+its own: a reload or a bookmark opens that page in a new shell, with its query parameters. A new document is
+loaded for the pages without the sidebar (the lock, the welcome screen, the phone's), for the unlock route, a
+profile switch, and a reload (`ui.navigate.reload`, after Undo, a restore, a moved data folder or a change of
+language).
 
 **Places and tabs** (decision 42, the UX review before 1.0, `docs/UX_REVIEW.md`). The sidebar lists seven places;
 a place with several pages shows them as tabs under the title (`layout.SECTIONS`), and a page that is no tab
@@ -1227,6 +1235,33 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     weighed: a help link per page (no help pages exist yet to link to), and keeping the header button beside the
     empty state's (two primary buttons on the first screen a user sees).
 
+NEW-SPA. **One document per window; the pages swap in the shell** (before 1.0). Every page used to be a
+    `@ui.page` that built the whole window, so each click in the sidebar loaded a new document: for about 70–110 ms
+    WebKit (the macOS window) showed neither sidebar nor content, and after the first-paint fix (`theme.FIRST_PAINT`:
+    the right background, cross-document view transitions) the recording of five sidebar clicks in dark mode still
+    had 49 frames of 240 half-painted or white (about 0.4 s per change). The shell is now built once per window
+    (`layout.shell`) and NiceGUI's own client-side router, `ui.sub_pages`, swaps only the content area: the same
+    recording has 0 frames with a blank sidebar, 0 with a blank content area and 0 bright ones (WebKit, 25 fps,
+    the lead's `lead_flash.py` and `lead_blank.py`). This keeps the stack (Python, NiceGUI, Quasar, pywebview): the
+    flash was the document load, not the framework. Every route of `main.PAGES` is registered for the one builder
+    `_shell`, not as a catch-all `/{path}`, so the attachment, API and NiceGUI routes and unknown URLs (404) are
+    untouched, and NiceGUI's router recognises a link to a page of its own (`/lock`, `/welcome`) by its different
+    builder and loads it. The lock guard runs before the document and again before each page (`main._sub_page`),
+    since a change of page no longer asks the server; a lock from another window holds on the next click. Query
+    parameters reach the builders by name, as with `@ui.page`, and a change of one rebuilds the page. A page's
+    elements, timers and refreshables go with it when the content area is cleared; the per-window state it left
+    (`_data_listeners`, `_month_steps`, open sheets, its tabs' badges) is reset by `layout.new_page`, so the page
+    keys act on the page shown. What the sidebar shows besides the places (profile, rates, update, sample data,
+    lock) is rebuilt on each page, as a page load did. Still a new document: the lock, welcome and phone pages
+    (they have no sidebar), the unlock route (it sets the session cookie), a profile switch (another profile's
+    name, language and records in every window, `layout.full_load`), and `ui.navigate.reload` after Undo, a
+    restore, a moved folder or a change of language, which are rare and change what every part of the window shows. On a phone the
+    drawer closes on a change of page (`layout.HIDE_MOBILE_DRAWER`). Opening the page already shown does nothing
+    (a page load rebuilt it). Alternatives weighed: another stack (a JavaScript front end or a native UI: a rewrite
+    of every page for a problem the router solves), keeping page loads and hiding them with view transitions (they
+    still blank in WebKit's window and cost a full build per click), and a catch-all route (it would also catch
+    paths NiceGUI and the attachment route serve, and needs the order of registration to stay right).
+
 ## 8. Testing
 
 - `uv run pytest` runs the unit tests (`tests/`) for:
@@ -1394,7 +1429,8 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
     through the key, a backup carrying `security.json` refused, sessions through one-time nonces, safe next
     paths, slowed wrong attempts, stale nonces, re-encoding the folder and its copies, the store opening after
     the unlock, the attachment route behind the lock; in the simulated client the lock page (redirect, wrong and
-    right password, the cookie holding across pages, Lock Now, the recovery key) and the Security group in
+    right password, the cookie holding across pages, Lock Now, a lock from another window on the next change of
+    page, no shell while locked, the recovery key) and the Security group in
     Settings (set, change and turn off the password, encryption on with the recovery key shown once, a new
     recovery key, off again);
   - investments (F21): the booked value staying at quantity × price after buys, sales between two
