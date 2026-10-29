@@ -59,6 +59,8 @@ load_env() {
   MACOS_MEMORY=${MACOS_MEMORY:-8192}
   MACOS_RUNNER_VERSION=${MACOS_RUNNER_VERSION:-2.338.0}
   MACOS_RUNNER_SHA256=${MACOS_RUNNER_SHA256:-df4cebda25c86a886ed204e49fee63f5c2e7cec5f447b5c98440a826bbdf9df2}
+  TART_VERSION=${TART_VERSION:-2.41.1}
+  TART_SHA256=${TART_SHA256:-e680a734febccfce7d4e910c1f7f13fc3b00f19a181c945e2d746de3214c32c2}
 }
 
 runner_count() {
@@ -105,7 +107,11 @@ on_host() {
   local platform=$1
   shift
   if [[ $platform == windows ]]; then
-    ssh -o BatchMode=yes -o ConnectTimeout=10 -T "$WINDOWS_SSH_HOST" "$@"
+    # Docker's credential helpers use the Windows Credential Manager, which an SSH session cannot
+    # reach ("A specified logon session does not exist"); without a configured one, Docker picks
+    # wincred itself. windows/docker-config names a helper that stores nothing instead.
+    ssh -o BatchMode=yes -o ConnectTimeout=10 -T "$WINDOWS_SSH_HOST" \
+      "\$env:DOCKER_CONFIG = (Join-Path \$HOME '$WINDOWS_DIR/docker-config'); \$env:PATH = \$env:DOCKER_CONFIG + ';' + \$env:PATH; $*"
   else
     "$@"
   fi
@@ -161,7 +167,9 @@ setup_windows() {
   # Brings Docker Desktop up in Windows-container mode and prints the engine, or what is missing.
   # Anything started over SSH ends with the SSH session, so Docker Desktop is started through a
   # one-off scheduled task in the signed-in user's session; that also needs someone signed in.
-  os=$(remote_ps "$(cat <<'PS'
+  # Read into a variable first: inside $(…), bash 3.2 (macOS) trips over quotes in a heredoc.
+  local script
+  read -r -d '' script <<'PS' || true
 function Engine { cmd /c "docker version --format {{.Server.Os}} 2>nul" }
 function Wait-Engine($os) { foreach ($i in 1..60) { if ((Engine) -eq $os) { return }; Start-Sleep 2 } }
 if ((Get-WindowsOptionalFeature -Online -FeatureName Containers).State -ne 'Enabled') {
@@ -181,32 +189,60 @@ if (-not (Get-Process 'Docker Desktop' -ErrorAction SilentlyContinue | Where-Obj
     Wait-Engine 'linux'
 }
 if ((Engine) -ne 'windows') {
-    cmd /c "docker desktop engine use windows 2>&1" | Out-Null
+    # The Windows engine runs under Docker Desktop's service, which Docker Desktop does not
+    # always manage to start itself; the switch then hangs for good.
+    Start-Service com.docker.service
+    $switch = Start-Process docker -ArgumentList 'desktop', 'engine', 'use', 'windows' -NoNewWindow -PassThru
+    if (-not $switch.WaitForExit(300000)) { $switch.Kill(); 'switch-hung'; exit }
     Wait-Engine 'windows'
 }
 Engine
 PS
-)" | tr -d '\r')
+  os=$(remote_ps "$script" | tr -d '\r')
   case $os in
     windows) ;;
     restart) die "Enabled the Windows feature Containers on $WINDOWS_SSH_HOST. Restart the PC
 (ssh $WINDOWS_SSH_HOST shutdown /r /t 0), sign in there (Docker Desktop starts at sign-in), then run setup again." ;;
     signed-out) die "Nobody is signed in on $WINDOWS_SSH_HOST, so Docker Desktop cannot start: sign in there, then run setup again." ;;
+    switch-hung) die "Docker Desktop on $WINDOWS_SSH_HOST hung while switching to Windows containers. On the PC: quit
+Docker Desktop (tray icon → Quit, or end its tasks in Task Manager), start it again, then run setup again." ;;
     *) die "Docker on $WINDOWS_SSH_HOST did not switch to Windows containers ('${os:-not running}'); check Docker Desktop there." ;;
   esac
 
   log "Copying the image files to $WINDOWS_SSH_HOST:$WINDOWS_DIR"
-  remote_ps "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue '$WINDOWS_DIR'; New-Item -ItemType Directory '$WINDOWS_DIR' | Out-Null"
+  remote_ps "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue '$WINDOWS_DIR'; New-Item -ItemType Directory -Force '$WINDOWS_DIR/docker-config' | Out-Null"
   tmp=$(mktemp -d)
   grep -E '^(RUNNER_REPOSITORY|WINDOWS_(TAG|MEMORY|CPUS))=' "$DIR/.env" >"$tmp/.env" || true
   scp -q -o BatchMode=yes "$DIR/windows/Dockerfile" "$DIR/windows/compose.yaml" "$DIR/windows/entrypoint.ps1" \
     "$tmp/.env" "$WINDOWS_SSH_HOST:$WINDOWS_DIR/"
+  scp -q -o BatchMode=yes "$DIR"/windows/docker-config/* "$WINDOWS_SSH_HOST:$WINDOWS_DIR/docker-config/"
   rm -rf "$tmp"
   log "Building the image on $WINDOWS_SSH_HOST (the first build downloads Windows Server Core)"
   compose windows build
 }
 
 # --- Tart (macos) ----------------------------------------------------------------------------
+
+# Tart from its GitHub release (the Homebrew tap is outdated); a Homebrew copy if one exists.
+TART_APP="$HOME/Applications/tart.app"
+tart() {
+  if [[ -x "$TART_APP/Contents/MacOS/tart" ]]; then "$TART_APP/Contents/MacOS/tart" "$@"; else command tart "$@"; fi
+}
+# type -P: `command -v` would find the function above.
+has_tart() { [[ -x "$TART_APP/Contents/MacOS/tart" ]] || type -P tart >/dev/null; }
+
+install_tart() {
+  local tmp
+  log "Installing Tart $TART_VERSION into $TART_APP"
+  tmp=$(mktemp -d)
+  curl -fsSL -o "$tmp/tart.tar.gz" "https://github.com/cirruslabs/tart/releases/download/$TART_VERSION/tart.tar.gz"
+  echo "$TART_SHA256  $tmp/tart.tar.gz" | shasum -a 256 -c >/dev/null
+  tar -xzf "$tmp/tart.tar.gz" -C "$tmp"
+  mkdir -p "$(dirname "$TART_APP")"
+  rm -rf "$TART_APP"
+  mv "$tmp/tart.app" "$TART_APP"
+  rm -rf "$tmp"
+}
 
 # Waits until the Tart guest agent answers, which is what `tart exec` talks to.
 wait_for_agent() {
@@ -249,7 +285,7 @@ macos_job() {
 }
 
 setup_macos() {
-  command -v tart >/dev/null || { log "Installing Tart"; brew install cirruslabs/cli/tart; }
+  has_tart || install_tart
   log "Pulling $MACOS_IMAGE (about 25 GB the first time)"
   tart pull "$MACOS_IMAGE"
   remove_vm "$TEMPLATE"
@@ -330,7 +366,7 @@ cmd_stop() {
     launchctl bootout "gui/$(id -u)/$AGENT.$p" 2>/dev/null || true
     rm -f "$(plist_path "$p")"
     if [[ $p == macos ]]; then
-      command -v tart >/dev/null && remove_job_vms
+      ! has_tart || remove_job_vms
     else
       stop_containers "$p"
     fi
@@ -348,7 +384,7 @@ cmd_status() {
       echo "== $p: stopped"
     fi
     case $p in
-      macos) command -v tart >/dev/null && tart list --source local --quiet | grep '^budget-macos-' || true ;;
+      macos) ! has_tart || tart list --source local --quiet | grep '^budget-macos-' || true ;;
       *) on_host "$p" docker ps --filter "name=budget-$p-" 2>/dev/null || echo "Docker not reachable" ;;
     esac
   done
@@ -413,7 +449,9 @@ cmd_setup() {
 
   SELECTED=("${ok[@]}")
   cmd_start
-  ((${#failed[@]} == 0)) || echo "Not set up: ${failed[*]} (see above; run 'just runners-setup ${failed[*]}' again)"
+  # Joined first: bash 3.2 drops the spaces of ${failed[*]} inside the quotes below.
+  local missing="${failed[*]}"
+  ((${#failed[@]} == 0)) || echo "Not set up: $missing (see above; run 'just runners-setup $missing' again)"
 
   read -rp "Send the jobs for ${ok[*]} to these runners now? [y/N] " answer
   if [[ $answer == [yY]* ]]; then cmd_enable; else echo "Later: just runners-enable ${ok[*]}"; fi
