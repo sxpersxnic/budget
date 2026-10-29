@@ -335,6 +335,7 @@ def test_run_defaults_to_the_browser_on_localhost(entry, tmp_path, english):
     assert calls["lock"] == [data] and calls["setup"] == [data]
     kw = calls["run"]
     assert (kw["host"], kw["port"], kw["native"], kw["show"]) == ("127.0.0.1", 8080, False, True)
+    assert not main_module.security.trust_network
     assert kw["window_size"] is None
     assert kw["reload"] is False
     assert kw["language"] == "en-GB"
@@ -348,6 +349,8 @@ def test_run_with_options(entry, tmp_path, monkeypatch):
     assert calls["setup"] == [data.resolve()]
     kw = calls["run"]
     assert (kw["host"], kw["port"], kw["show"]) == ("0.0.0.0", 9000, False)  # noqa: S104
+    assert main_module.security.trust_network  # every client counts as local, as before F35
+    monkeypatch.setattr(main_module.security, "trust_network", False)
 
 
 def test_run_native_uses_a_free_port_and_allows_downloads(entry):
@@ -396,6 +399,8 @@ async def test_setup_registers_pages_and_refreshes_rates(tmp_path, monkeypatch, 
     monkeypatch.setattr(main_module.ui, "page", lambda path, title: lambda builder: pages.append((path, builder)))
     monkeypatch.setattr(main_module.app, "on_startup", startup.append)
     shutdown: list = []
+    middleware: list = []
+    monkeypatch.setattr(main_module.app, "add_middleware", middleware.append)
     monkeypatch.setattr(main_module.app, "on_shutdown", shutdown.append)
     monkeypatch.setattr(main_module.app, "timer", lambda interval, fn, immediate: timers.append((interval, immediate)))
     for module, hook in ((main_module.security, "opener"), (main_module.profiles, "opener")):
@@ -414,12 +419,12 @@ async def test_setup_registers_pages_and_refreshes_rates(tmp_path, monkeypatch, 
     assert ctx.store.data_dir == tmp_path
     assert i18n.language() == "de"
     # every page is registered behind the app lock's guard (F27), plus the lock page itself
-    assert [path for path, _ in pages] == [*main_module.PAGES, *main_module.OPEN_PAGES]
-    assert all(builder.__name__ == "page" for _, builder in pages)
+    assert [path for path, _ in pages] == [*main_module.PAGES, *main_module.PHONE_PAGES, *main_module.OPEN_PAGES]
+    assert all(builder.__name__ in ("page", "pair_page") for _, builder in pages)
     assert timers == [(1800, False), (main_module.sync.INTERVAL, False)]  # rates; changes from another computer (F26)
     assert main_module.sync.stop in shutdown and main_module.sync.others() == []
     main_module.sync.stop()
-    [refresh] = startup
+    refresh, _listener = startup
     await refresh()
     assert refreshed == [ctx]
 

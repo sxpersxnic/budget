@@ -18,6 +18,7 @@ fourth attempt on, so the lock holds up against guessing from the home network (
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import secrets
 import time
@@ -81,6 +82,9 @@ class State:
 _state: State | None = None
 # set by main: opens the store of `data_dir` with the codec once an encrypted folder is unlocked
 opener: Callable[[Path], None] | None = None
+# set by main (F35): starts or stops the home-network listener whenever phones become allowed or not
+on_phone_change: Callable[[], None] | None = None
+LOCAL_HOSTS = ("127.0.0.1", "::1", "localhost", "testclient", "")  # "": no peer address (a test transport)
 
 
 def configure(data_dir: Path) -> State:
@@ -135,8 +139,36 @@ def session(request: Request | None) -> Session | None:
     return _state.sessions.get(token)
 
 
+# set by main when the app was started with `--host` on another interface: every client counts as this computer,
+# as before F35 (the password still applies when the lock is on)
+trust_network = False
+
+
+def is_local(host: str) -> bool:
+    """A request from this computer (or from anywhere, after an explicit `--host`)."""
+    return trust_network or host in LOCAL_HOSTS
+
+
+def from_home_network(host: str) -> bool:
+    """A private address of another device: the home network (10.x, 172.16–31.x, 192.168.x, fe80::, fd00::/8)."""
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return ip.is_private and not ip.is_loopback and not ip.is_unspecified
+
+
+def client_host(request: Request | None) -> str:
+    return request.client.host if request is not None and request.client else ""
+
+
 def allowed(request: Request | None, phone_ok: bool = False) -> bool:
-    """Whether the request may see a page: no lock, a desktop session, or a phone session where phones may go."""
+    """Whether the request may see a page. From this computer: no lock, or a session. From another device (F35):
+    only pages for phones, only from the home network while phones are allowed, and only with a phone session."""
+    host = client_host(request)
+    if not is_local(host):
+        s = session(request)
+        return phone_ok and phone_enabled() and from_home_network(host) and s is not None and s.kind == PHONE
     if not required():
         return True
     s = session(request)
@@ -146,17 +178,14 @@ def allowed(request: Request | None, phone_ok: bool = False) -> bool:
 
 
 def redirect_for(request: Request | None, path: str, phone_ok: bool = False) -> str | None:
-    """Where a request that may not see `path` is sent (None when it may)."""
+    """Where a request that may not see `path` is sent (None when it may): the pairing page for another device,
+    the lock page on this computer."""
     if allowed(request, phone_ok):
         return None
-    target = "/pair" if phone_ok and _phone_request(request) else "/lock"
+    target = "/lock" if is_local(client_host(request)) else "/pair"
+    if target == "/pair" and not phone_ok:
+        return target  # nothing but quick add for phones
     return f"{target}?next={quote(path, safe='/')}" if path not in ("/", target) else target
-
-
-def _phone_request(request: Request | None) -> bool:
-    """A request from another device on the network (the computer itself gets the password page)."""
-    host = request.client.host if request is not None and request.client else ""
-    return host not in ("", "127.0.0.1", "::1", "localhost", "testclient")
 
 
 def _grant(kind: str, next_path: str) -> str:
@@ -286,7 +315,8 @@ def remove_password(current: str) -> None:
         st.vault.remove_password(current)
     except WrongPassword as exc:
         raise ValidationError(t("Wrong password")) from exc
-    st.pairing = None
+    _end_phone_sessions()
+    _phone_changed()
 
 
 def _folders() -> list[Path]:
@@ -342,14 +372,26 @@ def new_recovery_key(password: str) -> str:
 
 # ------------------------------------------------------------------ phone companion (F35)
 def set_phone(enabled: bool) -> None:
+    """Allow phones on the home network (the folder's lock has to be on), or end that and every phone session."""
     st = state()
     if enabled and not st.vault.has_password:
         raise ValidationError(t("Set a password first: phones reach the app through the lock"))
     st.vault.set_phone(enabled)
     if not enabled:
-        st.pairing = None
-        for token in [k for k, s in st.sessions.items() if s.kind == PHONE]:
-            del st.sessions[token]
+        _end_phone_sessions()
+    _phone_changed()
+
+
+def _end_phone_sessions() -> None:
+    st = state()
+    st.pairing = None
+    for token in [k for k, s in st.sessions.items() if s.kind == PHONE]:
+        del st.sessions[token]
+
+
+def _phone_changed() -> None:
+    if on_phone_change is not None:
+        on_phone_change()
 
 
 def pairing_code() -> str:

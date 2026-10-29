@@ -157,7 +157,7 @@ async def test_setting_a_password_turns_the_lock_on_for_this_browser(user: User,
         assert user.client.page.path == "/settings"
     assert (ctx.store.data_dir / vault.FILE_NAME).exists()
     found = [b.text for b in user.find(kind=ui.button).elements if b.text in ("Change…", "Turn Off…", "Turn On…")]
-    assert sorted(found) == ["Change…", "Turn Off…", "Turn On…"]
+    assert sorted(found) == ["Change…", "Turn Off…", "Turn On…", "Turn On…"]  # encryption, and phones (F35)
 
 
 async def test_changing_and_turning_the_lock_off(user: User, ctx) -> None:
@@ -189,7 +189,9 @@ async def test_encryption_shows_the_recovery_key_once_and_can_be_turned_off(user
     security.set_password(PW, PW)
     await open_unlocked(user, "/settings")
     await user.should_see("Attachment files stay as they are.")
-    button(user, "Turn On…").click()
+    with user:
+        turn_on = [e for e in user.client.elements.values() if isinstance(e, ui.button) and e.text == "Turn On…"]
+    UserInteraction(user, {turn_on[0]}, "Turn On…").click()  # encryption's; the second is the phones' (F35)
     await user.should_see("The record files are rewritten")
     set_value(user, field(user, "Password"), PW)
     button(user, "Encrypt Records").click()

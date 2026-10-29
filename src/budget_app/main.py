@@ -23,7 +23,7 @@ from budget_app import config, i18n
 from budget_app.i18n import t
 from budget_app.services import attachments as attachments_svc
 from budget_app.services import context as context_module
-from budget_app.services import profiles, security, sync
+from budget_app.services import phone, profiles, security, sync
 from budget_app.services.context import Context, ValidationError, get_ctx, init_context
 from budget_app.storage import lock as instance_lock
 from budget_app.ui import theme
@@ -42,6 +42,7 @@ from budget_app.ui.pages import (
     lock,
     overview,
     payees,
+    quick_add,
     recurring,
     rules,
     settings,
@@ -72,14 +73,19 @@ PAGES = {
     "/settings": settings.page,
     "/history": history.page,
 }
-# Pages outside the lock (F27): the lock page itself.
+# Pages outside the lock (F27): the lock page itself, and the phone's pairing page (F35).
 OPEN_PAGES = {
     "/lock": lock.page,
+    "/pair": quick_add.pair_page,
+}
+# Pages a paired phone may see (F35), behind the lock like the others.
+PHONE_PAGES = {
+    "/quick": quick_add.page,
 }
 UNLOCK_ROUTE = "/unlock/{nonce}"
 
 
-def _guarded(path: str, builder: Callable[..., None]) -> Callable[..., RedirectResponse | None]:
+def _guarded(path: str, builder: Callable[..., None], phone_ok: bool = False) -> Callable[..., RedirectResponse | None]:
     """The page behind the app lock: without a session the request is redirected before anything is built.
 
     The wrapper keeps the builder's parameters (NiceGUI fills them from the query string) and asks for the
@@ -93,7 +99,7 @@ def _guarded(path: str, builder: Callable[..., None]) -> Callable[..., RedirectR
     def page(**kwargs: Any) -> RedirectResponse | None:
         request: Request = kwargs["request"] if takes_request else kwargs.pop("request")
         wanted = f"{path}?{request.url.query}" if request.url.query else path
-        target = security.redirect_for(request, wanted)
+        target = security.redirect_for(request, wanted, phone_ok)
         if target is not None:
             return RedirectResponse(target)
         builder(**kwargs)
@@ -108,6 +114,8 @@ def register_pages() -> None:
     """Every page of the app (each sets its translated title in layout.frame)."""
     for path, builder in PAGES.items():
         ui.page(path, title="Budget")(_guarded(path, builder))
+    for path, builder in PHONE_PAGES.items():
+        ui.page(path, title="Budget")(_guarded(path, builder, phone_ok=True))
     for path, builder in OPEN_PAGES.items():
         ui.page(path, title="Budget")(builder)
 
@@ -124,6 +132,7 @@ def _unlock_route(nonce: str) -> Response:
 
 
 def register_routes(api: FastAPI) -> None:
+    api.add_middleware(phone.Gate)  # F35: other devices reach the phone pages only, and only while allowed
     attachments_ui.register(api)  # serves attachment files to the page, by record id
     api.add_api_route(UNLOCK_ROUTE, _unlock_route, methods=["GET"], include_in_schema=False)
     selects.add_notes_route()
@@ -165,6 +174,7 @@ def open_folder(folder: Path, moved: bool = False) -> None:
         security.relocate(folder)
     else:
         security.configure(folder)
+    phone.sync_listener()  # the other folder's phone setting (F35)
     if security.can_open_without_password() or security.codec().encrypting:
         _open_and_refresh(folder)
     sync.start(folder)
@@ -179,6 +189,7 @@ def check_folder() -> None:
 def setup(data_dir: Path) -> None:
     security.configure(data_dir)
     security.opener = _open_and_refresh
+    security.on_phone_change = phone.sync_listener
     profiles.opener = open_folder
     theme.install()
     register_routes(app)
@@ -187,7 +198,9 @@ def setup(data_dir: Path) -> None:
         open_data(data_dir)
     sync.start(data_dir)
     app.on_startup(refresh)
+    app.on_startup(phone.sync_listener)  # F35: listens on the home network only while phones are allowed
     app.on_shutdown(sync.stop)
+    app.on_shutdown(phone.stop)
     app.timer(30 * 60, refresh, immediate=False)  # keeps rates current, and books what falls due overnight
     app.timer(sync.INTERVAL, check_folder, immediate=False)  # F26: changes from another computer
 
@@ -229,6 +242,7 @@ def run() -> None:
     except instance_lock.AlreadyRunningError as exc:
         logging.getLogger(__name__).error("%s", exc)
         sys.exit(1)
+    security.trust_network = args.host not in ("127.0.0.1", "localhost", "::1")  # an explicit choice (F35)
     setup(data)
     if args.native:
         # The app's own exports use the save dialog (layout.save_file); this covers any other download link.

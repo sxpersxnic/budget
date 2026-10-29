@@ -181,6 +181,9 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .notable-warn { color: var(--warning); }
 
 /* the lock page (F27) and the phone pages (F35): one card, no sidebar */
+.quick-card { max-width: 26rem; }
+.pairing-code { font: 600 34px/1.2 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.12em; }
+.pairing-qr { width: 10rem; height: 10rem; image-rendering: pixelated; }
 .lock-page { width: 100%; min-height: 100vh; justify-content: center; padding: 24px 16px; }
 .lock-card { width: 100%; max-width: 22rem; background: var(--surface); border-radius: 14px; padding: 24px 22px;
   box-shadow: var(--shadow); }

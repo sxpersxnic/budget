@@ -12,7 +12,7 @@ from budget_app.domain import months
 from budget_app.domain.models import ACCOUNT_ADVANCE, ACCOUNT_REGULAR, ASSET_CASH, ASSET_CLASSES, HOLDING_CLASSES
 from budget_app.i18n import t, tn
 from budget_app.services import accounts as acc_svc
-from budget_app.services import archive, security, sync
+from budget_app.services import archive, phone, security, sync
 from budget_app.services import budget as budget_svc
 from budget_app.services import export as export_svc
 from budget_app.services import investments as inv_svc
@@ -487,6 +487,87 @@ def _password_sheet(ctx: Context, mode: str, refresh) -> None:
         last.on("keydown.enter", save)
 
 
+def _pair_sheet(refresh) -> None:
+    """F35: a fresh pairing code, the address a phone opens, and a QR code of it."""
+    code = security.pairing_code()
+    addresses = phone.urls()
+    with sheet(t("Pair a Phone"), width="24rem") as dlg:
+        ui.label(
+            t(
+                "On the phone, open this address or scan the code, then type the pairing code. "
+                "The code works once, for ten minutes."
+            )
+        ).classes("footnote")
+        if addresses:
+            ui.image(phone.qr_data_url(addresses[0])).classes("pairing-qr self-center").props(
+                f'alt="{t("QR code of the address")}"'
+            )
+            for url in addresses:
+                ui.label(url).classes("mono select-all text-center break-all")
+        else:
+            ui.label(t("This computer has no address on a home network right now.")).classes("caption")
+        ui.label(f"{code[:3]} {code[3:]}").classes("pairing-code self-center")
+        with ui.row().classes("w-full justify-end pt-1"):
+            ui.button(t("Done"), on_click=lambda: (dlg.close(), refresh())).props("unelevated")
+
+
+def _phone_row(refresh) -> None:
+    """F35, decision 21: quick add from a phone on the home network, behind the lock and a pairing code."""
+    on = security.phone_enabled()
+
+    def turn_on() -> None:
+        try:
+            security.set_phone(True)
+        except ValidationError as exc:
+            error(str(exc))
+            return
+        refresh()
+
+    def turn_off() -> None:
+        security.set_phone(False)
+        success(t("Phones can no longer reach Budget"))
+        refresh()
+
+    with ui.element("div").classes("group-row"):
+        with ui.column().classes("gap-0 flex-1 min-w-0"):
+            ui.label(t("Quick Add from a Phone"))
+            if on:
+                ui.label(
+                    t(
+                        "On. A phone on your home network opens {address} and pairs with a code; it can only add "
+                        "expenses. Paired phones: {n}.",
+                        address=next(iter(phone.urls()), t("this computer’s address")),
+                        n=security.phone_sessions(),
+                    )
+                ).classes("caption break-all")
+            else:
+                ui.label(
+                    t(
+                        "Lets a phone on your home network add expenses once you pair it with a code. "
+                        "Budget then also listens on the home network."
+                    )
+                ).classes("caption")
+        if on:
+            ui.button(t("Pair a Phone…"), on_click=lambda: _pair_sheet(refresh)).props("flat dense no-caps").classes(
+                "text-primary"
+            )
+            ui.button(t("Turn Off"), on_click=turn_off).props("flat dense no-caps").classes("text-primary")
+        else:
+            ui.button(
+                t("Turn On…"),
+                on_click=lambda: confirm(
+                    t("Let phones on your home network add expenses?"),
+                    turn_on,
+                    action=t("Turn On"),
+                    detail=t(
+                        "Budget listens on your home network for the quick-add page. A phone needs a pairing code "
+                        "you show here, and sees nothing but the accounts and categories to choose from. The "
+                        "connection is not encrypted, so use it at home only."
+                    ),
+                ),
+            ).props("flat dense no-caps").classes("text-primary")
+
+
 def _security_group(ctx: Context) -> None:
     @ui.refreshable
     def body() -> None:
@@ -543,6 +624,7 @@ def _security_group(ctx: Context) -> None:
                         ui.label(t("Lock Now"))
                         ui.label(t("Asks for the password again, here and on paired phones.")).classes("caption")
                     ui.button(t("Lock Now"), on_click=lock_now).props("flat dense no-caps").classes("text-primary")
+                _phone_row(body.refresh)
 
     with ui.column().classes("w-full gap-0"):
         ui.label(t("Security")).classes("group-header")

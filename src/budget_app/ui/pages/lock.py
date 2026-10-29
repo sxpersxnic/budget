@@ -22,6 +22,9 @@ def _next_path() -> str:
 def page() -> None:
     theme.apply_colors()
     ui.page_title(f"{t('Locked')} – Budget")
+    if not security.is_local(ui.context.client.ip):  # F35: other devices pair, they never get the password page
+        ui.navigate.to("/pair")
+        return
     if not security.required():  # nothing to unlock
         ui.navigate.to("/")
         return
