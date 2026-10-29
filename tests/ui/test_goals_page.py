@@ -63,7 +63,11 @@ def texts(user: User) -> list[str]:
 async def test_the_page_without_goals(user: User, ctx) -> None:
     await user.open("/goals")
     await user.should_see("No goals yet.")
+    await user.should_see("Save towards a holiday")  # the explanation is the empty state's, not the header's
     await user.should_see("0 goals")
+    [new] = [b for b in user.find(kind=ui.button).elements if b.text == "New Goal"]  # the header's is hidden
+    click(user, new)
+    await user.should_see("Add Goal")
     tabs = [p for p, _ in layout.SECTIONS["/budget-entries"]]  # a tab of Plan, after the budget plan
     assert tabs.index("/goals") == tabs.index("/budget-entries") + 1
     await open_overview(user)

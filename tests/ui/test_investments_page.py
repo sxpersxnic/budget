@@ -90,10 +90,10 @@ def bought(ctx, depot):
 # ------------------------------------------------------------------ the page
 async def test_without_investment_accounts(user: User, ctx, setup) -> None:
     await user.open("/investments")
-    await user.should_see("Give an account the asset class Securities or Crypto in Settings")
+    await user.should_see("Give an account the asset class Securities or Crypto under Accounts")
     assert not [b for b in user.find(kind=ui.button).elements if b.text == "Buy"]
-    await click(user, page_button(user, "Settings…"))
-    await user.should_see("Base Currency", retries=20)
+    await click(user, page_button(user, "Accounts…"))
+    await user.should_see("Add Account…", retries=20)
 
 
 async def test_add_a_holding(user: User, ctx, depot) -> None:

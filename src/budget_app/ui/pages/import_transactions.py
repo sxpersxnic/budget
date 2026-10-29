@@ -71,12 +71,7 @@ def _income_options(ctx: Context) -> dict[str, str]:
 
 
 def page() -> None:
-    with frame(
-        t("Import Transactions"),
-        "/import",
-        subtitle=t("Bring in a CSV export or a camt statement from your bank or credit card"),
-        narrow=False,
-    ) as (ctx, _):
+    with frame(t("Import Transactions"), "/import") as (ctx, _):
         profiles = importer.load_profiles(ctx.store)
         # parsed: the CSV file; statement: the camt file (one of them is set); problem: why it can't be imported
         # balances: month-end balances the file offers; balance_problem: why its balances are not offered

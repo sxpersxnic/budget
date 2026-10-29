@@ -177,6 +177,10 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .group-row:hover .row-actions, .group-row:focus-within .row-actions { opacity: 1; }
 @media (hover: none) { .group-row .row-actions { opacity: 1; } }
 .link-btn { color: var(--accent) !important; font-weight: 500; }
+/* an empty list: what goes here and the action that adds it (widgets/empty.py) */
+.group-row.empty-state { flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 16px 16px; }
+.empty-title { color: var(--label-2); }
+.empty-text { max-width: 36rem; font-size: 13px; }
 
 /* metric strip */
 .metrics { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); width: 100%; }
@@ -484,6 +488,9 @@ body.body--dark .nicegui-aggrid { border: 0.5px solid var(--separator); }
 .nicegui-aggrid .ag-cell { font-variant-numeric: tabular-nums; }
 .nicegui-aggrid .amt-in { color: var(--positive); }
 .nicegui-aggrid .muted { color: var(--label-2); }
+/* a phone has room for the page stepper only; the row count shows below the grid */
+@media (max-width: 640px) {
+  .nicegui-aggrid .ag-paging-page-size, .nicegui-aggrid .ag-paging-row-summary-panel { display: none; } }
 /* a category the import suggested (F07): not the user's choice until they keep it */
 .nicegui-aggrid .suggested { color: var(--label-2); font-style: italic; }
 /* ---------------------------------------------------------------- utilities (last, so they win) */

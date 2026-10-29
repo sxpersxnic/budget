@@ -170,17 +170,12 @@ def page() -> None:
                 ui.menu_item(t("Export as PDF…"), on_click=lambda: export("pdf"))
                 ui.menu_item(t("Export as CSV…"), on_click=lambda: export("csv"))
                 ui.menu_item(t("Proofs as ZIP…"), on_click=lambda: export("zip"))
-        ui.label(
-            t(
-                "The year’s amounts for your tax declaration, by typical deduction, in CHF. Nothing is filed or "
-                "sent; the exports are for you or your tax adviser."
-            )
-        ).classes("caption -mt-2")
-        with ui.element("div").classes("callout tax-note"):
+        with ui.element("div").classes("callout tax-note"):  # the notes that must be read stay above the amounts
             ui.icon("o_info")
             with ui.column().classes("gap-0.5"):
                 ui.label(tax_export.note())
                 ui.label(tax_export.overlap_note()).classes("caption")
+                ui.label(t("Nothing is filed or sent; the exports are for you or your tax adviser.")).classes("caption")
 
         def toggled(key: str, value: bool) -> None:
             if value:

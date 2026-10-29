@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 from collections.abc import Callable
+from contextlib import contextmanager
 from datetime import date
 
 from nicegui import ui
@@ -158,7 +159,7 @@ def _month_fmt() -> str:
 
 
 def num_col(field: str, header: str, **extra) -> dict:
-    col = {"field": field, "headerName": header, "type": "rightAligned", "filter": "agNumberColumnFilter"}
+    col = {"field": field, "headerName": header, "type": "rightAligned"}
     col[":valueFormatter"] = f"p => p.value == null ? '' : p.value.{NUMBER}"
     col.update(extra)
     return col
@@ -191,7 +192,8 @@ def make_grid(columns: list[dict], height: str = "calc(100vh - 230px)") -> ui.ag
         {
             "columnDefs": columns,
             "rowData": [],
-            "defaultColDef": {"sortable": True, "resizable": True, "filter": True, "suppressHeaderMenuButton": True},
+            # one way to filter: the page's search and Filters panel, so the headers carry no filter icons
+            "defaultColDef": {"sortable": True, "resizable": True, "filter": False, "suppressHeaderMenuButton": True},
             "rowSelection": {"mode": "multiRow", "headerCheckbox": True, "selectAll": "filtered"},
             ":getRowId": "p => p.data.id",
             "pagination": True,
@@ -200,7 +202,8 @@ def make_grid(columns: list[dict], height: str = "calc(100vh - 230px)") -> ui.ag
             "overlayNoRowsTemplate": '<span style="color: var(--label-2)">'
             + html.escape(t("Nothing matches these filters."))
             + "</span>",
-            "localeText": AG_GRID_LOCALE.get(i18n.language(), {}),
+            # the selection column has no header text: its select-all checkbox carries the column's name
+            "localeText": AG_GRID_LOCALE.get(i18n.language(), {}) | {"ariaHeaderSelection": t("Select all rows")},
         },
         auto_size_columns=False,
     )
@@ -218,8 +221,8 @@ def confirm(message: str, on_yes, action: str | None = None, detail: str = "") -
             )
 
 
-def export_menu(name: str, title: str, columns: Callable[[], list[dict]], rows: Callable[[], list[dict]]) -> None:
-    """Share button with CSV and Excel exports of a list page's rows as currently filtered (F24)."""
+def export_items(name: str, title: str, columns: Callable[[], list[dict]], rows: Callable[[], list[dict]]) -> None:
+    """The CSV and Excel exports of a list page's rows as currently filtered (F24), as items of the open menu."""
 
     async def export(kind: str) -> None:
         try:
@@ -230,9 +233,26 @@ def export_menu(name: str, title: str, columns: Callable[[], list[dict]], rows: 
             return
         await save_file(data, f"{name}_{date.today().isoformat()}.{kind}")
 
+    ui.menu_item(t("Export as CSV…"), on_click=lambda: export("csv"))
+    ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))
+
+
+def export_menu(name: str, title: str, columns: Callable[[], list[dict]], rows: Callable[[], list[dict]]) -> None:
+    """Share button with the exports of `export_items`."""
     with (
         named(ui.button(icon="ios_share").props("flat round").classes("text-primary"), t("Export the list")),
         ui.menu().props("auto-close"),
     ):
-        ui.menu_item(t("Export as CSV…"), on_click=lambda: export("csv"))
-        ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))
+        export_items(name, title, columns, rows)
+
+
+@contextmanager
+def more_menu():
+    """The page's secondary actions behind one "More" button, so the toolbar keeps its search and filters in one
+    row (UX review, section 2). Yields the open menu; add `ui.menu_item`s to it."""
+    # a text button beside Filters, so it needs no tooltip (one would cover the open menu)
+    with (
+        ui.button(t("More"), icon="more_horiz").props("flat").classes("text-primary"),
+        ui.menu().props("auto-close") as menu,
+    ):
+        yield menu

@@ -130,11 +130,7 @@ def notes_view(code: str, lang: str | None = None) -> dict | None:
 
 
 def page() -> None:
-    with frame(
-        t("Categories"),
-        "/categories",
-        subtitle=t("COICOP 2018, the UN classification of spending by purpose"),
-    ) as (ctx, actions):
+    with frame(t("Categories"), "/categories") as (ctx, actions):
         coicop = get_coicop()
         spent = spent_this_year(ctx)
         nodes = tree_nodes(coicop, spent)
@@ -167,6 +163,7 @@ def page() -> None:
             tree.add_slot("default-header", ROW % {"show": escape(t("Show what this category includes"))})
         by_code = {node["id"]: node for node in all_nodes(tree.props["nodes"])}  # the tree's own (observed) copies
 
+        ui.label(t("COICOP 2018, the UN classification of spending by purpose")).classes("footnote px-1")
         ui.label(
             t(
                 "Besides COICOP, expenditure can be booked as {taxes}. The part of a payment made for "

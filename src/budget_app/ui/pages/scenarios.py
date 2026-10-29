@@ -19,6 +19,7 @@ from budget_app.ui.layout import (
     fmt,
     frame,
     month_options,
+    named,
     on_data_changed,
     segmented,
     sheet,
@@ -26,6 +27,7 @@ from budget_app.ui.layout import (
     undoable,
 )
 from budget_app.ui.pages.add_budget import FOREVER, recurrence_label, recurrence_options, until_options
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select, expenditure_category_select, income_category_select
 
@@ -217,25 +219,27 @@ def open_change_sheet(
 def page() -> None:
     with frame(t("Scenarios"), "/scenarios", narrow=True) as (ctx, actions):
         with actions:
-            ui.button(t("New Scenario"), icon="add", on_click=lambda: open_scenario_sheet(ctx, refresh)).props(
+            new = ui.button(t("New Scenario"), icon="add", on_click=lambda: open_scenario_sheet(ctx, refresh)).props(
                 "unelevated"
             )
-        ui.label(
-            t(
-                "Try a future without touching the plan: a scenario lays budget changes over it, such as less salary "
-                "from January or a car in March, and the Overview’s wealth chart shows the plan and each scenario side "
-                "by side. Adopt a scenario to write its changes into the plan."
-            )
-        ).classes("caption -mt-2")
 
         @ui.refreshable
         def scenario_list() -> None:
             rows = scen_svc.scenarios(ctx)
+            new.set_visibility(bool(rows))  # while there are none, the empty state offers it
             view_cur = ctx.store.settings.display_currency
             with ui.column().classes("w-full gap-5"):
                 if not rows:
-                    with ui.element("div").classes("group"), ui.element("div").classes("group-row"):
-                        ui.label(t("No scenarios yet.")).classes("text-2")
+                    with ui.element("div").classes("group"):
+                        empty_state(
+                            t("No scenarios yet."),
+                            t(
+                                "Try a future without touching the plan, such as less salary from January or a car "
+                                "in March. The Overview’s wealth chart shows it beside the plan."
+                            ),
+                            t("New Scenario"),
+                            lambda: open_scenario_sheet(ctx, refresh),
+                        )
                 for scenario in rows:
                     _scenario(scenario, view_cur)
 
@@ -252,12 +256,18 @@ def page() -> None:
                         value=scenario.shown,
                         on_change=lambda e, s=scenario: show(s, bool(e.value)),
                     ).props("dense left-label").classes("text-[13px]")
-                    ui.button(icon="o_edit", on_click=lambda s=scenario: open_scenario_sheet(ctx, refresh, s)).props(
-                        ROW_ACTION
-                    ).classes("text-primary").tooltip(t("Edit"))
-                    ui.button(icon="o_delete", on_click=lambda s=scenario: delete(s)).props(ROW_ACTION).classes(
-                        "text-negative"
-                    ).tooltip(t("Delete"))
+                    named(
+                        ui.button(icon="o_edit", on_click=lambda s=scenario: open_scenario_sheet(ctx, refresh, s))
+                        .props(ROW_ACTION)
+                        .classes("text-primary"),
+                        t("Edit"),
+                    )
+                    named(
+                        ui.button(icon="o_delete", on_click=lambda s=scenario: delete(s))
+                        .props(ROW_ACTION)
+                        .classes("text-negative"),
+                        t("Delete"),
+                    )
                 text, tone = outcome_line(ctx, scenario, view_cur)
                 ui.label(text).classes("caption px-1 " + tone)
                 with ui.element("div").classes("group w-full"):
@@ -272,13 +282,21 @@ def page() -> None:
                                 if change.comment:
                                     ui.label(change.comment).classes("caption")
                             with ui.row().classes("row-actions gap-0 no-wrap"):
-                                ui.button(
-                                    icon="o_edit",
-                                    on_click=lambda c=change, s=scenario: open_change_sheet(ctx, s, refresh, c),
-                                ).props(ROW_ACTION).classes("text-primary").tooltip(t("Edit"))
-                                ui.button(icon="o_delete", on_click=lambda c=change: delete_change(c)).props(
-                                    ROW_ACTION
-                                ).classes("text-negative").tooltip(t("Delete"))
+                                named(
+                                    ui.button(
+                                        icon="o_edit",
+                                        on_click=lambda c=change, s=scenario: open_change_sheet(ctx, s, refresh, c),
+                                    )
+                                    .props(ROW_ACTION)
+                                    .classes("text-primary"),
+                                    t("Edit"),
+                                )
+                                named(
+                                    ui.button(icon="o_delete", on_click=lambda c=change: delete_change(c))
+                                    .props(ROW_ACTION)
+                                    .classes("text-negative"),
+                                    t("Delete"),
+                                )
                     with ui.element("div").classes("group-row gap-3 flex-wrap"):
                         ui.button(
                             t("Add Change…"), on_click=lambda s=scenario: open_change_sheet(ctx, s, refresh)

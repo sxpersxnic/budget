@@ -35,7 +35,7 @@ from budget_app.ui.layout import date_input, error, frame, on_data_changed, pars
 from budget_app.ui.pages.add_budget import recurrence_label
 from budget_app.ui.pages.recurring import open_recurring_sheet
 from budget_app.ui.widgets.bulk_edit import open_bulk_edit_sheet
-from budget_app.ui.widgets.grid import confirm, date_col, export_menu, make_grid, money_col, num_col
+from budget_app.ui.widgets.grid import confirm, date_col, export_items, make_grid, money_col, more_menu, num_col
 from budget_app.ui.widgets.receipt import open_receipt_sheet
 from budget_app.ui.widgets.rule_sheet import always_like_this
 from budget_app.ui.widgets.selects import expenditure_category_select, set_options
@@ -198,16 +198,12 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
             with text.add_slot("prepend"):
                 ui.icon("search", size="18px").classes("text-3")
             filter_btn = ui.button(t("Filters"), icon="o_filter_list").props("flat").classes("text-primary")
-            export_menu("transactions", t("Transactions"), _columns, lambda: shown)
-            ui.button(
-                t("Receipt…"), icon="o_document_scanner", on_click=lambda: open_receipt_sheet(ctx, apply_filters)
-            ).props("flat").classes("text-primary")  # F04
-            ui.button(t("Import…"), icon="o_file_upload", on_click=lambda: ui.navigate.to("/import")).props(
-                "flat"
-            ).classes("text-primary")
-            ui.button(
-                t("New Transaction"), icon="add", on_click=lambda: open_transaction_sheet(ctx, apply_filters)
-            ).props("unelevated")
+            # New Transaction is the sidebar's and the phone header's; the rest waits behind More
+            with more_menu():
+                ui.menu_item(t("Import…"), on_click=lambda: ui.navigate.to("/import"))
+                ui.menu_item(t("Receipt…"), on_click=lambda: open_receipt_sheet(ctx, apply_filters))  # F04
+                ui.separator()
+                export_items("transactions", t("Transactions"), _columns, lambda: shown)
         with ui.row().classes("w-full items-start gap-2 flex-wrap") as filters:
             first_day, last_day = month_dates(month)
             d_from = date_input(t("From"), first_day).classes("w-40")

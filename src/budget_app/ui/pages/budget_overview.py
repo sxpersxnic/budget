@@ -335,9 +335,10 @@ def page(month: str = "", category: str = "") -> None:
             ):
                 ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))
                 ui.menu_item(t("Export as PDF…"), on_click=lambda: export("pdf"))
+            # secondary: the page is for reading the month; recording a balance is an occasional chore
             ui.button(
                 t("Record Balance"), icon="add", on_click=lambda: account_entry_dialog(ctx, content.refresh)
-            ).props("unelevated")
+            ).props("flat no-caps").classes("text-primary")
 
         @ui.refreshable
         def content() -> None:

@@ -4,7 +4,7 @@ import asyncio
 import io
 from datetime import date
 
-from nicegui import ui
+from nicegui import ElementFilter, ui
 from nicegui.elements.upload_files import SmallFileUpload
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
@@ -65,7 +65,13 @@ def click(user: User, element) -> None:
 
 async def open_sheet(user: User) -> None:
     await user.open("/transactions")
-    click(user, newest(user, ui.button, text="Receipt…"))
+    with user:  # in the page's More menu; menus are closed in the simulation, so their items count as hidden
+        [item] = [
+            i
+            for i in ElementFilter(kind=ui.menu_item, local_scope=False)
+            if any(getattr(e, "text", None) == "Receipt…" for e in i.descendants())
+        ]
+    click(user, item)
     await user.should_see("Drop a receipt (PDF or photo)")
 
 
