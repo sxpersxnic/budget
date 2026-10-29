@@ -18,6 +18,7 @@ Decisions made with the user:
   1. **Instant everything:** command palette, live fuzzy search, keyboard-first, cold start under 200 ms.
   2. **A double-entry ledger core** with an append-only event journal.
   3. **A twelve-factor app**, adapted to a desktop app (see below).
+  4. **Calm by design:** the app should feel like its own world, made for the people who use it. Money is stressful, so every screen should say: you're fine, here is the one thing that matters. A new design language, not v1's look ported (see below).
 - **Work on a separate branch:** the rewrite lives on a long-lived `v2` branch, and `main` stays v1 until cutover.
 
 Accepted trade-offs:
@@ -26,7 +27,7 @@ Accepted trade-offs:
 
 ## Branching and workflow
 
-- Cut a long-lived **`v2`** branch from `main` (6e14e53, v1.0.0 + licence) and push it to origin.
+- Cut a long-lived **`v2`** branch from `main` (c40dd64) and push it to origin.
 - Each milestone below goes into its own worktree under `.claude/worktrees/v2-mN-<slug>`, on branch `v2/mN-<slug>`. Each milestone is one PR into `v2` (squash-merged); the user merges.
   - When a stacked PR depends on an earlier one that was squash-merged, merge `v2` into it first.
 - `main` takes v1 hotfixes only. Every v1.x hotfix is merged into `v2` as well.
@@ -115,6 +116,54 @@ How the UI gets there:
 | XI. Logs | `tracing` events go to stderr. The GUI also writes a rolling log file in the data folder, because a GUI process has no visible stdout. No custom log management. |
 | XII. Admin processes | The `budget` CLI uses the same crates: `migrate-v1`, `check` (ledger invariants), `backup`, `restore`, `fx update`, `export beancount`, `demo` |
 
+### Calm by design (pillar 4)
+
+The test for every screen: **after a glance, do you feel more settled than before?**
+
+**Principles**
+1. **Answer first, numbers second.** Every place opens with one plain sentence before any table or chart. For example: *"You're on track. 1,240 left to spend until 31 October."* or *"Nothing is due this week."* The Overview becomes **Today**.
+2. **Fewer numbers on screen.** Summaries round to whole francs; cents appear in detail views and on hover. At most one chart per place unless you ask for more. The chart builder is an opt-in tool, not a dashboard.
+3. **No alarm colours for normal life.**
+   - Red is reserved for real errors: data that doesn't reconcile, or a payment that failed.
+   - Going over plan uses a soft amber with neutral wording: *"40 over plan"*, never *"OVERSPENT"*.
+   - The comparison is framed against your own plan, never against a failing grade.
+4. **Kind language.**
+   - The everyday names from v1 stay.
+   - Copy is never written to blame.
+   - Empty states reassure and offer one next step.
+   - Errors say what happened, what is safe, and what to do: *"Nothing was lost."*
+5. **Gentle, finite to-dos.**
+   - The Due list is grouped as *This week* and *Later*, with a calm "all clear" state.
+   - No red badge counters, streaks or guilt mechanics.
+   - When a goal is reached, a quiet note marks it; no confetti.
+6. **Privacy calm.** ⌘. / Ctrl+. blurs every amount at once, for when someone is looking over your shoulder or you just don't want to see numbers today.
+7. **A weekly check-in ritual.** A two-minute guided flow:
+   1. Sort the uncategorized items.
+   2. Confirm what is due.
+   3. Read one sentence about the week.
+
+   The ritual is optional, but it is the intended rhythm, so finance becomes a short habit rather than a chore.
+
+**The look: its own world**
+- **Palette:**
+  - Light theme: warm paper (not white).
+  - Dark theme: deep ink (not black).
+  - One quiet accent, for example sage or moss.
+  - Muted, low-chroma category colours.
+  - Every pair keeps AA contrast, checked in CI as `test_contrast.py` does in v1.
+- **Type:**
+  - One humanist sans with **tabular numerals** for amounts, so columns align and don't jitter.
+  - Generous line height and an 8 pt spacing grid.
+  - The UI scales with system font settings.
+- **Space:** wide margins and a lot of air. One primary action per view; secondary actions sit behind ⌘K.
+- **Motion:**
+  - 200–300 ms ease-out, nothing bouncy.
+  - Numbers cross-fade instead of counting up.
+  - Reduced motion is honoured.
+  - At 120 fps, GPUI makes calm motion cheap.
+- **Texture:** a subtle surface hierarchy (paper, card, sheet) instead of borders everywhere. Optionally a very faint grain on the background.
+- **A name and identity:** v2 gets its own name, icon and wordmark, decided in milestone D.
+
 ## What carries over from v1
 
 - **Port faithfully:**
@@ -127,8 +176,8 @@ How the UI gets there:
   - Loans, investments, tax: `domain/loans.py`, `investments.py`, `tax.py`
   - FX rules: `domain/fx.py`, and ARCHITECTURE §4.1
   - The Due list
-  - The 7 places and the everyday names
-  - Theme tokens: `ui/theme.py`
+  - The 7 places as a starting point (milestone D may rename them, e.g. Overview → Today) and the everyday names
+  - From `ui/theme.py`: only the contrast rules. The look itself is new (pillar 4).
 - **The v1 tests are the spec.** Port the domain test cases from `tests/` (not `tests/ui/`) as table-driven Rust tests.
 - **Deferred:**
   - F04 receipt OCR: size cost; revisit with a native OCR API
@@ -170,8 +219,24 @@ How the UI gets there:
   - Writes a **reconciliation report**: for every account × month and every category × month, compare the v1 total with the v2 total. The differences must be 0, or each one must be listed and explained.
 - Test it on v1's demo data (`services/demo.py`), then on the owner's real data, locally and never committed.
 
+**D — Design language** (runs alongside M1–M3; M4 cannot start until the owner approves it)
+- A mood board and the tokens:
+  - palette (light and dark), type scale, spacing, radii, elevation and motion curves
+  - the copy voice guide, with before/after examples taken from v1 strings
+- Key screens:
+  - Today (with the Due list)
+  - Month
+  - Transactions (search typed into it)
+  - the weekly check-in
+  - an empty state and an error state
+  - the amounts-hidden mode
+  - each in light and dark
+- The v2 name, icon and wordmark.
+- Delivered as a clickable HTML prototype for review. Figma optional.
+- Exit: the owner signs it off, and ideally the second user has looked at it too. The tokens are then frozen into `crates/app/src/theme.rs`.
+
 **M4 — UI shell and instant search**
-- The 7 places, the ⌘K palette, the keymap, light/dark tokens and Fluent i18n.
+- The places as settled in D, the ⌘K palette, the keymap, the design tokens from D and Fluent i18n.
 - A virtualized Transactions table and nucleo search over the `index` crate.
 - Measure against the budgets with a 100k-transaction dataset from `budget demo --size 100k`.
 
@@ -205,11 +270,18 @@ How the UI gets there:
   - `criterion` benchmarks for search, aggregation and replay against the 100k dataset, with CI failing on a regression of more than 10 %.
   - Cold-start timing, logged by `tracing` from process start to the first frame, on the Mac and on pc-01.
   - On pc-01, start the GUI through a scheduled task, because processes started over SSH die when the session ends.
+- **Calm review:** at each UI milestone, screenshots of every place in light and dark go into the PR and are checked against D's prototype and these points:
+  - one sentence first
+  - no red outside real errors
+  - one primary action per view
+  - the copy follows the voice guide
 - **Hands-on:**
   - At each UI milestone, launch the app (`just v2-run`) and drive the main flows by keyboard only.
   - Before cutover, the second user tries a Windows build.
 
 ## Open items (they don't block M0–M3)
+
+- The v2 name and identity: decided in milestone D.
 
 - Code signing and notarization for the 2.0 installers.
 - Whether the second user needs fr or it.
