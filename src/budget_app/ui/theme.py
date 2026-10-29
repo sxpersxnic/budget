@@ -6,6 +6,8 @@ Quasar toggles `body.body--dark`, and AG Grid follows the same class, so the tok
 
 from __future__ import annotations
 
+import re
+
 from nicegui import ui
 
 # Plotly cannot read CSS variables; these mid-tone values stay legible on light and dark surfaces.
@@ -555,8 +557,32 @@ def tag_css() -> str:
     return "\n".join(rules)
 
 
+# Written into the HTML of every page, so the browser paints it with the first frame: the page background (the --bg
+# tokens above) and, in dark mode, the dark tokens. ui.add_css only arrives with the page's scripts, and Quasar sets
+# body--dark only once the page is mounted; until then a page change showed the browser's white canvas and then the
+# light tokens, a flash on every change, worst in dark mode. The app follows the system appearance (ui.run(dark=None)),
+# so prefers-color-scheme tells which tokens Quasar will choose. Cross-document view transitions (Safari 18.2+,
+# Chromium 126+) keep the old page on screen while the next one loads, which halves the blank time of a page change;
+# the rest is NiceGUI building the page, which only client-side navigation would remove.
+BG_LIGHT, BG_DARK = "#f5f5f7", "#000000"
+DARK_TOKENS = re.search(r"^body\.body--dark \{\n(.*?)\n\}", CSS, re.S | re.M).group(1)  # type: ignore[union-attr]
+FIRST_PAINT = f"""<meta name="color-scheme" content="light dark">
+<style>
+@view-transition {{ navigation: auto; }}
+@media (prefers-reduced-motion: reduce) {{ ::view-transition-group(*) {{ animation: none; }} }}
+html, body {{ background: {BG_LIGHT}; }}
+@media (prefers-color-scheme: dark) {{
+html, body {{ background: {BG_DARK}; }}
+body {{
+{DARK_TOKENS}
+}}
+}}
+</style>"""
+
+
 def install() -> None:
     """Register the stylesheet for every page (call once at startup)."""
+    ui.add_head_html(FIRST_PAINT, shared=True)
     ui.add_css(CSS + "\n" + tag_css(), shared=True)
 
 
