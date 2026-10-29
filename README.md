@@ -1,5 +1,12 @@
 # Budget
 
+[![CI](https://github.com/sxpersxnic/budget/actions/workflows/ci.yml/badge.svg)](https://github.com/sxpersxnic/budget/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sxpersxnic/budget)](https://github.com/sxpersxnic/budget/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/sxpersxnic/budget/total)](https://github.com/sxpersxnic/budget/releases)
+[![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fsxpersxnic%2Fbudget%2Fmain%2Fpyproject.toml)](pyproject.toml)
+[![License: GPL-3.0-or-later](https://img.shields.io/github/license/sxpersxnic/budget)](LICENSE)
+![Platforms: macOS, Windows, Linux](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-informational)
+
 A local personal-budgeting app.
 
 - Data is stored in plain CSV files on your computer.
@@ -562,3 +569,9 @@ types, tests and coverage before each push.
 All of them come as wheels with their native code for macOS, Windows and Linux, so `uv sync` needs no
 compiler. ONNX Runtime has no wheel for Intel Macs on Python 3.13, so there the app runs without the receipt
 reader and the receipt sheet says so.
+
+## Licence
+
+Budget is free software, under the [GNU General Public License, version 3 or later](LICENSE)
+(GPL-3.0-or-later). You may use, study, share and change it; if you pass on a changed version, it has to be under
+the same licence, with its source. The libraries above keep their own licences, all of which allow this.

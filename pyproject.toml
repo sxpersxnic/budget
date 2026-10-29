@@ -4,6 +4,8 @@ version = "1.0.0"
 description = "Local personal budgeting app (CSV storage, CHF base currency, ECB exchange rates)"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 dependencies = [
     "nicegui>=3.13",
     "pandas>=2.2",
