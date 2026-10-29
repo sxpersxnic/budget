@@ -12,16 +12,15 @@ A local personal-budgeting app.
 The installers bundle everything the app needs. You do **not** need Python, uv or any other tools to use it.
 
 **Download:** the installers are attached to each
-[release on GitHub](https://github.com/sxpersxnic/budget/releases/latest), with a
-`SHA256SUMS.txt` to check them:
+[release on GitHub](https://github.com/sxpersxnic/budget/releases/latest), each with a
+`.sha256` file to check it (`shasum -a 256 -c <file>.sha256`):
 
 - macOS: `Budget-<version>-macOS-arm64.dmg`
 - Windows: `Budget-<version>-Windows-Setup.exe`
 - Linux: `Budget-<version>-Linux-x86_64.tar.gz`
 
-They are built automatically from the code in this repository (see
-[Building the installers](#building-the-installers)). The first macOS installer, 0.1.0, is also
-in the [`installers/`](installers/README.md) folder.
+They are built from the tagged code in this repository (see
+[Building the installers](#building-the-installers)).
 
 - [Install on macOS](#install-on-macos)
 - [Install on Windows](#install-on-windows)
@@ -446,18 +445,13 @@ comes back. Sample data only goes into an empty data folder.
 
 ## Building the installers
 
-**Automatically (GitHub Actions):** every push to `main` builds all three installers after the
-checks pass; they are attached to the workflow run as artifacts. To publish a release, raise
-`version` in `pyproject.toml`, commit, then tag and push:
+The installers are built by hand, each on its own operating system, and attached to the GitHub
+release of their version; no workflow builds them. To publish a release, raise `version` in
+`pyproject.toml`, tag that commit with the same version (`git tag v0.2.0 && git push origin v0.2.0`),
+build on each system and attach the files: the steps are in
+[packaging/README.md](packaging/README.md#releasing-an-update).
 
-```bash
-git tag v0.2.0 && git push origin v0.2.0
-```
-
-The tag must match the version. The [Installers workflow](.github/workflows/installers.yml) then
-creates the GitHub release with the three installers and `SHA256SUMS.txt`.
-
-**Locally:** each installer is built on its own operating system. A Mac cannot build the Windows
+Each installer is built on its own operating system. A Mac cannot build the Windows
 installer, and Windows cannot build the macOS one. Building needs
 [uv](https://docs.astral.sh/uv/), which downloads Python and every dependency automatically.
 Users of the finished installer do not need it.
@@ -473,8 +467,7 @@ Each build script:
 1. checks the prerequisites;
 2. installs the locked dependencies;
 3. runs the tests;
-4. writes the installer to `dist/`. The macOS and Windows installers are also copied, with a
-   SHA-256 checksum, to `installers/<os>/`.
+4. writes the installer and its SHA-256 checksum (`<installer>.sha256`) to `dist/`.
 
 A build takes 2–5 minutes. The version number comes from `pyproject.toml`. Signing and other
 details are in [packaging/README.md](packaging/README.md).

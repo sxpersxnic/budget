@@ -34,5 +34,5 @@ uv run --group build python packaging/build.py
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
-Write-Host "Installer ready (commit it to publish it):" -ForegroundColor Green
-Get-ChildItem installers\windows\*-Setup.exe | ForEach-Object { $_.FullName }
+Write-Host "Installer ready (attach it and its .sha256 to the release):" -ForegroundColor Green
+Get-ChildItem dist\*-Setup.exe, dist\*-Setup.exe.sha256 | ForEach-Object { $_.FullName }

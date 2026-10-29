@@ -1289,11 +1289,13 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 
 ## 9. Installers
 
-Installed builds are made with PyInstaller (see [packaging/README.md](../packaging/README.md)):
+Installed builds are made with PyInstaller (see [packaging/README.md](../packaging/README.md)), by hand on
+each system, and attached to the GitHub release of their version with a `.sha256` file each:
 
 - **macOS:** `Budget.app` inside a drag-to-Applications `.dmg`.
 - **Windows:** an Inno Setup installer. It installs per user, needs no admin rights, and
   adds a Start-menu entry and an uninstaller.
+- **Linux:** a `.tar.gz` with the app folder and a per-user `install.sh` (Qt WebEngine window).
 
 An installed build:
 

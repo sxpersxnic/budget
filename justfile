@@ -123,7 +123,7 @@ runners-enable *platforms:
 runners-disable *platforms:
     {{ runners }} disable {{ platforms }}
 
-# Remove build output and tool caches (keeps data/ and installers/)
+# Remove build output and tool caches (keeps data/)
 [unix]
 clean:
     rm -rf build dist .pytest_cache .ruff_cache .mypy_cache .coverage htmlcov

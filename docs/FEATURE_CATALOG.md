@@ -33,7 +33,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 done except F35, of which the quick add and the pairing are built (F10, F12, F11, F03, F14, F16, F20, F18, F19, F17, F15, F31, F22, F23, F30, F33, F27, F34, F26, F04 and F32 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | 1746 tests, coverage 99.5 %, gate at 87 % |
-| Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
+| Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | the CI workflow checks every PR, and `just ci` runs the same checks locally; the installers are built by hand on each system and attached to the GitHub release of their version (the installer workflow was removed on 2026-10-29) |
 
 ## Open now
 
@@ -1542,7 +1542,7 @@ months end there. The Budget Plan page's dialog has the same fields since B14.
 | F30 · Onboarding and demo data | ☑ Done | A welcome screen on the first start (language, currency, data folder) and a year of sample data to load and remove; details under F30. |
 | F33 · In-app update check | ☑ Done | Off by default; when on, reads the newest release's version from GitHub once a day and links to it, never downloads; details under F33. |
 | Test suite and git hooks | ☑ Done | UI tests in NiceGUI's simulated client, 99 % line coverage with a gate at 87 %, lefthook checks before commit and push (`8fdc730`). |
-| CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request and build the three installers (first successful runs on 2026-10-19); a version tag publishes them as a release. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
+| CI and installers for macOS, Windows and Linux | ☑ Done | GitHub Actions run the checks on every push and pull request (`just ci` locally). The installers are built by hand on each system and attached to the GitHub release of their version; the workflow that built them (first runs on 2026-10-19) was removed on 2026-10-29. Linux: `.tar.gz` with a per-user `install.sh` and a Qt WebEngine window. The Windows and Linux installers have not been tried on a real PC yet. See [packaging/README.md](../packaging/README.md). |
 
 #### F01 · CSV import of transactions
 
