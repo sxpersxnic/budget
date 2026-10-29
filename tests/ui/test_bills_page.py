@@ -17,6 +17,7 @@ from budget_app.services import bills as bills_svc
 from budget_app.services import rules as rules_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.transactions import TransactionInput
+from budget_app.ui import layout
 from budget_app.ui.pages import bills as bills_page
 from budget_app.ui.widgets import attachments as att_ui
 from budget_app.ui.widgets.selects import PayeeInput
@@ -64,10 +65,8 @@ async def drop(user: User, *named: tuple[str, bytes]) -> None:
 
 
 def bills_badge(user: User) -> ui.badge:
-    with user:  # hidden ones too, which `find` leaves out
-        badges = [e for e in user.client.elements.values() if isinstance(e, ui.badge) and "nav-badge" in e.classes]
-    # the sidebar adds Recurring's first, then Bills', then Reminders' (F31) and Loans' (F22)
-    return sorted(badges, key=lambda b: b.id)[1]
+    """The count on the Bills tab (hidden too, which `find` leaves out)."""
+    return layout._due_badges[user.client]["/bills"]
 
 
 def history_for(ctx, setup, payee: str, times: int = 2) -> None:

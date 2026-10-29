@@ -26,7 +26,7 @@ def codes(options) -> list[str]:
 # ------------------------------------------------------------------ the data file
 def test_every_entry_has_four_languages_and_search_words() -> None:
     raw = json.loads(ev.EVERYDAY_FILE.read_text(encoding="utf-8"))
-    assert 60 <= len(raw) <= 90
+    assert 200 <= len(raw) <= 260
     for code, entry in raw.items():
         assert set(entry) == {*i18n.LANGUAGES, "keywords"}, code
         for lang in i18n.LANGUAGES:
@@ -41,6 +41,20 @@ def test_every_code_exists_in_coicop() -> None:
     for code in ev.everyday():
         assert coicop.get(code) is not None, code
         assert code != ADV
+
+
+def test_every_division_and_group_has_an_everyday_name() -> None:
+    """Levels 1 and 2 all have one (F08): lists and reports show no bare COICOP division or group name."""
+    top = [c.code for c in get_coicop().categories.values() if c.level <= 2]
+    missing = [code for code in top if ev.everyday_name(code, "en") == ""]
+    assert missing == [ADV]  # the advance payments are no COICOP category
+
+
+def test_a_class_that_repeats_its_parent_takes_the_parents_name() -> None:
+    assert ev.everyday_name("09.8.0", "de") == ev.everyday_name("09.8", "de") == "Ferien und Pauschalreisen"
+    assert ev.everyday_name("08.2.0.0", "en") == "Software and apps"  # through 08.2.0
+    assert ev.everyday_name("13.9.0.1", "en") == ""  # its own COICOP name: Prostitution
+    assert ev.everyday_name("01.1.1.1", "en") == ""  # not a ".0" code
 
 
 def test_names_are_unique_and_follow_the_house_style() -> None:
@@ -70,20 +84,27 @@ def test_a_missing_name_falls_back_to_english() -> None:
 
 
 # ------------------------------------------------------------------ options
-def test_options_show_everyday_names_with_the_code() -> None:
+def test_options_show_the_code_and_the_everyday_name_as_the_app_does() -> None:
     options = {o.code: o for o in ev.category_options()}
     assert len(options) == len(get_coicop().categories) - 1 and ADV not in options  # every COICOP code and Taxes
     groceries = options["01.1"]
     assert (groceries.label, groceries.caption, groceries.level, groceries.recent) == (
-        "Groceries · 01.1",
+        "01.1 Groceries",
         "Food",
         2,
         False,
     )
-    assert options["08.3.9.2"].label == "Streaming subscriptions · 08.3.9.2"
-    other = options["01.1.1"]
-    assert (other.label, other.caption) == ("01.1.1 Cereals and cereal products", "")
+    assert options["08.3.9.2"].label == "08.3.9.2 Streaming subscriptions"
+    assert (options["05"].label, options["05"].caption) == (
+        "05 Household and furniture",
+        "Furnishings, household equipment and routine household maintenance",
+    )
+    other = options["01.1.1.1"]  # no everyday name: the official one, no caption
+    assert (other.label, other.caption) == ("01.1.1.1 Cereals", "")
+    assert (options["02.3"].label, options["02.3"].caption) == ("02.3 Tobacco", "")  # the same name: no caption
     assert (options[TAX].label, options[TAX].caption) == ("Taxes", "")
+    for code, option in options.items():
+        assert option.label == get_coicop().label(code) == ev.label(code)  # one label everywhere
 
 
 def test_options_keep_the_coicop_order_with_taxes_last() -> None:
@@ -103,9 +124,12 @@ def test_recent_categories_come_first() -> None:
 
 def test_german_names(german) -> None:
     options = {o.code: o for o in ev.category_options()}
-    assert (options["01.1"].label, options["01.1"].caption) == ("Lebensmittel · 01.1", "Nahrungsmittel")
-    assert options["12.1.2"].label == "Krankenkasse · 12.1.2"
-    assert options["01.1.1"].label == "01.1.1 Getreide und Getreideerzeugnisse"
+    assert (options["01.1"].label, options["01.1"].caption) == ("01.1 Lebensmittel", "Nahrungsmittel")
+    assert options["12.1.2"].label == "12.1.2 Krankenkasse"
+    assert (options["01.1.1"].label, options["01.1.1"].caption) == (
+        "01.1.1 Brot und Getreideprodukte",
+        "Getreide und Getreideerzeugnisse",
+    )
     assert options[TAX].label == "Steuern"
     assert "01.1" in codes(ev.search(options.values(), "groceries"))  # the English names still match
 
@@ -138,6 +162,11 @@ def test_german_names(german) -> None:
         ("Getränke", "01.2"),  # nor do umlauts
         ("public transport", "07.3"),  # every word must match
         ("cereals", "01.1.1"),  # official names
+        ("eating out", "11.1"),  # the names of groups and classes added for 1.0
+        ("eigenmietwert", "04.2"),
+        ("ovomaltine", "01.2.4"),
+        ("zügeln", "07.4.9"),
+        ("swissquote", "12.2.9.9"),
         ("07.3.1", "07.3.1"),  # codes
     ],
 )
@@ -151,6 +180,7 @@ def test_search_keeps_the_order_and_needs_every_word() -> None:
     assert found[0] == "11.1.1" and "01.1" in found  # a recent match first
     assert codes(ev.search(options, "netflix")) == ["08.3.9.2"]
     assert codes(ev.search(options, "train sbb")) == ["07.3.1"]
+    assert codes(ev.search(options, "krankenkasse")) == ["12.1.2"]  # not 12.1.2.0, which only inherits the name
     assert ev.search(options, "migros netflix") == []
     assert ev.search(options, "") == options
 

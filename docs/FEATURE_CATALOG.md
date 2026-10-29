@@ -490,7 +490,7 @@ Every Swiss invoice carries a QR code with the amount, currency, creditor and re
 
 **Status:** ☑ Done (2026-10-28)
 
-**As built (decision 29):** **Receipt…** in the Transactions toolbar (before *Import…*) opens the *Receipt* sheet:
+**As built (decision 29):** **Receipt…** in the Transactions toolbar's *More* menu (after *Import…*) opens the *Receipt* sheet:
 a drop zone for one PDF or photo (JPEG, PNG, WebP; HEIC asks for JPEG or PNG), then the receipt on the left and a new
 expenditure on the right. The receipt is read **on the computer** by RapidOCR (PP-OCRv6 multilingual models, bundled
 in its wheel, so nothing is downloaded) on ONNX Runtime; the libraries are the optional extra `budget-app[ocr]`,
@@ -590,7 +590,7 @@ and accents; the longest text wins, between equally long ones the newest. **Hist
 category the payee had most often among transactions of the same type (ties: the most recent), "Used 14 times for
 this payee"; rows stored before payees (F09) fall back to the same bank text without its digits. Where no account
 is fixed, an account is suggested too: the rule's, else the one the payee had most often. The **form** shows
-"Use Groceries · 01.1" with the reason under the category of a new expenditure or income once it has a payee; a
+"Use 01.1 Groceries" with the reason under the category of a new expenditure or income once it has a payee; a
 click fills the category (and the account, if still empty). The **import preview** (CSV and camt) fills in
 suggestions in italics, with a *Suggestion* column for the reason, counts them in the summary and offers *Clear
 Suggestions*; a category chosen by hand loses the mark, a changed payee brings a new suggestion, and importing keeps
@@ -617,16 +617,18 @@ categorize like this*, never from a confirmed suggestion.
 
 **Status:** ☑ Done (2026-10-20, `6786f2a`)
 
-**As built:** 81 common COICOP codes (and Taxes) have an everyday name in English, German, French
-and Italian plus about 1'700 search words (shops, brands and Swiss terms such as Migros, SBB, ZVV,
-Krankenkasse, Serafe, Kita, Nebenkosten) in `resources/everyday_categories.json`; every other
-category keeps its translated COICOP name. The picker shows "Groceries · 01.1" with the official
-name as a second line and lists the last ten distinct expenditure categories first (marked with a
+**As built:** every COICOP division and group, the classes people book and Taxes (218 entries since the
+redesign before 1.0, decision 44; 81 before) have an everyday name in English, German, French
+and Italian plus search words (shops, brands and Swiss terms such as Migros, SBB, ZVV,
+Krankenkasse, Serafe, Kita, Nebenkosten, Eigenmietwert) in `resources/everyday_categories.json`; a ".0" class
+that repeats its group takes the group's name, every other category keeps its translated COICOP name. The
+picker shows "01.1 Groceries" with the official name as a second line and lists the last ten distinct expenditure categories first (marked with a
 history icon). The search matches everyday name, search words, official name and code, ignoring
 case and accents, in the browser; since F40 also what the COICOP notes say a category includes
 (listed after the matches by name), and hovering an option shows its notes. Transaction form, budget forms, the Budget Plan sheet and the
-import page use it; the stored value stays the COICOP code. Not built: favourites, and everyday
-names outside the picker (lists and reports keep the COICOP labels).
+import page use it; the stored value stays the COICOP code. Since the redesign before 1.0 every list,
+ledger, report, chart and export shows the same label ("01.1 Groceries"); the official name is on the
+Categories page and on hover in the Budget ledger and the Transactions grid. Not built: favourites.
 
 COICOP names are statistical ("Individual consumption expenditure of non-profit institutions
 serving households"). Keep COICOP as the storage format, but:
@@ -699,7 +701,7 @@ Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
 **As built (decision 14):** a split is a category per item line. In the transaction form each item line of an
 expenditure has a split button that opens a row below it with the category picker (F08) and a tag field (F10) for
-that line; lines without a category keep the transaction's. Below the list, "Rest in 01.1 Food: 23.40 CHF" shows
+that line; lines without a category keep the transaction's. Below the list, "Rest in 01.1 Groceries: 23.40 CHF" shows
 what stays in the transaction's category, live. `transaction_items.csv` got `category` and `tags` columns (older
 files load unchanged). **How the amount is counted** (`domain.splits`, the one place every consumer uses): each
 line with its own category (or tags) counts its total there, in CHF at the transaction's own rate rounded to the
@@ -712,7 +714,7 @@ discount on its category and raises the rest by as much. **Advances:** every par
 *Income and Expenditure* chart series and their exports, the projection's "higher of recorded and budget", the
 COICOP page's spending this year, and tag totals, budgets and the *Spending by Tag* chart (a line's tags count
 that line, on top of the transaction's). Net income, account balances and the reconciliation use the whole
-transaction and never change (tested). **Transactions** shows a split as "01.1 Food + 2 more"; the search finds
+transaction and never change (tested). **Transactions** shows a split as "01.1 Groceries + 2 more"; the search finds
 its lines' categories, and the tag column and filter include its lines' tags. Deleting or merging a tag rewrites
 the lines too. **Bulk edit** changes only the rest's category (the hint says how many rows are split). Income,
 transfers, exchanges and revaluations are not split: the form hides the split buttons for income and says that
@@ -853,7 +855,7 @@ March".
 
 **Status:** ☑ Done (2026-10-22)
 
-**As built:** *Propose from History…* on Budget Plan (beside *New Budget Entry*) opens one sheet. **Inputs:** the
+**As built:** *Propose from History…* on Budget Plan (in its *More* menu, and in the empty plan's card) opens one sheet. **Inputs:** the
 last 3, 6 or 12 complete months (default 6), *Average* or *Median*, the COICOP level of the expenditure rows
 (division, group (default) or class), the rounding (to the cent, 1, 5, 10 (default), 50 or 100 CHF), and From
 (this month to the plan's end) and Until (a month or *Forever*, as in the New Budget Entry form). **Rows:** every
@@ -889,22 +891,24 @@ months per category, as a starting point the user edits. A one-sheet action on B
 
 **Status:** ☑ Done (2026-10-28)
 
-**As built** (architecture §7, decision 33): a **Subscriptions** page (`/subscriptions`, in the sidebar after
-Recurring) with three groups. *Detected* lists the payees that charge again and again: expenditure is grouped by
+**As built** (architecture §7, decision 33; since 1.0 on the Recurring tab, decision 45): *Found in Your
+Transactions* on **Transactions → Recurring** (`/recurring`, below *Due* and *Your Series*; `/subscriptions` leads
+there) lists the payees that charge again and again: expenditure is grouped by
 payee (F09, compared by its lookup key, so "MIGROS" and "Migros" are one; a row without a payee by its note) and
 currency, and a group is a subscription when its latest charges make a run: going back from the last charge, every
 gap fits one rhythm (every month, two months, quarter, half year or year, within 4 days plus one per month of the
 rhythm) and every charge is within 20 % or 2.00 of the median; a skipped or late charge, an irregular one or an
 old price ends the run, so long imported histories still find today's subscription. The run needs at least three
-charges (two for half-yearly and yearly rhythms), and its last one must be no older than two rhythms. Each row says what it costs a year, how much and how often, how many charges since
-when, the last and the expected next date; the header sums the detected subscriptions per year in the display
-currency. **Make Recurring…** opens F05's series sheet prefilled from the last charge (its payee, note, tags, the
+charges (two for half-yearly and yearly rhythms), and its last one must be no older than two rhythms. Each row says
+two facts, how much and how often with the expected next date ("49.90 CHF · Every month · next around 15 Nov
+2026"), and what it costs a year; how many charges since when and the last one are its tooltip. The header sums the
+detected subscriptions per year in the display currency. **Make Recurring…** opens F05's series sheet prefilled from the last charge (its payee, note, tags, the
 most frequent category and account, the detected rhythm, the last charge as the series' first booking, so the
 next occurrence is due a rhythm later); **Ignore** takes a group off the list for good (`subscription_ignores.csv`,
 one undo step), and the closed *Ignored* group offers **Watch Again**. Rows a series booked (F05) are never
 counted, and a group whose payee already has a running expenditure series is left out, so a subscription made
-recurring disappears from *Detected* and appears under *Recurring Transactions*, which lists the running
-expenditure series of F05 with their yearly cost and total. Nothing is booked by the page; the thresholds are
+recurring disappears from the list and appears under *Your Series*, whose header gives the yearly cost of the
+running expenditure series of F05. Nothing is booked by the page; the thresholds are
 fixed and explained in `domain.subscriptions` (the README names them). In the demo data the rent, health
 insurance, rail pass, phone and a quarterly card fee are detected, and a doctor's note seen twice half a year
 apart (what *Ignore* is for); its streaming charges vary too much and are not. Not built: detecting price changes as a separate
@@ -1161,7 +1165,8 @@ Advance payments already record money paid for others. Build on that:
 
 **Status:** ☑ Done (2026-10-19)
 
-**As built:** a share button on Transactions and Budget Plan exports the rows the filters show,
+**As built:** *More* on Transactions and on Budget Plan exports the rows the list shows
+(on Budget Plan: one per budget in the Series view, one per month in the Months view),
 in the list's column order, as CSV or Excel. *Settings → Data → Export as JSON…* writes every
 record into one document (`format: budget-app/export`, `version: 1`). Decided: the JSON export is
 for other programs and is not imported back; full backups (F25) are the restore format.
@@ -1325,17 +1330,22 @@ and the Budget page lead there), a folder picker.
 
 **Status:** ☑ Done (2026-10-28), in the app only
 
-**As built** (architecture §7, decision 31): a **Reminders** page (`/reminders`, sidebar after Bills, icon
-`o_notifications_none`, with a badge counting its items) lists, while the app runs, what wants doing or looking at,
-grouped by kind and each row a link to where it is dealt with: **balances to record** (regular accounts without a
-balance for last month whose last balance isn't zero, the Budget page's rule; links to that month), **recurring
-transactions due** (one per due occurrence, F05; "Due since …" in red), **bills due** (open QR bills overdue or due
-within a week, F03), **budgets exceeded or about to be** (the exceeded and on-pace items of *Notable this month*,
-F18's rules and thresholds; links to the category on the Budget page) and **goals behind or overdue** (F14; "Behind:
-… short of the plan line", "Overdue since … · … to go"). *Settings → Reminders* has one switch per kind (all on;
-`settings.json` → `reminders_off`); a kind turned off leaves the page and the badge. Everything is computed from
-the records when a page opens or data changes; nothing is stored per reminder, nothing is sent anywhere – no e-mail,
-no system notification, no network, no background helper while the app is closed. Not built: desktop notifications,
+**As built** (architecture §7, decision 31; since 1.0 the Overview's Due list, decision 45): the **Due** card
+on the Overview (`/`, after the wealth card, before *Notable this month*; `/reminders` leads there) lists, while the
+app runs, what wants doing, what is overdue first, one row each with an icon, title, when (red once overdue), the
+amount and the action that settles it: **balances to record** (regular accounts without a balance for last month
+whose last balance isn't zero, the Budget page's rule; *Record…* opens the balance sheet at that month),
+**recurring transactions due** (F05, one row per series, "3 occurrences due since …" when several are; *Book* books
+the earliest at the series' amount), **bills due** (open QR bills overdue or due within a week, F03; *Pay…* opens
+the payment sheet), **loan payments due** (F22, one row per loan; *Book* books the earliest with the schedule's
+interest and repayment) and **goals behind or overdue** (F14; "Behind: … short of the plan line", "Overdue since …
+· … to go"; *Open*). The title links to the page where the item can be changed first. More than six rows fold the
+rest behind *Show n more*; nothing due is one quiet line. The sidebar's one badge, beside Overview, counts the
+rows. Budgets exceeded or on pace to be are no reminder any more: they are *Notable this month* on the same page
+(F18). *Settings → Reminders* has one switch per kind (all on; `settings.json` → `reminders_off`); a kind turned off
+leaves the list and the badge, and with every kind off the card is gone. Everything is computed from the records
+when a page opens or data changes; nothing is stored per reminder, nothing is sent anywhere – no e-mail, no system
+notification, no network, no background helper while the app is closed. Not built: desktop notifications,
 reminders while the app is closed, snoozing or dismissing a reminder (deal with the item or turn the kind off).
 
 Desktop notifications, all optional:
@@ -1398,8 +1408,8 @@ Settings; the README's privacy note then needs one more line.
 
 **Status:** ☑ Done (2026-10-28)
 
-**As built (decision 39):** **Settings → Profiles** lists the profiles, each a name and a data folder of its
-own, with *Open*, *Rename* and *Remove* (which only forgets the profile: its folder and records stay where they
+**As built (decision 39):** **Settings → Profiles** lists the profiles (with only one, the group is the *Add Profile…*
+row; the open folder shows under *Data Folder*), each a name and a data folder of its own, with *Open*, *Rename* and *Remove* (which only forgets the profile: its folder and records stay where they
 are; the open profile can't be removed). *Add Profile…* asks for a name and, optionally, a folder: left empty, the
 app makes `profiles/<name>` beside its own folder; a folder that already holds records (another computer's, a
 cloud folder) is opened as it is; another profile's folder, a file or a folder directly inside the app's own is
@@ -1499,7 +1509,8 @@ replaces the specification's rule that manual entries use the latest rate.
 **B09 as built.** Budget entries are stored one row per month, linked by a series ID. The
 dialog shows the series' end month (or *Forever*), its rhythm and an editable note; changing
 the schedule replans the series from the edited month on, as a new series, and the earlier
-months end there. The Budget Plan page's dialog has the same fields since B14.
+months end there. The Budget Plan page's month dialog has the same fields since B14, and its series sheet
+(before 1.0) changes a whole budget from a chosen month on the same way (`budget.replan_series`).
 
 ### Follow-up fixes and milestone 2
 

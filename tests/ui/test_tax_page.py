@@ -65,7 +65,7 @@ async def test_the_page_lists_the_sections_of_last_year(user: User, ctx, setup) 
     spend(ctx, setup, 85, "07.3", payee="ZVV")
     spend(ctx, setup, 99, "06", day=date(LAST + 1, 1, 5))  # the next year
     await user.open("/tax")
-    assert layout.NAV[-1] == ("/tax", "Tax Summary", "o_account_balance")
+    assert layout.SECTIONS["/review"][-1] == ("/tax", "Tax Summary")  # the last tab of Reports
     await user.should_see("Tax Summary")
     await user.should_see("Cantonal rules differ", kind=ui.label)
     await user.should_see("Sections can overlap", kind=ui.label)
@@ -74,7 +74,7 @@ async def test_the_page_lists_the_sections_of_last_year(user: User, ctx, setup) 
     assert "Medical and dental costs" in shown and "240.00 CHF" in shown and "1 row · 1 file" in shown
     assert "Professional expenses" in shown and "85.00 CHF" in shown
     assert shown.count(f"Nothing in {LAST}") == 2 * 7  # the header and the body of each empty section
-    assert "Dr. Muster" in shown and f"10 Mar {LAST} · 06.2 Outpatient care services" in shown
+    assert "Dr. Muster" in shown and f"10 Mar {LAST} · 06.2 Doctor and dentist" in shown
     links = [ln for ln in user.find(kind=ui.link).elements if "/attachment/" in ln.props.get("href", "")]
     assert [ln.props["href"] for ln in links] == [f"/attachment/{att_svc.list_for(ctx, doctor.id)[0].id}"]
 
@@ -106,7 +106,7 @@ async def test_linking_tags_in_the_sheet(user: User, ctx, setup, monkeypatch) ->
     await user.open("/tax")
     click(user, newest(user, ui.button, text="Sections…"))
     await user.should_see("Tax Sections")
-    await user.should_see("Categories: 06 Health, 14.2 Health, 15.2 Health")
+    await user.should_see("Categories: 06 Health, 14.2 Non-profit health services, 15.2 Public health services")
     await user.should_see("Transfers to pillar 3a accounts")
     await user.should_see("Dividends with withholding tax in CHF accounts (Investments)")
     await user.should_see("Dividends (Investments) and income in the categories Dividends and Interest")

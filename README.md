@@ -155,7 +155,8 @@ The app opens in its own window and keeps all data in your user folder:
   undo is refused when the records were changed again afterwards, so it never overwrites later
   work.
 - **Export:** the Transactions and Budget Plan lists export what they show (with their filters)
-  as CSV or Excel (share button). **Settings → Data → Export as JSON…** writes every record into
+  as CSV or Excel (**More** on Transactions, and on Budget Plan: the budgets or the months, whichever
+  view is open). **Settings → Data → Export as JSON…** writes every record into
   one JSON file for other programs; it can't be restored.
 - **Older versions:** opening your data with an older version is safe too; it keeps fields it
   doesn't know about instead of dropping them.
@@ -230,11 +231,11 @@ comes back. Sample data only goes into an empty data folder.
    quantity and price; the Transactions search then also finds a purchase by item name. To **split** an expenditure across categories
    (food, detergent and a present on one receipt), click the split button beside a line and give it
    its own category, and tags if you like; the line below the list shows what stays in the
-   transaction's category ("Rest in 01.1 Food: 23.40"). Reports, budgets, charts and tag totals then
+   transaction's category ("Rest in 01.1 Groceries: 23.40"). Reports, budgets, charts and tag totals then
    count each line in its own category; a share paid for others is taken proportionally from every
    part. Lines with their own category can't add up to more than the amount; a negative line (a
    discount) lowers its category. Only expenditure is split. The Transactions list shows a split
-   as "01.1 Food + 2 more", and its search finds the lines' categories. Under **Attachments** you can keep the receipt,
+   as "01.1 Groceries + 2 more", and its search finds the lines' categories. Under **Attachments** you can keep the receipt,
    invoice or contract with the transaction: drop files onto the box or click it to choose them
    (PDF, photos including iPhone HEIC, Word, Excel, OpenDocument, text or CSV, up to 20 MB each).
    Click a photo's or PDF's name to preview it; **Open** shows it in your usual viewer, **Save a
@@ -247,8 +248,11 @@ comes back. Sample data only goes into an empty data folder.
    in the sidebar and **,** opens Settings; press **?** (or **Keyboard Shortcuts** at the foot of the sidebar)
    to see them all. In any sheet, **⌘↩** (Ctrl+Enter) saves and **Esc** closes it. Every button has a name for
    screen readers, and text keeps a contrast of at least 4.5:1 in light and dark mode.
-   The category field shows everyday names ("Groceries · 01.1") and your recently used
-   categories first, and its search also knows shops and brands: type "Migros", "SBB" or "Netflix".
+   The category field shows everyday names with their COICOP code ("01.1 Groceries", the official
+   name below it) and your recently used categories first, and its search also knows shops and
+   brands: type "Migros", "SBB" or "Netflix". Every list, report and chart shows the same name;
+   hover over a category in the Budget page or the Transactions list to see its official COICOP
+   name. Transfers and exchanges show their accounts there ("Bank → Savings").
    It also finds a category by what it includes ("quinoa" finds 01.1.1.1 Cereals); hover over a
    category, or tap its ⓘ on a touch screen, to see what it includes and excludes.
    Expenditures and income have a **Payee** (who you paid, or who paid you): pick one of the
@@ -258,7 +262,7 @@ comes back. Sample data only goes into an empty data folder.
    **Tags** label transactions across categories ("Holiday Italy", "Renovation"): pick existing
    ones or type a new name and press Enter; it becomes a tag when you save. A transaction can have
    several.
-4. **Transactions → Import…** (optional): bring in a CSV export from your e-banking
+4. **Transactions → More → Import…** (optional): bring in a CSV export from your e-banking
    instead of typing. Choose the account, check the detected columns, give the new rows a
    category and import. The column settings can be saved per bank; transactions already
    imported are recognised and skipped. The payee is filled in from the bank text
@@ -278,15 +282,19 @@ comes back. Sample data only goes into an empty data folder.
    which one **Undo**
    reverts. Rows a change doesn't fit (a transfer has no category) keep what they have; a split
    transaction changes only the category of its rest, its lines keep theirs.
-   **Transactions → Receipt…**: drop the photo or PDF of a till receipt (or click to choose it). The
+   **Transactions → More → Receipt…**: drop the photo or PDF of a till receipt (or click to choose it). The
    app reads it on your computer – nothing is sent anywhere – and shows the receipt beside a new
    expenditure filled in with the total, the date, the currency and the shop as payee, plus the item
    lines when they add up to the total. Check them (reading a crumpled receipt is not perfect), choose
    the category and account and click **Add Transaction**; the receipt is kept as an attachment. If
    reading isn't available on your computer (Intel Macs), the sheet says so and you type the amount,
    date and payee from the picture beside the form.
-5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
-   for open-ended budgets. To start from what actually happened, choose **Propose from History…**:
+5. **Plan → Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
+   for open-ended budgets. The page lists one row per budget ("Rent · every month · from Oct 2025,
+   forever"), income first; click one to change it from a month on (amount, currency, until, repeat),
+   while the months before keep their values, or to delete it. **Months** shows the same plan month
+   by month, to change a single month. To start from what actually happened, choose
+   **More → Propose from History…**:
    pick the last 3, 6 or 12 complete months, average or median, the COICOP level (division, group
    or class) and the rounding (for example to 10 CHF). Each category you spent or received money in
    gets a row with its months, the budget it already has and a proposed monthly amount in CHF, which
@@ -315,16 +323,20 @@ comes back. Sample data only goes into an empty data folder.
    chart draws it as a dashed line beside the plan, so you can compare several futures. When you
    decide, **Adopt into Plan…** writes the changes into your budget (replacing the plan's budget for
    those categories and months) and removes the scenario; one Undo takes it back.
-   **Reminders** (sidebar): one list of what wants doing while the app is open: balances to record
-   for last month, recurring transactions and QR bills that are due, budgets exceeded (or on pace
-   to be) this month, and goals behind their plan or past their date. Each row takes you to the
-   place where you deal with it, and the sidebar counts them. Nothing is sent anywhere, no
-   e-mail and no system notification; in **Settings → Reminders** you switch off the kinds you
-   don't want.
-6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is
-   due it is listed for one-click booking (change the amount first if it varies, or skip it);
-   turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
-   series from a transaction you already entered.
+   **Due** (on the Overview, below your wealth): one list of what wants doing while the app is open:
+   balances to record for last month, recurring transactions, QR bills and loan payments that are
+   due, and goals behind their plan or past their date. Each row has its action: *Record…* the
+   balance, *Book* the transaction or the payment as planned, *Pay…* the bill, or *Open* the goal;
+   the title takes you to the page where you can change the amount or the date first. The badge
+   beside Overview in the sidebar counts the rows. Nothing is sent anywhere, no e-mail and no system
+   notification; in **Settings → Reminders** you switch off the kinds you don't want. (Budgets
+   exceeded or on pace to be are under *Notable this month*, right below.)
+6. **Transactions → Recurring:** enter rent, premiums, salary or subscriptions once with **New
+   Recurring Transaction**. When one is due it is listed under *Due* for one-click booking (change
+   the amount first if it varies, or skip it); turn on *Book automatically* for fixed amounts.
+   *Your Series* lists them, with what the expenditure costs a year. *Transactions → Make
+   Recurring…* starts a series from a transaction you already entered, and *Found in Your
+   Transactions* below suggests the charges that already repeat (see 10).
    **Bills** (sidebar): drop the PDF of a Swiss QR bill, or a photo of its QR code (JPEG or PNG), onto
    the box, or click it to choose files. The app reads the QR code on your computer (nothing is sent
    anywhere) and lists the bill under **Open** with the creditor, amount, reference and due date (read
@@ -335,7 +347,8 @@ comes back. Sample data only goes into an empty data folder.
    PDF goes with the payment as an attachment. **Dismiss** a bill you don't pay here (for example one
    paid by eBill); paid and dismissed bills are kept under **Paid and Dismissed**. The same bill
    dropped twice is refused; deleting its payment puts a bill back on the open list.
-7. **Categories** (sidebar): look up a COICOP category by code, name or what it includes; the ⓘ
+7. **Categories** (sidebar): look up a COICOP category by code, official or everyday name, or what it
+   includes (each row shows both names: "01.1 Food · Groceries"); the ⓘ
    beside a name shows what the category includes, also includes and excludes. The ones you used
    show what you spent in them this year.
    **Payees** (sidebar) lists everyone you paid or who paid you, with the number of transactions and
@@ -371,7 +384,7 @@ comes back. Sample data only goes into an empty data folder.
    - **Large payment:** a payment of 250 CHF or more that is four times the usual size in its
      category (the median of its payments in the last six months, with at least three of them), or,
      in a category with fewer earlier payments, a quarter of a usual month's spending or more.
-   - **Well above usual:** a category (COICOP group, such as *01.1 Food*) at 1.5 times its usual
+   - **Well above usual:** a category (COICOP group, such as *01.1 Groceries*) at 1.5 times its usual
      month (the median of the last six complete months) and at least 100 CHF above it, unless its
      budget covers the amount or one large payment explains it.
 9. **Investments** (sidebar, optional): give an account the asset class *Securities* or *Crypto*
@@ -412,16 +425,17 @@ comes back. Sample data only goes into an empty data folder.
    oldest payments first (the sheet shows which) and is recorded as repayments, undoable in one step.
    **Summary…** gives the open payments as text to copy, or as a text or PDF file to save, so you can send it
    yourself; the app sends nothing. Names count as the same person regardless of upper case and accents.
-10. **Subscriptions** (sidebar, after Recurring): charges that come back at the same rhythm for
-    about the same amount, found in your transactions and grouped by payee: streaming, phone, gym,
-    insurance, rent. A payee is listed once its latest charges came three times at one rhythm (every
-    month, two months, quarter, half year or year, give or take a few days; twice for half-yearly and
-    yearly charges), each within 20 % (or 2.00) of the usual amount, and the last charge is no older
-    than two rhythms. A pause, a late payment or a price rise only restarts the count. Each row says what it costs a year, how many charges since when, the last and the
-    expected next date. **Make Recurring…** opens the recurring-transaction sheet prefilled from the last
-    charge, so the next one is due a rhythm later; **Ignore** hides a payee you don't consider a
-    subscription (undo, or *Watch Again* in the Ignored list). Below, your recurring transactions are
-    listed with what they cost a year. Nothing is booked for you.
+10. **Found in Your Transactions** (on *Transactions → Recurring*, below your series): charges that come
+    back at the same rhythm for about the same amount, found in your transactions and grouped by payee:
+    streaming, phone, gym, insurance, rent. A payee is listed once its latest charges came three times at
+    one rhythm (every month, two months, quarter, half year or year, give or take a few days; twice for
+    half-yearly and yearly charges), each within 20 % (or 2.00) of the usual amount, and the last charge
+    is no older than two rhythms. A pause, a late payment or a price rise only restarts the count. Each
+    row says the usual amount, the rhythm and the expected next date ("49.90 CHF · Every month · next
+    around 15 Nov 2026") and what it costs a year; hover it for how many charges since when and the last
+    one. **Make Recurring…** opens the recurring-transaction sheet prefilled from the last charge, so the
+    next one is due a rhythm later, and the payee moves up to *Your Series*; **Ignore** hides a payee you
+    don't consider a subscription (undo, or *Watch Again* in the Ignored list). Nothing is booked for you.
 11. **Year in Review** (sidebar): a year's income, spending, savings and wealth against the year
     before. Last year opens by default; this year is shown *so far* (January to the current month,
     compared with the same months of last year). You see what you saved and your savings rate, how

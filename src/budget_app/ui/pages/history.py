@@ -12,6 +12,7 @@ from budget_app.services import undo as undo_svc
 from budget_app.services.context import ValidationError
 from budget_app.storage.history import Action
 from budget_app.ui.layout import error, frame, success
+from budget_app.ui.widgets.empty import empty_state
 
 LIMIT = 200
 
@@ -23,17 +24,16 @@ def _when(action: Action) -> str:
 
 def page() -> None:
     with frame(t("Change History"), "/history", narrow=True) as (ctx, _):
-        ui.label(
-            t("The last changes to your records. Undo puts the records back as they were before a change.")
-        ).classes("caption -mt-2")
 
         @ui.refreshable
         def body() -> None:
             actions = undo_svc.recent(ctx, LIMIT)
             with ui.element("div").classes("group"):
                 if not actions:
-                    with ui.element("div").classes("group-row"):
-                        ui.label(t("No changes yet.")).classes("text-2")
+                    empty_state(
+                        t("No changes yet."),
+                        t("The last changes to your records. Undo puts the records back as they were before a change."),
+                    )
                 for act in actions:
                     with ui.element("div").classes("group-row history-row"):
                         with ui.column().classes("gap-0 flex-1 min-w-0"):

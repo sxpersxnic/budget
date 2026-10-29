@@ -87,9 +87,12 @@ def tagged(ctx, setup):
 # ------------------------------------------------------------------ the Tags page
 async def test_the_page_lists_tags_with_totals_and_budgets(user: User, ctx, setup) -> None:
     await user.open("/tags")
-    await user.should_see("No tags yet. Add one here or on a transaction.")
-    assert ("/tags", "Tags", "o_sell") in layout.NAV
-    assert [p for p, _, _ in layout.NAV].index("/tags") == [p for p, _, _ in layout.NAV].index("/payees") + 1
+    await user.should_see("No tags yet.")
+    await user.should_see("Labels across categories")  # the page's explanation, while empty
+    new_tag = [b for b in user.find(kind=ui.button).elements if b.text == "New Tag"]
+    assert len(new_tag) == 1  # the empty state's: the header's waits until there is a tag
+    tabs = [p for p, _ in layout.SECTIONS["/settings"]]  # a list, after Payees
+    assert tabs.index("/tags") == tabs.index("/payees") + 1
 
 
 async def test_tags_with_their_numbers(user: User, ctx, tagged) -> None:

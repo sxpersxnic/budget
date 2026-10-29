@@ -61,3 +61,18 @@ def test_quasar_brand_colours_follow_the_tokens() -> None:
 def test_contrast_is_computed_as_wcag_defines_it() -> None:
     assert contrast("#000000", "#ffffff") == pytest.approx(21)
     assert contrast("#777777", "#ffffff") == pytest.approx(4.48, abs=0.01)
+
+
+def test_the_first_paint_uses_the_page_tokens() -> None:
+    """Every page's HTML carries the background and dark tokens, so a page change never flashes white."""
+    assert LIGHT["bg"] == theme.BG_LIGHT and DARK["bg"] == theme.BG_DARK
+    assert f"--bg: {DARK['bg']};" in theme.DARK_TOKENS and "--surface:" in theme.DARK_TOKENS
+    assert "prefers-color-scheme: dark" in theme.FIRST_PAINT and "@view-transition" in theme.FIRST_PAINT
+
+
+def test_install_writes_the_first_paint_into_every_page(monkeypatch) -> None:
+    heads: list[tuple[str, bool]] = []
+    monkeypatch.setattr(theme.ui, "add_head_html", lambda code, shared=False: heads.append((code, shared)))
+    monkeypatch.setattr(theme.ui, "add_css", lambda code, shared=False: None)
+    theme.install()
+    assert heads == [(theme.FIRST_PAINT, True)]

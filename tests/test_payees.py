@@ -315,7 +315,7 @@ def test_templates_duplicates_and_series_carry_the_payee(ctx, setup):
     assert inp.payee == "Immo AG"
     series = rec_svc.save(ctx, inp, first_booked=tx.id)
     assert series.payee == "Immo AG" and rec_svc.to_input(series).payee == "Immo AG"
-    assert rec_svc.title(ctx, series) == "Immo AG · 01.1 Food"
+    assert rec_svc.title(ctx, series) == "Immo AG · 01.1 Groceries"
     booked = rec_svc.book(ctx, series.id, series.next_due)
     assert booked.payee == "Immo AG"
 

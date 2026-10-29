@@ -19,6 +19,7 @@ from nicegui.testing.user_interaction import UserInteraction
 from budget_app.domain import months
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME
 from budget_app.services import accounts as acc_svc
+from budget_app.services import budget as budget_svc
 from budget_app.services import reports
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
@@ -249,7 +250,8 @@ async def test_expanding_a_division_shows_its_subcategories(user: User, demo) ->
     assert not [e for e in find_all(user, ui.html) if 'class="code">01.1<' in e.content]
     await click(user, label_cell(user, "01"))
     sub = next(e for e in find_all(user, ui.html) if 'class="code">01.1<' in e.content)
-    assert sub.props["title"] == "01.1 Food"
+    assert sub.props["title"] == "01.1 Groceries\nCOICOP 01.1 Food"  # the label, and the official name on hover
+    assert sub.content.endswith("Groceries")
     assert sub.parent_slot.parent._style["padding-left"] == "18px"  # indented one level
     assert any("open" in i.classes for i in find_all(user, ui.icon, label_cell(user, "01")))
     assert not [e for e in find_all(user, ui.html) if 'class="code">01.2<' in e.content]  # empty: hidden
@@ -440,7 +442,7 @@ async def test_replan_hides_the_later_months_switch(user: User, demo) -> None:
 async def test_add_a_budget_to_an_empty_category(user: User, demo, ctx) -> None:
     await open_budget(user)
     dlg = await edit_budget(user, "02")
-    await user.should_see("Alcoholic beverages, tobacco and narcotics")
+    await user.should_see("02 Alcohol and tobacco")  # the sheet is titled with the label
     assert not find_all(user, ui.checkbox, dlg)  # nothing to remove
     await set_value(user, find_one(user, ui.number, dlg, label="Amount"), 45)
     await set_value(user, find_one(user, ui.select, dlg, label="Until"), months.add_months(CM, 6))
@@ -531,6 +533,9 @@ async def test_budget_another_income_category(user: User, demo, ctx) -> None:
     added = [b for b in ctx.store.budget.all() if b.category == bonus.id]
     assert [(b.month, b.type, b.amount) for b in added] == [(CM, BUDGET_INCOME, 1000)]
     await user.should_see("7'200.00 still expected of 7'200.00 CHF")
+    # the Budget Plan shows it as a budget of its own, once in this month
+    [bonus_series] = [s for s in budget_svc.series(ctx) if s.category == bonus.id]
+    assert (bonus_series.first, bonus_series.once, bonus_series.current.amount) == (CM, True, 1000)
 
 
 async def test_cancel_leaves_the_budget_alone(user: User, demo, ctx) -> None:

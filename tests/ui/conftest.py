@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 
 import pytest
+from nicegui import background_tasks
 from nicegui.testing import User
 from nicegui.testing.user_simulation import user_simulation
 
@@ -67,6 +68,27 @@ def demo(ctx, setup):
         ),
     )
     return setup
+
+
+_patch_outbox = User._patch_outbox_emit_function
+
+
+def _follow_full_loads(self: User) -> None:
+    """Load the page a client is sent to (`client.open`, layout.full_load) as a browser does: NiceGUI's simulated
+    user only follows `ui.navigate`, which changes pages in the shell (47)."""
+    _patch_outbox(self)
+    emit = self._client.outbox._emit
+
+    async def follow(message) -> None:
+        await emit(message)
+        _, kind, data = message
+        if kind == "open" and not data["new_tab"]:
+            background_tasks.create(self.open(data["path"]), name=f"load {data['path']}")
+
+    self._client.outbox._emit = follow  # type: ignore[method-assign]
+
+
+User._patch_outbox_emit_function = _follow_full_loads  # type: ignore[method-assign]
 
 
 @pytest.fixture

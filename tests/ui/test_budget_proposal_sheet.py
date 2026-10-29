@@ -37,7 +37,14 @@ def is_open(user: User, dlg: ui.dialog) -> bool:
 
 async def open_sheet(user: User) -> ui.dialog:
     await user.open("/budget-entries")
-    user.find("Propose from History…").click()
+    with user:  # an item of the page's More menu (closed menus count as hidden in the simulation)
+        item = next(
+            e
+            for e in user.client.elements.values()
+            if isinstance(e, ui.menu_item)
+            and any(getattr(c, "text", "") == "Propose from History…" for c in e.descendants())
+        )
+    UserInteraction(user, {item}, None).click()
     dlg = sheet(user)
     assert "Propose from History" in texts(dlg)
     return dlg

@@ -22,6 +22,7 @@ from budget_app.domain.coicop import get_coicop
 from budget_app.domain.fx import FxError
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, TX_TRANSFER, Recurring, Transaction
 from budget_app.i18n import N_, t
+from budget_app.services import accounts as acc_svc
 from budget_app.services import payees as payee_svc
 from budget_app.services import tags as tag_svc
 from budget_app.services import transactions as tx_svc
@@ -246,8 +247,8 @@ def title(ctx: Context, series: Recurring) -> str:
         cat = ctx.store.income_categories.get(series.category)
         label = cat.name if cat else ""
         return f"{series.payee} · {label}" if series.payee else label
-    names = {a.id: a.name for a in ctx.store.accounts.all()}
-    return f"{names.get(series.from_account, '')} → {names.get(series.to_account, '')}"
+    accounts = ctx.store.accounts
+    return acc_svc.route_label(accounts.get(series.from_account), accounts.get(series.to_account))
 
 
 def last_booked(ctx: Context) -> dict[str, date]:

@@ -33,6 +33,7 @@ from budget_app.ui.layout import (
     undoable,
 )
 from budget_app.ui.pages.add_budget import recurrence_label, recurrence_options
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import (
     account_options,
@@ -352,14 +353,9 @@ def _booked_row(ctx: Context, tx: Transaction, on_click: Callable[[], object]) -
 def page() -> None:
     with frame(t("Loans"), "/loans", narrow=True) as (ctx, actions):
         with actions:
-            ui.button(t("New Loan"), icon="add", on_click=lambda: open_loan_sheet(ctx, refresh)).props("unelevated")
-        ui.label(
-            t(
-                "Mortgages and loans: the debt counts against your wealth, and when a payment is due it is listed "
-                "here with the interest on the outstanding debt and the repayment. Book it, or change the amounts "
-                "to what the bank charged."
+            new = ui.button(t("New Loan"), icon="add", on_click=lambda: open_loan_sheet(ctx, refresh)).props(
+                "unelevated"
             )
-        ).classes("caption -mt-2")
         inputs: dict[tuple[str, date], tuple[ui.number, ui.number, ui.input]] = {}
 
         def changes() -> loan_svc.Changes:
@@ -370,6 +366,8 @@ def page() -> None:
             today = date.today()
             payments = loan_svc.due(ctx, today)
             inputs.clear()
+            if not payments and not loan_svc.statuses(ctx):
+                return  # no loans: the empty state below says what this page is for
             with ui.column().classes("w-full gap-0"):
                 with ui.row().classes("w-full items-end gap-2"):
                     ui.label(t("Due")).classes("group-header")
@@ -421,12 +419,20 @@ def page() -> None:
         @ui.refreshable
         def loan_list() -> None:
             rows = loan_svc.statuses(ctx)
+            new.set_visibility(bool(rows))  # while there are none, the empty state offers it
             with ui.column().classes("w-full gap-0"):
                 ui.label(tn("{n} loan", "{n} loans", len(rows))).classes("group-header")
                 with ui.element("div").classes("group"):
                     if not rows:
-                        with ui.element("div").classes("group-row"):
-                            ui.label(t("No loans yet.")).classes("text-2")
+                        empty_state(
+                            t("No loans yet."),
+                            t(
+                                "A mortgage or loan counts against your wealth. When a payment is due, it is listed "
+                                "here with its interest and repayment, ready to book."
+                            ),
+                            t("New Loan"),
+                            lambda: open_loan_sheet(ctx, refresh),
+                        )
                     for st in rows:
                         _row(st)
 

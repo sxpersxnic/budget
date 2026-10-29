@@ -1,4 +1,10 @@
-"""Recurring transactions (F05): the Due list on top, the series below, and the sheet to edit one."""
+"""Recurring (Transactions · Recurring): what repeats, on one page.
+
+*Due* (F05: the occurrences to book or skip), *Your Series* (F05: the series the user made, with the sheet to add or
+edit one) and *Found in Your Transactions* (F17: charges that repeat at a rhythm, each with *Make Recurring…*, which
+opens the series sheet prefilled from the last charge, and *Ignore*; the ignored ones folded below with *Watch
+Again*). `/subscriptions` leads here. Nothing is booked without the user, except series that book automatically.
+"""
 
 from __future__ import annotations
 
@@ -8,12 +14,15 @@ from datetime import date
 from nicegui import ui
 
 from budget_app import i18n
+from budget_app.domain import subscriptions as rules
 from budget_app.domain.fx import FxError
-from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, TX_TYPES, Recurring
+from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, TX_TYPES, Recurring, SubscriptionIgnore
 from budget_app.i18n import N_, t, tn
 from budget_app.services import recurring as rec_svc
+from budget_app.services import subscriptions as sub_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.recurring import Booking, Occurrence, RecurringInput
+from budget_app.services.subscriptions import Subscription
 from budget_app.ui.layout import (
     date_input,
     error,
@@ -191,18 +200,51 @@ def _caption(ctx: Context, series: Recurring, last: date | None) -> str:
     return " · ".join(parts)
 
 
+def caption(sub: Subscription) -> str:
+    """Two facts on the row: '49.90 CHF · Every month · next around 15 Nov 2026'."""
+    return " · ".join(
+        [
+            fmt(sub.amount, sub.currency),
+            recurrence_label(sub.period),
+            t("next around {date}", date=i18n.date_label(sub.next)),
+        ]
+    )
+
+
+def details(sub: Subscription) -> str:
+    """The rest, in the tooltip: '8 charges since 15 Mar 2026 · last on 15 Oct 2026'."""
+    return " · ".join(
+        [
+            tn("{n} charge since {date}", "{n} charges since {date}", sub.count, date=i18n.date_label(sub.first)),
+            t("last on {date}", date=i18n.date_label(sub.last)),
+        ]
+    )
+
+
+def yearly_label(amount: float, currency: str) -> str:
+    return t("{amount} a year", amount=fmt(amount, currency))
+
+
+def _header(title: str, note: str = "") -> None:
+    with ui.row().classes("w-full items-end gap-2"):
+        ui.label(title).classes("group-header")
+        ui.space()
+        if note:
+            ui.label(note).classes("caption pb-1.5 pr-1")
+
+
+def _empty(text: str) -> None:
+    with ui.element("div").classes("group-row py-3"):
+        ui.label(text).classes("text-2")
+
+
 def page() -> None:
     with frame(t("Recurring"), "/recurring", narrow=True) as (ctx, actions):
+        currency = ctx.store.settings.display_currency
         with actions:
             ui.button(
                 t("New Recurring Transaction"), icon="add", on_click=lambda: open_recurring_sheet(ctx, refresh)
             ).props("unelevated")
-        ui.label(
-            t(
-                "Rent, premiums, subscriptions: transactions that repeat. When one is due, book it here; "
-                "a series that books automatically needs no confirmation."
-            )
-        ).classes("caption -mt-2")
         inputs: dict[tuple[str, date], tuple[ui.number, ui.input]] = {}
 
         def changes() -> rec_svc.Changes:
@@ -210,9 +252,10 @@ def page() -> None:
 
         @ui.refreshable
         def due_list() -> None:
-            today = date.today()
-            occurrences = rec_svc.due(ctx, today)
             inputs.clear()
+            if not rec_svc.series(ctx):
+                return  # nothing can be due yet; Your Series says how to start
+            occurrences = rec_svc.due(ctx, date.today())
             with ui.column().classes("w-full gap-0"):
                 with ui.row().classes("w-full items-end gap-2"):
                     ui.label(t("Due")).classes("group-header")
@@ -221,8 +264,7 @@ def page() -> None:
                         ui.button(t("Book All"), on_click=book_all).props("flat dense no-caps").classes("link-btn")
                 with ui.element("div").classes("group"):
                     if not occurrences:
-                        with ui.element("div").classes("group-row"):
-                            ui.label(t("Nothing is due.")).classes("text-2")
+                        _empty(t("Nothing is due."))
                     earlier: dict[str, date] = {}
                     for occ in occurrences:
                         _due_row(ctx, occ, earlier.get(occ.series.id))
@@ -259,12 +301,19 @@ def page() -> None:
         def series_list() -> None:
             rows = rec_svc.series(ctx)
             last = rec_svc.last_booked(ctx)
+            spend = sub_svc.recurring_spend(ctx, currency)  # F17: what the running expenditure series cost a year
+            note = t("spending about {amount} a year", amount=fmt(sum(r.yearly_view for r in spend), currency))
             with ui.column().classes("w-full gap-0"):
-                ui.label(t("Series")).classes("group-header")
+                _header(t("Your Series"), note if spend else "")
                 with ui.element("div").classes("group"):
                     if not rows:
-                        with ui.element("div").classes("group-row"):
-                            ui.label(t("No recurring transactions yet.")).classes("text-2")
+                        _empty(
+                            t(
+                                "Rent, premiums, a salary: add what repeats with New Recurring Transaction, or make "
+                                "one of the charges found in your transactions recurring. When one is due, book it "
+                                "here or on the Overview; one that books automatically needs no confirmation."
+                            )
+                        )
                     for series in rows:
                         with ui.element("div").classes("group-row"):
                             with ui.column().classes("gap-0 flex-1 min-w-0"):
@@ -290,14 +339,72 @@ def page() -> None:
                                     .classes("text-negative"),
                                     t("Delete"),
                                 )
+
+        @ui.refreshable
+        def found_list() -> None:
+            subs = sub_svc.detect(ctx, currency)
+            note = ""
+            if subs:
+                total = sum(s.yearly_view for s in subs)
+                note = tn(
+                    "{n} subscription · about {amount} a year",
+                    "{n} subscriptions · about {amount} a year",
+                    len(subs),
+                    amount=fmt(total, currency),
+                )
+            with ui.column().classes("w-full gap-0"):
+                _header(t("Found in Your Transactions"), note)
+                with ui.element("div").classes("group"):
+                    if not subs:
+                        _empty(
+                            t(
+                                "Streaming, phone, gym, insurance: a charge that comes back at the same rhythm for "
+                                "about the same amount shows here once it was charged {n} times ({m} times for "
+                                "half-yearly and yearly ones). Nothing is booked for you.",
+                                n=rules.MIN_CHARGES,
+                                m=rules.MIN_CHARGES_LONG,
+                            )
+                        )
+                    for sub in subs:
+                        with ui.element("div").classes("group-row flex-wrap"):
+                            with ui.column().classes("gap-0 flex-1 min-w-[12rem]") as text:
+                                ui.label(sub.name).classes("truncate")
+                                ui.label(caption(sub)).classes("caption")
+                            text.tooltip(details(sub))
+                            # the cost and the actions stay together, on the row or on a line of their own
+                            with ui.row().classes("items-center gap-0 no-wrap ml-auto"):
+                                ui.label(yearly_label(sub.yearly, sub.currency)).classes("num whitespace-nowrap pr-2")
+                                ui.button(t("Make Recurring…"), on_click=lambda s=sub: make_recurring(s)).props(
+                                    "flat dense no-caps no-wrap"
+                                ).classes("text-primary")
+                                named(
+                                    ui.button(icon="o_visibility_off", on_click=lambda s=sub: ignore(s))
+                                    .props(ROW_ACTION)
+                                    .classes("text-2"),
+                                    t("Ignore"),
+                                )
+
+        @ui.refreshable
+        def ignored_list() -> None:
+            items = sub_svc.ignored(ctx)
+            if not items:
+                return
+            title = tn("Ignored · {n} subscription", "Ignored · {n} subscriptions", len(items))
+            with ui.expansion(title).classes("w-full group closed-bills").props("dense"):
+                for item in items:
                     with ui.element("div").classes("group-row"):
-                        ui.button(
-                            t("Add Recurring Transaction…"), on_click=lambda: open_recurring_sheet(ctx, refresh)
-                        ).props("flat dense no-caps").classes("link-btn -ml-2")
+                        with ui.column().classes("gap-0 flex-1 min-w-0"):
+                            ui.label(item.name or item.key).classes("truncate")
+                            ui.label(item.currency).classes("caption")
+                        ui.button(t("Watch Again"), on_click=lambda i=item: unignore(i)).props(
+                            "flat dense no-caps"
+                        ).classes("text-primary")
 
         def refresh() -> None:
             due_list.refresh()
             series_list.refresh()
+            found_list.refresh()
+            ignored_list.refresh()
             refresh_due_badge()
 
         def book(occ: Occurrence, amount: float | None, booking_date: date | None) -> None:
@@ -340,6 +447,30 @@ def page() -> None:
                 detail=t("Transactions it has already booked stay."),
             )
 
+        def make_recurring(sub: Subscription) -> None:
+            try:
+                prefill = sub_svc.to_recurring(ctx, sub)
+            except ValidationError as exc:
+                error(str(exc))
+                return
+            open_recurring_sheet(ctx, refresh, prefill=prefill, first_booked=sub.last_id)
+
+        def ignore(sub: Subscription) -> None:
+            sub_svc.ignore(ctx, sub)
+            undoable(t("Ignored {name}", name=sub.name))
+            refresh()
+
+        def unignore(item: SubscriptionIgnore) -> None:
+            try:
+                sub_svc.unignore(ctx, item.id)
+            except ValidationError as exc:
+                error(str(exc))
+                return
+            undoable(t("Watching {name} again", name=item.name))
+            refresh()
+
         due_list()
         series_list()
+        found_list()
+        ignored_list()
         on_data_changed(refresh)

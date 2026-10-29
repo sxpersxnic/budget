@@ -335,9 +335,10 @@ def page(month: str = "", category: str = "") -> None:
             ):
                 ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))
                 ui.menu_item(t("Export as PDF…"), on_click=lambda: export("pdf"))
+            # secondary: the page is for reading the month; recording a balance is an occasional chore
             ui.button(
                 t("Record Balance"), icon="add", on_click=lambda: account_entry_dialog(ctx, content.refresh)
-            ).props("unelevated")
+            ).props("flat no-caps").classes("text-primary")
 
         @ui.refreshable
         def content() -> None:
@@ -564,7 +565,8 @@ def page(month: str = "", category: str = "") -> None:
                     code, name = _split_code(line)
                     code_html = f'<span class="code">{html.escape(code)}</span>' if code else ""
                     lbl = ui.html(code_html + html.escape(name), tag="span").classes("name")
-                    lbl._props["title"] = line.label  # full name on hover; long COICOP names are truncated
+                    # on hover the full name (long names are truncated) and the official COICOP name
+                    lbl._props["title"] = "\n".join(filter(None, (line.label, get_coicop().tooltip(line.key))))
                 if change is not None:  # F18: the compared month instead of the budget
                     ui.element("div").classes("c-bar")
                     _amount(line.actual)

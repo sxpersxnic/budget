@@ -37,6 +37,7 @@ from budget_app.ui.layout import (
     error,
     fmt,
     frame,
+    full_load,
     lock_now,
     month_options,
     named,
@@ -146,7 +147,7 @@ def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
         name.on("keydown.enter", save)
 
 
-def _accounts_group(ctx: Context, kind: str, title: str) -> None:
+def accounts_group(ctx: Context, kind: str, title: str) -> None:
     @ui.refreshable
     def body():
         rows = acc_svc.accounts(ctx, kind)
@@ -255,7 +256,9 @@ def _category_sheet(ctx: Context, refresh, cat=None) -> None:
         name.on("keydown.enter", save)
 
 
-def _income_group(ctx: Context) -> None:
+def income_group(ctx: Context) -> None:
+    """The income categories, with add, rename and delete; on the Categories page."""
+
     @ui.refreshable
     def body():
         with ui.element("div").classes("group"):
@@ -298,19 +301,10 @@ def _income_group(ctx: Context) -> None:
     with ui.column().classes("w-full gap-0"):
         ui.label(t("Income Categories")).classes("group-header")
         body()
-        with ui.element("div").classes("group mt-3"), ui.element("div").classes("group-row"):
-            with ui.column().classes("gap-0 flex-1 min-w-0"):
-                ui.label(t("Categorization Rules"))
-                ui.label(t("Which category new and imported transactions are given for a payee or bank text.")).classes(
-                    "caption"
-                )
-            ui.button(t("Rules…"), on_click=lambda: ui.navigate.to("/rules")).props("flat dense no-caps").classes(
-                "text-primary"
-            )
 
 
 def _reminders_group(ctx: Context) -> None:
-    """F31: which kinds of reminders the Reminders page and its badge show; all in the app, nothing is sent."""
+    """F31: which kinds of reminders the Overview's Due list and its badge show; all in the app, nothing is sent."""
 
     def toggle(kind: str, on: bool) -> None:
         rem_svc.set_enabled(ctx, kind, on)
@@ -327,7 +321,7 @@ def _reminders_group(ctx: Context) -> None:
                     ui.switch(
                         value=rem_svc.enabled(ctx, kind), on_change=lambda e, k=kind: toggle(k, bool(e.value))
                     ).props("dense").mark(f"reminder-{kind}")
-        ui.label(t("Shown on the Reminders page and counted in the sidebar while the app runs.")).classes(
+        ui.label(t("Shown in the Overview's Due list and counted in the sidebar while the app runs.")).classes(
             "caption px-1 pt-1"
         )
 
@@ -441,7 +435,8 @@ def _profiles_group() -> None:
     def body() -> None:
         reg = profiles_svc.load()
         with ui.element("div").classes("group"):
-            for p in reg.profiles:
+            # one profile: only the way to add another (its folder is shown under Data Folder)
+            for p in reg.profiles if len(reg.profiles) > 1 else []:
                 current = p.id == reg.current
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
@@ -552,7 +547,7 @@ def _password_sheet(ctx: Context, mode: str, refresh) -> None:
                 if mode == "set":
                     nonce = security.set_password(new.value or "", repeat.value or "")
                     dlg.close()
-                    ui.navigate.to(f"/unlock/{nonce}")  # this browser gets its session; the page returns here
+                    full_load(f"/unlock/{nonce}")  # this browser gets its session; the page returns here
                     return
                 if mode == "change":
                     security.change_password(current.value or "", new.value or "", repeat.value or "")
@@ -932,7 +927,7 @@ PROJECTION_LABELS = {  # the choice in Settings, in its order (decision 36)
 def page() -> None:
     with frame(t("Settings"), "/settings", narrow=True) as (ctx, _):
         with ui.column().classes("w-full gap-0"):
-            ui.label(t("Budget")).classes("group-header")
+            ui.label(t("General")).classes("group-header")  # the tab's name
             with ui.element("div").classes("group"):
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
@@ -951,7 +946,7 @@ def page() -> None:
                     }
                     ui.select(languages, value=ctx.store.settings.language, on_change=set_language).props(
                         "dense outlined options-dense"
-                    ).classes("w-36")
+                    ).classes("w-52")  # "System (Français)" in full
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
                         ui.label(t("Plan Until"))
@@ -1021,9 +1016,6 @@ def page() -> None:
                             "caption"
                         )
                     ui.label(BASE_CURRENCY).classes("text-2 pr-2")
-        _accounts_group(ctx, ACCOUNT_REGULAR, t("Accounts"))
-        _accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"))
-        _income_group(ctx)
         _reminders_group(ctx)
         _profiles_group()
         _security_group(ctx)

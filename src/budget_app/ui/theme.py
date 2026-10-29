@@ -6,6 +6,8 @@ Quasar toggles `body.body--dark`, and AG Grid follows the same class, so the tok
 
 from __future__ import annotations
 
+import re
+
 from nicegui import ui
 
 # Plotly cannot read CSS variables; these mid-tone values stay legible on light and dark surfaces.
@@ -134,7 +136,16 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 
 /* ---------------------------------------------------------------- page chrome */
 .page { width: 100%; max-width: 72rem; margin: 0 auto; padding: 28px 32px 64px; gap: 20px; }
-.page.narrow { max-width: 40rem; }
+/* every page has the same column, so the title never moves; a narrow page keeps its lists to a readable width,
+   left-aligned under the title (UX review before 1.0) */
+.page.narrow > * { max-width: 46rem; }
+/* the pages of a place, as tabs under the title */
+.section-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: -8px; border-bottom: 0.5px solid var(--separator);
+  width: 100%; }
+.section-tab { display: flex; align-items: center; gap: 6px; padding: 6px 12px 8px; margin-bottom: -0.5px;
+  color: var(--label-2); font-size: 14px; text-decoration: none; border-bottom: 2px solid transparent; }
+.section-tab:hover { color: var(--label); }
+.section-tab.active { color: var(--label); font-weight: 600; border-bottom-color: var(--accent); }
 .page.wide { max-width: 100rem; }  /* the budget page: room for two tables side by side */
 @media (max-width: 640px) { .page { padding: 16px 16px 48px; gap: 16px; } }
 .large-title { font-size: 28px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.15; color: var(--label); }
@@ -168,6 +179,10 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .group-row:hover .row-actions, .group-row:focus-within .row-actions { opacity: 1; }
 @media (hover: none) { .group-row .row-actions { opacity: 1; } }
 .link-btn { color: var(--accent) !important; font-weight: 500; }
+/* an empty list: what goes here and the action that adds it (widgets/empty.py) */
+.group-row.empty-state { flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 16px 16px; }
+.empty-title { color: var(--label-2); }
+.empty-text { max-width: 36rem; font-size: 13px; }
 
 /* metric strip */
 .metrics { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); width: 100%; }
@@ -190,18 +205,38 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 /* net worth by asset class (Overview, F21) */
 .class-bar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; width: 100%; }
 .class-seg { min-width: 3px; }
-.class-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 6px 24px;
+.class-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: 8px 24px;
   width: 100%; }
+.class-item { display: grid; grid-template-columns: 9px minmax(0, 1fr); column-gap: 8px; align-items: center; }
+.class-item .class-amount { grid-column: 2; white-space: nowrap; }
 .class-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 /* notable this month (Overview, F18): icon · title over its reason · amount · chevron, each row a link */
 .nicegui-link.notable-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 18px; column-gap: 10px;
   align-items: center; padding: 7px 6px; margin: 0 -6px; border-radius: 8px; color: var(--label);
   text-decoration: none; }
 .nicegui-link.notable-row:hover { background: var(--fill-2); opacity: 1; }
-.notable-row .n-title { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.notable-row .n-sub { font-size: 12px; color: var(--label-2); line-height: 1.35; }
-.notable-row .n-amount { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.notable-row .n-title, .due-row .n-title { font-size: 14px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+.notable-row .n-sub, .due-row .n-sub { font-size: 12px; color: var(--label-2); line-height: 1.35; }
+.notable-row .n-amount, .due-row .n-amount { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;
+  white-space: nowrap; }
 .notable-warn { color: var(--warning); }
+/* the Overview's Due list (F31): icon · title over when · amount · the action that settles it */
+.due-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 5rem; column-gap: 10px;
+  align-items: center; min-height: 48px; padding: 4px 0; }
+.due-row + .due-row { border-top: 0.5px solid var(--separator); }
+.nicegui-link.due-text { display: flex; flex-direction: column; min-width: 0; color: var(--label);
+  text-decoration: none; }
+.nicegui-link.due-text:hover { opacity: 1; }
+.nicegui-link.due-text:hover .n-title { color: var(--accent); }
+.due-row .due-action { justify-self: end; }
+.due-empty { font-size: 13px; color: var(--label-2); padding: 0 4px; }
+@media (max-width: 640px) {
+  .due-row { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .due-row .due-icon { grid-row: 1 / span 2; }
+  .due-row .n-amount { grid-column: 2; grid-row: 2; font-size: 13px; }
+  .due-row .due-action { grid-column: 3; grid-row: 1 / span 2; }
+}
 
 /* the lock page (F27) and the phone pages (F35): one card, no sidebar */
 .quick-card { max-width: 26rem; }
@@ -302,6 +337,7 @@ body.body--dark .lock-card { border: 0.5px solid var(--separator); }
 .cat-node .code { color: var(--label-3); font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
 .cat-node .name { min-width: 0; overflow-wrap: anywhere; }  /* an information page: names wrap, never cut */
 .cat-node.lvl-1 .name { font-weight: 600; }
+.cat-node .name .everyday { color: var(--label-2); font-weight: 400; }  /* the name the app shows (F08) */
 .cat-node .caption { white-space: nowrap; }
 .cat-node .spent { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;
   color: var(--label-2); }
@@ -475,6 +511,9 @@ body.body--dark .nicegui-aggrid { border: 0.5px solid var(--separator); }
 .nicegui-aggrid .ag-cell { font-variant-numeric: tabular-nums; }
 .nicegui-aggrid .amt-in { color: var(--positive); }
 .nicegui-aggrid .muted { color: var(--label-2); }
+/* a phone has room for the page stepper only; the row count shows below the grid */
+@media (max-width: 640px) {
+  .nicegui-aggrid .ag-paging-page-size, .nicegui-aggrid .ag-paging-row-summary-panel { display: none; } }
 /* a category the import suggested (F07): not the user's choice until they keep it */
 .nicegui-aggrid .suggested { color: var(--label-2); font-style: italic; }
 /* ---------------------------------------------------------------- utilities (last, so they win) */
@@ -518,8 +557,32 @@ def tag_css() -> str:
     return "\n".join(rules)
 
 
+# Written into the HTML of every page, so the browser paints it with the first frame: the page background (the --bg
+# tokens above) and, in dark mode, the dark tokens. ui.add_css only arrives with the page's scripts, and Quasar sets
+# body--dark only once the page is mounted; until then a page change showed the browser's white canvas and then the
+# light tokens, a flash on every change, worst in dark mode. The app follows the system appearance (ui.run(dark=None)),
+# so prefers-color-scheme tells which tokens Quasar will choose. Cross-document view transitions (Safari 18.2+,
+# Chromium 126+) keep the old page on screen while the next one loads, which halves the blank time of a page change;
+# the rest is NiceGUI building the page, which only client-side navigation would remove.
+BG_LIGHT, BG_DARK = "#f5f5f7", "#000000"
+DARK_TOKENS = re.search(r"^body\.body--dark \{\n(.*?)\n\}", CSS, re.S | re.M).group(1)  # type: ignore[union-attr]
+FIRST_PAINT = f"""<meta name="color-scheme" content="light dark">
+<style>
+@view-transition {{ navigation: auto; }}
+@media (prefers-reduced-motion: reduce) {{ ::view-transition-group(*) {{ animation: none; }} }}
+html, body {{ background: {BG_LIGHT}; }}
+@media (prefers-color-scheme: dark) {{
+html, body {{ background: {BG_DARK}; }}
+body {{
+{DARK_TOKENS}
+}}
+}}
+</style>"""
+
+
 def install() -> None:
     """Register the stylesheet for every page (call once at startup)."""
+    ui.add_head_html(FIRST_PAINT, shared=True)
     ui.add_css(CSS + "\n" + tag_css(), shared=True)
 
 

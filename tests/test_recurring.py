@@ -260,7 +260,7 @@ def test_income_and_transfer_series(ctx, setup):
     assert move.category == "" and rec_svc.title(ctx, move) == "Bank → Savings"
     tx = rec_svc.book(ctx, move.id, date(2026, 9, 26))
     assert (tx.type, tx.from_account, tx.to_account) == ("transfer", setup["chf"].id, second.id)
-    assert rec_svc.title(ctx, rec_svc.save(ctx, rent(setup))) == "04.1 Actual rental payments made for housing"
+    assert rec_svc.title(ctx, rec_svc.save(ctx, rent(setup))) == "04.1 Rent"
 
 
 # ------------------------------------------------------------------ from a transaction, undo, deleting

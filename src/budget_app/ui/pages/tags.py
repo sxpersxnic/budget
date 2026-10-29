@@ -28,6 +28,7 @@ from budget_app.ui.layout import (
     sheet_buttons,
     undoable,
 )
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select
 from budget_app.ui.widgets.tags import ColourPicker, chip
@@ -186,13 +187,7 @@ def page() -> None:
             )
             with search.add_slot("prepend"):
                 ui.icon("search", size="18px").classes("text-3")
-            ui.button(t("New Tag"), icon="add", on_click=lambda: open_tag_sheet(ctx, refresh)).props("unelevated")
-        ui.label(
-            t(
-                "Labels across categories, such as a holiday or a renovation. A transaction can have several. "
-                "Click a tag to see its transactions; give it a budget to follow its spending."
-            )
-        ).classes("caption -mt-2")
+            new = ui.button(t("New Tag"), icon="add", on_click=lambda: open_tag_sheet(ctx, refresh)).props("unelevated")
         selected: set[str] = set()
         with ui.element("div").classes("selection-bar") as bar:
             selected_label = ui.label().classes("font-medium")
@@ -228,6 +223,7 @@ def page() -> None:
             selected.intersection_update(g.id for g in tags)
             query = key(search.value or "")
             shown = [g for g in tags if not query or query in key(g.name)]
+            new.set_visibility(bool(tags))  # while there are none, the empty state offers it
             with ui.column().classes("w-full gap-0"):
                 with ui.row().classes("w-full items-end gap-2"):
                     header = (
@@ -240,11 +236,19 @@ def page() -> None:
                     if totals:
                         ui.label(t("All time, {currency}", currency=currency)).classes("caption pb-1.5 pr-1")
                 with ui.element("div").classes("group"):
-                    if not shown:
+                    if tags and not shown:
                         with ui.element("div").classes("group-row"):
-                            ui.label(
-                                t("No tag matches.") if tags else t("No tags yet. Add one here or on a transaction.")
-                            ).classes("text-2")
+                            ui.label(t("No tag matches.")).classes("text-2")
+                    elif not tags:
+                        empty_state(
+                            t("No tags yet."),
+                            t(
+                                "Labels across categories, such as a holiday or a renovation. A transaction can have "
+                                "several; give a tag a budget to follow its spending."
+                            ),
+                            t("New Tag"),
+                            lambda: open_tag_sheet(ctx, refresh),
+                        )
                     for tag in shown:
                         _row(tag, totals.get(tag.id), currency)
             update_bar()

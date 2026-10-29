@@ -84,7 +84,7 @@ async def test_a_line_gets_its_own_category_and_the_rest_is_shown(user: User, ct
     click(user, split_button(user, 1))
     [category] = line_fields(user, "Category of this item")
     put(user, category, "05.6")
-    await user.should_see("Rest in 01.1 Food: 43.40")
+    await user.should_see("Rest in 01.1 Groceries: 43.40")
     assert "text-primary" in split_button(user, 1).classes  # the line is marked as split
     [tags] = line_fields(user, "Tags of this item")
     put(user, tags, ["Household"])  # a new name becomes a tag when saved
@@ -120,7 +120,7 @@ async def test_lines_above_the_amount_are_refused_on_save(user: User, ctx, setup
     assert notified(user, "2.00 CHF more than the amount")
     assert ctx.store.transactions.all() == []
     put(user, field(user, ui.number, "Amount"), 12)
-    await user.should_see("Rest in 01.1 Food: 0.00")
+    await user.should_see("Rest in 01.1 Groceries: 0.00")
 
 
 async def test_income_is_not_split(user: User, ctx, setup) -> None:
@@ -146,9 +146,9 @@ async def test_editing_a_split_shows_its_lines_and_duplicating_keeps_them(user: 
     await user.should_see("Edit Transaction")
     categories = line_fields(user, "Category of this item")
     assert [c.value for c in categories] == ["05.6", "09.1"]  # lines with a category open by themselves
-    await user.should_see("Rest in 01.1 Food: 60.00")
+    await user.should_see("Rest in 01.1 Groceries: 60.00")
     put(user, categories[0], None)
-    await user.should_see("Rest in 01.1 Food: 85.00")
+    await user.should_see("Rest in 01.1 Groceries: 85.00")
     click(user, button(user, "Save Changes"))
     assert [i.category for i in items_svc.items_for(ctx, split.id)] == ["", "", "09.1"]
 
@@ -161,7 +161,7 @@ async def test_editing_a_split_shows_its_lines_and_duplicating_keeps_them(user: 
 async def test_the_transactions_list_shows_and_finds_a_split(user: User, ctx, split) -> None:
     await user.open("/transactions")
     [row] = [r for r in grid_rows(user) if r["id"] == split.id]
-    assert row["category"] == "01.1 Food + 2 more"
+    assert row["category"] == "01.1 Groceries + 2 more"
     assert row["tags"] == "Birthday"  # a line's tag shows with the transaction
     search = next(e for e in user.find(kind=ui.input).elements if e.props.get("placeholder") == "Search")
     for text in ("recreational durables", "05.6", "household maintenance"):  # the categories of its lines

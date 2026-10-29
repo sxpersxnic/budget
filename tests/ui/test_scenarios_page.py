@@ -45,9 +45,8 @@ def texts(user: User) -> list[str]:
 async def test_the_page_without_scenarios(user: User, ctx) -> None:
     await user.open("/scenarios")
     await user.should_see("No scenarios yet.")
-    paths = [p for p, _, _ in layout.NAV]
-    assert ("/scenarios", "Scenarios", "o_alt_route") in layout.NAV
-    assert paths.index("/scenarios") == paths.index("/goals") + 1
+    tabs = [p for p, _ in layout.SECTIONS["/budget-entries"]]  # a tab of Plan, after Goals
+    assert tabs.index("/scenarios") == tabs.index("/goals") + 1
 
 
 async def test_scenarios_with_their_changes_and_outcome(user: User, ctx, demo) -> None:

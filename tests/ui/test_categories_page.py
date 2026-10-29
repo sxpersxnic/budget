@@ -37,11 +37,14 @@ async def test_the_page_lists_every_coicop_category(user: User) -> None:
     assert deep["label"] == "01.1.1.1 Cereals" and deep["level"] == 4 and deep["sub"] == ""
     assert nodes["01"]["level"] == 1 and nodes["01"]["sub"] == "3 subcategories"
     assert nodes["01.1.1"]["sub"] == "6 subcategories"
+    # the official name first, and the everyday name the rest of the app shows beside it (F08)
+    assert (nodes["01.1"]["name"], nodes["01.1"]["everyday"]) == ("Food", "Groceries")
+    assert deep["everyday"] == "" and nodes["06"]["everyday"] == ""  # none, or the same as the official name
     assert ":filter-method" in tree.props and tree.props["expanded"] == []
 
 
 async def test_the_sidebar_links_to_the_page(user: User) -> None:
-    await user.open("/budget-entries")
+    await user.open("/settings")  # a tab of Settings (UX review before 1.0)
     links = [link for link in user.find(ui.link).elements if link.props.get("href") == "/categories"]
     assert len(links) == 1 and "active" not in links[0].classes
     await user.open("/categories")
@@ -71,6 +74,15 @@ async def test_search_narrows_and_opens_the_matches(user: User) -> None:
     await user.should_see("602 categories")
     assert not tree.props["filter"]
     assert tree.props["expanded"] == ["04"]  # back to what was open before searching
+
+
+async def test_search_finds_a_category_by_its_everyday_name(user: User) -> None:
+    await user.open("/categories")
+    tree = the_tree(user)
+    user.find(ui.input).type("groceries")
+    await user.should_see("2 matches")
+    assert filtered(tree) == ["01.1", "07.4.9"]  # its everyday name; and deliveries, whose notes mention groceries
+    assert "groceries" not in categories.search_index(get_coicop())["07.4.9"][0]
 
 
 async def test_search_finds_what_a_category_includes(user: User) -> None:

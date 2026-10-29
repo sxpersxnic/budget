@@ -25,6 +25,7 @@ from budget_app.services.context import Context
 from budget_app.services.review import Figure, YearReview
 from budget_app.ui.layout import error, fmt, fmt_signed, frame, metric, money_html, named, on_data_changed, save_file
 from budget_app.ui.theme import POSITIVE, SERIES, chart_layout, figure_dict
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.selects import currency_select
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
@@ -207,12 +208,6 @@ def page() -> None:
             ):
                 ui.menu_item(t("Save as PDF…"), on_click=lambda: export("pdf"))
                 ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))
-        ui.label(
-            t(
-                "Your income, spending, savings and wealth over a year, against the year before. The figures are "
-                "the monthly statements added up; wealth is the recorded month-end balances."
-            )
-        ).classes("caption -mt-2")
 
         @ui.refreshable
         def content() -> None:
@@ -221,8 +216,14 @@ def page() -> None:
             period = review_export.period_label(review)
             if not review.has_data:
                 state["plot"] = None
-                with ui.element("div").classes("group"), ui.element("div").classes("group-row"):
-                    ui.label(t("Nothing recorded in {year}", year=str(review.year))).classes("text-2")
+                with ui.element("div").classes("group"):
+                    empty_state(
+                        t("Nothing recorded in {year}", year=str(review.year)),
+                        t(
+                            "Your income, spending, savings and wealth over a year, against the year before. The "
+                            "figures are the monthly statements added up; wealth is the recorded month-end balances."
+                        ),
+                    )
                 return
             with ui.element("div").classes("surface flex flex-col gap-3"):
                 with ui.row().classes("w-full items-baseline gap-2"):

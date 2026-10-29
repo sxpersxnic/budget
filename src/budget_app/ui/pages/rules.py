@@ -13,6 +13,7 @@ from budget_app.services import accounts as acc_svc
 from budget_app.services import rules as rules_svc
 from budget_app.services.context import Context
 from budget_app.ui.layout import frame, named, on_data_changed, undoable
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.rule_sheet import open_rule_sheet
 
@@ -32,27 +33,28 @@ def caption(ctx: Context, rule: Rule) -> str:
 
 
 def page() -> None:
-    with frame(t("Categorization Rules"), "/rules", narrow=True) as (ctx, actions):
-        with actions:
-            ui.button(t("New Rule"), icon="add", on_click=lambda: open_rule_sheet(ctx, refresh)).props("unelevated")
-        ui.label(
-            t(
-                "A rule suggests its category for new and imported transactions whose payee or bank text contains "
-                "its text. The longest text wins. Create one with “Always Categorize Like This…” on a transaction."
-            )
-        ).classes("caption -mt-2")
+    # each group adds its own type of rule with its "Add Rule…" row, so the header has no button of its own
+    with frame(t("Categorization Rules"), "/rules", narrow=True) as (ctx, _actions):
 
         @ui.refreshable
         def rule_list() -> None:
             rules = rules_svc.all_rules(ctx)
-            for kind in rules_svc.RULE_TYPES:
+            for i, kind in enumerate(rules_svc.RULE_TYPES):
                 shown = [r for r in rules if r.type == kind]
                 with ui.column().classes("w-full gap-0"):
                     ui.label(t(TX_TYPES[kind])).classes("group-header")
                     with ui.element("div").classes("group"):
                         if not shown:
-                            with ui.element("div").classes("group-row"):
-                                ui.label(t("No rules yet.")).classes("text-2")
+                            empty_state(
+                                t("No rules yet."),
+                                t(
+                                    "A rule suggests its category for new and imported transactions whose payee or "
+                                    "bank text contains its text; the longest text wins. Create one here, or with "
+                                    "“Always Categorize Like This…” on a transaction."
+                                )
+                                if not rules and i == 0
+                                else "",
+                            )
                         for rule in shown:
                             _row(rule)
                         with ui.element("div").classes("group-row"):

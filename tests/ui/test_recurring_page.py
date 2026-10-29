@@ -1,4 +1,5 @@
-"""The Recurring page (F05): the Due list, booking and skipping, the series sheet, and Make Recurring."""
+"""The Recurring page (F05): the Due list, booking and skipping, the series sheet, one primary action, and Make
+Recurring. Its *Found in Your Transactions* part (F17) is tested in `test_recurring_found.py`."""
 
 import asyncio
 import re
@@ -16,7 +17,7 @@ from budget_app.services.recurring import RecurringInput
 from budget_app.services.transactions import TransactionInput
 from budget_app.ui import layout
 
-RENT = "04.1 Actual rental payments made for housing"
+RENT = "04.1 Rent"
 SELECTED = re.compile(r".*getSelectedRows")
 
 
@@ -92,9 +93,18 @@ async def settle() -> None:
 # ------------------------------------------------------------------ the page
 async def test_empty_page(user: User, ctx) -> None:
     await user.open("/recurring")
-    await user.should_see("Nothing is due.")
-    await user.should_see("No recurring transactions yet.")
+    await user.should_see("Rent, premiums, a salary: add what repeats with New Recurring Transaction")
+    await user.should_not_see("Nothing is due.")  # without a series nothing can be due
     await user.should_not_see("Book All")
+    # one primary action, in the header; no second "Add Recurring Transaction…" in the list
+    assert len(page_buttons(user, "New Recurring Transaction")) == 1
+    assert not page_buttons(user, "Add Recurring Transaction…")
+
+
+async def test_nothing_due_with_a_series(user: User, ctx, setup) -> None:
+    rec_svc.save(ctx, rent(setup, start=first_of(-1)))
+    await user.open("/recurring")
+    await user.should_see("Nothing is due.")
 
 
 async def test_due_occurrences_are_listed_with_the_series(user: User, ctx, setup) -> None:
@@ -174,14 +184,13 @@ async def test_book_all_with_an_edit_and_a_failure(user: User, ctx, setup) -> No
 
 async def test_the_sidebar_counts_due_occurrences(user: User, ctx, setup) -> None:
     rec_svc.save(ctx, rent(setup))
-    await user.open("/")
-    badges = [b for b in user.find(kind=ui.badge).elements if "nav-badge" in b.classes]
-    assert [b.text for b in badges if b.visible] == ["3", "3"]  # Recurring's, and Reminders' counting them (F31)
     await user.open("/recurring")
+    badges = layout._due_badges[user.client]
+    # the Overview's Due list has one row per series; the Recurring tab counts the occurrences
+    assert (badges["/"].text, badges["/recurring"].text) == ("1", "3")
     click(user, page_buttons(user, "Book")[0])
     await settle()
-    shown = [b.text for b in user.find(kind=ui.badge).elements if "nav-badge" in b.classes and b.visible]
-    assert shown == ["2", "2"]
+    assert (badges["/"].text, badges["/recurring"].text) == ("1", "2")
 
 
 # ------------------------------------------------------------------ the sheet
