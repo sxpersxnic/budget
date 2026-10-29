@@ -1153,8 +1153,8 @@ NEW-POLISH. **Headers hold the title and its actions; explanations live in the e
     action: while a list is empty its header button waits and the empty state offers it, so the screen still has
     one; *New Transaction* is the sidebar's only; *Record Balance* on Budget is secondary; Rules adds by type from
     each group's *Add Rule…* row, as the other grouped lists do. The Transactions toolbar keeps Search and Filters
-    and puts Import, Receipt and the exports behind *More*, a text button (an icon button's tooltip covered the open
-    menu). Grids filter in one place, the search and the *Filters* panel, so the column headers carry no filter
+    and puts Import, Receipt and the exports behind *More* (an icon button named for screen readers, as on Budget
+    Plan). Grids filter in one place, the search and the *Filters* panel, so the column headers carry no filter
     menus; the header-less selection column is named by its select-all checkbox. With one profile, Profiles is the
     *Add Profile…* row (the name the other add rows use; the open folder shows under Data Folder). Alternatives
     weighed: a help link per page (no help pages exist yet to link to), and keeping the header button beside the

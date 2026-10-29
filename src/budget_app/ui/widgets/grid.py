@@ -250,9 +250,8 @@ def export_menu(name: str, title: str, columns: Callable[[], list[dict]], rows: 
 def more_menu():
     """The page's secondary actions behind one "More" button, so the toolbar keeps its search and filters in one
     row (UX review, section 2). Yields the open menu; add `ui.menu_item`s to it."""
-    # a text button beside Filters, so it needs no tooltip (one would cover the open menu)
     with (
-        ui.button(t("More"), icon="more_horiz").props("flat").classes("text-primary"),
+        named(ui.button(icon="more_horiz").props("flat round").classes("text-primary"), t("More")),
         ui.menu().props("auto-close") as menu,
     ):
         yield menu

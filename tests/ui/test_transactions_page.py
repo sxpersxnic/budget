@@ -330,8 +330,8 @@ async def test_new_transaction_from_the_sidebar_refreshes_the_list(user: User, c
 
 async def test_import_in_the_more_menu_opens_the_import_page(user: User) -> None:
     await user.open("/transactions")
-    [more] = [b for b in user.find(kind=ui.button).elements if b.text == "More"]  # beside Filters, named by its text
-    assert more.props["icon"] == "more_horiz"
+    [more] = [b for b in user.find(kind=ui.button).elements if b.props.get("aria-label") == "More"]
+    assert more.props["icon"] == "more_horiz" and not more.text  # an icon button, named for screen readers
     click(user, menu_item(user, "Import…"))
     await user.should_see("Import Transactions")
 
