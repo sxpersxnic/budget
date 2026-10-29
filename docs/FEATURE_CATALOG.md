@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F27 (done), F19, F30, F32, F31, F22, F23, F33, F34 (done), F15, F17, F26 (done), F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F27 (done), F19, F30, F32, F31, F22, F23, F33, F34 (done), F15, F17, F26 (done), F04, F35 (quick add built) | – |
 
 ### Bugs
 
@@ -188,7 +188,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F32 | ☐ Open | Keyboard shortcuts and accessibility | Experience | M | Local | – |
 | F33 | ☐ Open | In-app update check | Experience | S | Optional | – |
 | F34 | ☑ Done | Several households or profiles | Experience | M | Local | – |
-| F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
+| F35 | ◐ Partly | Phone companion | Experience | XL | Optional | F27 |
 | F36 | ☑ Done | Closing balance from bank files | Data in | M | Local | F01 |
 | F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 added the notes) |
 | F38 | ☑ Done | Exchange-rate chart | Insight | S | Local | – |
@@ -1208,7 +1208,21 @@ per-profile settings.
 
 #### F35 · Phone companion
 
-**Status:** ☐ Open
+**Status:** ◐ Partly (2026-10-28): the smallest step, quick add on the home network, is built; the phone app is not
+
+**As built (decision 21, decision NEW-F35):** *Settings → Security → Quick Add from a Phone · Turn On…* (only with
+the app lock on, after a confirmation that says the connection is not encrypted) lets Budget listen on the home
+network too, on port 8484 (or a free one); the app's own server stays on `127.0.0.1`. *Pair a Phone…* shows the
+address (`http://<computer>:8484/pair`), a QR code of it and a six-digit code that works once, for ten minutes and
+five tries. On the phone, the pairing page takes the code and the phone gets a session of its own; the quick-add
+page then records an expense: amount, account (the last one used first), category (the recent and everyday ones,
+searchable), payee, date and note, and lists what it saved. A phone sees nothing else: every other page, the
+attachment files and the lock page are refused to other devices, requests from outside the home network (public
+addresses) are refused, and so is everything while phones are off. *Turn Off*, *Lock Now*, turning the lock off,
+switching profile and quitting end every phone session; a phone pairs again after each start of the app, since
+sessions live in memory (F27). Not built: the phone app that queues entries offline (the larger step), income and
+transfers from the phone, HTTPS (a self-signed certificate makes phone browsers refuse or warn; the connection is
+plain HTTP on the home network, which the confirmation says), and remembering a paired phone across restarts.
 
 Record expenses on the phone where they happen.
 

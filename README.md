@@ -167,7 +167,8 @@ The app opens in its own window and keeps all data in your user folder:
   The data folder is kept on purpose. Delete it by hand if you want to remove your data too.
 - **Internet:** only needed for the daily exchange-rate download. Offline, the app uses the
   last downloaded rates.
-- **Privacy:** the app only accepts connections from your own computer. Nothing is uploaded.
+- **Privacy:** the app only accepts connections from your own computer, unless you turn on
+  **Quick Add from a Phone** (below). Nothing is uploaded.
 - **App lock:** **Settings → Security → Set Password…** makes the app ask for a password before it
   opens (and again after **Lock Now**, the padlock at the bottom of the sidebar). Without more, your
   files stay plain CSV; if you forget the password, quit the app and delete `security.json` from the
@@ -183,6 +184,12 @@ The app opens in its own window and keeps all data in your user folder:
   password; switch between them at the top of the sidebar. **Remove** only takes a profile off the
   list: its folder and records stay where they are. The list itself is `profiles.json` in the data
   folder above.
+- **Quick add from a phone:** with the app lock on, **Settings → Security → Quick Add from a Phone ·
+  Turn On…** lets a phone on your home network record expenses. **Pair a Phone…** shows an address and a
+  QR code to open on the phone, and a six-digit code to type there; the phone can then add expenses and
+  see nothing else. The connection is not encrypted, so use it at home only. **Turn Off** or **Lock Now**
+  ends it for every phone; after a restart of the app, pair again. Your firewall may ask once whether
+  Budget may accept connections: allow it for private networks only.
 - **Two computers (cloud folder):** **Settings → Data → Data Folder · Move…** copies your records to
   another folder, for example `iCloud Drive/Budget`, `Dropbox/Budget` or `OneDrive/Budget`, and
   uses them there; the old folder is left as it was. On the other computer, add the same folder

@@ -72,6 +72,7 @@ storage/    typed CSV tables + settings JSON
 | `services/security.py` | F27, F35. The process-wide lock state: the open folder's `Vault`, its `Codec` (the key once unlocked) and the sessions, random tokens in the `budget_session` cookie, kind `desktop` (password) or `phone` (pairing code), kept in memory only. `allowed` / `redirect_for` for the page guard; `unlock` and `recover` (wrong answers slowed from the fourth on), handed over as one-time nonces that the `/unlock/<nonce>` route turns into the cookie; `lock`; the Settings actions (`set_password`, `change_password`, `remove_password`, `enable_encryption`, `disable_encryption`, `new_recovery_key`), which re-encode the data folder and its `backups/` copies; `opener` opens the store after the unlock of an encrypted folder. |
 | `services/profiles.py` | F34. The profile rules: `add` (name unique ignoring case; folder typed or `<home>/profiles/<name>`, never another profile's, the home folder, a folder directly inside it or a file), `rename`, `remove` (forgets; not the open one), `switch` (opens the folder through `opener`, set by `main.open_folder`, before the registry changes); `move` (F26: copies a folder, without the lock, claim, registry and temp files, to a new or empty one and reopens the open profile there as the same records). |
 | `services/sync.py` | F26, decision 19. `start(folder)` claims the open folder and takes its files as seen, `stop()` releases it, `others()` lists other computers with it open, `tick()` (every `INTERVAL`, 5 s, from `main.check_folder`) refreshes the claim once a minute and reloads the store (`Store.reload`, in place) when record files changed elsewhere and are the same on two checks; `cloud_folders()` for the Move sheet. |
+| `services/phone.py` | F35, decision 21. `Gate` (ASGI middleware on every server: from another device only `/pair`, `/quick`, the unlock route and NiceGUI's files and socket, only from a private address, only while phones are allowed; else 403 or a closed socket), `admitted(host, path)`, the home-network listener (`start` / `stop` / `sync_listener`: a second uvicorn server on the same app, all interfaces, port 8484 or a free one, inside the app's loop), `addresses()` / `urls()` (the computer's private IPv4 addresses) and `qr_data_url` (zxing-cpp). |
 | `services/accounts.py` | Accounts (with their asset class, F21), advance-payment accounts and income categories, with their deletion rules. |
 | `services/transactions.py` | Validation and saving of the four transaction types, advance payments and settlement; deleting releases the QR bills a deleted transaction paid (F03); `recent_categories()` (the last ten distinct expenditure categories, for the category picker). An edit is `prepare_edit` (validate and build the new record, nothing saved) then `store_edit` (save it, keeping an exchange's spread booking in step); `save` does both. |
 | `services/bulk.py` | Bulk edit (F13): `BulkChanges` (expenditure category, income category, payee, account, tags to add and to remove (F10), note mode and text; `None` or an empty list leaves a field as it is), which field applies to which row (`takes_*`, `is_spread`), `plan()` (every selected row as form input with the changes applied, checked with `prepare_edit`; rows the changes leave as they are drop out, also when the built record equals the stored one) and `bulk_edit()`, all or nothing (`BulkEditError` names the failing rows by date and amount) as one recorded action. Adding a field means one attribute, one `takes_*` rule and one line in `apply()`. |
@@ -103,6 +104,7 @@ storage/    typed CSV tables + settings JSON
 | `ui/widgets/tags.py` | F10. `TagSelect`: a multiple `ui.select` whose chosen tags are chips in their colour (Quasar slots `selected-item` and `option`), a name typed with Enter added as it is (a new tag once saved; a typed name of an existing tag picks it, ignoring case); `chip`, `ColourPicker` (one swatch per palette colour) and `CHIPS_RENDERER`, the AG Grid cell renderer that builds the chips as elements from the row's `_tags`, so names are never HTML. |
 | `ui/widgets/notable.py` | F18. `notable_card(ctx, currency)`, the Overview's *Notable This Month* card: one link row per item (icon, title, reason, amount, chevron) to `link(item, month)`; `texts(item, notable)` words each kind. |
 | `ui/widgets/attachments.py` | F12. `AttachmentList`, the *Attachments* section of the transaction form (see §6), and the route `/attachment/{id}` (`register`, `serve`, `url`), behind the app lock (F27). |
+| `ui/pages/quick_add.py` | F35. The phone's pages, without the sidebar: `pair_page` (`/pair`, outside the lock: the pairing code) and `page` (`/quick`, behind the lock for a phone session: one expense with amount, account, category, payee, date and note). |
 | `ui/pages/` | One module per page (see §6). |
 
 ## 3. Data model (`data/`)
@@ -560,7 +562,8 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 7. **Chart PNGs** are rendered in the browser (Plotly `downloadImage`), so no headless
    Chrome or Kaleido is required.
 8. **Default budget horizon:** December of next year, until it is changed in Settings.
-9. **Localhost only.** The server binds to `127.0.0.1` because the app has no login. Use
+9. **Localhost only.** The server binds to `127.0.0.1` because the app has no login (F35 adds a second
+   listener only while phones are allowed; see decision NEW-F35). Use
    `--host 0.0.0.0` only on a trusted network.
 10. **Exports are formula-safe.** Text cells in Excel and CSV exports that start with `=`,
     `+`, `-`, `@`, a tab or a carriage return are prefixed with `'`. A name like
@@ -820,6 +823,29 @@ NEW-F26. **A cloud folder is used one computer at a time: claims warn, changed f
     place so pages holding it see the new records. Merging per record (F28's history would allow it) was left out
     by decision 19: it needs an answer for every conflict, and one computer at a time needs none. Each computer
     keeps its own profile list, since the paths differ; the second computer adds the cloud folder as a profile.
+
+NEW-F35. **Phones reach the app through a second listener that exists only while phones are allowed, behind a
+    gate, the lock and a pairing code** (F35, decision 21; decision 9). The app's own server keeps binding to
+    `127.0.0.1`, so with phones off nothing on the network can connect, exactly as before. Turning *Quick Add from a
+    Phone* on requires the lock (F27) and a confirmation, and starts a second uvicorn server for the same app on all
+    interfaces, port 8484 (a free one when taken); turning it off, turning the lock off, switching to a profile
+    without it and quitting stop it (`security.on_phone_change` → `phone.sync_listener`). Three checks stand
+    between another device and the records: the `Gate` middleware runs before every route on both servers and lets
+    a non-local client reach only `/pair`, `/quick`, the cookie route and NiceGUI's own files and socket, only from a
+    private address (RFC 1918, link-local, ULA; "no entries from away from home"), and only while phones are
+    allowed; the page guard then wants a phone session for `/quick`; and that session only comes from the six-digit
+    pairing code shown in Settings on the computer (once, ten minutes, five tries, compared in constant time, from
+    `secrets`). A phone session never opens another page, and the lock page and the password are never offered to
+    other devices, so a phone can't reach the desktop session even with the password. The server is not bound to the
+    home address alone because addresses change (DHCP, Wi-Fi and cable); the gate checks the client instead. Plain
+    HTTP, not HTTPS: a self-signed certificate (which `cryptography` could make) makes phone browsers refuse or warn
+    on every visit, and a home network is the boundary decision 21 chose; the confirmation and the README say the
+    connection is not encrypted. What a phone sees is minimal (the account and category names to choose from, and
+    what it saved itself), and what it can do is add an expense, which the history (F28) can undo. Phone sessions
+    live in memory like the desktop's, so a phone pairs again after each start. Starting the app with `--host` on
+    another interface is the user's explicit choice and keeps its old meaning (`security.trust_network`: every client
+    counts as this computer, the lock's password still applies). The phone app with an offline queue (the catalog's
+    larger step) is not built.
 
 ## 8. Testing
 
