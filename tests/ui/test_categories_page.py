@@ -41,7 +41,7 @@ async def test_the_page_lists_every_coicop_category(user: User) -> None:
 
 
 async def test_the_sidebar_links_to_the_page(user: User) -> None:
-    await user.open("/budget-entries")
+    await user.open("/settings")  # a tab of Settings (UX review before 1.0)
     links = [link for link in user.find(ui.link).elements if link.props.get("href") == "/categories"]
     assert len(links) == 1 and "active" not in links[0].classes
     await user.open("/categories")

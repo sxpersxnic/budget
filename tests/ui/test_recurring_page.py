@@ -174,14 +174,12 @@ async def test_book_all_with_an_edit_and_a_failure(user: User, ctx, setup) -> No
 
 async def test_the_sidebar_counts_due_occurrences(user: User, ctx, setup) -> None:
     rec_svc.save(ctx, rent(setup))
-    await user.open("/")
-    badges = [b for b in user.find(kind=ui.badge).elements if "nav-badge" in b.classes]
-    assert [b.text for b in badges if b.visible] == ["3", "3"]  # Recurring's, and Reminders' counting them (F31)
     await user.open("/recurring")
+    badges = layout._due_badges[user.client]
+    assert (badges["/"].text, badges["/recurring"].text) == ("3", "3")  # Overview's Due count, and the Recurring tab's
     click(user, page_buttons(user, "Book")[0])
     await settle()
-    shown = [b.text for b in user.find(kind=ui.badge).elements if "nav-badge" in b.classes and b.visible]
-    assert shown == ["2", "2"]
+    assert (badges["/"].text, badges["/recurring"].text) == ("2", "2")
 
 
 # ------------------------------------------------------------------ the sheet

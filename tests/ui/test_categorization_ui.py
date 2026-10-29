@@ -227,8 +227,8 @@ async def test_the_rules_page_lists_edits_and_deletes(user: User, ctx, setup, th
     await user.should_see("Groceries · 01.1 · Bank (CHF)")
     await user.should_see("Contains “Lohn”")
     await user.should_see("3 rules")
-    [active] = [link for link in user.find(kind=ui.link).elements if "active" in link.classes]
-    assert active.props["href"] == "/payees"  # the page belongs to Payees in the sidebar
+    active = {link.props["href"] for link in user.find(kind=ui.link).elements if "active" in link.classes}
+    assert active == {"/settings", "/payees"}  # Settings in the sidebar, its Payees tab
 
     edit = min((b for b in user.find(kind=ui.button).elements if b.props.get("icon") == "o_edit"), key=lambda b: b.id)
     click(user, edit)
@@ -275,13 +275,10 @@ async def test_a_rule_whose_category_is_gone_says_so(user: User, ctx, setup) -> 
     await user.should_see("Category no longer exists · Account no longer exists")
 
 
-async def test_payees_and_settings_lead_to_the_rules(user: User, ctx, setup) -> None:
+async def test_payees_lead_to_the_rules(user: User, ctx, setup) -> None:
     await user.open("/payees")
     click(user, button(user, "Rules…"))
     await user.should_see("Categorization Rules")
-    await user.open("/settings")
-    await user.should_see("Which category new and imported transactions are given for a payee or bank text.")
-    click(user, button(user, "Rules…"))
     await user.should_see("A rule suggests its category for new and imported transactions")
 
 

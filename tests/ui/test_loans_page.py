@@ -72,9 +72,8 @@ async def test_the_page_without_loans(user: User, ctx) -> None:
     await user.should_see("No loans yet.")
     await user.should_see("0 loans")
     await user.should_see("Nothing is due.")
-    paths = [p for p, _, _ in layout.NAV]
-    assert ("/loans", "Loans", "o_credit_score") in layout.NAV
-    assert paths.index("/loans") == paths.index("/investments") + 1
+    tabs = [p for p, _ in layout.SECTIONS["/accounts"]]  # a tab of Wealth, after Investments
+    assert tabs.index("/loans") == tabs.index("/investments") + 1
     assert "/loans" in layout.BADGES
 
 
@@ -291,10 +290,10 @@ async def test_a_change_elsewhere_refreshes_the_page(user: User, ctx, setup) -> 
 
 
 # ------------------------------------------------------------------ elsewhere
-async def test_settings_budget_and_overview_know_loan_accounts(user: User, ctx, setup, loan) -> None:
+async def test_accounts_budget_and_overview_know_loan_accounts(user: User, ctx, setup, loan) -> None:
     prev = months.previous_month()
     wealth_svc.upsert_entry(ctx, setup["chf"].id, prev, 20_000)
-    await user.open("/settings")
+    await user.open("/accounts")
     await user.should_see("Loans and mortgages · 500'000.00 CHF outstanding")
     row_button(user, "Mortgage", "o_edit").click()
     await settle()
@@ -303,7 +302,7 @@ async def test_settings_budget_and_overview_know_loan_accounts(user: User, ctx, 
     assert select.value == ASSET_LOAN and not select.enabled and list(select.options) == [ASSET_LOAN]
     assert "The outstanding debt of its loan on the Loans page" in sheet_texts(user)
     click(user, sheet_button(user, "Cancel"))
-    await user.open("/settings")
+    await user.open("/accounts")
     click(user, page_button(user, "Add Account…"))
     select = field(user, ui.select, "Asset class")
     assert ASSET_LOAN not in select.options

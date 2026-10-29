@@ -85,8 +85,8 @@ async def settle() -> None:
 
 # ------------------------------------------------------------------ the page
 async def test_the_sidebar_has_the_page_before_the_tax_summary(user: User) -> None:
-    assert layout.NAV[-2] == ("/review", "Year in Review", "o_auto_stories")
-    assert layout.NAV[-1][0] == "/tax"
+    assert layout.NAV[-1][0] == "/review"  # Reports, the last place
+    assert [p for p, _ in layout.SECTIONS["/review"]] == ["/review", "/tax"]
     await user.open("/review")
     await user.should_see("Year in Review")
     await user.should_see(f"Nothing recorded in {date.today().year}")  # no data: this year, so far

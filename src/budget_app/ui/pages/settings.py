@@ -146,7 +146,7 @@ def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
         name.on("keydown.enter", save)
 
 
-def _accounts_group(ctx: Context, kind: str, title: str) -> None:
+def accounts_group(ctx: Context, kind: str, title: str) -> None:
     @ui.refreshable
     def body():
         rows = acc_svc.accounts(ctx, kind)
@@ -255,7 +255,9 @@ def _category_sheet(ctx: Context, refresh, cat=None) -> None:
         name.on("keydown.enter", save)
 
 
-def _income_group(ctx: Context) -> None:
+def income_group(ctx: Context) -> None:
+    """The income categories, with add, rename and delete; on the Categories page."""
+
     @ui.refreshable
     def body():
         with ui.element("div").classes("group"):
@@ -298,15 +300,6 @@ def _income_group(ctx: Context) -> None:
     with ui.column().classes("w-full gap-0"):
         ui.label(t("Income Categories")).classes("group-header")
         body()
-        with ui.element("div").classes("group mt-3"), ui.element("div").classes("group-row"):
-            with ui.column().classes("gap-0 flex-1 min-w-0"):
-                ui.label(t("Categorization Rules"))
-                ui.label(t("Which category new and imported transactions are given for a payee or bank text.")).classes(
-                    "caption"
-                )
-            ui.button(t("Rules…"), on_click=lambda: ui.navigate.to("/rules")).props("flat dense no-caps").classes(
-                "text-primary"
-            )
 
 
 def _reminders_group(ctx: Context) -> None:
@@ -1021,9 +1014,6 @@ def page() -> None:
                             "caption"
                         )
                     ui.label(BASE_CURRENCY).classes("text-2 pr-2")
-        _accounts_group(ctx, ACCOUNT_REGULAR, t("Accounts"))
-        _accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"))
-        _income_group(ctx)
         _reminders_group(ctx)
         _profiles_group()
         _security_group(ctx)

@@ -29,6 +29,7 @@ from budget_app.storage import lock as instance_lock
 from budget_app.ui import theme
 from budget_app.ui.layout import book_recurring, check_updates, records_reloaded, refresh_rates
 from budget_app.ui.pages import (
+    accounts,
     add_budget,
     add_transaction,
     bills,
@@ -84,6 +85,7 @@ PAGES = {
     "/tax": tax.page,
     "/rules": rules.page,
     "/settings": settings.page,
+    "/accounts": accounts.page,  # Wealth: the accounts, out of Settings (UX review before 1.0)
     "/history": history.page,
     "/welcome": welcome.page,  # F30: the first-start screen; the Overview opens it while nothing is recorded
 }

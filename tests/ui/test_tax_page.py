@@ -65,7 +65,7 @@ async def test_the_page_lists_the_sections_of_last_year(user: User, ctx, setup) 
     spend(ctx, setup, 85, "07.3", payee="ZVV")
     spend(ctx, setup, 99, "06", day=date(LAST + 1, 1, 5))  # the next year
     await user.open("/tax")
-    assert layout.NAV[-1] == ("/tax", "Tax Summary", "o_account_balance")
+    assert layout.SECTIONS["/review"][-1] == ("/tax", "Tax Summary")  # the last tab of Reports
     await user.should_see("Tax Summary")
     await user.should_see("Cantonal rules differ", kind=ui.label)
     await user.should_see("Sections can overlap", kind=ui.label)

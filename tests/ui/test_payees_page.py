@@ -90,7 +90,7 @@ def shops(ctx, setup) -> None:
 async def test_the_page_lists_payees_with_counts_and_amounts(user: User, ctx, setup) -> None:
     await user.open("/payees")
     await user.should_see("No payees yet. Add one on a transaction, or import a bank file.")
-    assert ("/payees", "Payees", "o_storefront") in layout.NAV
+    assert ("/payees", "Payees") in layout.SECTIONS["/settings"]  # a list, among the settings' tabs
 
     shops(ctx, setup)
     await user.open("/payees")

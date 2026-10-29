@@ -346,8 +346,8 @@ async def test_bulk_edit_leaves_booked_rows(user: User, ctx, bought) -> None:
     assert "2 transactions booked on the Investments page stay as they are" in sheet_texts(user)
 
 
-async def test_settings_set_the_asset_class(user: User, ctx, setup) -> None:
-    await user.open("/settings")
+async def test_the_accounts_page_sets_the_asset_class(user: User, ctx, setup) -> None:
+    await user.open("/accounts")
     await click(user, page_button(user, "Add Account…"))
     assert "Valued from the balances you record" in sheet_texts(user)
     await put(user, field(user, ui.input, "Name"), "Broker")
@@ -358,7 +358,7 @@ async def test_settings_set_the_asset_class(user: User, ctx, setup) -> None:
     assert acc.asset_class == ASSET_SECURITIES
     await user.should_see("Securities · 0.00 CHF in holdings")
     acc_svc.edit_account(ctx, setup["eur"].id, "Euro account", "EUR", ASSET_PILLAR3A)
-    await user.open("/settings")
+    await user.open("/accounts")
     await user.should_see("Pillar 3a · No balance recorded")
 
 

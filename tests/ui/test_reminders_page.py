@@ -21,14 +21,9 @@ from budget_app.ui import layout
 TODAY = date.today()
 
 
-def nav_badges(user: User) -> list[ui.badge]:
-    with user:  # hidden ones too
-        badges = [e for e in user.client.elements.values() if isinstance(e, ui.badge) and "nav-badge" in e.classes]
-    return sorted(badges, key=lambda b: b.id)
-
-
 def reminders_badge(user: User) -> ui.badge:
-    return nav_badges(user)[2]  # Recurring, Bills, then Reminders
+    """The sidebar's one badge, beside Overview."""
+    return layout._due_badges[user.client]["/"]
 
 
 def links(user: User) -> list[str]:
@@ -39,9 +34,7 @@ def links(user: User) -> list[str]:
 async def test_the_page_without_reminders(user: User, ctx) -> None:
     await user.open("/reminders")
     await user.should_see("Nothing to do right now.")
-    paths = [p for p, _, _ in layout.NAV]
-    assert ("/reminders", "Reminders", "o_notifications_none") in layout.NAV
-    assert paths.index("/reminders") == paths.index("/bills") + 1
+    assert layout.BADGES["/"] == "Things to do" and layout.NAV_PARENT["/reminders"] == "/"
     assert not reminders_badge(user).visible
 
 

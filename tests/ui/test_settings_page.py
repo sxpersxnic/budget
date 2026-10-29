@@ -108,20 +108,23 @@ async def test_rows_show_balances_and_outstanding_advances(user: User, ctx, setu
             debtor="Anna",
         ),
     )
-    await user.open("/settings")
-    await user.should_see("Settings")
+    await user.open("/accounts")  # Wealth's first page, out of Settings (UX review before 1.0)
+    await user.should_see("Accounts")
     await user.should_see("1'234.50 CHF at the end of Sep 2026")
     await user.should_see("No balance recorded")  # the euro account has none
     await user.should_see("Flatmates")
     await user.should_see("40.00 CHF outstanding")
+    await user.open("/categories")  # income categories beside the COICOP ones
     await user.should_see("Salary")
+    await user.open("/settings")  # preferences only
     await user.should_see("Base Currency")
     await user.should_see("Every amount is also stored in this currency. It can’t be changed.")
+    await user.should_not_see("Flatmates")
 
 
 # ------------------------------------------------------------------ accounts
 async def test_add_account(user: User, ctx) -> None:
-    await user.open("/settings")
+    await user.open("/accounts")
     user.find("Add Account…").click()
     assert "Every transaction on this account will be in this currency." in dialog_texts(user)
     name = dialog_field(user, ui.input, "Name")
@@ -139,7 +142,7 @@ async def test_add_account(user: User, ctx) -> None:
 
 
 async def test_add_account_with_enter_key(user: User, ctx) -> None:
-    await user.open("/settings")
+    await user.open("/accounts")
     user.find("Add Account…").click()
     name = dialog_field(user, ui.input, "Name")
     set_value(user, name, "Wallet")
@@ -148,7 +151,7 @@ async def test_add_account_with_enter_key(user: User, ctx) -> None:
 
 
 async def test_add_account_refuses_empty_and_duplicate_names(user: User, ctx, setup) -> None:
-    await user.open("/settings")
+    await user.open("/accounts")
     user.find("Add Account…").click()
     dialog_button(user, "Add").click()
     await user.should_see("Name is required")
@@ -162,7 +165,7 @@ async def test_add_account_refuses_empty_and_duplicate_names(user: User, ctx, se
 
 
 async def test_add_advance_payment_account(user: User, ctx) -> None:
-    await user.open("/settings")
+    await user.open("/accounts")
     await user.should_see("Advance Payment Accounts")
     user.find("Add Advance Payment Account…").click()
     assert "New Advance Payment Account" in dialog_texts(user)
@@ -175,7 +178,7 @@ async def test_add_advance_payment_account(user: User, ctx) -> None:
 
 
 async def test_edit_account_name_and_currency(user: User, ctx, setup) -> None:
-    await user.open("/settings")
+    await user.open("/accounts")
     row_button(user, "Euro account", "o_edit").click()
     assert "Edit Account" in dialog_texts(user)
     cur = dialog_field(user, ui.select, "Currency")
@@ -191,7 +194,7 @@ async def test_edit_account_name_and_currency(user: User, ctx, setup) -> None:
 
 async def test_edit_account_in_use_keeps_its_currency(user: User, ctx, setup) -> None:
     wealth_svc.upsert_entry(ctx, setup["chf"].id, "2026-09", 500)
-    await user.open("/settings")
+    await user.open("/accounts")
     row_button(user, "Bank", "o_edit").click()
     # a recorded balance is enough to lock the currency, and the caption says so (B11)
     assert "The currency can’t change while transactions or recorded balances use this account." in dialog_texts(user)
@@ -204,14 +207,14 @@ async def test_edit_account_in_use_keeps_its_currency(user: User, ctx, setup) ->
 
 async def test_edit_advance_account_title(user: User, ctx) -> None:
     acc_svc.add_account(ctx, "Club", "CHF", ACCOUNT_ADVANCE)
-    await user.open("/settings")
+    await user.open("/accounts")
     row_button(user, "Club", "o_edit").click()
     assert "Edit Advance Payment Account" in dialog_texts(user)
 
 
 async def test_delete_unused_account_removes_its_balances(user: User, ctx, setup) -> None:
     wealth_svc.upsert_entry(ctx, setup["eur"].id, "2026-09", 900)
-    await user.open("/settings")
+    await user.open("/accounts")
     row_button(user, "Euro account", "o_delete").click()
     assert "Delete “Euro account”?" in dialog_texts(user)
     assert any("Accounts with transactions can’t be deleted." in s for s in dialog_texts(user))
@@ -223,14 +226,14 @@ async def test_delete_unused_account_removes_its_balances(user: User, ctx, setup
 
 
 async def test_delete_cancelled_keeps_the_account(user: User, ctx, setup) -> None:
-    await user.open("/settings")
+    await user.open("/accounts")
     row_button(user, "Euro account", "o_delete").click()
     dialog_button(user, "Cancel").click()
     assert ctx.store.accounts.get(setup["eur"].id) is not None
 
 
 async def test_account_with_transactions_cannot_be_deleted(user: User, ctx, demo) -> None:
-    await user.open("/settings")
+    await user.open("/accounts")
     row_button(user, "Bank", "o_delete").click()
     dialog_button(user, "Delete").click()
     await user.should_see("Accounts with transactions cannot be deleted")
@@ -240,7 +243,7 @@ async def test_account_with_transactions_cannot_be_deleted(user: User, ctx, demo
 
 # ------------------------------------------------------------------ income categories
 async def test_add_income_category(user: User, ctx) -> None:
-    await user.open("/settings")
+    await user.open("/categories")
     user.find("Add Category…").click()
     assert "New Income Category" in dialog_texts(user)
     set_value(user, dialog_field(user, ui.input, "Name"), "Bonus")
@@ -250,7 +253,7 @@ async def test_add_income_category(user: User, ctx) -> None:
 
 
 async def test_add_income_category_refuses_duplicates(user: User, ctx, setup) -> None:
-    await user.open("/settings")
+    await user.open("/categories")
     user.find("Add Category…").click()
     name = dialog_field(user, ui.input, "Name")
     set_value(user, name, "salary")
@@ -260,7 +263,7 @@ async def test_add_income_category_refuses_duplicates(user: User, ctx, setup) ->
 
 
 async def test_rename_income_category(user: User, ctx, setup) -> None:
-    await user.open("/settings")
+    await user.open("/categories")
     row_button(user, "Salary", "o_edit").click()
     assert "Rename Income Category" in dialog_texts(user)
     name = dialog_field(user, ui.input, "Name")
@@ -275,7 +278,7 @@ async def test_rename_income_category(user: User, ctx, setup) -> None:
 
 
 async def test_delete_unused_income_category(user: User, ctx, setup) -> None:
-    await user.open("/settings")
+    await user.open("/categories")
     row_button(user, "Salary", "o_delete").click()
     assert "Categories that are in use can’t be deleted." in dialog_texts(user)
     dialog_button(user, "Delete").click()
@@ -285,7 +288,7 @@ async def test_delete_unused_income_category(user: User, ctx, setup) -> None:
 
 
 async def test_used_income_category_cannot_be_deleted(user: User, ctx, demo) -> None:
-    await user.open("/settings")
+    await user.open("/categories")
     row_button(user, "Salary", "o_delete").click()
     dialog_button(user, "Delete").click()
     await user.should_see("Income categories with entries cannot be deleted")

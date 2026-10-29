@@ -36,6 +36,7 @@ from budget_app.i18n import N_, t, tn
 from budget_app.services import aggregates
 from budget_app.services.context import Context
 from budget_app.ui.layout import fmt, frame
+from budget_app.ui.pages.settings import income_group
 
 # The row: code, name (divisions bold) with the notes button, number of subcategories, amount spent this year;
 # below it the notes once opened. Clicks inside the notes neither open nor close the node.
@@ -205,3 +206,4 @@ def page() -> None:
 
         search.on_value_change(lambda e: apply(e.value))
         tree.on("notes", lambda e: toggle_notes(str(e.args)))
+        income_group(ctx)  # what income is booked under; expenditure follows COICOP above

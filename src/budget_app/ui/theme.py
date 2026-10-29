@@ -134,7 +134,16 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 
 /* ---------------------------------------------------------------- page chrome */
 .page { width: 100%; max-width: 72rem; margin: 0 auto; padding: 28px 32px 64px; gap: 20px; }
-.page.narrow { max-width: 40rem; }
+/* every page has the same column, so the title never moves; a narrow page keeps its lists to a readable width,
+   left-aligned under the title (UX review before 1.0) */
+.page.narrow > * { max-width: 46rem; }
+/* the pages of a place, as tabs under the title */
+.section-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: -8px; border-bottom: 0.5px solid var(--separator);
+  width: 100%; }
+.section-tab { display: flex; align-items: center; gap: 6px; padding: 6px 12px 8px; margin-bottom: -0.5px;
+  color: var(--label-2); font-size: 14px; text-decoration: none; border-bottom: 2px solid transparent; }
+.section-tab:hover { color: var(--label); }
+.section-tab.active { color: var(--label); font-weight: 600; border-bottom-color: var(--accent); }
 .page.wide { max-width: 100rem; }  /* the budget page: room for two tables side by side */
 @media (max-width: 640px) { .page { padding: 16px 16px 48px; gap: 16px; } }
 .large-title { font-size: 28px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.15; color: var(--label); }

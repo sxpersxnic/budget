@@ -99,16 +99,16 @@ def page() -> None:
                     _row(
                         t("Your Own Data"),
                         t(
-                            "Add your accounts and income categories in Settings, then record each account’s "
-                            "balance on the Budget page."
+                            "Add your accounts, then record each account’s balance on the Budget page. "
+                            "Income categories are under Settings → Categories."
                         ),
                     )
 
                     def own_data() -> None:
                         demo_svc.finish_onboarding(ctx)
-                        ui.navigate.to("/settings")
+                        ui.navigate.to("/accounts")  # Wealth · Accounts, the first step
 
-                    ui.button(t("Open Settings"), on_click=own_data).props("unelevated no-wrap").classes(
+                    ui.button(t("Add Accounts"), on_click=own_data).props("unelevated no-wrap").classes(
                         "bg-primary text-white"
                     )
                 with ui.element("div").classes("group-row"):

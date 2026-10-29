@@ -64,9 +64,8 @@ async def test_the_page_without_goals(user: User, ctx) -> None:
     await user.open("/goals")
     await user.should_see("No goals yet.")
     await user.should_see("0 goals")
-    paths = [p for p, _, _ in layout.NAV]
-    assert ("/goals", "Goals", "o_flag") in layout.NAV
-    assert paths.index("/goals") == paths.index("/budget-entries") + 1
+    tabs = [p for p, _ in layout.SECTIONS["/budget-entries"]]  # a tab of Plan, after the budget plan
+    assert tabs.index("/goals") == tabs.index("/budget-entries") + 1
     await open_overview(user)
     await user.should_not_see("All Goals")
 

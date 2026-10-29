@@ -33,43 +33,65 @@ from budget_app.ui import theme
 log = logging.getLogger(__name__)
 
 # Places only. Creating things ("Add transaction", "Add budget entry") is an action, offered where it is needed.
+# Seven places (UX review before 1.0); a place with several pages shows them as tabs under its title (SECTIONS).
 NAV = [
     ("/", N_("Overview"), "o_space_dashboard"),
     ("/budget", N_("Budget"), "o_donut_large"),
     ("/transactions", N_("Transactions"), "o_receipt_long"),
-    ("/recurring", N_("Recurring"), "o_event_repeat"),
-    ("/subscriptions", N_("Subscriptions"), "o_subscriptions"),  # F17: what repeats without a series yet
-    ("/bills", N_("Bills"), "o_request_quote"),
-    ("/reminders", N_("Reminders"), "o_notifications_none"),  # F31: due things, overruns and goals in one list
-    ("/budget-entries", N_("Budget Plan"), "o_event_note"),
-    ("/goals", N_("Goals"), "o_flag"),
-    ("/scenarios", N_("Scenarios"), "o_alt_route"),  # F15: what-if futures beside the plan
-    ("/categories", N_("Categories"), "o_account_tree"),
-    ("/payees", N_("Payees"), "o_storefront"),
-    ("/tags", N_("Tags"), "o_sell"),
-    ("/investments", N_("Investments"), "o_show_chart"),
-    ("/loans", N_("Loans"), "o_credit_score"),  # F22
-    ("/shared", N_("Shared Expenses"), "o_group"),  # F23: who owes what
-    # the two yearly pages close the list: both draw on all the others and are opened a few times a year
-    ("/review", N_("Year in Review"), "o_auto_stories"),  # F19
-    ("/tax", N_("Tax Summary"), "o_account_balance"),  # F20: once a year, so last
+    ("/budget-entries", N_("Plan"), "o_event_note"),
+    ("/accounts", N_("Wealth"), "o_account_balance_wallet"),
+    ("/review", N_("Reports"), "o_insert_chart"),  # the yearly pages: opened a few times a year
 ]
 SETTINGS = ("/settings", N_("Settings"), "o_settings")
-# Routes that are not in the sidebar highlight their parent.
-NAV_PARENT = {
+# The pages of a place, in their order, shown as tabs under the title; the first is the place's own page.
+SECTIONS = {
+    "/transactions": [
+        ("/transactions", N_("Transactions")),
+        ("/recurring", N_("Recurring")),
+        ("/bills", N_("Bills")),
+    ],
+    "/budget-entries": [
+        ("/budget-entries", N_("Budget Plan")),
+        ("/goals", N_("Goals")),
+        ("/scenarios", N_("Scenarios")),
+    ],
+    "/accounts": [
+        ("/accounts", N_("Accounts")),
+        ("/investments", N_("Investments")),
+        ("/loans", N_("Loans")),
+        ("/shared", N_("Shared Expenses")),
+    ],
+    "/review": [
+        ("/review", N_("Year in Review")),
+        ("/tax", N_("Tax Summary")),
+    ],
+    "/settings": [
+        ("/settings", N_("General")),
+        ("/categories", N_("Categories")),
+        ("/payees", N_("Payees")),
+        ("/tags", N_("Tags")),
+    ],
+}
+# Pages that are no tab highlight the tab they belong to.
+TAB_PARENT = {
     "/add-transaction": "/transactions",
     "/import": "/transactions",
+    "/subscriptions": "/recurring",
     "/add-budget": "/budget-entries",
     "/history": "/settings",
     "/rules": "/payees",
+    "/reminders": "/",
 }
+# Every route that is not a place highlights its place in the sidebar.
+NAV_PARENT = {tab: place for place, tabs in SECTIONS.items() for tab, _ in tabs if tab != place}
+NAV_PARENT |= {route: NAV_PARENT.get(tab, tab) for route, tab in TAB_PARENT.items()}
 
 # F32: the keys the shortcuts sheet lists, in its order. They work wherever the cursor is not in a field.
 SHORTCUTS = [
     ("N", N_("New Transaction")),
     ("/", N_("Search this page")),
     ("← →", N_("Previous or next month")),
-    ("1 – 9", N_("The places in the sidebar, in their order")),
+    (f"1 – {len(NAV)}", N_("The places in the sidebar, in their order")),
     (",", N_("Settings")),
     ("Ctrl/⌘ Enter", N_("Save the open sheet")),
     ("Esc", N_("Close the open sheet")),
@@ -88,9 +110,9 @@ _sheets: weakref.WeakKeyDictionary[Client, weakref.WeakSet[ui.dialog]] = weakref
 # per page: the sidebar badges by route (due recurring transactions, bills due soon, reminders)
 _due_badges: weakref.WeakKeyDictionary[Client, dict[str, ui.badge]] = weakref.WeakKeyDictionary()
 BADGES = {
-    "/recurring": N_("Due recurring transactions"),
+    "/": N_("Things to do"),  # in the sidebar: what the Overview's Due list holds
+    "/recurring": N_("Due recurring transactions"),  # the others on their tabs
     "/bills": N_("Bills due within a week or overdue"),
-    "/reminders": N_("Reminders"),
     "/loans": N_("Due loan payments"),
 }
 
@@ -189,14 +211,14 @@ def _open_elsewhere() -> None:
 
 
 def refresh_due_badge() -> None:
-    """Show the number of due recurring transactions beside "Recurring", of the open bills due within a week or
-    overdue beside "Bills" (F03), of the reminders beside "Reminders" (F31) and of the due loan payments beside
-    "Loans" (F22) in the sidebar."""
+    """Show how many things are due beside "Overview" in the sidebar, and on their tabs the due recurring
+    transactions (Recurring), the open bills due within a week or overdue (Bills, F03) and the due loan payments
+    (Loans, F22)."""
     badges = _due_badges.get(ui.context.client, {})
     counts = {
+        "/": reminders_svc.count,
         "/recurring": recurring_svc.due_count,
         "/bills": bills_svc.due_count,
-        "/reminders": reminders_svc.count,
         "/loans": loan_svc.due_count,
     }
     for target, badge in badges.items():
@@ -205,7 +227,15 @@ def refresh_due_badge() -> None:
         badge.set_visibility(n > 0)
 
 
-# ------------------------------------------------------------------ frame
+def _badge(target: str) -> None:
+    """The count beside a place or tab that has one (BADGES)."""
+    if target in BADGES:
+        badge = ui.badge().props("rounded").classes("nav-badge")
+        badge.tooltip(t(BADGES[target]))
+        _due_badges.setdefault(ui.context.client, {})[target] = badge
+        refresh_due_badge()
+
+
 def _nav_item(target: str, label: str, icon: str, active: bool) -> None:
     with (
         ui.link(target=target)
@@ -216,10 +246,23 @@ def _nav_item(target: str, label: str, icon: str, active: bool) -> None:
         ui.label(t(label))
         if target in BADGES:
             ui.space()
-            badge = ui.badge().props("rounded").classes("nav-badge")
-            badge.tooltip(t(BADGES[target]))
-            _due_badges.setdefault(ui.context.client, {})[target] = badge
-            refresh_due_badge()
+            _badge(target)
+
+
+def _section_tabs(place: str, path: str) -> None:
+    """The pages of a place as tabs under the title; the open one is marked."""
+    current = TAB_PARENT.get(path, path)
+    with ui.element("nav").classes("section-tabs") as nav:
+        nav.props["aria-label"] = t(next(label for target, label, _ in [*NAV, SETTINGS] if target == place))
+        for target, label in SECTIONS[place]:
+            active = target == current
+            with (
+                ui.link(target=target)
+                .classes("section-tab" + (" active" if active else ""))
+                .props('aria-current="page"' if active else "")
+            ):
+                ui.label(t(label))
+                _badge(target)
 
 
 def _new_transaction() -> None:
@@ -405,6 +448,9 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
                     ui.label(subtitle).classes("title-sub")
             ui.space()
             actions = ui.row().classes("items-center gap-2 flex-wrap")
+        place = NAV_PARENT.get(path, path)
+        if place in SECTIONS:
+            _section_tabs(place, path)
         yield ctx, actions
 
 

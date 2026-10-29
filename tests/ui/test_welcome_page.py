@@ -65,7 +65,7 @@ async def test_the_first_start_opens_the_welcome_screen(user: User, first_run, t
     await user.should_see("Before You Start")
     await user.should_see(str(tmp_path))  # the data folder
     await user.should_see("Load Sample Data")
-    await user.should_see("Open Settings")
+    await user.should_see("Add Accounts")
     # no sidebar on the first screen
     with user:
         assert not any(isinstance(e, ui.left_drawer) for e in user.client.elements.values())
@@ -111,11 +111,10 @@ def _currency(user: User) -> ui.select:
 
 
 # ------------------------------------------------------------------ the two ways in
-async def test_open_settings_passes_the_screen(user: User, first_run, tmp_path) -> None:
+async def test_add_accounts_passes_the_screen(user: User, first_run, tmp_path) -> None:
     await user.open("/welcome")
-    user.find("Open Settings").click()
-    await user.should_see("Accounts")  # the Settings page
-    await user.should_see("Add Account…")
+    user.find("Add Accounts").click()
+    await user.should_see("Add Account…")  # Wealth · Accounts
     assert first_run.store.settings.onboarding_done
     assert Store(tmp_path).settings.onboarding_done
     await user.open("/")

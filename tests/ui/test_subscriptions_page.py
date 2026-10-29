@@ -62,8 +62,7 @@ async def settle() -> None:
 
 
 async def test_the_empty_page_and_the_sidebar_entry(user: User, ctx) -> None:
-    assert layout.NAV[4] == ("/subscriptions", "Subscriptions", "o_subscriptions")
-    assert layout.NAV[3][0] == "/recurring"
+    assert layout.TAB_PARENT["/subscriptions"] == "/recurring"  # shown under Transactions · Recurring
     await user.open("/subscriptions")
     await user.should_see("Subscriptions")
     await user.should_see("Nothing detected yet. A subscription shows once it was charged 3 times")

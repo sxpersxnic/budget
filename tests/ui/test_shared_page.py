@@ -56,9 +56,8 @@ async def test_the_page_without_debts(user: User, ctx) -> None:
     await user.open("/shared")
     await user.should_see("Nobody owes you anything.")
     await user.should_see("0 people owe you")
-    paths = [p for p, _, _ in layout.NAV]
-    assert ("/shared", "Shared Expenses", "o_group") in layout.NAV
-    assert paths.index("/shared") == paths.index("/loans") + 1
+    tabs = [p for p, _ in layout.SECTIONS["/accounts"]]  # a tab of Wealth, after Loans
+    assert tabs.index("/shared") == tabs.index("/loans") + 1
 
 
 async def test_people_with_their_items(user: User, ctx, debts) -> None:
