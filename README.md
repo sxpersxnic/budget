@@ -184,9 +184,9 @@ The app opens in its own window and keeps all data in your user folder:
    (with a COICOP category or taxes), income, transfers, currency exchanges and
    revaluations (a change in an account's value, such as a gain on an investment). Turn on
    *Partly paid for others* when part of a payment was for someone else. Record their
-   repayment later as income with *Repays an advance payment*. Under **Items** you can list
-   what you bought (for example a grocery receipt) with quantity and price; the Transactions
-   search then also finds a purchase by item name. To **split** an expenditure across categories
+   repayment later as income with *Repays an advance payment*, or on the **Shared Expenses**
+   page. Under **Items** you can list what you bought (for example a grocery receipt) with
+   quantity and price; the Transactions search then also finds a purchase by item name. To **split** an expenditure across categories
    (food, detergent and a present on one receipt), click the split button beside a line and give it
    its own category, and tags if you like; the line below the list shows what stays in the
    transaction's category ("Rest in 01.1 Food: 23.40"). Reports, budgets, charts and tag totals then
@@ -338,6 +338,13 @@ The app opens in its own window and keeps all data in your user folder:
    planned payments, when it will be paid off and what was booked. If the loan was paid into one of your
    accounts, enter 0 as the debt at the start and record the payout as a transfer from the loan account.
    Budget the interest like any other cost; the repayment doesn't change your wealth.
+   **Shared Expenses** (sidebar): who owes you what. Everyone you named as debtor of a payment *partly paid
+   for others* gets a row with what is still open (per currency), how many payments, the oldest one and what
+   came back this year; unfold the row to see the payments and click one to open it. When someone pays you
+   back, **Settle Up…**: enter the amount, the date and the account it went to. The amount settles their
+   oldest payments first (the sheet shows which) and is recorded as repayments, undoable in one step.
+   **Summary…** gives the open payments as text to copy, or as a text or PDF file to save, so you can send it
+   yourself; the app sends nothing. Names count as the same person regardless of upper case and accents.
 10. **Tax Summary** (sidebar, once a year): the amounts for your tax declaration, last year by
     default, in CHF, in sections for professional expenses, pillar 3a payments, insurance premiums,
     medical and dental costs, donations, childcare, debt interest, the withholding tax to reclaim
