@@ -1,20 +1,21 @@
-"""Reminders and alerts (F31): each kind drawn from its feature, the setting that turns kinds off, the count for
-the sidebar, and nothing beyond what is in the app."""
+"""Reminders and alerts (F31): each kind drawn from its feature, the Overview's Due list they make, the setting that
+turns kinds off, the count for the sidebar (exactly the Due list's rows), and nothing beyond what is in the app."""
 
 import json
 from datetime import date, timedelta
 
-import pytest
-
+from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import Bill
 from budget_app.services import budget as budget_svc
 from budget_app.services import goals as goal_svc
+from budget_app.services import loans as loan_svc
 from budget_app.services import recurring as rec_svc
 from budget_app.services import reminders as rem_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.budget import BudgetInput
 from budget_app.services.goals import GoalInput
+from budget_app.services.loans import LoanInput
 from budget_app.services.recurring import RecurringInput
 from budget_app.services.transactions import TransactionInput
 from budget_app.storage.store import Store
@@ -59,7 +60,7 @@ def test_balances_to_record(ctx, setup):
 
 
 def test_recurring_transactions_due(ctx, setup):
-    rec_svc.save(
+    rent = rec_svc.save(
         ctx,
         RecurringInput(
             amount=1900, currency="CHF", category="04.1", from_account=setup["chf"].id, start=date(2026, 9, 1)
@@ -78,12 +79,48 @@ def test_recurring_transactions_due(ctx, setup):
         ),
     )
     found = rem_svc.reminders(ctx, "CHF", TODAY)[rem_svc.RECURRING]
-    assert [(i.title, i.sub, i.amount, i.tone, i.link) for i in found] == [
-        ("04.1 Rent", "Due since 1 Sep 2026", 1900, rem_svc.LATE, "/recurring"),
-        ("04.1 Rent", "Due since 1 Oct 2026", 1900, rem_svc.LATE, "/recurring"),
-        ("Boss · Salary", "Due today", 100, rem_svc.WARN, "/recurring"),
+    # one item per series: the earliest occurrence, the one to book next, and how many are due
+    assert [(i.title, i.sub, i.amount, i.tone, i.link, i.on, i.times) for i in found] == [
+        (
+            get_coicop().label("04.1"),
+            "2 occurrences due since 1 Sep 2026",
+            1900,
+            rem_svc.LATE,
+            "/recurring",
+            date(2026, 9, 1),
+            2,
+        ),
+        ("Boss · Salary", "Due today", 100, rem_svc.WARN, "/recurring", TODAY, 1),
     ]
-    assert rem_svc.count(ctx, TODAY) == 3
+    assert found[0].ref == rent.id
+    assert rem_svc.count(ctx, TODAY) == 2  # the rows of the Due list; the Recurring tab counts 3 occurrences
+    rec_svc.book(ctx, rent.id, date(2026, 9, 1))
+    [late, _] = rem_svc.reminders(ctx, "CHF", TODAY)[rem_svc.RECURRING]
+    assert (late.sub, late.on, late.times) == ("Due since 1 Oct 2026", date(2026, 10, 1), 1)
+
+
+def test_loan_payments_due(ctx, setup):
+    base = dict(
+        currency="CHF",
+        principal=500_000,
+        start=date(2026, 1, 1),
+        rate=1.5,
+        recur_months=3,
+        first_due=date(2026, 3, 31),
+        amortization=2_500,
+        cash_account=setup["chf"].id,
+    )
+    mortgage = loan_svc.add(ctx, LoanInput(name="Mortgage", **base))
+    loan_svc.add(ctx, LoanInput(name="Car", **(base | dict(principal=5_000, first_due=TODAY, rate=0))))
+    loan_svc.add(ctx, LoanInput(name="Later", **(base | dict(first_due=date(2026, 12, 31)))))
+    found = rem_svc.reminders(ctx, "CHF", TODAY)[rem_svc.LOANS]
+    assert [(i.title, i.sub, i.amount, i.currency, i.tone, i.link, i.on, i.times) for i in found] == [
+        ("Mortgage", "3 payments due since 31 Mar 2026", 4_375, "CHF", rem_svc.LATE, "/loans", date(2026, 3, 31), 3),
+        ("Car", "Due today", 2_500, "CHF", rem_svc.WARN, "/loans", TODAY, 1),
+    ]
+    assert found[0].ref == mortgage.id
+    loan_svc.book(ctx, mortgage.id, date(2026, 3, 31))
+    assert rem_svc.reminders(ctx, "CHF", TODAY)[rem_svc.LOANS][0].sub == "2 payments due since 30 Jun 2026"
 
 
 def test_bills_due(ctx, setup):
@@ -101,39 +138,27 @@ def test_bills_due(ctx, setup):
     assert all(i.link == "/bills" for i in found)
 
 
-def test_budgets_exceeded_or_on_pace(ctx, setup):
-    for code, amount in (("01.1", 500), ("07.3", 100)):
-        budget_svc.create(
-            ctx,
-            BudgetInput(
-                start_month="2026-10",
-                end_month="2026-10",
-                type="expenditure",
-                currency="CHF",
-                amount=amount,
-                category=code,
-            ),
-        )
-    for day, amount, code in ((2, 300, "01.1.1"), (9, 300, "01.1"), (3, 25, "07.3"), (8, 25, "07.3"), (12, 25, "07.3")):
-        tx_svc.save(
-            ctx,
-            TransactionInput(
-                date=date(2026, 10, day),
-                type="expenditure",
-                amount=amount,
-                currency="CHF",
-                category=code,
-                from_account=setup["chf"].id,
-            ),
-        )
-    found = rem_svc.reminders(ctx, "CHF", TODAY)[rem_svc.BUDGETS]
-    assert [(i.title, i.sub, i.amount, i.tone) for i in found] == [
-        ("01.1 Groceries", "100.00 over the 500.00 CHF budget", 600, rem_svc.LATE),
-        ("07.3 Public transport", "On pace for 129.17 of the 100.00 CHF budget", 75, rem_svc.WARN),
-    ]
-    assert found[0].link == "/budget?month=2026-10&category=01.1"
-    eur = rem_svc.reminders(ctx, "EUR", TODAY)[rem_svc.BUDGETS]
-    assert eur[0].currency == "EUR" and eur[0].amount == pytest.approx(600 / 0.94)  # at the transactions' own rate
+def test_budgets_are_notable_not_due(ctx, setup):
+    """An exceeded budget is *Notable This Month* on the Overview (F18), so it is no item of the Due list."""
+    budget_svc.create(
+        ctx,
+        BudgetInput(
+            start_month="2026-10", end_month="2026-10", type="expenditure", currency="CHF", amount=100, category="01.1"
+        ),
+    )
+    tx_svc.save(
+        ctx,
+        TransactionInput(
+            date=date(2026, 10, 2),
+            type="expenditure",
+            amount=600,
+            currency="CHF",
+            category="01.1",
+            from_account=setup["chf"].id,
+        ),
+    )
+    assert rem_svc.reminders(ctx, "CHF", TODAY) == {} and rem_svc.count(ctx, TODAY) == 0
+    assert "budgets" not in rem_svc.KINDS
 
 
 def test_goals_behind_or_overdue(ctx, setup):
@@ -179,6 +204,26 @@ def test_kinds_can_be_turned_off_and_the_setting_is_saved(ctx, setup, tmp_path):
     assert ctx.store.settings.reminders_off == [rem_svc.GOALS]
     assert kinds(rem_svc.reminders(ctx, "CHF", TODAY)) == [rem_svc.BALANCES, rem_svc.BILLS]
     assert rem_svc.count(ctx, TODAY) == 2
+
+
+def test_the_due_list_puts_what_is_overdue_first(ctx, setup):
+    bill(ctx, "Soon", TODAY + timedelta(days=2))
+    bill(ctx, "Late", TODAY - timedelta(days=2))
+    wealth_svc.upsert_entry(ctx, setup["chf"].id, "2026-08", 1200)
+    found = rem_svc.due_list(ctx, "CHF", TODAY)
+    assert [(i.kind, i.title) for i in found] == [
+        (rem_svc.BILLS, "Late"),
+        (rem_svc.BALANCES, "Bank"),  # within a tone, in the order of the kinds
+        (rem_svc.BILLS, "Soon"),
+    ]
+    assert rem_svc.count(ctx, TODAY) == len(found) == 3
+
+
+def test_a_kind_turned_off_before_is_forgotten_once_it_is_gone(ctx):
+    ctx.store.settings.reminders_off = ["budgets", "bills"]  # budgets: a kind of the Reminders page before 1.0
+    assert not rem_svc.enabled(ctx, rem_svc.BILLS)
+    rem_svc.set_enabled(ctx, rem_svc.GOALS, False)
+    assert ctx.store.settings.reminders_off == [rem_svc.BILLS, rem_svc.GOALS]
 
 
 def test_every_kind_has_its_texts():

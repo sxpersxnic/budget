@@ -303,7 +303,7 @@ def income_group(ctx: Context) -> None:
 
 
 def _reminders_group(ctx: Context) -> None:
-    """F31: which kinds of reminders the Reminders page and its badge show; all in the app, nothing is sent."""
+    """F31: which kinds of reminders the Overview's Due list and its badge show; all in the app, nothing is sent."""
 
     def toggle(kind: str, on: bool) -> None:
         rem_svc.set_enabled(ctx, kind, on)
@@ -320,7 +320,7 @@ def _reminders_group(ctx: Context) -> None:
                     ui.switch(
                         value=rem_svc.enabled(ctx, kind), on_change=lambda e, k=kind: toggle(k, bool(e.value))
                     ).props("dense").mark(f"reminder-{kind}")
-        ui.label(t("Shown on the Reminders page and counted in the sidebar while the app runs.")).classes(
+        ui.label(t("Shown in the Overview's Due list and counted in the sidebar while the app runs.")).classes(
             "caption px-1 pt-1"
         )
 

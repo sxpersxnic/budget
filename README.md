@@ -323,16 +323,20 @@ comes back. Sample data only goes into an empty data folder.
    chart draws it as a dashed line beside the plan, so you can compare several futures. When you
    decide, **Adopt into Plan…** writes the changes into your budget (replacing the plan's budget for
    those categories and months) and removes the scenario; one Undo takes it back.
-   **Reminders** (sidebar): one list of what wants doing while the app is open: balances to record
-   for last month, recurring transactions and QR bills that are due, budgets exceeded (or on pace
-   to be) this month, and goals behind their plan or past their date. Each row takes you to the
-   place where you deal with it, and the sidebar counts them. Nothing is sent anywhere, no
-   e-mail and no system notification; in **Settings → Reminders** you switch off the kinds you
-   don't want.
-6. **Recurring** (sidebar): enter rent, premiums, salary or subscriptions once. When one is
-   due it is listed for one-click booking (change the amount first if it varies, or skip it);
-   turn on *Book automatically* for fixed amounts. *Transactions → Make Recurring…* starts a
-   series from a transaction you already entered.
+   **Due** (on the Overview, below your wealth): one list of what wants doing while the app is open:
+   balances to record for last month, recurring transactions, QR bills and loan payments that are
+   due, and goals behind their plan or past their date. Each row has its action: *Record…* the
+   balance, *Book* the transaction or the payment as planned, *Pay…* the bill, or *Open* the goal;
+   the title takes you to the page where you can change the amount or the date first. The badge
+   beside Overview in the sidebar counts the rows. Nothing is sent anywhere, no e-mail and no system
+   notification; in **Settings → Reminders** you switch off the kinds you don't want. (Budgets
+   exceeded or on pace to be are under *Notable this month*, right below.)
+6. **Transactions → Recurring:** enter rent, premiums, salary or subscriptions once with **New
+   Recurring Transaction**. When one is due it is listed under *Due* for one-click booking (change
+   the amount first if it varies, or skip it); turn on *Book automatically* for fixed amounts.
+   *Your Series* lists them, with what the expenditure costs a year. *Transactions → Make
+   Recurring…* starts a series from a transaction you already entered, and *Found in Your
+   Transactions* below suggests the charges that already repeat (see 10).
    **Bills** (sidebar): drop the PDF of a Swiss QR bill, or a photo of its QR code (JPEG or PNG), onto
    the box, or click it to choose files. The app reads the QR code on your computer (nothing is sent
    anywhere) and lists the bill under **Open** with the creditor, amount, reference and due date (read
@@ -421,16 +425,17 @@ comes back. Sample data only goes into an empty data folder.
    oldest payments first (the sheet shows which) and is recorded as repayments, undoable in one step.
    **Summary…** gives the open payments as text to copy, or as a text or PDF file to save, so you can send it
    yourself; the app sends nothing. Names count as the same person regardless of upper case and accents.
-10. **Subscriptions** (sidebar, after Recurring): charges that come back at the same rhythm for
-    about the same amount, found in your transactions and grouped by payee: streaming, phone, gym,
-    insurance, rent. A payee is listed once its latest charges came three times at one rhythm (every
-    month, two months, quarter, half year or year, give or take a few days; twice for half-yearly and
-    yearly charges), each within 20 % (or 2.00) of the usual amount, and the last charge is no older
-    than two rhythms. A pause, a late payment or a price rise only restarts the count. Each row says what it costs a year, how many charges since when, the last and the
-    expected next date. **Make Recurring…** opens the recurring-transaction sheet prefilled from the last
-    charge, so the next one is due a rhythm later; **Ignore** hides a payee you don't consider a
-    subscription (undo, or *Watch Again* in the Ignored list). Below, your recurring transactions are
-    listed with what they cost a year. Nothing is booked for you.
+10. **Found in Your Transactions** (on *Transactions → Recurring*, below your series): charges that come
+    back at the same rhythm for about the same amount, found in your transactions and grouped by payee:
+    streaming, phone, gym, insurance, rent. A payee is listed once its latest charges came three times at
+    one rhythm (every month, two months, quarter, half year or year, give or take a few days; twice for
+    half-yearly and yearly charges), each within 20 % (or 2.00) of the usual amount, and the last charge
+    is no older than two rhythms. A pause, a late payment or a price rise only restarts the count. Each
+    row says the usual amount, the rhythm and the expected next date ("49.90 CHF · Every month · next
+    around 15 Nov 2026") and what it costs a year; hover it for how many charges since when and the last
+    one. **Make Recurring…** opens the recurring-transaction sheet prefilled from the last charge, so the
+    next one is due a rhythm later, and the payee moves up to *Your Series*; **Ignore** hides a payee you
+    don't consider a subscription (undo, or *Watch Again* in the Ignored list). Nothing is booked for you.
 11. **Year in Review** (sidebar): a year's income, spending, savings and wealth against the year
     before. Last year opens by default; this year is shown *so far* (January to the current month,
     compared with the same months of last year). You see what you saved and your savings rate, how
