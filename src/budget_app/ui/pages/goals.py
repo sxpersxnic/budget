@@ -31,6 +31,7 @@ from budget_app.ui.layout import (
     sheet_buttons,
     undoable,
 )
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import account_options, currency_select
 
@@ -232,23 +233,27 @@ def goals_card(ctx: Context, view_cur: str) -> None:
 def page() -> None:
     with frame(t("Goals"), "/goals", narrow=True) as (ctx, actions):
         with actions:
-            ui.button(t("New Goal"), icon="add", on_click=lambda: open_goal_sheet(ctx, refresh)).props("unelevated")
-        ui.label(
-            t(
-                "Save towards a holiday, a car or an emergency fund. Link a goal to an account to follow its "
-                "balance, or enter what you have saved; with a target date you see what to put aside each month."
+            new = ui.button(t("New Goal"), icon="add", on_click=lambda: open_goal_sheet(ctx, refresh)).props(
+                "unelevated"
             )
-        ).classes("caption -mt-2")
 
         @ui.refreshable
         def goal_list() -> None:
             rows = goal_svc.statuses(ctx)
+            new.set_visibility(bool(rows))  # while there are none, the empty state offers it
             with ui.column().classes("w-full gap-0"):
                 ui.label(tn("{n} goal", "{n} goals", len(rows))).classes("group-header")
                 with ui.element("div").classes("group"):
                     if not rows:
-                        with ui.element("div").classes("group-row"):
-                            ui.label(t("No goals yet.")).classes("text-2")
+                        empty_state(
+                            t("No goals yet."),
+                            t(
+                                "Save towards a holiday, a car or an emergency fund. Link a goal to an account to "
+                                "follow its balance; with a target date you see what to put aside each month."
+                            ),
+                            t("New Goal"),
+                            lambda: open_goal_sheet(ctx, refresh),
+                        )
                     for st in rows:
                         _row(st)
 

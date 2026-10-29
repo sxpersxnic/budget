@@ -190,7 +190,7 @@ async def test_only_expenditure_and_income_with_a_category_make_a_rule(user: Use
 async def test_the_rule_sheet_checks_its_fields(user: User, ctx, setup) -> None:
     await user.open("/rules")
     await user.should_see("Categorization Rules")
-    click(user, button(user, "New Rule"))
+    click(user, min((b for b in user.find(kind=ui.button).elements if b.text == "Add Rule…"), key=lambda b: b.id))
     await user.should_see("New Rule")
     save = button(user, "Save Rule")
     assert not save.enabled

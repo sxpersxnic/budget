@@ -434,7 +434,8 @@ def _profiles_group() -> None:
     def body() -> None:
         reg = profiles_svc.load()
         with ui.element("div").classes("group"):
-            for p in reg.profiles:
+            # one profile: only the way to add another (its folder is shown under Data Folder)
+            for p in reg.profiles if len(reg.profiles) > 1 else []:
                 current = p.id == reg.current
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
@@ -925,7 +926,7 @@ PROJECTION_LABELS = {  # the choice in Settings, in its order (decision 36)
 def page() -> None:
     with frame(t("Settings"), "/settings", narrow=True) as (ctx, _):
         with ui.column().classes("w-full gap-0"):
-            ui.label(t("Budget")).classes("group-header")
+            ui.label(t("General")).classes("group-header")  # the tab's name
             with ui.element("div").classes("group"):
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
@@ -944,7 +945,7 @@ def page() -> None:
                     }
                     ui.select(languages, value=ctx.store.settings.language, on_change=set_language).props(
                         "dense outlined options-dense"
-                    ).classes("w-36")
+                    ).classes("w-52")  # "System (Français)" in full
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
                         ui.label(t("Plan Until"))

@@ -22,6 +22,7 @@ from budget_app.services import bills as bills_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import error, fmt, frame, named, on_data_changed, picks_files, refresh_due_badge, undoable
 from budget_app.ui.widgets import attachments as att_ui
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
@@ -71,12 +72,6 @@ def _open(ctx: Context, att) -> None:
 
 def page() -> None:
     with frame(t("Bills"), "/bills", narrow=True) as (ctx, _actions):
-        ui.label(
-            t(
-                "Drop the PDF or a photo of a Swiss QR bill. It waits here until you pay it; "
-                "the file stays with the payment. Nothing leaves your computer."
-            )
-        ).classes("caption -mt-2")
 
         async def uploaded(e: events.UploadEventArguments) -> None:
             data = await e.file.read()
@@ -135,8 +130,13 @@ def page() -> None:
                 ui.label(tc("bill", "Open")).classes("group-header")
                 with ui.element("div").classes("group"):
                     if not rows:
-                        with ui.element("div").classes("group-row"):
-                            ui.label(t("No open bills.")).classes("text-2")
+                        empty_state(
+                            t("No open bills."),
+                            t(
+                                "Drop the PDF or a photo of a Swiss QR bill above. It waits here until you pay it; "
+                                "the file stays with the payment. Nothing leaves your computer."
+                            ),
+                        )
                     for bill in rows:
                         _open_row(bill, today)
 

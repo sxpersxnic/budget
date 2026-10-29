@@ -155,8 +155,8 @@ The app opens in its own window and keeps all data in your user folder:
   undo is refused when the records were changed again afterwards, so it never overwrites later
   work.
 - **Export:** the Transactions and Budget Plan lists export what they show (with their filters)
-  as CSV or Excel (share button on Transactions, **More** on Budget Plan: the budgets or the months,
-  whichever view is open). **Settings → Data → Export as JSON…** writes every record into
+  as CSV or Excel (**More** on Transactions, and on Budget Plan: the budgets or the months, whichever
+  view is open). **Settings → Data → Export as JSON…** writes every record into
   one JSON file for other programs; it can't be restored.
 - **Older versions:** opening your data with an older version is safe too; it keeps fields it
   doesn't know about instead of dropping them.
@@ -262,7 +262,7 @@ comes back. Sample data only goes into an empty data folder.
    **Tags** label transactions across categories ("Holiday Italy", "Renovation"): pick existing
    ones or type a new name and press Enter; it becomes a tag when you save. A transaction can have
    several.
-4. **Transactions → Import…** (optional): bring in a CSV export from your e-banking
+4. **Transactions → More → Import…** (optional): bring in a CSV export from your e-banking
    instead of typing. Choose the account, check the detected columns, give the new rows a
    category and import. The column settings can be saved per bank; transactions already
    imported are recognised and skipped. The payee is filled in from the bank text
@@ -282,7 +282,7 @@ comes back. Sample data only goes into an empty data folder.
    which one **Undo**
    reverts. Rows a change doesn't fit (a transfer has no category) keep what they have; a split
    transaction changes only the category of its rest, its lines keep theirs.
-   **Transactions → Receipt…**: drop the photo or PDF of a till receipt (or click to choose it). The
+   **Transactions → More → Receipt…**: drop the photo or PDF of a till receipt (or click to choose it). The
    app reads it on your computer – nothing is sent anywhere – and shows the receipt beside a new
    expenditure filled in with the total, the date, the currency and the shop as payee, plus the item
    lines when they add up to the total. Check them (reading a crumpled receipt is not perfect), choose

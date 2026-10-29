@@ -5,7 +5,7 @@ import re
 from datetime import date
 
 import pytest
-from nicegui import ui
+from nicegui import ElementFilter, ui
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
@@ -48,6 +48,18 @@ def button(user: User, text: str) -> ui.button:
 
 def click(user: User, element) -> None:
     UserInteraction(user, {element}, None).click()
+
+
+def menu_item(user: User, text: str) -> ui.menu_item:
+    """A menu's item; menus are closed in the simulation, so their items count as hidden."""
+    with user:
+        found = [
+            i
+            for i in ElementFilter(kind=ui.menu_item, local_scope=False)
+            if any(getattr(e, "text", None) == text for e in [i, *i.descendants()])
+        ]
+    assert found, f"no menu item {text!r}"
+    return found[0]
 
 
 def the_grid(user: User) -> ui.aggrid:
@@ -249,6 +261,15 @@ async def test_the_grid_sorts_by_date_with_every_column_sortable(user: User, dem
     assert options["rowSelection"]["mode"] == "multiRow"
 
 
+async def test_the_grid_filters_in_one_place(user: User, demo) -> None:
+    """The search and the Filters panel filter the list; the headers carry no filter menus (UX review, section 2)."""
+    await user.open("/transactions")
+    options = the_grid(user).options
+    assert options["defaultColDef"]["filter"] is False
+    assert not [c["field"] for c in options["columnDefs"] if c.get("filter")]
+    assert options["localeText"]["ariaHeaderSelection"] == "Select all rows"  # the header-less column's name
+
+
 # ------------------------------------------------------------------ selection
 async def test_delete_selected_after_confirmation(user: User, ctx, demo, shop) -> None:
     await user.open("/transactions")
@@ -323,9 +344,10 @@ async def test_double_click_opens_the_editor(user: User, ctx, demo, shop) -> Non
     assert field(user, ui.number, "Amount Received").value == 110.5
 
 
-async def test_new_transaction_from_the_page_refreshes_the_list(user: User, ctx, setup) -> None:
+async def test_new_transaction_from_the_sidebar_refreshes_the_list(user: User, ctx, setup) -> None:
     await user.open("/transactions")
     await user.should_see("0 transactions")
+    assert len([b for b in user.find(kind=ui.button).elements if b.text == "New Transaction"]) == 1  # the sidebar's
     click(user, button(user, "New Transaction"))
     await user.should_see("Add Transaction")
     put(user, field(user, ui.number, "Amount"), 12)
@@ -336,9 +358,11 @@ async def test_new_transaction_from_the_page_refreshes_the_list(user: User, ctx,
     assert len(rows(user)) == 1
 
 
-async def test_import_button_opens_the_import_page(user: User) -> None:
+async def test_import_in_the_more_menu_opens_the_import_page(user: User) -> None:
     await user.open("/transactions")
-    click(user, button(user, "Import…"))
+    [more] = [b for b in user.find(kind=ui.button).elements if b.props.get("aria-label") == "More"]
+    assert more.props["icon"] == "more_horiz" and not more.text  # an icon button, named for screen readers
+    click(user, menu_item(user, "Import…"))
     await user.should_see("Import Transactions")
 
 

@@ -14,6 +14,7 @@ from budget_app.services import payees as payee_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.payees import Usage
 from budget_app.ui.layout import error, fmt, frame, named, on_data_changed, sheet, sheet_buttons, undoable
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
 
 ROW_ACTION = "flat dense round size=sm"
@@ -93,12 +94,6 @@ def page() -> None:
             ui.button(t("Rules…"), icon="o_rule", on_click=lambda: ui.navigate.to("/rules")).props("flat").classes(
                 "text-primary"
             )
-        ui.label(
-            t(
-                "Who you pay and who pays you. Imports fill in the payee from the bank text; after a rename or "
-                "a merge, the next import of the same text uses the payee you kept."
-            )
-        ).classes("caption -mt-2")
         selected: set[str] = set()
         with ui.element("div").classes("selection-bar") as bar:
             selected_label = ui.label().classes("font-medium")
@@ -146,13 +141,17 @@ def page() -> None:
                     if usage:
                         ui.label(t("All time, {currency}", currency=currency)).classes("caption pb-1.5 pr-1")
                 with ui.element("div").classes("group"):
-                    if not shown:
+                    if payees and not shown:
                         with ui.element("div").classes("group-row"):
-                            ui.label(
-                                t("No payee matches.")
-                                if payees
-                                else t("No payees yet. Add one on a transaction, or import a bank file.")
-                            ).classes("text-2")
+                            ui.label(t("No payee matches.")).classes("text-2")
+                    elif not payees:
+                        empty_state(
+                            t("No payees yet."),
+                            t(
+                                "Who you pay and who pays you. Add one on a transaction, or import a bank file: after "
+                                "a rename or a merge, the next import of the same bank text uses the payee you kept."
+                            ),
+                        )
                     for payee in shown:
                         _row(payee, usage.get(key(payee.name)), currency)
             update_bar()

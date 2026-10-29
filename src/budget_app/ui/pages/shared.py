@@ -32,6 +32,7 @@ from budget_app.ui.layout import (
     success,
     undoable,
 )
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.selects import account_options
 
 ROW_ACTION = "flat dense round size=sm"
@@ -184,13 +185,6 @@ def page() -> None:
     from budget_app.ui.widgets.transaction_form import open_transaction_sheet  # noqa: PLC0415 - avoids an import cycle
 
     with frame(t("Shared Expenses"), "/shared", narrow=True) as (ctx, _actions):
-        ui.label(
-            t(
-                "Who owes you what: the share of your payments made for others (advance payments), what came "
-                "back, and a settle-up that records the repayment. Name the person as debtor when you record a "
-                "payment partly made for others."
-            )
-        ).classes("caption -mt-2")
         opened: set[str] = set()
 
         @ui.refreshable
@@ -202,8 +196,15 @@ def page() -> None:
                 ui.label(tn("{n} person owes you", "{n} people owe you", len(owing))).classes("group-header")
                 with ui.element("div").classes("group"):
                     if not owing:
-                        with ui.element("div").classes("group-row"):
-                            ui.label(t("Nobody owes you anything.")).classes("text-2")
+                        empty_state(
+                            t("Nobody owes you anything."),
+                            ""
+                            if settled
+                            else t(
+                                "When you pay partly for others, turn on “Partly paid for others” in the transaction "
+                                "and name the debtor. What they owe shows here until you settle up."
+                            ),
+                        )
                     for p in owing:
                         _row(p)
             if settled:

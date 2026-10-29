@@ -46,6 +46,7 @@ from budget_app.ui.layout import (
     sheet_buttons,
     undoable,
 )
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import account_options, set_options
 
@@ -927,16 +928,20 @@ def page() -> None:
         def body() -> None:
             accounts = inv_svc.investment_accounts(ctx)
             if not accounts:
-                with ui.element("div").classes("group"), ui.element("div").classes("group-row flex-wrap"):
-                    ui.label(
+                with (
+                    ui.element("div").classes("group"),
+                    empty_state(
+                        t("No securities or crypto accounts yet."),
                         t(
-                            "Give an account the asset class Securities or Crypto in Settings, then add its "
-                            "holdings here."
-                        )
-                    ).classes("text-2 flex-1 min-w-[12rem]")
-                    ui.button(t("Settings…"), on_click=lambda: ui.navigate.to("/settings")).props(
+                            "Give an account the asset class Securities or Crypto under Accounts, then add its "
+                            "holdings here. They are valued at quantity × the latest price, and buys, sales and "
+                            "dividends are booked as transactions."
+                        ),
+                    ),
+                ):
+                    ui.button(t("Accounts…"), on_click=lambda: ui.navigate.to("/accounts")).props(
                         "flat dense no-caps"
-                    ).classes("text-primary")
+                    ).classes("link-btn -ml-2")
                 return
             if inv_svc.holdings(ctx):
                 try:
@@ -975,11 +980,5 @@ def page() -> None:
 
         with actions:
             buttons()
-        ui.label(
-            t(
-                "Securities and crypto accounts are valued from their holdings: quantity × the latest price. "
-                "Buys, sales, dividends, fees and price changes are booked as transactions."
-            )
-        ).classes("caption -mt-2")
         body()
         on_data_changed(refresh)

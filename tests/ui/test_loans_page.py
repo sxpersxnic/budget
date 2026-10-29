@@ -71,7 +71,8 @@ async def test_the_page_without_loans(user: User, ctx) -> None:
     await user.open("/loans")
     await user.should_see("No loans yet.")
     await user.should_see("0 loans")
-    await user.should_see("Nothing is due.")
+    await user.should_see("A mortgage or loan counts against your wealth")  # the empty state explains the page
+    await user.should_not_see("Nothing is due.")  # no Due group without a loan
     tabs = [p for p, _ in layout.SECTIONS["/accounts"]]  # a tab of Wealth, after Investments
     assert tabs.index("/loans") == tabs.index("/investments") + 1
     assert "/loans" in layout.BADGES

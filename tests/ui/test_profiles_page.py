@@ -58,6 +58,8 @@ async def test_one_profile_shows_the_apps_name(user: User) -> None:
     await user.open("/settings")
     await user.should_see("Profiles")
     await user.should_see("Separate budgets in separate folders")
+    await user.should_see("Add Profile…")  # the group is that one row: the open folder shows under Data Folder
+    await user.should_not_see("Budget · open")
     with user:
         assert not [
             e for e in user.client.elements.values() if isinstance(e, ui.button) and "profile-button" in e.classes
