@@ -259,8 +259,8 @@ def test_adopt_writes_the_changes_and_removes_the_scenario_in_one_step(ctx, plan
         (b.month, b.amount, b.comment, b.forever) for b in ctx.store.budget.all() if b.type == BUDGET_INCOME
     )
     assert income == [
-        ("2026-11", 6200, "", True),
-        ("2026-12", 6200, "", True),
+        ("2026-11", 6200, "", False),  # the old salary ends where the cut begins: only the cut continues
+        ("2026-12", 6200, "", False),
         ("2027-01", 4960, "80 %", True),
         ("2027-02", 4960, "80 %", True),
         ("2027-03", 3100, "", False),  # the later change won, as in the overlay
@@ -270,6 +270,13 @@ def test_adopt_writes_the_changes_and_removes_the_scenario_in_one_step(ctx, plan
     cars = [(b.month, b.amount) for b in ctx.store.budget.all() if b.category == "07.1.1"]
     assert cars == [("2027-02", 18500)]
     assert [b.amount for b in ctx.store.budget.all() if b.category == "04.1"] == [1900] * 5  # untouched
+    # the Budget Plan's series view: the old salary ends, the cut continues, March stands alone
+    income_series = [s for s in budget_svc.series(ctx, "2026-11") if s.type == BUDGET_INCOME]
+    assert [(s.first, s.last, s.forever, s.current.amount) for s in income_series] == [
+        ("2026-11", "2026-12", False, 6200),
+        ("2027-01", "2027-02", True, 4960),
+        ("2027-03", "2027-03", False, 3100),
+    ]
     assert ctx.store.scenarios.get(s.id) is None and scen_svc.changes(ctx, s.id) == []
     # the adopted plan projects what the scenario did
     assert wealth_svc.projected_wealth(ctx, "2027-03", "CHF") == pytest.approx(

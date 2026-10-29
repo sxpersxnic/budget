@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -6,6 +7,7 @@ from budget_app.domain.models import PROJECTION_BUDGET, PROJECTION_HIGHER, TX_EX
 from budget_app.services import budget as budget_svc
 from budget_app.services import reports
 from budget_app.services import transactions as tx_svc
+from budget_app.services import undo as undo_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.budget import BudgetInput
 from budget_app.services.context import ValidationError
@@ -134,6 +136,146 @@ def test_final_month_limited_to_horizon_and_overwrite(ctx, setup):
     )
     by_month = {(b.month, b.amount) for b in ctx.store.budget.all()}
     assert by_month == {("2026-11", 50), ("2026-12", 70), ("2027-01", 70)}
+
+
+def test_overwrite_with_a_forever_entry_ends_the_older_forever_series(ctx, setup):
+    old = budget_svc.create(
+        ctx,
+        BudgetInput(start_month="2026-10", forever=True, type="expenditure", currency="CHF", amount=100, category="04"),
+    )
+    budget_svc.create(
+        ctx,
+        BudgetInput(
+            start_month="2027-01",
+            forever=True,
+            type="expenditure",
+            currency="CHF",
+            amount=120,
+            category="04",
+            overwrite=True,
+        ),
+    )
+    kept = [b for b in ctx.store.budget.all() if b.series_id == old[0].series_id]
+    assert [(b.month, b.forever, b.generated_until) for b in kept] == [
+        ("2026-10", False, ""),
+        ("2026-11", False, ""),
+        ("2026-12", False, ""),
+    ]
+    budget_svc.set_horizon(ctx, "2027-05")  # only the new amount continues: no month twice
+    assert sorted((b.month, b.amount) for b in ctx.store.budget.all() if b.month >= "2027-01") == [
+        (m, 120) for m in ("2027-01", "2027-02", "2027-03", "2027-04", "2027-05")
+    ]
+
+
+def _plan(ctx, setup):
+    rent = budget_svc.create(
+        ctx,
+        BudgetInput(
+            start_month="2026-08", forever=True, type="expenditure", currency="CHF", amount=1900, category="04"
+        ),
+    )
+    salary = budget_svc.create(
+        ctx,
+        BudgetInput(
+            start_month="2026-08", forever=True, type="income", currency="CHF", amount=6200, category=setup["salary"].id
+        ),
+    )
+    trip = budget_svc.create(
+        ctx,
+        BudgetInput(
+            start_month="2026-12", end_month="2026-12", type="expenditure", currency="EUR", amount=500, category="09.6"
+        ),
+    )
+    return rent, salary, trip
+
+
+def test_series_group_the_plan(ctx, setup):
+    rent, _, trip = _plan(ctx, setup)
+    lone = budget_svc.create(
+        ctx,
+        BudgetInput(
+            start_month="2026-08", end_month="2026-09", type="expenditure", currency="CHF", amount=80, category="01.1"
+        ),
+    )
+    plan = budget_svc.series(ctx, "2026-10")
+    assert [(s.type, s.category) for s in plan] == [
+        ("income", setup["salary"].id),
+        ("expenditure", "01.1"),
+        ("expenditure", "04"),
+        ("expenditure", "09.6"),
+    ]
+    inc, food, home, holiday = plan
+    assert (inc.first, inc.last, inc.forever, inc.once, inc.current.month) == (
+        "2026-08",
+        "2027-03",
+        True,
+        False,
+        "2026-10",
+    )
+    assert (food.current.id, food.ended("2026-10"), food.ended("2026-09")) == (lone[-1].id, True, False)
+    assert (holiday.once, holiday.current.id, holiday.differing) == (True, trip[0].id, 0)
+    assert len(home.entries) == len(rent) and not home.ended("2026-10")
+
+    # a month changed by hand differs; a month moved to another category leaves the series
+    budget_svc.update_entry(ctx, rent[3].id, 2000)
+    budget_svc.update_entry(ctx, rent[4].id, 1900, category="04.1")
+    home = budget_svc.find_series(ctx, budget_svc.series_key(rent[0]))
+    assert (home.differing, len(home.entries)) == (1, len(rent) - 1)
+    moved = budget_svc.find_series(ctx, budget_svc.series_key(ctx.store.budget.get(rent[4].id)))
+    assert [b.id for b in moved.entries] == [rent[4].id]
+    # an entry without a series id is a series of its own
+    loose = ctx.store.budget.update(replace(ctx.store.budget.get(trip[0].id), series_id=""))
+    assert budget_svc.series_key(loose) == f"{loose.id}|expenditure|09.6"
+
+    assert budget_svc.planned(ctx, budget_svc.series(ctx), "2026-12", "CHF") == pytest.approx(
+        {"income": 6200, "expenditure": 1900 + 450}
+    )
+    assert budget_svc.planned(ctx, [], "2026-12", "CHF") == {"income": 0, "expenditure": 0}
+
+
+def test_replan_a_series_from_a_month(ctx, setup):
+    rent, _, _ = _plan(ctx, setup)
+    key = budget_svc.series_key(rent[0])
+    new = budget_svc.replan_series(
+        ctx, key, BudgetInput(start_month="2026-11", forever=True, currency="EUR", amount=2000, comment="new flat")
+    )
+    assert [b.month for b in new] == ["2026-11", "2026-12", "2027-01", "2027-02", "2027-03"]
+    assert all((b.amount, b.currency, b.category, b.forever) == (2000, "EUR", "04", True) for b in new)
+    before = [(b.month, b.amount, b.forever) for b in budget_svc.find_series(ctx, key).entries]
+    assert before == [("2026-08", 1900, False), ("2026-09", 1900, False), ("2026-10", 1900, False)]
+    assert undo_svc.latest(ctx).label == "Replan a budget"
+
+    # a start before the first month replaces the whole series; a quarter until a month, in another category
+    key = budget_svc.series_key(new[0])
+    again = budget_svc.replan_series(
+        ctx,
+        key,
+        BudgetInput(
+            start_month="2026-10", end_month="2027-01", recur_months=3, currency="CHF", amount=5, category="04.1"
+        ),
+    )
+    assert [(b.month, b.category, b.recur_months) for b in again] == [("2026-10", "04.1", 3), ("2027-01", "04.1", 3)]
+    assert budget_svc.find_series(ctx, key) is None
+    with pytest.raises(ValidationError, match="Budget entry not found"):
+        budget_svc.replan_series(ctx, key, BudgetInput(start_month="2026-10", currency="CHF", amount=5))
+    with pytest.raises(ValidationError, match="final month must not be before"):
+        budget_svc.replan_series(
+            ctx,
+            budget_svc.series_key(again[0]),
+            BudgetInput(start_month="2026-12", end_month="2026-11", currency="CHF", amount=5),
+        )
+
+
+def test_delete_a_series_in_one_undoable_step(ctx, setup):
+    _, salary, _ = _plan(ctx, setup)
+    total = len(ctx.store.budget.all())
+    assert budget_svc.delete_series(ctx, budget_svc.series_key(salary[0])) == len(salary)
+    assert len(ctx.store.budget.all()) == total - len(salary)
+    act = undo_svc.latest(ctx)
+    assert act.label == "Delete a budget"
+    undo_svc.undo(ctx, act.id)
+    assert len(ctx.store.budget.all()) == total
+    assert budget_svc.delete_series(ctx, "gone") == 0
 
 
 def test_wealth_projection_and_unaccounted(ctx, setup):

@@ -42,6 +42,20 @@ def recurrence_label(recur_months: int) -> str:
     return t(RECURRENCE[recur_months]) if recur_months in RECURRENCE else t("Every {n} months", n=recur_months)
 
 
+def plan_summary(month_list: list[str], forever: bool) -> str:
+    """'3 months, Oct 2026 – Dec 2026', and for a 'Forever' plan ', continued as the plan grows'."""
+    n = len(month_list)
+    span = months.label(month_list[0]) + (f" – {months.label(month_list[-1])}" if n > 1 else "")
+    if forever:
+        return tn(
+            "{n} month, {span}, continued as the plan grows",
+            "{n} months, {span}, continued as the plan grows",
+            n,
+            span=span,
+        )
+    return tn("{n} month, {span}", "{n} months, {span}", n, span=span)
+
+
 def budget_form(ctx: Context, on_saved: Callable[[], None] | None = None, on_cancel=None) -> None:
     horizon = ctx.horizon()
     start_range, _ = data_month_range(ctx)
@@ -117,17 +131,7 @@ def budget_form(ctx: Context, on_saved: Callable[[], None] | None = None, on_can
         try:
             ms = budget_svc.validate(ctx, read())
             save_btn.enable()
-            span = months.label(ms[0]) + (f" – {months.label(ms[-1])}" if len(ms) > 1 else "")
-            if end.value == FOREVER:
-                text = tn(
-                    "{n} month, {span}, continued as the plan grows",
-                    "{n} months, {span}, continued as the plan grows",
-                    len(ms),
-                    span=span,
-                )
-            else:
-                text = tn("{n} month, {span}", "{n} months, {span}", len(ms), span=span)
-            status.set_text(text)
+            status.set_text(plan_summary(ms, end.value == FOREVER))
         except ValidationError as exc:
             save_btn.disable()
             status.set_text(str(exc) if touched["value"] else "")

@@ -155,7 +155,8 @@ The app opens in its own window and keeps all data in your user folder:
   undo is refused when the records were changed again afterwards, so it never overwrites later
   work.
 - **Export:** the Transactions and Budget Plan lists export what they show (with their filters)
-  as CSV or Excel (share button). **Settings → Data → Export as JSON…** writes every record into
+  as CSV or Excel (share button on Transactions, **More** on Budget Plan: the budgets or the months,
+  whichever view is open). **Settings → Data → Export as JSON…** writes every record into
   one JSON file for other programs; it can't be restored.
 - **Older versions:** opening your data with an older version is safe too; it keeps fields it
   doesn't know about instead of dropping them.
@@ -285,8 +286,12 @@ comes back. Sample data only goes into an empty data folder.
    the category and account and click **Add Transaction**; the receipt is kept as an attachment. If
    reading isn't available on your computer (Intel Macs), the sheet says so and you type the amount,
    date and payee from the picture beside the form.
-5. **Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
-   for open-ended budgets. To start from what actually happened, choose **Propose from History…**:
+5. **Plan → Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
+   for open-ended budgets. The page lists one row per budget ("Rent · every month · from Oct 2025,
+   forever"), income first; click one to change it from a month on (amount, currency, until, repeat),
+   while the months before keep their values, or to delete it. **Months** shows the same plan month
+   by month, to change a single month. To start from what actually happened, choose
+   **More → Propose from History…**:
    pick the last 3, 6 or 12 complete months, average or median, the COICOP level (division, group
    or class) and the rounding (for example to 10 CHF). Each category you spent or received money in
    gets a row with its months, the budget it already has and a proposed monthly amount in CHF, which

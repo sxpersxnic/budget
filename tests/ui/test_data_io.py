@@ -80,11 +80,23 @@ async def test_transactions_export_follows_the_filters(user: User, demo) -> None
 
 
 async def test_budget_plan_export_as_excel(user: User, ctx, demo) -> None:
+    """The Series view exports one row per budget, the Months view one per month, as each shows them."""
     await user.open("/budget-entries")
     await menu_item(user, "Export as Excel…")
     response = await downloaded(user)
     assert response.content[:2] == b"PK"
     df = pd.read_excel(io.BytesIO(response.content))
+    assert list(df.columns) == ["Category", "Type", "Amount", "Currency", "Repeats", "From", "Until", "Note"]
+    assert len(df) == 4 and set(df["Until"]) == {"Forever"} and set(df["Repeats"]) == {"Every month"}
+    assert list(df["Type"]) == ["Income", "Expenditure", "Expenditure", "Expenditure"]
+
+    with user:
+        [view] = list(ElementFilter(kind=ui.toggle, local_scope=False))
+        view.value = "months"
+    await settle()
+    user.download.http_responses.clear()
+    await menu_item(user, "Export as Excel…")
+    df = pd.read_excel(io.BytesIO((await downloaded(user)).content))
     assert len(df) == len(ctx.store.budget.all())
     assert {"Month", "Category", "Amount", "Currency", "Repeats"} <= set(df.columns)
 

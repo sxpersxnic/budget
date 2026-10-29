@@ -19,6 +19,7 @@ from nicegui.testing.user_interaction import UserInteraction
 from budget_app.domain import months
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME
 from budget_app.services import accounts as acc_svc
+from budget_app.services import budget as budget_svc
 from budget_app.services import reports
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
@@ -531,6 +532,9 @@ async def test_budget_another_income_category(user: User, demo, ctx) -> None:
     added = [b for b in ctx.store.budget.all() if b.category == bonus.id]
     assert [(b.month, b.type, b.amount) for b in added] == [(CM, BUDGET_INCOME, 1000)]
     await user.should_see("7'200.00 still expected of 7'200.00 CHF")
+    # the Budget Plan shows it as a budget of its own, once in this month
+    [bonus_series] = [s for s in budget_svc.series(ctx) if s.category == bonus.id]
+    assert (bonus_series.first, bonus_series.once, bonus_series.current.amount) == (CM, True, 1000)
 
 
 async def test_cancel_leaves_the_budget_alone(user: User, demo, ctx) -> None:
