@@ -48,6 +48,7 @@ ASSET_PILLAR3A = "pillar3a"
 ASSET_REAL_ESTATE = "real_estate"
 ASSET_CRYPTO = "crypto"
 ASSET_OTHER = "other"
+ASSET_LOAN = "loan"  # F22: a liability; its balance is the debt a `Loan` tracks, negative
 ASSET_CLASSES = {
     ASSET_CASH: N_("Cash and accounts"),
     ASSET_SECURITIES: N_("Securities"),
@@ -56,6 +57,7 @@ ASSET_CLASSES = {
     ASSET_REAL_ESTATE: N_("Real estate"),
     ASSET_CRYPTO: N_("Crypto"),
     ASSET_OTHER: N_("Other assets"),
+    ASSET_LOAN: N_("Loans and mortgages"),
 }
 # accounts of these classes are valued from their holdings (quantity × price), not from recorded balances
 HOLDING_CLASSES = (ASSET_SECURITIES, ASSET_CRYPTO)
@@ -90,6 +92,12 @@ class Account:
         """Valued from its holdings at the end of `month`: a securities or crypto account, from the month it was
         converted on (before it, its recorded balances count)."""
         return self.holds_securities and (not self.invest_from or month >= self.invest_from)
+
+    @property
+    def is_loan(self) -> bool:
+        """A loan's liability account (F22): its balance is the outstanding debt, negative, computed from the
+        loan and the transactions on the account; no balances are recorded for it."""
+        return self.asset_class == ASSET_LOAN
 
 
 @dataclass
@@ -127,6 +135,7 @@ class Transaction:
     # booked by the Investments page (F21): the id of the `Trade` or `Price` the row belongs to
     invest_id: str = ""
     tags: str = ""  # F10: ids of `Tag`s, separated by "|" (domain.tags.split / join); empty in older files
+    loan_id: str = ""  # F22: the `Loan` whose payment booked the row (repayment or interest); empty in older files
     id: str = field(default_factory=new_id)
 
 
@@ -507,6 +516,39 @@ class Price:
     date: dt.date
     price: float
     id: str = field(default_factory=new_id)
+
+
+@dataclass
+class Loan:
+    """A loan or mortgage (F22): a liability account with a repayment schedule.
+
+    The account (`account_id`, asset class `loan`) owes `principal` on `start`; what is transferred into the
+    account pays the debt off, what leaves it adds to the debt, so its balance is always minus the outstanding
+    debt (`services.loans.debt`). Every `recur_months` months from `first_due` a payment is due: interest on the
+    outstanding debt (`rate` % a year, simple interest for the period) as an expenditure in `interest_category`,
+    and `amortization` as a transfer from `cash_account` (0 for an interest-only mortgage). `next_due` is the
+    first payment not yet booked or skipped. `fixed_until` ('YYYY-MM-DD' or empty) is when the rate or the
+    term ends (a mortgage renewal); it is shown, nothing more.
+    """
+
+    account_id: str
+    principal: float
+    start: dt.date
+    rate: float  # percent a year
+    first_due: dt.date
+    next_due: dt.date
+    recur_months: int = 1
+    amortization: float = 0.0  # per payment, in the account's currency
+    cash_account: str = ""  # the regular account the payments come from
+    interest_category: str = "12.2.1"  # domain.loans.INTEREST_CATEGORY
+    lender: str = ""  # the payee of the interest (F09); optional
+    fixed_until: str = ""
+    comment: str = ""
+    id: str = field(default_factory=new_id)
+
+    @property
+    def fixed_until_date(self) -> dt.date | None:
+        return dt.date.fromisoformat(self.fixed_until) if self.fixed_until else None
 
 
 @dataclass

@@ -64,7 +64,9 @@ def account_entry_dialog(ctx: Context, on_saved, month: str | None = None, accou
             .props("dense outlined options-dense")
             .classes("w-full")
         )
-        acc_sel = ui.select(account_options(ctx, converted=True), value=account_id, label=t("Account"), with_input=True)
+        acc_sel = ui.select(
+            account_options(ctx, converted=True, loans=False), value=account_id, label=t("Account"), with_input=True
+        )
         acc_sel.props("dense outlined").classes("w-full")
         amount = (
             ui.number(t("Balance"), format="%.2f").props("outlined inputmode=decimal").classes("hero-amount w-full")
@@ -669,6 +671,8 @@ def page(month: str = "", category: str = "") -> None:
                                 ui.label(r.account.name).classes("truncate w-full")
                                 if r.needs_entry:
                                     ui.label(t("Not recorded, last balance carried over")).classes("caption")
+                                elif r.valued and r.account.is_loan:
+                                    ui.label(t("Outstanding debt of the loan")).classes("caption")
                                 elif r.valued:
                                     ui.label(t("Valued from holdings")).classes("caption")
                             ui.label(fmt(r.opening, acc_cur) if r.opening is not None else "–").classes(

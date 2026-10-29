@@ -7,6 +7,7 @@ from budget_app.domain.models import (
     ACCOUNT_REGULAR,
     ASSET_CASH,
     ASSET_CLASSES,
+    ASSET_LOAN,
     HOLDING_CLASSES,
     Account,
     IncomeCategory,
@@ -41,7 +42,7 @@ def account_in_use(ctx: Context, account_id: str) -> bool:
     return any(e.account_id == account_id for e in ctx.store.account_entries.all())
 
 
-def _check_name(ctx: Context, name: str, currency: str, kind: str, exclude_id: str = "") -> str:
+def check_name(ctx: Context, name: str, currency: str, kind: str, exclude_id: str = "") -> str:
     name = (name or "").strip()
     if not name:
         raise ValidationError(t("Name is required"))
@@ -66,6 +67,10 @@ def _check_class(ctx: Context, asset_class: str, kind: str, acc: Account | None 
         return ASSET_CASH
     if asset_class not in ASSET_CLASSES:
         raise ValidationError(t("Select an asset class"))
+    if asset_class == ASSET_LOAN and (acc is None or not acc.is_loan):  # F22: only through a loan
+        raise ValidationError(t("A loan account is added with its loan on the Loans page"))
+    if acc is not None and acc.is_loan and asset_class != ASSET_LOAN:
+        raise ValidationError(t("This account belongs to a loan. Delete the loan on the Loans page instead."))
     if acc is None or asset_class == acc.asset_class:
         return asset_class
     if asset_class in HOLDING_CLASSES and acc.asset_class not in HOLDING_CLASSES and account_in_use(ctx, acc.id):
@@ -82,11 +87,18 @@ def _check_class(ctx: Context, asset_class: str, kind: str, acc: Account | None 
     return asset_class
 
 
+def add_loan_account(ctx: Context, name: str, currency: str) -> Account:
+    """The liability account of a loan (F22), added by `services.loans` inside the loan's action; Settings can't
+    give an account this class."""
+    name = check_name(ctx, name, currency, ACCOUNT_REGULAR)
+    return ctx.store.accounts.add(Account(name=name, currency=currency, asset_class=ASSET_LOAN))
+
+
 @recorded(N_("Add an account"))
 def add_account(
     ctx: Context, name: str, currency: str, kind: str = ACCOUNT_REGULAR, asset_class: str = ASSET_CASH
 ) -> Account:
-    name = _check_name(ctx, name, currency, kind)
+    name = check_name(ctx, name, currency, kind)
     asset_class = _check_class(ctx, asset_class, kind)
     return ctx.store.accounts.add(Account(name=name, currency=currency, kind=kind, asset_class=asset_class))
 
@@ -96,7 +108,7 @@ def edit_account(ctx: Context, account_id: str, name: str, currency: str, asset_
     acc = ctx.store.accounts.get(account_id)
     if acc is None:
         raise ValidationError(t("Account not found"))
-    name = _check_name(ctx, name, currency, acc.kind, exclude_id=acc.id)
+    name = check_name(ctx, name, currency, acc.kind, exclude_id=acc.id)
     if currency != acc.currency and (account_in_use(ctx, acc.id) or has_holdings(ctx, acc.id)):
         raise ValidationError(t("The currency cannot be changed while transactions or entries use this account"))
     acc.asset_class = _check_class(ctx, acc.asset_class if asset_class is None else asset_class, acc.kind, acc)
@@ -118,6 +130,8 @@ def delete_account(ctx: Context, account_id: str) -> None:
         raise ValidationError(t("Accounts used by recurring transactions cannot be deleted"))
     if has_holdings(ctx, account_id):
         raise ValidationError(t("Accounts with holdings cannot be deleted. Delete the holdings first."))
+    if any(loan.account_id == account_id for loan in ctx.store.loans.all()):
+        raise ValidationError(t("This account belongs to a loan. Delete the loan on the Loans page instead."))
     ctx.store.account_entries.delete([e.id for e in ctx.store.account_entries.where(account_id=account_id)])
     ctx.store.accounts.delete([account_id])
 

@@ -17,6 +17,7 @@ from budget_app.domain.models import (
     Goal,
     Holding,
     IncomeCategory,
+    Loan,
     Payee,
     Price,
     Recurring,
@@ -86,6 +87,7 @@ class Store:
         self.tax_sections = CsvTable(data_dir / "tax_sections.csv", TaxSection, h)  # F20: tags per section
         # F17: detected subscriptions the user doesn't want listed
         self.subscription_ignores = CsvTable(data_dir / "subscription_ignores.csv", SubscriptionIgnore, h)
+        self.loans = CsvTable(data_dir / "loans.csv", Loan, h)  # F22
         self._settings = SettingsStore(data_dir / "settings.json")
 
     def tables(self) -> dict[str, CsvTable]:
@@ -112,6 +114,7 @@ class Store:
             self.scenario_changes,
             self.tax_sections,
             self.subscription_ignores,
+            self.loans,
         ]
         return {t.name: t for t in tables}
 

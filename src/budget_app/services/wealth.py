@@ -12,6 +12,7 @@ from budget_app.domain.models import ACCOUNT_REGULAR, ASSET_CASH, ASSET_CLASSES,
 from budget_app.i18n import N_, t
 from budget_app.services import accounts as acc_svc
 from budget_app.services import investments as inv_svc
+from budget_app.services import loans as loan_svc
 from budget_app.services.aggregates import projected_net
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.undo import recorded
@@ -31,7 +32,7 @@ class AccountRow:
     flows: float = 0.0  # the month's recorded movements, in the account's currency
     unexplained: float | None = None  # change minus flows (F46); only with a balance recorded for this month
     fx_gain: float = 0.0  # value change from exchange-rate moves, in the view currency (decision 4)
-    valued: bool = False  # valued from its holdings this month (F21), not from a recorded balance
+    valued: bool = False  # computed this month, from its holdings (F21) or its loan (F22), not a recorded balance
 
     @property
     def change(self) -> float | None:
@@ -51,10 +52,13 @@ def balance_entry(ctx: Context, account_id: str, month: str) -> AccountEntry | N
 
     A securities or crypto account has no recorded entries: its balance is computed from its holdings (F21). One
     converted from an account with history (decision 13) keeps its recorded balances before the conversion month.
+    A loan account's balance is minus its outstanding debt (F22).
     """
     acc = ctx.store.accounts.get(account_id)
     if acc is not None and acc.holds_in(month):
         return inv_svc.value_entry(ctx, acc, month)
+    if acc is not None and acc.is_loan:
+        return loan_svc.value_entry(ctx, acc, month)
     best = None
     for e in ctx.store.account_entries.all():
         if e.account_id == account_id and e.month <= month and (best is None or e.month > best.month):
@@ -71,6 +75,8 @@ def upsert_entry(ctx: Context, account_id: str, month: str, amount: float | None
         raise ValidationError(t("Select a month"))
     if amount is None:
         raise ValidationError(t("Enter the amount"))
+    if acc.is_loan:
+        raise ValidationError(t("A loan account's balance is its outstanding debt, computed from the loan's bookings"))
     if acc.holds_in(month):
         if acc.invest_from:
             raise ValidationError(
@@ -109,6 +115,8 @@ def first_recorded_month(ctx: Context) -> str | None:
     ms = [e.month for e in ctx.store.account_entries.all()]
     if held := inv_svc.first_month(ctx):
         ms.append(held)
+    if owed := loan_svc.first_month(ctx):
+        ms.append(owed)
     return min(ms) if ms else None
 
 
@@ -126,7 +134,7 @@ def account_rows(ctx: Context, month: str, view_cur: str) -> list[AccountRow]:
         if entry is None:
             continue
         has = entry.month == month
-        valued = acc.holds_in(month)
+        valued = acc.holds_in(month) or acc.is_loan
         rows.append(
             AccountRow(
                 acc,

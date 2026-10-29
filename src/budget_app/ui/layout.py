@@ -18,6 +18,7 @@ from budget_app import config, i18n
 from budget_app.domain import months
 from budget_app.i18n import N_, t
 from budget_app.services import bills as bills_svc
+from budget_app.services import loans as loan_svc
 from budget_app.services import recurring as recurring_svc
 from budget_app.services import reminders as reminders_svc
 from budget_app.services import transactions as tx_svc
@@ -44,6 +45,8 @@ NAV = [
     ("/payees", N_("Payees"), "o_storefront"),
     ("/tags", N_("Tags"), "o_sell"),
     ("/investments", N_("Investments"), "o_show_chart"),
+    ("/loans", N_("Loans"), "o_credit_score"),  # F22
+    ("/shared", N_("Shared Expenses"), "o_group"),  # F23: who owes what
     # the two yearly pages close the list: both draw on all the others and are opened a few times a year
     ("/review", N_("Year in Review"), "o_auto_stories"),  # F19
     ("/tax", N_("Tax Summary"), "o_account_balance"),  # F20: once a year, so last
@@ -65,6 +68,7 @@ BADGES = {
     "/recurring": N_("Due recurring transactions"),
     "/bills": N_("Bills due within a week or overdue"),
     "/reminders": N_("Reminders"),
+    "/loans": N_("Due loan payments"),
 }
 
 
@@ -131,9 +135,15 @@ def data_changed() -> None:
 
 def refresh_due_badge() -> None:
     """Show the number of due recurring transactions beside "Recurring", of the open bills due within a week or
-    overdue beside "Bills" (F03) and of the reminders beside "Reminders" (F31) in the sidebar."""
+    overdue beside "Bills" (F03), of the reminders beside "Reminders" (F31) and of the due loan payments beside
+    "Loans" (F22) in the sidebar."""
     badges = _due_badges.get(ui.context.client, {})
-    counts = {"/recurring": recurring_svc.due_count, "/bills": bills_svc.due_count, "/reminders": reminders_svc.count}
+    counts = {
+        "/recurring": recurring_svc.due_count,
+        "/bills": bills_svc.due_count,
+        "/reminders": reminders_svc.count,
+        "/loans": loan_svc.due_count,
+    }
     for target, badge in badges.items():
         n = counts[target](get_ctx(), date.today())
         badge.set_text(str(n))

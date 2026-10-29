@@ -72,6 +72,7 @@ class TransactionInput:
     recurring_id: str = ""  # booked from a recurring transaction (F05)
     payee: str = ""  # expenditure and income (F09); a new name adds a payee
     tags: list[str] = field(default_factory=list)  # F10: tag ids, or names of new tags (added when stored)
+    loan_id: str = ""  # booked as a loan payment (F22): the loan's id
 
 
 @dataclass
@@ -286,6 +287,7 @@ def _build(ctx: Context, inp: TransactionInput, base: Transaction | None) -> Tra
         import_ref=inp.import_ref,
         recurring_id=inp.recurring_id,
         tags=tag_svc.encode(ctx, inp.tags),  # new tags stay pending until stored
+        loan_id=inp.loan_id,
     )
     if inp.type in payee_svc.PAYEE_TYPES:
         tx.payee = payee_svc.spelling(ctx, inp.payee)  # added to the payees only when stored
@@ -357,6 +359,7 @@ def prepare_edit(ctx: Context, inp: TransactionInput, editing_id: str) -> tuple[
             )
     tx.linked_id = old.linked_id
     tx.recurring_id = tx.recurring_id or old.recurring_id  # the form doesn't carry the series
+    tx.loan_id = tx.loan_id or old.loan_id  # nor the loan (F22)
     return tx, old
 
 
@@ -495,6 +498,7 @@ def to_input(tx: Transaction) -> TransactionInput:
         recurring_id=tx.recurring_id,
         payee=tx.payee,
         tags=tag_codec.split(tx.tags),
+        loan_id=tx.loan_id,
     )
     if tx.type == TX_EXPENDITURE and tx.is_advance:
         inp.advance_mode, inp.advance_value = "amount", tx.advance_amount

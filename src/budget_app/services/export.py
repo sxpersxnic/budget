@@ -340,5 +340,6 @@ def everything_json(ctx: Context) -> bytes:
         "scenario_changes": table(sorted(store.scenario_changes.all(), key=lambda c: (c.scenario_id, c.seq, c.id))),
         "tax_sections": table(sorted(store.tax_sections.all(), key=lambda s: s.id)),  # F20
         "subscription_ignores": table(sorted(store.subscription_ignores.all(), key=lambda s: (s.key, s.id))),  # F17
+        "loans": table(sorted(store.loans.all(), key=lambda ln: (ln.start, ln.id))),  # F22
     }
     return json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8")

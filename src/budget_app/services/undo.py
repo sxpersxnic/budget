@@ -92,6 +92,7 @@ TABLE_NAMES = {
     "scenario_changes": N_("Scenario change"),
     "tax_sections": N_("Tax summary section"),
     "subscription_ignores": N_("Ignored subscription"),
+    "loans": N_("Loan"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
 
@@ -122,6 +123,8 @@ def describe_change(ctx: Context, change) -> str:
     elif change.table == "scenario_changes":
         amount = f"{raw.get('amount', '')} {raw.get('currency', '')}"
         what = f"{raw.get('start_month', '')} · {raw.get('category', '')} · {amount}"
+    elif change.table == "loans":
+        what = f"{accounts.get(raw.get('account_id', ''), '')} · {raw.get('principal', '')} · {raw.get('rate', '')} %"
     else:
         what = raw.get("name", "")
     kind = t(TABLE_NAMES.get(change.table, change.table))
