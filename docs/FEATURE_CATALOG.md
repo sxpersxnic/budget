@@ -30,7 +30,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 | 3 · Revaluations | ☑ Done | 4 of 4 steps |
 | 4 · Import and charts | ☑ Done | 3 of 3 steps |
 | 5 · COICOP data | ☑ Done | step 17 (F40: English notes with our German, French and Italian translations); F39 dropped by decision 7 |
-| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18, F30, F33 and F04 done) |
+| After issue 01 (steps 19–25) | ◐ Partly | steps 19 to 24 done (F24, F25, F28, F08, F06, F05, F09, F07, F13, F02, F21) and F29; step 25 under way (F10, F12, F11, F03, F14, F16, F20, F18, F30, F33, F04, F15 and F31 done) |
 | Bugs B01–B15 | ☑ Done | 15 of 15 fixed |
 | Engineering: tests and hooks | ☑ Done | coverage 99 %, gate at 87 % |
 | Engineering: CI and installers for macOS, Windows, Linux | ☑ Done | checks pass on every PR; the installer workflow builds macOS (49 MB), Windows (51 MB) and Linux (273 MB); no release published yet |
@@ -39,7 +39,7 @@ not committed). The bugs B01–B15 and the features F36–F47 come from it or fr
 
 State on 2026-10-21: milestones 1–4, the follow-up fixes and steps 19–24 are done (see
 [Done](#done)); every decision is made, and milestone 5 (F40 notes in English, German, French and Italian) is done.
-Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22, F30 onboarding and demo data and F33 update check, F04 receipt scanning on 2026-10-28). Steps run in the order given; *Needs* lists what has to be done first, and decisions
+Step 25 is under way (F10 tags, F12 attachments, F11 split transactions, F03 QR bills, F14 savings goals, F16 budget from history, F20 tax summary and F18 trends done on 2026-10-22, F30 onboarding and demo data and F33 update check, F04 receipt scanning, F15 what-if scenarios and F31 reminders on 2026-10-28). Steps run in the order given; *Needs* lists what has to be done first, and decisions
 are numbered as in [Decisions for the product owner](#decisions-for-the-product-owner).
 
 ### Next milestones
@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30 (done), F32, F31, F22, F23, F33 (done), F34, F15, F17, F27, F26, F04 (done), F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F19, F30 (done), F32, F31 (done), F22, F23, F33 (done), F34, F15 (done), F17, F27, F26, F04 (done), F35 | – |
 
 ### Bugs
 
@@ -141,6 +141,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 18. ☑ **F15:** decided on 2026-10-22 — any number of named scenarios, each a set of budget changes
     on top of the plan and never written into it; the Overview wealth chart shows the plan and the
     chosen scenarios; *Adopt into Plan* copies a scenario's changes into the budget as one undo step.
+    Built (architecture §7, decision 30).
 19. ☑ **F26:** decided — one computer at a time: the data folder can move into a cloud folder, a
     lock file there warns when another computer has the app open, and files changed elsewhere are
     detected and reloaded; no merging.
@@ -168,7 +169,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F12 | ☑ Done | Attachments | Organizing | M | Local | – |
 | F13 | ☑ Done | Bulk edit | Organizing | S | Local | – |
 | F14 | ☑ Done | Savings goals | Planning | M | Local | – |
-| F15 | ☐ Open | What-if scenarios | Planning | L | Local | – |
+| F15 | ☑ Done | What-if scenarios | Planning | L | Local | – |
 | F16 | ☑ Done | Budget from history | Planning | S | Local | – |
 | F17 | ☐ Open | Subscription and recurring-spend detection | Insight | M | Local | F09 |
 | F18 | ☑ Done | Trends and unusual spending | Insight | M | Local | – |
@@ -184,7 +185,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F28 | ☑ Done | Undo and change history | Security | M | Local | – |
 | F29 | ☑ Done | Multi-language support | Experience | L | Local | – |
 | F30 | ☑ Done | Onboarding and demo data | Experience | M | Local | – |
-| F31 | ☐ Open | Reminders and alerts | Experience | M | Local | – |
+| F31 | ☑ Done | Reminders and alerts | Experience | M | Local | – |
 | F32 | ☐ Open | Keyboard shortcuts and accessibility | Experience | M | Local | – |
 | F33 | ☑ Done | In-app update check | Experience | S | Optional | – |
 | F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
@@ -805,7 +806,28 @@ a goal falls behind (F31), contributions booked from the goal, several accounts 
 
 #### F15 · What-if scenarios
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built** (architecture §7, decision 30): `scenarios.csv` holds each scenario (name, note, *shown on the
+Overview*), `scenario_changes.csv` its **changes**: for a category (expenditure or income) an amount in a currency,
+the first month, the rhythm and the last month (or *to the end of the plan*), in the order they were entered. In the
+scenario the budget of that category **is** that amount in those months instead of whatever the plan budgets there;
+**0 takes the budget out** of those months ("drop the gym from March"); everything else stays as in the plan. Where
+two changes of a scenario meet in a month and category, the later one counts. The scenario's projection is the plan's
+(F47) with those budgets laid over: recorded amounts still count where they are higher, so a scenario never undoes
+what has happened. The **Scenarios** page (`/scenarios`, sidebar after Goals, icon `o_alt_route`) lists each
+scenario with "Projected for Dec 2027: 48'200.00 CHF · −9'600.00 CHF against the plan", its changes ("Salary ·
+4'960.00 CHF every month · from Jan 2027 to the end of the plan"), *Add Change…*, a switch *On the Overview*, edit
+and delete; the change sheet (type, amount, currency, category, From, Until or Forever, Repeat, note) says how many
+months it covers and what the plan has for that category in the first month. The **Overview** wealth chart draws
+every shown scenario as a dashed line of its own from the last recorded value, beside the plan and the goals' line,
+and the chart export gets a `scenario: <name>` column each. **Adopt into Plan…** (confirmed) writes the changes into
+the budget as one undo step: per change the plan's entries of that type and category in its months are replaced by a
+series of the change's amount (none for 0), in entry order; every change is checked first, so nothing is written
+when one lies beyond the plan's end; the scenario is then removed, and Undo brings back both the budget and the
+scenario. Nothing is ever written into the plan until then. Not built: changes to recorded transactions or balances,
+one-off amounts added on top of a budget (set the new total instead), scenarios of goals (F14) or of the free-wealth
+line.
 
 Compare futures: "What if I reduce to 80 % work from January?", "Buy a car for 25'000 CHF in
 March".
@@ -1161,7 +1183,20 @@ and the Budget page lead there), a folder picker.
 
 #### F31 · Reminders and alerts
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28), in the app only
+
+**As built** (architecture §7, decision 31): a **Reminders** page (`/reminders`, sidebar after Bills, icon
+`o_notifications_none`, with a badge counting its items) lists, while the app runs, what wants doing or looking at,
+grouped by kind and each row a link to where it is dealt with: **balances to record** (regular accounts without a
+balance for last month whose last balance isn't zero, the Budget page's rule; links to that month), **recurring
+transactions due** (one per due occurrence, F05; "Due since …" in red), **bills due** (open QR bills overdue or due
+within a week, F03), **budgets exceeded or about to be** (the exceeded and on-pace items of *Notable this month*,
+F18's rules and thresholds; links to the category on the Budget page) and **goals behind or overdue** (F14; "Behind:
+… short of the plan line", "Overdue since … · … to go"). *Settings → Reminders* has one switch per kind (all on;
+`settings.json` → `reminders_off`); a kind turned off leaves the page and the badge. Everything is computed from
+the records when a page opens or data changes; nothing is stored per reminder, nothing is sent anywhere – no e-mail,
+no system notification, no network, no background helper while the app is closed. Not built: desktop notifications,
+reminders while the app is closed, snoozing or dismissing a reminder (deal with the item or turn the kind off).
 
 Desktop notifications, all optional:
 

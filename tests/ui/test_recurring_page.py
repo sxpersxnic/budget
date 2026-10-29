@@ -176,11 +176,12 @@ async def test_the_sidebar_counts_due_occurrences(user: User, ctx, setup) -> Non
     rec_svc.save(ctx, rent(setup))
     await user.open("/")
     badges = [b for b in user.find(kind=ui.badge).elements if "nav-badge" in b.classes]
-    assert [b.text for b in badges if b.visible] == ["3"]
+    assert [b.text for b in badges if b.visible] == ["3", "3"]  # Recurring's, and Reminders' counting them (F31)
     await user.open("/recurring")
     click(user, page_buttons(user, "Book")[0])
     await settle()
-    assert [b.text for b in user.find(kind=ui.badge).elements if "nav-badge" in b.classes and b.visible] == ["2"]
+    shown = [b.text for b in user.find(kind=ui.badge).elements if "nav-badge" in b.classes and b.visible]
+    assert shown == ["2", "2"]
 
 
 # ------------------------------------------------------------------ the sheet

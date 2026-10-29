@@ -36,10 +36,9 @@ def fake_github(monkeypatch):
 
 
 def switch(user: User) -> ui.switch:
-    with user:
-        found = [e for e in user.client.elements.values() if isinstance(e, ui.switch)]
+    found = user.find(marker="update-check").elements
     assert len(found) == 1
-    return found[0]
+    return found.pop()
 
 
 def links(user: User) -> list[ui.link]:

@@ -358,6 +358,41 @@ class Goal:
 
 
 @dataclass
+class Scenario:
+    """A what-if scenario (F15, decision 18): a named set of budget changes laid over the plan, never written into
+    it. `shown` draws it on the Overview's wealth chart beside the plan."""
+
+    name: str
+    comment: str = ""
+    shown: bool = True
+    created: dt.date = field(default_factory=dt.date.today)
+    id: str = field(default_factory=new_id)
+
+
+@dataclass
+class ScenarioChange:
+    """One change of a scenario: in the scenario, the budget of `category` (of `type`, expenditure or income) is
+    `amount` in every month from `start_month`, every `recur_months` months, up to `end_month` (empty: the end of the
+    plan), instead of whatever the plan budgets there. An `amount` of 0 takes the budget out of those months. Where
+    two changes of a scenario meet in a month and category, the one entered later (`seq`) counts. `amount_chf` is
+    at the latest rate when the change was saved; displays convert like budget entries, at the latest rate."""
+
+    scenario_id: str
+    type: str
+    category: str
+    amount: float
+    currency: str
+    amount_chf: float
+    fx_date: dt.date
+    start_month: str
+    end_month: str = ""
+    recur_months: int = 1
+    comment: str = ""
+    seq: int = 0
+    id: str = field(default_factory=new_id)
+
+
+@dataclass
 class AccountEntry:
     """Recorded balance of an account at the end of a month."""
 
@@ -474,3 +509,4 @@ class Settings:
     update_check: bool = False  # F33: ask GitHub for the newest release once a day; off until the user turns it on
     update_checked: str = ""  # F33: the day of the last successful check (ISO date)
     update_latest: str = ""  # F33: the tag it answered with ("v0.2.0")
+    reminders_off: list[str] = field(default_factory=list)  # kinds of reminders turned off (F31, `reminders.KINDS`)

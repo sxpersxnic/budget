@@ -88,6 +88,8 @@ TABLE_NAMES = {
     "tags": N_("Tag"),
     "bills": N_("Bill"),
     "goals": N_("Savings goal"),
+    "scenarios": N_("Scenario"),
+    "scenario_changes": N_("Scenario change"),
     "tax_sections": N_("Tax summary section"),
 }
 OPS = {"add": N_("added"), "update": N_("changed"), "delete": N_("deleted")}
@@ -116,6 +118,9 @@ def describe_change(ctx: Context, change) -> str:
         what = t(section.title) if section else raw.get("id", "")
     elif change.table == "prices":
         what = f"{raw.get('date', '')} · {raw.get('price', '')}"
+    elif change.table == "scenario_changes":
+        amount = f"{raw.get('amount', '')} {raw.get('currency', '')}"
+        what = f"{raw.get('start_month', '')} · {raw.get('category', '')} · {amount}"
     else:
         what = raw.get("name", "")
     kind = t(TABLE_NAMES.get(change.table, change.table))

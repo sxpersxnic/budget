@@ -19,6 +19,7 @@ from budget_app.domain import months
 from budget_app.i18n import N_, t
 from budget_app.services import bills as bills_svc
 from budget_app.services import recurring as recurring_svc
+from budget_app.services import reminders as reminders_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
 from budget_app.services import updates as updates_svc
@@ -34,8 +35,10 @@ NAV = [
     ("/transactions", N_("Transactions"), "o_receipt_long"),
     ("/recurring", N_("Recurring"), "o_event_repeat"),
     ("/bills", N_("Bills"), "o_request_quote"),
+    ("/reminders", N_("Reminders"), "o_notifications_none"),  # F31: due things, overruns and goals in one list
     ("/budget-entries", N_("Budget Plan"), "o_event_note"),
     ("/goals", N_("Goals"), "o_flag"),
+    ("/scenarios", N_("Scenarios"), "o_alt_route"),  # F15: what-if futures beside the plan
     ("/categories", N_("Categories"), "o_account_tree"),
     ("/payees", N_("Payees"), "o_storefront"),
     ("/tags", N_("Tags"), "o_sell"),
@@ -53,11 +56,12 @@ NAV_PARENT = {
 }
 
 _data_listeners: weakref.WeakKeyDictionary[Client, Callable[[], object]] = weakref.WeakKeyDictionary()
-# per page: the sidebar badges by route (due recurring transactions, bills due soon)
+# per page: the sidebar badges by route (due recurring transactions, bills due soon, reminders)
 _due_badges: weakref.WeakKeyDictionary[Client, dict[str, ui.badge]] = weakref.WeakKeyDictionary()
 BADGES = {
     "/recurring": N_("Due recurring transactions"),
     "/bills": N_("Bills due within a week or overdue"),
+    "/reminders": N_("Reminders"),
 }
 
 
@@ -123,10 +127,10 @@ def data_changed() -> None:
 
 
 def refresh_due_badge() -> None:
-    """Show the number of due recurring transactions beside "Recurring" and of the open bills due within a week
-    or overdue beside "Bills" (F03) in the sidebar."""
+    """Show the number of due recurring transactions beside "Recurring", of the open bills due within a week or
+    overdue beside "Bills" (F03) and of the reminders beside "Reminders" (F31) in the sidebar."""
     badges = _due_badges.get(ui.context.client, {})
-    counts = {"/recurring": recurring_svc.due_count, "/bills": bills_svc.due_count}
+    counts = {"/recurring": recurring_svc.due_count, "/bills": bills_svc.due_count, "/reminders": reminders_svc.count}
     for target, badge in badges.items():
         n = counts[target](get_ctx(), date.today())
         badge.set_text(str(n))

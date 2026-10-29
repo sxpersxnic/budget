@@ -142,12 +142,26 @@ def projected_net(ctx: Context, month: str, view_cur: str) -> float:
     Advances and their repayments have no budget, so they count as recorded.
     """
     mset = {month}
+    return net_with_budgets(
+        ctx,
+        month,
+        view_cur,
+        budgeted(ctx, mset, BUDGET_EXPENDITURE, view_cur),
+        budgeted(ctx, mset, BUDGET_INCOME, view_cur),
+    )
+
+
+def net_with_budgets(
+    ctx: Context, month: str, view_cur: str, exp_budget: dict[str, float], inc_budget: dict[str, float]
+) -> float:
+    """`projected_net` with the budgets given (direct, per category, in the view currency) instead of the plan's: a
+    what-if scenario (F15) lays its changes over the plan and projects with the result."""
+    mset = {month}
     exp_act = rollup(actual_expenditure(ctx, mset, view_cur))
-    exp_bud = rollup(budgeted(ctx, mset, BUDGET_EXPENDITURE, view_cur))
+    exp_bud = rollup(exp_budget)
     spending = sum(max(exp_act.get(c, 0.0), exp_bud.get(c, 0.0)) for c in top_expenditure_codes())
     inc_act = actual_income(ctx, mset, view_cur)
-    inc_bud = budgeted(ctx, mset, BUDGET_INCOME, view_cur)
-    income = sum(max(inc_act.get(k, 0.0), inc_bud.get(k, 0.0)) for k in set(inc_act) | set(inc_bud))
+    income = sum(max(inc_act.get(k, 0.0), inc_budget.get(k, 0.0)) for k in set(inc_act) | set(inc_budget))
     return income - spending
 
 

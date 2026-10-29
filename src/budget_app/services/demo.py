@@ -41,6 +41,7 @@ from budget_app.services import budget as budget_svc
 from budget_app.services import goals as goal_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services import items as items_svc
+from budget_app.services import scenarios as scen_svc
 from budget_app.services import tags as tag_svc
 from budget_app.services import tax as tax_svc
 from budget_app.services import templates as tpl_svc
@@ -51,6 +52,7 @@ from budget_app.services.context import Context, ValidationError
 from budget_app.services.goals import GoalInput
 from budget_app.services.investments import TradeInput
 from budget_app.services.items import ItemInput
+from budget_app.services.scenarios import ChangeInput
 from budget_app.services.transactions import TransactionInput
 from budget_app.storage import backup
 from budget_app.storage.store import Store
@@ -573,4 +575,19 @@ def seed(ctx: Context) -> None:
     )
     goal_svc.add(
         ctx, GoalInput(name="Emergency fund", currency="CHF", kind=GOAL_MONTHS, months=6, account_id=savings.id)
+    )
+
+    # F15: a what-if scenario beside the plan: 80 % work from the new year, and a used car in spring
+    part_time = scen_svc.add(ctx, "80 % work from January", "Four days a week; the car is paid in cash")
+    # the changes stay inside the plan's horizon, which a test or the user may have set short
+    january, april = min(f"{today.year + 1}-01", ctx.horizon()), min(f"{today.year + 1}-04", ctx.horizon())
+    scen_svc.add_change(
+        ctx,
+        part_time.id,
+        ChangeInput(type="income", category=salary.id, amount=4960, currency="CHF", start_month=january),
+    )
+    scen_svc.add_change(
+        ctx,
+        part_time.id,
+        ChangeInput(category="07.1.1", amount=18500, currency="CHF", start_month=april, end_month=april),
     )
