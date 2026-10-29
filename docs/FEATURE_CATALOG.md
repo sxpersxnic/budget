@@ -63,7 +63,7 @@ Decision 7: notes from the UN COICOP 2018 publication, our own translations; no 
 | 22 | ☑ Done | **F09** Payees → **F07** Automatic categorization → **F13** Bulk edit | The *Stop typing* bundle: imports (F01, F36) become quicker to categorize. |
 | 23 | ☑ Done | **F02** camt.053 import | Reuses F01's preview and F36's closing balance; camt files carry the balance. |
 | 24 | ☑ Done | **F21** Investments and asset classes | Continues "capital gains on investment" from F43. |
-| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F27 (done), F19, F30, F32, F31, F22, F23, F33, F34, F15, F17, F26, F04, F35 | – |
+| 25 | ◐ Partly | The rest, roughly by value per effort: F11 (done), F12 (done), F03 (done), F10 (done), F20 (done), F16 (done), F18 (done), F14 (done), F27 (done), F19, F30, F32, F31, F22, F23, F33, F34 (done), F15, F17, F26, F04, F35 | – |
 
 ### Bugs
 
@@ -187,7 +187,7 @@ decisions 1, 7 and 10–13 on 2026-10-21, decisions 14–21 on 2026-10-22. All d
 | F31 | ☐ Open | Reminders and alerts | Experience | M | Local | – |
 | F32 | ☐ Open | Keyboard shortcuts and accessibility | Experience | M | Local | – |
 | F33 | ☐ Open | In-app update check | Experience | S | Optional | – |
-| F34 | ☐ Open | Several households or profiles | Experience | M | Local | – |
+| F34 | ☑ Done | Several households or profiles | Experience | M | Local | – |
 | F35 | ☐ Open | Phone companion | Experience | XL | Optional | F27 |
 | F36 | ☑ Done | Closing balance from bank files | Data in | M | Local | F01 |
 | F37 | ☑ Done | COICOP information page | Organizing | S | Local | – (F40 added the notes) |
@@ -1170,7 +1170,22 @@ Settings; the README's privacy note then needs one more line.
 
 #### F34 · Several households or profiles
 
-**Status:** ☐ Open
+**Status:** ☑ Done (2026-10-28)
+
+**As built (decision NEW-F34):** **Settings → Profiles** lists the profiles, each a name and a data folder of its
+own, with *Open*, *Rename* and *Remove* (which only forgets the profile: its folder and records stay where they
+are; the open profile can't be removed). *Add Profile…* asks for a name and, optionally, a folder: left empty, the
+app makes `profiles/<name>` beside its own folder; a folder that already holds records (another computer's, a
+cloud folder) is opened as it is; another profile's folder, a file or a folder directly inside the app's own is
+refused. With two profiles or more, the top of the sidebar shows the open profile's name with a menu of the others
+(and *Profiles…*); the choice reopens the app on that folder, with its own settings and language, lock and
+encryption (F27), and every open page starts over on its Overview. A folder that another Budget window has open is
+refused, and nothing changes. The lock page names the locked profile and offers *Open Another Profile*, since each
+lock guards one folder only. The registry `profiles.json` lives in the app's home folder (the OS data folder, or
+`--data-dir`), which is also the first profile's folder, so an installation without profiles is unchanged; the app
+reopens the profile that was open last. Not built: one window per profile at the same time (the app has one open
+folder per process; a second window on another folder is a second `--data-dir` start), and per-profile colours or
+icons.
 
 Separate budgets (personal, joint household, a small association) in separate data folders,
 switchable from the sidebar. Builds on the existing `--data-dir` support; mainly a picker and

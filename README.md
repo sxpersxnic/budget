@@ -178,6 +178,11 @@ The app opens in its own window and keeps all data in your user folder:
   plain text, so it restores without the password; keep it somewhere safe.
 - **One window at a time:** opening the app a second time while it is running does nothing.
   Switch to the window that is already open.
+- **Profiles:** to keep separate budgets apart (yours, a joint household, an association), add them
+  under **Settings → Profiles → Add Profile…**. Each profile has its own folder, accounts, settings and
+  password; switch between them at the top of the sidebar. **Remove** only takes a profile off the
+  list: its folder and records stay where they are. The list itself is `profiles.json` in the data
+  folder above.
 
 ## First steps
 
