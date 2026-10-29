@@ -419,7 +419,7 @@ async def test_setup_registers_pages_and_refreshes_rates(tmp_path, monkeypatch, 
     assert ctx.store.data_dir == tmp_path
     assert i18n.language() == "de"
     # every page is registered behind the app lock's guard (F27), plus the lock page itself; the pages with the
-    # sidebar share the shell (NEW-SPA)
+    # sidebar share the shell (47)
     registered = [*main_module.PAGES, *main_module.LONE_PAGES, *main_module.PHONE_PAGES, *main_module.OPEN_PAGES]
     assert [path for path, _ in pages] == registered
     assert {builder for path, builder in pages if path in main_module.PAGES} == {main_module._shell}

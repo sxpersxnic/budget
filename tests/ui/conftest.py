@@ -75,7 +75,7 @@ _patch_outbox = User._patch_outbox_emit_function
 
 def _follow_full_loads(self: User) -> None:
     """Load the page a client is sent to (`client.open`, layout.full_load) as a browser does: NiceGUI's simulated
-    user only follows `ui.navigate`, which changes pages in the shell (NEW-SPA)."""
+    user only follows `ui.navigate`, which changes pages in the shell (47)."""
     _patch_outbox(self)
     emit = self._client.outbox._emit
 

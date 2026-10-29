@@ -59,7 +59,7 @@ from budget_app.ui.pages import (
 from budget_app.ui.widgets import attachments as attachments_ui
 from budget_app.ui.widgets import selects
 
-# The pages in the window's shell (NEW-SPA): one document per window, the sidebar built once, the pages swapped in
+# The pages in the window's shell (47): one document per window, the sidebar built once, the pages swapped in
 # its content area. Each route is also a page of its own URL, so a reload or a bookmark opens it directly.
 PAGES = {
     "/": overview.page,
@@ -152,7 +152,7 @@ def _sub_page(builder: Callable[..., None]) -> Callable[..., None]:
 
 
 def _shell(request: Request) -> RedirectResponse | None:
-    """Every URL of PAGES (NEW-SPA): the lock first, then the window's shell, which shows the page of the URL. Links
+    """Every URL of PAGES (47): the lock first, then the window's shell, which shows the page of the URL. Links
     and `ui.navigate.to` change pages in the shell from then on; the browser's back and forward too."""
     wanted = f"{request.url.path}?{request.url.query}" if request.url.query else request.url.path
     target = security.redirect_for(request, wanted)

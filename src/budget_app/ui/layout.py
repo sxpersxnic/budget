@@ -1,7 +1,7 @@
 """The window's shell (sidebar, phone header), the page frame, formatting, dialogs and notification helpers.
 
 Every window builds the shell once (`shell`); the pages swap in its content area (`ui.sub_pages`), so a change of
-page keeps the sidebar and never loads a new document (NEW-SPA). State a page leaves for the window (its data
+page keeps the sidebar and never loads a new document (47). State a page leaves for the window (its data
 listener, month stepper, sheets) goes when the next one starts (`new_page`).
 """
 
@@ -280,7 +280,7 @@ def _new_transaction() -> None:
 
 
 def full_load(path: str) -> None:
-    """Open `path` as a new document instead of in the shell's content area (NEW-SPA): the pages without the shell
+    """Open `path` as a new document instead of in the shell's content area (47): the pages without the shell
     (the lock, the welcome screen, the unlock route), and a window that has to start over (another profile)."""
     ui.context.client.open(path)
 
@@ -418,7 +418,7 @@ _shells: weakref.WeakKeyDictionary[Client, _Shell] = weakref.WeakKeyDictionary()
 
 
 def shell(routes: dict[str, Callable[..., object]]) -> None:
-    """The window around the pages, built once per window (NEW-SPA): the page keys, the skip link, the sidebar and the
+    """The window around the pages, built once per window (47): the page keys, the skip link, the sidebar and the
     phone header, then the content area, which shows the page of the URL and swaps pages on links,
     `ui.navigate.to` and the browser's back and forward."""
     client = ui.context.client
@@ -457,7 +457,7 @@ def shell(routes: dict[str, Callable[..., object]]) -> None:
 
 
 def new_page() -> None:
-    """A page is about to be built in the shell: what the page before left for the window goes (NEW-SPA). Its
+    """A page is about to be built in the shell: what the page before left for the window goes (47). Its
     elements, timers and refreshables went with it when the content area was cleared."""
     client = ui.context.client
     _data_listeners.pop(client, None)

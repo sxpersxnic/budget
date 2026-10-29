@@ -1,4 +1,4 @@
-"""The window's shell (NEW-SPA): one sidebar per window, the pages swapped in its content area, behind the lock."""
+"""The window's shell (47): one sidebar per window, the pages swapped in its content area, behind the lock."""
 
 import asyncio
 
