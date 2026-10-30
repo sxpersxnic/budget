@@ -20,6 +20,7 @@
  "A mortgage or loan counts against your wealth. When a payment is due, it is listed here with its interest and repayment, ready to book.": "Eine Hypothek oder ein Darlehen zählt gegen Ihr Vermögen. Eine fällige Zahlung erscheint hier mit Zins und Rückzahlung, bereit zum Buchen.",
  "A password is already set": "Ein Passwort ist schon gesetzt",
  "A payee called “{name}” already exists. Merge the two instead.": "Es gibt schon eine Gegenpartei «{name}». Führen Sie die beiden zusammen.",
+ "A person you paid by TWINT. What are these payments usually?": "Eine Person, der Sie per TWINT bezahlt haben. Wofür sind diese Zahlungen meistens?",
  "A price list finds the holding by its name, ISIN or symbol.": "Eine Kursliste findet die Position über ihren Namen, ihre ISIN oder ihr Symbol.",
  "A profile called “{name}” already exists": "Ein Profil «{name}» gibt es schon",
  "A profile is a budget of its own, with its own accounts, settings and password, in a folder of its own: for example a joint household or an association.": "Ein Profil ist ein eigenes Budget mit eigenen Konten, Einstellungen und eigenem Passwort, in einem eigenen Ordner: zum Beispiel ein gemeinsamer Haushalt oder ein Verein.",
@@ -150,6 +151,7 @@
   "Archiviert · {n} Sparziele"
  ],
  "Archived “{name}”": "«{name}» archiviert",
+ "Ask Me per Purchase": "Bei jedem Einkauf fragen",
  "Asks for a password before the app opens.": "Fragt nach einem Passwort, bevor die App sich öffnet.",
  "Asks for the password again, here and on paired phones.": "Fragt erneut nach dem Passwort, hier und auf gekoppelten Telefonen.",
  "Asset class": "Anlageklasse",
@@ -241,6 +243,7 @@
  "Capital gains on investment": "Kapitalgewinne aus Anlagen",
  "Cash account": "Geldkonto",
  "Cash and accounts": "Konten und Bargeld",
+ "Cash from a cash machine. What do you usually spend it on?": "Bargeld vom Automaten. Wofür geben Sie es meistens aus?",
  "Categories": "Kategorien",
  "Categories that are in use can’t be deleted.": "Verwendete Kategorien können nicht gelöscht werden.",
  "Categories: {codes}": "Kategorien: {codes}",
@@ -494,6 +497,7 @@
  "Every transaction with this payee is renamed too. Imports keep finding it.": "Alle Buchungen mit dieser Gegenpartei werden mit umbenannt. Importe finden sie weiterhin.",
  "Every year": "Jedes Jahr",
  "Every {n} months": "Alle {n} Monate",
+ "Everything is sorted.": "Alles ist zugeordnet.",
  "Exchange Rates": "Wechselkurse",
  "Exchange rate download failed ({error}). Using the last stored rates.": "Die Wechselkurse konnten nicht geladen werden ({error}). Es gelten die zuletzt gespeicherten Kurse.",
  "Exchanges and revaluations can’t be saved as templates": "Wechsel und Neubewertungen lassen sich nicht als Vorlage speichern",
@@ -581,6 +585,7 @@
   "{n} Buchungen importieren"
  ],
  "Import {transactions} and {balances}": "{transactions} und {balances} importieren",
+ "Imported transactions Budget can't place wait here, one question per payee.": "Importierte Buchungen, die Budget nicht zuordnen kann, warten hier: eine Frage pro Gegenpartei.",
  "Imported {n} transaction": [
   "{n} Buchung importiert",
   "{n} Buchungen importiert"
@@ -821,6 +826,7 @@
  "Once": "Einmalig",
  "Once a day, Budget asks GitHub for the number of the newest release. Nothing is downloaded or installed, and the request carries nothing about you or your data. Off by default; besides the ECB rates it is the only connection the app makes.": "Einmal am Tag fragt Budget bei GitHub die Nummer der neusten Version ab. Nichts wird heruntergeladen oder installiert, und die Anfrage enthält nichts über Sie oder Ihre Daten. Standardmässig aus; neben den EZB-Kursen ist es die einzige Verbindung der App.",
  "One amount column": "Eine Betragsspalte",
+ "One answer sorts every transaction of a payee.": "Eine Antwort ordnet alle Buchungen einer Gegenpartei zu.",
  "One line per price: date, holding (name, ISIN or symbol) and price, separated by tabs, semicolons or commas, as copied from a bank or broker price list. A price already recorded for that day is replaced.": "Eine Zeile pro Kurs: Datum, Position (Name, ISIN oder Symbol) und Kurs, getrennt durch Tabulatoren, Strichpunkte oder Kommas, wie aus einer Kursliste der Bank oder des Brokers kopiert. Ein für diesen Tag bereits erfasster Kurs wird ersetzt.",
  "Only PDF files and photos up to 20 MB": "Nur PDF-Dateien und Fotos bis 20 MB",
  "Only an empty data folder can take the sample data.": "Beispieldaten lassen sich nur in einen leeren Datenordner laden.",
@@ -883,6 +889,7 @@
  "Payee contains “{word}”": "Gegenpartei enthält «{word}»",
  "Payee not found": "Gegenpartei nicht gefunden",
  "Payees": "Gegenparteien",
+ "Payees to sort": "Zuzuordnende Gegenparteien",
  "Paying Account": "Zahlendes Konto",
  "Payments already booked stay as they are; the schedule continues on the new terms.": "Bereits gebuchte Zahlungen bleiben, wie sie sind; der Zahlungsplan läuft mit den neuen Bedingungen weiter.",
  "Pay…": "Bezahlen …",
@@ -970,6 +977,7 @@
  "Red": "Rot",
  "Ref. {reference}": "Ref. {reference}",
  "Releases page": "Seite der Versionen",
+ "Remember for next time": "Für das nächste Mal merken",
  "Reminders": "Erinnerungen",
  "Remove": "Entfernen",
  "Remove Budget": "Budget entfernen",
@@ -1178,6 +1186,8 @@
  "Sold": "Verkauft",
  "Some files were not attached: only PDF files, photos, office and text files up to 20 MB": "Einige Dateien wurden nicht angehängt: nur PDF-Dateien, Fotos, Office- und Textdateien bis 20 MB",
  "Some selected advance payments have repayments. Delete the repayments first (or select them as well).": "Zu einigen ausgewählten Auslagen gibt es Rückzahlungen. Bitte zuerst die Rückzahlungen löschen (oder sie ebenfalls auswählen).",
+ "Something else…": "Etwas anderes …",
+ "Sort transactions": "Buchungen zuordnen",
  "Spending by Category": "Ausgaben nach Kategorie",
  "Spending by Tag": "Ausgaben nach Schlagwort",
  "Spent in {year}, {currency}": "Ausgaben {year}, {currency}",
@@ -1374,9 +1384,11 @@
  "Tick at least one category": "Mindestens eine Kategorie ankreuzen",
  "To": "Bis",
  "To Account": "Gutschriftskonto",
+ "To Sort": "Zuordnen",
  "To end of": "Bis Ende",
  "To import · {n}": "Zu importieren · {n}",
  "To send yourself; the app sends nothing.": "Zum Selberverschicken; die App verschickt nichts.",
+ "To sort": "Zuzuordnen",
  "To the cent": "Auf den Rappen",
  "Total": "Total",
  "Total ({currency})": "Total ({currency})",
@@ -1458,6 +1470,8 @@
  "Welcome": "Willkommen",
  "What": "Was",
  "What did the account hold at the end of the month?": "Welchen Saldo hatte das Konto am Monatsende?",
+ "What do you usually buy here?": "Was kaufen Sie hier meistens?",
+ "What is this money?": "Was ist das für Geld?",
  "When you pay partly for others, turn on “Partly paid for others” in the transaction and name the debtor. What they owe shows here until you settle up.": "Wenn Sie teilweise für andere bezahlen, schalten Sie in der Buchung «Teilweise für andere bezahlt» ein und nennen Sie den Schuldner. Was er Ihnen schuldet, steht hier, bis Sie abrechnen.",
  "Who you pay and who pays you. Add one on a transaction, or import a bank file: after a rename or a merge, the next import of the same bank text uses the payee you kept.": "Wen Sie bezahlen und wer Sie bezahlt. Erfassen Sie eine Gegenpartei bei einer Buchung oder importieren Sie eine Bankdatei: Nach dem Umbenennen oder Zusammenführen landet derselbe Banktext beim nächsten Import bei der behaltenen Gegenpartei.",
  "Withholding tax": "Verrechnungssteuer",
@@ -1741,6 +1755,10 @@
   "{n} Gegenpartei",
   "{n} Gegenparteien"
  ],
+ "{n} payment": [
+  "{n} Zahlung",
+  "{n} Zahlungen"
+ ],
  "{n} payment due since {date}": [
   "{n} Zahlung fällig seit {date}",
   "{n} Zahlungen fällig seit {date}"
@@ -1756,6 +1774,10 @@
  "{n} possible duplicate": [
   "{n} mögliches Duplikat",
   "{n} mögliche Duplikate"
+ ],
+ "{n} purchase": [
+  "{n} Einkauf",
+  "{n} Einkäufe"
  ],
  "{n} row": [
   "{n} Zeile",
@@ -1829,6 +1851,10 @@
   "{n} Buchung ist in mehr als einer Rubrik",
   "{n} Buchungen sind in mehr als einer Rubrik"
  ],
+ "{n} transaction is now {category}": [
+  "{n} Buchung ist jetzt {category}",
+  "{n} Buchungen sind jetzt {category}"
+ ],
  "{n} transaction loses this tag; nothing else changes.": [
   "{n} Buchung verliert dieses Schlagwort; sonst ändert sich nichts.",
   "{n} Buchungen verlieren dieses Schlagwort; sonst ändert sich nichts."
@@ -1844,6 +1870,10 @@
  "{n} was already in the list": [
   "{n} war schon in der Liste",
   "{n} waren schon in der Liste"
+ ],
+ "{n} withdrawal": [
+  "{n} Bezug",
+  "{n} Bezüge"
  ],
  "{open} of {share}": "{open} von {share}",
  "{pct} % of the money put in": "{pct} % des eingesetzten Gelds",

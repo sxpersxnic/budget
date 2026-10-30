@@ -533,6 +533,29 @@ input[type=number] { -moz-appearance: textfield; }
 .selection-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px 6px 14px;
   border-radius: 10px; background: var(--accent-fill); width: 100%; font-size: 14px; }
 .selection-bar .q-btn { white-space: nowrap; }  /* narrow windows: whole buttons wrap, not their words */
+
+/* To sort: one question per payee (ui/widgets/sort_cards.py) */
+.sort-cards { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.sort-card { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 2px 16px; align-items: start;
+  padding: 18px 20px; border-radius: 12px; box-shadow: 0 0 0 0.5px var(--separator-strong);
+  background: var(--surface); }
+.sort-card.answered { grid-template-columns: 40px auto minmax(0, 1fr); align-items: center; padding: 10px 20px; }
+.sort-logo { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; color: #fff;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+.sort-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sort-name { font-weight: 600; font-size: 15px; }
+.sort-facts { font-size: 13px; color: var(--label-3); font-variant-numeric: tabular-nums; }
+.sort-answer { color: var(--label-2); }
+.sort-ask { grid-column: 2; display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.sort-question { font-size: 13.5px; color: var(--label-2); }
+.sort-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.sort-choice.q-btn { border-radius: 18px !important; padding: 2px 12px; min-height: 32px; font-weight: 400;
+  background: var(--fill) !important; color: var(--label) !important; }
+.sort-choice.q-btn:hover { background: var(--accent-fill) !important; color: var(--accent) !important; }
+.sort-choice.other.q-btn { background: transparent !important; color: var(--accent) !important;
+  box-shadow: inset 0 0 0 1px var(--separator-strong); }
+.sort-ask .q-checkbox { font-size: 13px; color: var(--label-2); }
+@media (max-width: 560px) { .sort-card { padding: 14px; gap: 2px 12px; } .sort-ask { grid-column: 1 / -1; } }
 """
 
 

@@ -17,6 +17,10 @@ from budget_app.i18n import N_, t
 TAX = "TAX"
 ADV = "ADV"
 PSEUDO_NAMES = {TAX: N_("Taxes"), ADV: N_("Advance payments")}
+# imported spending or income nobody has given a category yet (services/sorting.py); stored as an empty category,
+# so it is no category: pickers, budgets and rules do not offer it
+TO_SORT = ""
+TO_SORT_NAME = N_("To sort")
 
 
 @dataclass
@@ -77,7 +81,10 @@ class Coicop:
         return self.categories.get(code)
 
     def label(self, code: str) -> str:
-        """The category's label ("01.1 Groceries", see `Category.label`); `code` itself when unknown."""
+        """The category's label ("01.1 Groceries", see `Category.label`); "To sort" for none; `code` itself when
+        unknown."""
+        if code == TO_SORT:
+            return t(TO_SORT_NAME)
         cat = self.categories.get(code)
         return cat.label if cat else code
 

@@ -416,6 +416,17 @@ what-if scenarios (F15). With the change, every transaction and account balance 
 at each start (and after each rate check), and its CHF amount recalculated where it differs, so a new version values
 everything already recorded correctly.
 
+### F48 · To sort: imported transactions without a category
+
+**Status:** ☑ Done (2026-10-30, decision 48)
+
+An import no longer waits for every row to have a category. Imported spending and income without one is saved as
+**To sort**, counts in every total at once, and is asked about on the **To Sort** tab of Transactions: one question
+per payee ("What do you usually buy here?"), the likeliest answers as buttons (Amazon: phones and computers, books,
+household supplies, clothing), *Something else…*, *Ask Me per Purchase*, and *Remember for next time*, which makes
+the answer a rule for the next file. The sidebar shows how many payees wait. A transaction typed in still needs a
+category.
+
 ## Backlog
 
 Feature ideas from the first catalog, by area. F01 is done and described under [Done](#done);

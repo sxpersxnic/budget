@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from budget_app.domain import months
-from budget_app.domain.coicop import ADV, TAX, get_coicop
+from budget_app.domain.coicop import ADV, TAX, TO_SORT, TO_SORT_NAME, get_coicop
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, REVAL_FX, REVAL_INVEST, REVALUATION_KINDS
 from budget_app.i18n import t
 from budget_app.services import wealth as wealth_svc
@@ -86,8 +86,9 @@ class MonthReport:
 
 
 def income_names(ctx: Context) -> dict[str, str]:
-    """The names of the income lines: income categories by id, and the advance repayments."""
-    return {c.id: c.name for c in ctx.store.income_categories.all()} | {ADV_REPAY: t(ADV_REPAY_NAME)}
+    """The names of the income lines: income categories by id, the advance repayments, and income to sort."""
+    names = {c.id: c.name for c in ctx.store.income_categories.all()}
+    return names | {ADV_REPAY: t(ADV_REPAY_NAME), TO_SORT: t(TO_SORT_NAME)}
 
 
 def month_report(ctx: Context, month: str, view_cur: str, today: date | None = None) -> MonthReport:
@@ -102,26 +103,32 @@ def month_report(ctx: Context, month: str, view_cur: str, today: date | None = N
         cat = coicop.get(code)
         rep.expenditure_tree[code] = Line(
             code,
-            cat.label if cat else code,
+            coicop.label(code),
             act_exp.get(code, 0.0),
             bud_exp.get(code, 0.0),
             level=cat.level if cat else 1,
             has_children=bool(cat and cat.children),
-            editable=code != ADV,
+            editable=code not in (ADV, TO_SORT),  # neither has a budget
         )
     for code in top_expenditure_codes():
-        if code not in rep.expenditure_tree:
+        if code not in rep.expenditure_tree and code != TO_SORT:  # To sort only when something waits
             cat = coicop.categories[code]  # divisions and pseudo-categories always exist
             rep.expenditure_tree[code] = Line(
                 code, cat.label, level=1, has_children=bool(cat.children), editable=code != ADV
             )
-    rep.top_expenditure = top_expenditure_codes()
+    rep.top_expenditure = [c for c in top_expenditure_codes() if c in rep.expenditure_tree]
 
     act_inc = actual_income(ctx, mset, view_cur)
     bud_inc = budgeted(ctx, mset, BUDGET_INCOME, view_cur)
     names = income_names(ctx)
     for key in sorted(set(act_inc) | set(bud_inc), key=lambda k: (names.get(k) or k).lower()):
-        line = Line(key, names.get(key, key), act_inc.get(key, 0.0), bud_inc.get(key, 0.0), editable=key != ADV_REPAY)
+        line = Line(
+            key,
+            names.get(key, key),
+            act_inc.get(key, 0.0),
+            bud_inc.get(key, 0.0),
+            editable=key not in (ADV_REPAY, TO_SORT),
+        )
         if abs(line.actual) > 0.005 or abs(line.budget) > 0.005:
             rep.income_lines.append(line)
 

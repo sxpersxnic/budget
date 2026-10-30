@@ -20,6 +20,7 @@
  "A mortgage or loan counts against your wealth. When a payment is due, it is listed here with its interest and repayment, ready to book.": "Un’ipoteca o un prestito riduce il tuo patrimonio. Ogni rata in scadenza appare qui con interessi e ammortamento, pronta da registrare.",
  "A password is already set": "Una password è già impostata",
  "A payee called “{name}” already exists. Merge the two instead.": "Esiste già un beneficiario «{name}». Unisci i due invece.",
+ "A person you paid by TWINT. What are these payments usually?": "Una persona che avete pagato con TWINT. A cosa servono di solito questi pagamenti?",
  "A price list finds the holding by its name, ISIN or symbol.": "Un elenco dei corsi trova la posizione tramite il nome, l’ISIN o il simbolo.",
  "A profile called “{name}” already exists": "Esiste già un profilo «{name}»",
  "A profile is a budget of its own, with its own accounts, settings and password, in a folder of its own: for example a joint household or an association.": "Un profilo è un budget a sé, con conti, impostazioni e password propri, in una cartella propria: per esempio un’economia domestica comune o un’associazione.",
@@ -150,6 +151,7 @@
   "Archiviati · {n} obiettivi"
  ],
  "Archived “{name}”": "Archiviato: «{name}»",
+ "Ask Me per Purchase": "Chiedere per ogni acquisto",
  "Asks for a password before the app opens.": "Chiede una password prima che l’app si apra.",
  "Asks for the password again, here and on paired phones.": "Chiede di nuovo la password, qui e sui telefoni abbinati.",
  "Asset class": "Classe d’investimento",
@@ -241,6 +243,7 @@
  "Capital gains on investment": "Utili di capitale su investimenti",
  "Cash account": "Conto di liquidità",
  "Cash and accounts": "Conti e contanti",
+ "Cash from a cash machine. What do you usually spend it on?": "Contanti dal bancomat. Per cosa li spendete di solito?",
  "Categories": "Categorie",
  "Categories that are in use can’t be deleted.": "Le categorie in uso non possono essere eliminate.",
  "Categories: {codes}": "Categorie: {codes}",
@@ -494,6 +497,7 @@
  "Every transaction with this payee is renamed too. Imports keep finding it.": "Anche tutte le transazioni di questo beneficiario vengono rinominate. Le importazioni lo ritrovano.",
  "Every year": "Ogni anno",
  "Every {n} months": "Ogni {n} mesi",
+ "Everything is sorted.": "È tutto assegnato.",
  "Exchange Rates": "Tassi di cambio",
  "Exchange rate download failed ({error}). Using the last stored rates.": "Impossibile scaricare i tassi di cambio ({error}). Vengono utilizzati gli ultimi tassi salvati.",
  "Exchanges and revaluations can’t be saved as templates": "Cambi e rivalutazioni non possono essere salvati come modelli",
@@ -581,6 +585,7 @@
   "Importa {n} transazioni"
  ],
  "Import {transactions} and {balances}": "Importa {transactions} e {balances}",
+ "Imported transactions Budget can't place wait here, one question per payee.": "Le transazioni importate che Budget non sa assegnare attendono qui: una domanda per beneficiario.",
  "Imported {n} transaction": [
   "{n} transazione importata",
   "{n} transazioni importate"
@@ -821,6 +826,7 @@
  "Once": "Una volta",
  "Once a day, Budget asks GitHub for the number of the newest release. Nothing is downloaded or installed, and the request carries nothing about you or your data. Off by default; besides the ECB rates it is the only connection the app makes.": "Una volta al giorno Budget chiede a GitHub il numero della versione più recente. Nulla viene scaricato o installato e la richiesta non contiene nulla su di lei o sui suoi dati. Disattivato per impostazione predefinita; oltre ai tassi della BCE è l’unica connessione dell’app.",
  "One amount column": "Una colonna importo",
+ "One answer sorts every transaction of a payee.": "Una risposta assegna tutte le transazioni di un beneficiario.",
  "One line per price: date, holding (name, ISIN or symbol) and price, separated by tabs, semicolons or commas, as copied from a bank or broker price list. A price already recorded for that day is replaced.": "Una riga per corso: data, posizione (nome, ISIN o simbolo) e corso, separati da tabulazioni, punti e virgola o virgole, come copiati da un elenco dei corsi della banca o del broker. Un corso già registrato per quel giorno viene sostituito.",
  "Only PDF files and photos up to 20 MB": "Solo file PDF e foto fino a 20 MB",
  "Only an empty data folder can take the sample data.": "I dati di esempio si caricano solo in una cartella dei dati vuota.",
@@ -883,6 +889,7 @@
  "Payee contains “{word}”": "Il beneficiario contiene «{word}»",
  "Payee not found": "Beneficiario non trovato",
  "Payees": "Beneficiari",
+ "Payees to sort": "Beneficiari da assegnare",
  "Paying Account": "Conto pagante",
  "Payments already booked stay as they are; the schedule continues on the new terms.": "Le rate già registrate restano come sono; il piano continua alle nuove condizioni.",
  "Pay…": "Paga…",
@@ -970,6 +977,7 @@
  "Red": "Rosso",
  "Ref. {reference}": "Rif. {reference}",
  "Releases page": "Pagina delle versioni",
+ "Remember for next time": "Ricordare per la prossima volta",
  "Reminders": "Promemoria",
  "Remove": "Rimuovi",
  "Remove Budget": "Rimuovi budget",
@@ -1178,6 +1186,8 @@
  "Sold": "Venduto",
  "Some files were not attached: only PDF files, photos, office and text files up to 20 MB": "Alcuni file non sono stati allegati: solo PDF, foto, file di Office e di testo fino a 20 MB",
  "Some selected advance payments have repayments. Delete the repayments first (or select them as well).": "Per alcuni anticipi selezionati esistono rimborsi. Eliminare prima i rimborsi (o selezionare anche questi).",
+ "Something else…": "Altro…",
+ "Sort transactions": "Assegnare transazioni",
  "Spending by Category": "Spese per categoria",
  "Spending by Tag": "Spese per etichetta",
  "Spent in {year}, {currency}": "Spese {year}, {currency}",
@@ -1374,9 +1384,11 @@
  "Tick at least one category": "Selezionare almeno una categoria",
  "To": "A",
  "To Account": "Conto di accredito",
+ "To Sort": "Da assegnare",
  "To end of": "Alla fine di",
  "To import · {n}": "Da importare · {n}",
  "To send yourself; the app sends nothing.": "Da inviare tu stesso; l’app non invia nulla.",
+ "To sort": "Da assegnare",
  "To the cent": "Al centesimo",
  "Total": "Totale",
  "Total ({currency})": "Totale ({currency})",
@@ -1458,6 +1470,8 @@
  "Welcome": "Benvenuti",
  "What": "Cosa",
  "What did the account hold at the end of the month?": "Qual era il saldo del conto a fine mese?",
+ "What do you usually buy here?": "Cosa comprate di solito qui?",
+ "What is this money?": "Di che denaro si tratta?",
  "When you pay partly for others, turn on “Partly paid for others” in the transaction and name the debtor. What they owe shows here until you settle up.": "Quando paghi in parte per altri, attiva «Pagato in parte per altri» nella transazione e indica il debitore. Quanto ti deve appare qui finché non salderete.",
  "Who you pay and who pays you. Add one on a transaction, or import a bank file: after a rename or a merge, the next import of the same bank text uses the payee you kept.": "Chi paghi e chi ti paga. Indicane uno su una transazione o importa un file bancario: dopo una rinomina o un’unione, la prossima importazione dello stesso testo bancario usa il beneficiario mantenuto.",
  "Withholding tax": "Imposta preventiva",
@@ -1741,6 +1755,10 @@
   "{n} beneficiario",
   "{n} beneficiari"
  ],
+ "{n} payment": [
+  "{n} pagamento",
+  "{n} pagamenti"
+ ],
  "{n} payment due since {date}": [
   "{n} rata in scadenza dal {date}",
   "{n} rate in scadenza dal {date}"
@@ -1756,6 +1774,10 @@
  "{n} possible duplicate": [
   "{n} possibile duplicato",
   "{n} possibili duplicati"
+ ],
+ "{n} purchase": [
+  "{n} acquisto",
+  "{n} acquisti"
  ],
  "{n} row": [
   "{n} riga",
@@ -1829,6 +1851,10 @@
   "{n} transazione è in più di una rubrica",
   "{n} transazioni sono in più di una rubrica"
  ],
+ "{n} transaction is now {category}": [
+  "{n} transazione è ora in {category}",
+  "{n} transazioni sono ora in {category}"
+ ],
  "{n} transaction loses this tag; nothing else changes.": [
   "{n} transazione perde questa etichetta; nient’altro cambia.",
   "{n} transazioni perdono questa etichetta; nient’altro cambia."
@@ -1844,6 +1870,10 @@
  "{n} was already in the list": [
   "{n} era già nella lista",
   "{n} erano già nella lista"
+ ],
+ "{n} withdrawal": [
+  "{n} prelievo",
+  "{n} prelievi"
  ],
  "{open} of {share}": "{open} di {share}",
  "{pct} % of the money put in": "{pct} % del denaro investito",
