@@ -416,6 +416,17 @@ what-if scenarios (F15). With the change, every transaction and account balance 
 at each start (and after each rate check), and its CHF amount recalculated where it differs, so a new version values
 everything already recorded correctly.
 
+### F48 · To sort: imported transactions without a category
+
+**Status:** ☑ Done (2026-10-30, decision 48)
+
+An import no longer waits for every row to have a category. Imported spending and income without one is saved as
+**To sort**, counts in every total at once, and is asked about on the **To Sort** tab of Transactions: one question
+per payee ("What do you usually buy here?"), the likeliest answers as buttons (Amazon: phones and computers, books,
+household supplies, clothing), *Something else…*, *Ask Me per Purchase*, and *Remember for next time*, which makes
+the answer a rule for the next file. The sidebar shows how many payees wait. A transaction typed in still needs a
+category.
+
 ## Backlog
 
 Feature ideas from the first catalog, by area. F01 is done and described under [Done](#done);
@@ -594,12 +605,9 @@ words in the payee suggests its category, "Payee contains “Migros”" (spendin
 categories are left out), so a first import is mostly categorized. Where no account
 is fixed, an account is suggested too: the rule's, else the one the payee had most often. The **form** shows
 "Use 01.1 Groceries" with the reason under the category of a new expenditure or income once it has a payee; a
-click fills the category (and the account, if still empty). The **import preview** (CSV and camt) fills in
-suggestions in italics, with a *Suggestion* column for the reason, counts them in the summary and offers *Clear
-Suggestions*; a category chosen by hand loses the mark, a changed payee brings a new suggestion, and importing keeps
-what the preview shows. A category applied to some rows is suggested for the file's other rows of the same payee,
-and rows still without a category start unticked, so the rest of a large file can be imported at once and those rows
-later, from the same file; a row is ticked as soon as it gets a category. Confirming a suggestion never makes a rule. **Categorization Rules** (`/rules`, under
+click fills the category (and the account, if still empty). The **import** (CSV and camt) imports the suggestions;
+afterwards it lists, folded, what was sorted from rules and history and, with *Change…*, what was sorted only because of
+a word in the name; what it could not place waits under To sort (F48). Taking a suggestion never makes a rule. **Categorization Rules** (`/rules`, under
 Payees; *Rules…* on the Payees page and in Settings) lists the rules per type, with add, edit and delete; every
 change is undoable. Not built: the AI level, conditions on amount or account, and applying a new rule to stored
 transactions (bulk edit, F13, does that).
@@ -654,8 +662,8 @@ phone numbers, IBANs and postal codes go, so do the booking words of UBS, PostFi
 and TWINT in German, French, Italian and English, payment services such as `TWINT *` and `SumUp *`, and the
 location at the end (the legal form stays: "Immo Muster AG", decision 11); about 170 brands, shops and banks in `resources/payees.json` get one
 name, "MIGROS ZUERICH HB 1234" → "Migros"). The CSV import reads the payee from a counterparty column (*Empfänger*, *Payee*,
-*Merchant* …) or the description, camt from the counterparty's name; the preview shows it and it can be edited
-there, which teaches the alias. The form's payee field suggests known payees (recently used first) and takes a
+*Merchant* …) or the description, camt from the counterparty's name, and remembers each bank text as an alias of
+its payee; a payee renamed or merged later holds for the next file. The form's payee field suggests known payees (recently used first) and takes a
 new name as typed. Transactions has a Payee column, search and filter. The **Payees** page lists every payee
 with its number of transactions and what was spent and received, and renames, merges (several → one name; their
 transactions, templates, series and aliases move) and deletes unused payees, each as one undo step. Not built:

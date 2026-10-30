@@ -1,10 +1,10 @@
 """Importing transactions from bank and card CSV exports.
 
 Flow: `read_file` detects encoding, delimiter and header line; `guess_profile` maps the columns;
-`parse_rows` turns lines into signed amounts; `analyse` marks duplicates, finds payees and suggests categories
-(`categorize.py`: rules, then the payee's history, then shops and brands in the payee); `spread` passes a category
-chosen in the preview on to the other rows of the same payee; `commit` saves the chosen rows. Rows left out are
-not saved, so importing the same file again offers just them (the others show as already imported). Column
+`parse_rows` turns lines into signed amounts; `analyse` marks duplicates (a possible duplicate names the transaction
+it matches), finds payees and suggests categories (`categorize.py`: rules, then the payee's history, then shops and
+brands in the payee, marked `guessed`); `commit` saves the chosen rows, those without a category under To sort
+(decision 48, `sorting.py`). Rows left out are not saved, so importing the same file again offers just them. Column
 settings can be saved per bank as a profile. A running-balance column, when the profile names one, is read into
 each row; `import_balances` turns it into month-end balances.
 camt.053 / camt.054 statements (`camt.py`) produce the same rows and go through `analyse` and `commit` too.
@@ -25,7 +25,6 @@ from datetime import date, datetime
 
 from budget_app.domain.coicop import TAX, get_coicop
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, Transaction
-from budget_app.domain.payees import key as payee_key
 from budget_app.i18n import N_, t
 from budget_app.services import categorize
 from budget_app.services import payees as payee_svc
@@ -159,7 +158,8 @@ class ImportRow:
     balance: float | None = None  # the account's balance after this booking, when the file shows it
     counterparty: str = ""  # who was paid or who paid, when the file names them apart from the text
     payee: str = ""  # F09: found from the counterparty (else the text) by `analyse`, editable in the preview
-    waiting: bool = False  # left out only because it has no category yet; ticked again once it gets one
+    match_id: str = ""  # a possible duplicate: the transaction already stored that it matches
+    guessed: bool = False  # the suggestion comes only from a word in the payee's name: worth a second look
 
     @property
     def payee_source(self) -> str:
@@ -387,9 +387,10 @@ def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Import
     """
     existing = [tx for tx in ctx.store.transactions.all() if account_id in (tx.from_account, tx.to_account)]
     refs = {tx.import_ref for tx in existing if tx.import_ref}
-    by_day: dict[str, Counter[tuple]] = defaultdict(Counter)  # source ("" = typed by hand) -> (day, type, amount)
+    # source ("" = typed by hand) -> (day, type, amount) -> the transactions not matched yet
+    by_day: dict[str, dict[tuple, list[str]]] = defaultdict(lambda: defaultdict(list))
     for tx in existing:
-        by_day[_source(tx.import_ref)][(tx.date, tx.type, round(tx.amount, 2))] += 1
+        by_day[_source(tx.import_ref)][(tx.date, tx.type, round(tx.amount, 2))].append(tx.id)
     suggester = categorize.Suggester(ctx)  # rules and history read once for the whole file
     seen: Counter[str] = Counter()
     for row in rows:
@@ -401,11 +402,11 @@ def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Import
             row.import_ref = "csv:" + hashlib.sha256(f"{key}#{seen[key]}".encode()).hexdigest()[:20]
         day = (row.date, row.type, round(abs(row.amount), 2))
         # one earlier entry matches one row
-        other = next((c for s, c in by_day.items() if s != _source(row.import_ref) and c[day] > 0), None)
+        other = next((c for s, c in by_day.items() if s != _source(row.import_ref) and c[day]), None)
         if row.import_ref in refs:
             row.status, row.include = DUPLICATE, False
         elif other is not None:
-            other[day] -= 1
+            row.match_id = other[day].pop(0)
             row.status, row.include = POSSIBLE_DUPLICATE, False
         else:
             row.status, row.include = NEW, True
@@ -413,7 +414,6 @@ def analyse(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Import
             row.payee = payee_svc.resolve(ctx, row.payee_source)
         if not row.category:
             suggest(suggester, row, account_id)
-    hold_uncategorized(ctx, rows)
     return rows
 
 
@@ -422,50 +422,12 @@ def suggest(suggester: categorize.Suggester, row: ImportRow, account_id: str) ->
     hit = suggester.suggest(row.type, row.payee, row.text, account=account_id)
     if hit is not None:
         row.category, row.suggested, row.reason = hit.category, True, hit.reason
-
-
-def spread(rows: list[ImportRow], chosen: list[ImportRow]) -> int:
-    """Suggest the category just chosen for `chosen` to the file's other rows with the same payee and type that
-    have no category or only a suggestion; a category chosen by hand stays. The number of rows filled in."""
-    by_payee = {(r.type, payee_key(r.payee)): r.category for r in chosen if r.category and payee_key(r.payee)}
-    picked = {id(r) for r in chosen}
-    filled = 0
-    for row in rows:
-        category = by_payee.get((row.type, payee_key(row.payee)))
-        if category is None or id(row) in picked or row.status == ERROR or (row.category and not row.suggested):
-            continue
-        row.category, row.suggested, row.reason = category, True, t("Same payee as a row you chose")
-        filled += 1
-    return filled
-
-
-def clear_suggestions(rows: list[ImportRow]) -> int:
-    """Empty every suggested category; the number of rows cleared."""
-    cleared = [r for r in rows if r.suggested]
-    for r in cleared:
-        r.category, r.suggested, r.reason = "", False, ""
-    return len(cleared)
+        row.guessed = hit.source == categorize.KEYWORD
 
 
 def _source(import_ref: str) -> str:
     """'csv', 'camt', or '' for a transaction typed by hand."""
     return import_ref.split(":", 1)[0] if import_ref else ""
-
-
-def hold_uncategorized(ctx: Context, rows: list[ImportRow]) -> int:
-    """Leave out the rows that would be imported but have no category yet, and take back those that got one since.
-
-    A file's categorized rows can then be imported at once while the rest wait, instead of the whole import waiting
-    for the last row (1900 lines, 1007 without a category). A row the user left out stays out: only rows this
-    function held (`waiting`) come back. The number of rows waiting.
-    """
-    for row in rows:
-        has_category = valid_category(ctx, row.type, row.category)
-        if row.include and not has_category:
-            row.include, row.waiting = False, True
-        elif row.waiting and has_category:
-            row.include, row.waiting = True, False
-    return sum(1 for r in rows if r.waiting)
 
 
 def valid_category(ctx: Context, type_: str, category: str) -> bool:
@@ -476,7 +438,8 @@ def valid_category(ctx: Context, type_: str, category: str) -> bool:
 
 @recorded(N_("Import transactions"))
 def commit(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Transaction]:
-    """Save every included row as a transaction in one write. Nothing is saved if a row is invalid."""
+    """Save every included row as a transaction in one write; a row without a category waits under To sort
+    (decision 48). Nothing is saved if a row is invalid."""
     acc = ctx.store.accounts.get(account_id)
     if acc is None:
         raise ValidationError(t("Choose the account the file belongs to"))
@@ -486,7 +449,7 @@ def commit(ctx: Context, rows: list[ImportRow], account_id: str) -> list[Transac
             continue
         if row.date is None or row.amount is None:
             raise ValidationError(t("Row {n}: {error}", n=row.index + 1, error=row.error or t("incomplete")))
-        if not valid_category(ctx, row.type, row.category):
+        if row.category and not valid_category(ctx, row.type, row.category):
             raise ValidationError(t("Row {n}: choose a category", n=row.index + 1))
         inp = TransactionInput(
             date=row.date,

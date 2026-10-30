@@ -8,7 +8,7 @@ from nicegui import ui
 
 from budget_app.domain import months
 from budget_app.domain import tags as tag_codec
-from budget_app.domain.coicop import ADV, get_coicop
+from budget_app.domain.coicop import ADV, TO_SORT_NAME, get_coicop
 from budget_app.domain.models import (
     REVALUATION_KINDS,
     TX_EXCHANGE,
@@ -28,6 +28,7 @@ from budget_app.services import items as items_svc
 from budget_app.services import payees as payee_svc
 from budget_app.services import recurring as rec_svc
 from budget_app.services import rules as rules_svc
+from budget_app.services import sorting as sorting_svc
 from budget_app.services import tags as tag_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
@@ -114,7 +115,7 @@ def _row(
     elif tx.type == TX_EXPENDITURE:
         category, tip = coicop.label(tx.category), coicop.tooltip(tx.category)
     elif tx.type == TX_INCOME:
-        category = t(ADV_REPAY_NAME) if tx.is_advance else income_cats.get(tx.category, "")
+        category = t(ADV_REPAY_NAME) if tx.is_advance else income_cats.get(tx.category) or coicop.label(tx.category)
     elif tx.type == TX_REVALUATION:
         category = t(REVALUATION_KINDS.get(tx.category, tx.category))
     else:  # a transfer or an exchange: where the money went
@@ -182,7 +183,10 @@ def month_dates(month: str) -> tuple[str, str]:
 
 
 def in_category(ctx: Context, tx: Transaction, code: str, lines: dict[str, list]) -> bool:
-    """Whether an expenditure counts in `code` or a category below it, by its own category or a split line's."""
+    """Whether an expenditure counts in `code` or a category below it, by its own category or a split line's;
+    `sorting.FILTER`: whether the transaction (spending or income) waits under To sort."""
+    if code == sorting_svc.FILTER:
+        return sorting_svc.is_unsorted(tx)
     if tx.type != TX_EXPENDITURE:
         return False
     coicop = get_coicop()
@@ -191,9 +195,10 @@ def in_category(ctx: Context, tx: Transaction, code: str, lines: dict[str, list]
     )
 
 
-def page(tag: str = "", month: str = "", category: str = "") -> None:
+def page(tag: str = "", month: str = "", category: str = "", payee: str = "") -> None:
     """Query parameters start the list filtered: `tag` (from the Tags page), `month` (YYYY-MM) and `category` (an
-    expenditure category, its subcategories included; both from the Overview's *Notable this month*, F18)."""
+    expenditure category, its subcategories included; both from the Overview's *Notable this month*, F18), or
+    `category=to-sort` with a `payee` (To sort's *Ask Me per Purchase*)."""
     with frame(t("Transactions"), "/transactions") as (ctx, actions):
         with actions:
             text = (
@@ -221,10 +226,15 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
                 clearable=True,
             )
             acc.props("dense outlined").classes("w-56")
-            payee = ui.select(
-                [p.name for p in payee_svc.all_payees(ctx)], label=t("Payee"), with_input=True, clearable=True
+            names = [p.name for p in payee_svc.all_payees(ctx)]
+            payee_filter = ui.select(
+                names + ([payee] if payee and payee not in names else []),
+                label=t("Payee"),
+                value=payee or None,
+                with_input=True,
+                clearable=True,
             )
-            payee.props("dense outlined").classes("w-56")
+            payee_filter.props("dense outlined").classes("w-56")
             typ = (
                 ui.select({k: t(v) for k, v in TX_TYPES.items()}, label=t("Type"), clearable=True)
                 .props("dense outlined")
@@ -233,8 +243,12 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
             tag_filter = TagSelect(ctx, [tag] if tag else [], label=t("Tags"), allow_new=False)  # any of them
             tag_filter.classes("w-64")
             known = category if category and get_coicop().get(category) and category != ADV else None
-            cat_filter = expenditure_category_select(known, ctx=ctx).classes(remove="w-full", add="w-64")
-        filters.set_visibility(bool(tag_filter.value or first_day or cat_filter.value))
+            if category == sorting_svc.FILTER:
+                known = category
+            cat_filter = expenditure_category_select(
+                known, ctx=ctx, extra={sorting_svc.FILTER: t(TO_SORT_NAME)}
+            ).classes(remove="w-full", add="w-64")
+        filters.set_visibility(bool(tag_filter.value or first_day or cat_filter.value or payee_filter.value))
         filter_btn.on_click(lambda: filters.set_visibility(not filters.visible))
         with ui.element("div").classes("selection-bar") as bar:
             selected_label = ui.label().classes("font-medium")
@@ -265,7 +279,7 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
         shown: list[dict] = []  # the rows the filters let through, for the export
 
         def apply_filters() -> None:
-            set_options(payee, [p.name for p in payee_svc.all_payees(ctx)])  # with payees added since
+            set_options(payee_filter, [p.name for p in payee_svc.all_payees(ctx)])  # with payees added since
             tag_filter.refresh_tags(ctx)  # and tags
             wanted = set(tag_filter.value or [])
             tags = tag_svc.by_id(ctx)
@@ -288,7 +302,7 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
                     continue
                 if typ.value and tx.type != typ.value:
                     continue
-                if payee.value and tx.payee != payee.value:
+                if payee_filter.value and tx.payee != payee_filter.value:
                     continue
                 split = split_columns(ctx, tx, lines)
                 if wanted and wanted.isdisjoint([*tag_codec.split(tx.tags), *split[1]]):
@@ -316,7 +330,7 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
             )
             bar.set_visibility(False)
 
-        for el in (d_from, d_to, a_min, a_max, acc, payee, typ, tag_filter, cat_filter, text):
+        for el in (d_from, d_to, a_min, a_max, acc, payee_filter, typ, tag_filter, cat_filter, text):
             el.on_value_change(apply_filters)
         apply_filters()
         on_data_changed(apply_filters)

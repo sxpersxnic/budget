@@ -118,11 +118,11 @@ async def test_a_change_of_page_closes_an_open_sheet(user: User) -> None:
 
 async def test_the_badges_of_the_page_before_are_let_go(user: User) -> None:
     await user.open("/recurring")
-    assert set(layout._due_badges[user.client]) == {"/", "/recurring", "/bills"}
+    assert set(layout._due_badges[user.client]) == {"/", "/transactions", "/to-sort", "/recurring", "/bills"}
     await go(user, "/budget")
-    assert set(layout._due_badges[user.client]) == {"/"}  # the sidebar's stays
+    assert set(layout._due_badges[user.client]) == {"/", "/transactions"}  # the sidebar's stay
     await go(user, "/loans")
-    assert set(layout._due_badges[user.client]) == {"/", "/loans"}
+    assert set(layout._due_badges[user.client]) == {"/", "/transactions", "/loans"}
 
 
 async def test_a_change_of_page_closes_the_phone_drawer(user: User, monkeypatch: pytest.MonkeyPatch) -> None:

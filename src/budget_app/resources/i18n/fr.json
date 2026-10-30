@@ -1,9 +1,5 @@
 {
  "0 takes the category’s budget out of these months.": "0 retire le budget de la catégorie de ces mois.",
- "1 · File": "1 · Fichier",
- "2 · Columns": "2 · Colonnes",
- "2 · Review": "2 · Vérifier",
- "3 · Review": "3 · Vérifier",
  "= {amount} (ECB rate of {date})": "= {amount} (taux BCE du {date})",
  "A QR reference needs a QR-IBAN": "Une référence QR nécessite un QR-IBAN",
  "A QR-IBAN needs a QR reference": "Un QR-IBAN nécessite une référence QR",
@@ -20,6 +16,7 @@
  "A mortgage or loan counts against your wealth. When a payment is due, it is listed here with its interest and repayment, ready to book.": "Une hypothèque ou un prêt vient en déduction de votre fortune. Chaque échéance due apparaît ici avec ses intérêts et son amortissement, prête à être comptabilisée.",
  "A password is already set": "Un mot de passe est déjà défini",
  "A payee called “{name}” already exists. Merge the two instead.": "Un bénéficiaire «{name}» existe déjà. Fusionnez-les plutôt.",
+ "A person you paid by TWINT. What are these payments usually?": "Une personne que vous avez payée par TWINT. À quoi servent généralement ces paiements ?",
  "A price list finds the holding by its name, ISIN or symbol.": "Une liste de cours trouve la position par son nom, son ISIN ou son symbole.",
  "A profile called “{name}” already exists": "Un profil «{name}» existe déjà",
  "A profile is a budget of its own, with its own accounts, settings and password, in a folder of its own: for example a joint household or an association.": "Un profil est un budget à part, avec ses propres comptes, réglages et mot de passe, dans un dossier à lui : par exemple un ménage commun ou une association.",
@@ -37,7 +34,6 @@
  "Account": "Compte",
  "Account no longer exists": "Le compte n’existe plus",
  "Account not found": "Compte introuvable",
- "Account remembered from the last import of this IBAN.": "Compte repris de la dernière importation de cet IBAN.",
  "Account transfer": "Virement entre comptes",
  "Accounts": "Comptes",
  "Accounts used by recurring transactions cannot be deleted": "Les comptes utilisés par des transactions récurrentes ne peuvent pas être supprimés",
@@ -111,7 +107,6 @@
  "All records in one ZIP file. Keep it somewhere safe; it can be restored here.": "Toutes les données dans un fichier ZIP. À conserver en lieu sûr ; il peut être restauré ici.",
  "All time": "Depuis le début",
  "All time, {currency}": "Depuis le début, {currency}",
- "Already imported": "Déjà importée",
  "Already recorded. Saving replaces it.": "Déjà saisi. L’enregistrement remplace la valeur.",
  "Also by tag": "Aussi par étiquette",
  "Also change the {n} later month of this series": [
@@ -149,6 +144,7 @@
   "Archivés · {n} objectifs"
  ],
  "Archived “{name}”": "Archivé : «{name}»",
+ "Ask Me per Purchase": "Me demander à chaque achat",
  "Asks for a password before the app opens.": "Demande un mot de passe avant l’ouverture de l’app.",
  "Asks for the password again, here and on paired phones.": "Redemande le mot de passe, ici et sur les téléphones jumelés.",
  "Asset class": "Classe d’actifs",
@@ -209,6 +205,7 @@
   "Comptabilisé · {n} transaction",
   "Comptabilisé · {n} transactions"
  ],
+ "Bring in a bank file": "Importer un fichier bancaire",
  "Budget": "Budget",
  "Budget Another Category": "Budgéter une autre catégorie",
  "Budget Plan": "Plan budgétaire",
@@ -240,6 +237,7 @@
  "Capital gains on investment": "Gains en capital sur placements",
  "Cash account": "Compte de liquidités",
  "Cash and accounts": "Comptes et espèces",
+ "Cash from a cash machine. What do you usually spend it on?": "Espèces retirées au distributeur. À quoi les dépensez-vous généralement ?",
  "Categories": "Catégories",
  "Categories that are in use can’t be deleted.": "Les catégories utilisées ne peuvent pas être supprimées.",
  "Categories: {codes}": "Catégories  : {codes}",
@@ -282,10 +280,10 @@
  "Check for Updates": "Rechercher les mises à jour",
  "Checked on {date}: the newest release is {version}.": "Vérifié le {date} : la version la plus récente est {version}.",
  "Childcare": "Frais de garde des enfants par des tiers",
+ "Choose Another File…": "Choisir un autre fichier…",
  "Choose Backup…": "Choisir une sauvegarde…",
  "Choose File…": "Choisir un fichier…",
  "Choose a category": "Choisir une catégorie",
- "Choose a category first": "Choisir d’abord une catégorie",
  "Choose a date": "Choisissez une date",
  "Choose a folder of its own, not the app’s folder or one directly inside it": "Choisissez un dossier à part, pas celui de l’app ni un dossier directement dedans",
  "Choose a folder outside the current one": "Choisissez un dossier en dehors de l’actuel",
@@ -294,14 +292,15 @@
  "Choose the account the file belongs to": "Choisir le compte auquel appartient le fichier",
  "Choose the account this file belongs to.": "Choisir le compte auquel appartient ce fichier.",
  "Choose the kind of goal": "Choisissez le type d’objectif",
+ "Choose…": "Choisir…",
  "Class": "Classe",
  "Clear": "Effacer",
  "Clear Selection": "Désélectionner",
- "Clear Suggestions": "Effacer les suggestions",
  "Close": "Fermer",
  "Close the open sheet": "Fermer la fenêtre ouverte",
  "Closing": "Clôture",
  "Colour": "Couleur",
+ "Columns": "Colonnes",
  "Comma ,": "Virgule ,",
  "Commuting by public transport, meals at work and further education": "Trajets en transports publics, repas hors du domicile et formation continue",
  "Compare with": "Comparer avec",
@@ -492,10 +491,11 @@
  "Every transaction with this payee is renamed too. Imports keep finding it.": "Toutes les transactions de ce bénéficiaire sont renommées aussi. Les importations le retrouvent.",
  "Every year": "Chaque année",
  "Every {n} months": "Tous les {n} mois",
+ "Everything in this file is already in Budget": "Tout ce fichier figure déjà dans Budget",
+ "Everything is sorted.": "Tout est trié.",
  "Exchange Rates": "Taux de change",
  "Exchange rate download failed ({error}). Using the last stored rates.": "Le téléchargement des taux de change a échoué ({error}). Les derniers taux enregistrés sont utilisés.",
  "Exchanges and revaluations can’t be saved as templates": "Les opérations de change et les réévaluations ne peuvent pas être enregistrées comme modèles",
- "Exclude": "Exclure",
  "Excludes": "Ne comprend pas",
  "Expected date, holding and price": "Attendu : date, position et cours",
  "Expenditure": "Dépense",
@@ -553,6 +553,7 @@
  "Has a budget in {n} of these months. Tick to replace it.": "A un budget dans {n} de ces mois. Cochez pour le remplacer.",
  "Header on line": "Ligne d’en-tête",
  "Health, accident and life insurance": "Assurance maladie, accidents et vie",
+ "Hide Them": "Masquer",
  "History": "Historique",
  "Holding": "Position",
  "Holding not found": "Position introuvable",
@@ -573,21 +574,19 @@
  ],
  "Import": "Importer",
  "Import Transactions": "Importer des transactions",
+ "Import anyway": "Importer quand même",
  "Import transactions": "Importer des transactions",
  "Import {n} Transaction": [
   "Importer {n} transaction",
   "Importer {n} transactions"
  ],
  "Import {transactions} and {balances}": "Importer {transactions} et {balances}",
- "Imported {n} transaction": [
-  "{n} transaction importée",
-  "{n} transactions importées"
- ],
+ "Imported": "Importé",
+ "Imported transactions Budget can't place wait here, one question per payee.": "Les transactions importées que Budget ne sait pas classer attendent ici : une question par bénéficiaire.",
  "Import…": "Importer…",
  "In CHF": "En CHF",
  "In {currency}": "En {currency}",
  "In “{name}”": "Dans «{name}»",
- "Include": "Inclure",
  "Includes": "Comprend",
  "Income": "Revenu",
  "Income Categories": "Catégories de revenus",
@@ -598,7 +597,6 @@
  "Income category '{name}' already exists": "La catégorie de revenus «{name}» existe déjà",
  "Income category not found": "Catégorie de revenus introuvable",
  "Income minus expenditure": "Revenus moins dépenses",
- "Income · {name}": "Revenu · {name}",
  "Income: {name}": "Revenu : {name}",
  "Index (start = 100)": "Indice (départ = 100)",
  "Insurance premiums": "Primes d’assurance",
@@ -611,8 +609,10 @@
  "Interest on mortgages, loans and credit cards; mostly found by tag": "Intérêts d’hypothèques, de prêts et de cartes de crédit ; trouvés surtout par étiquette",
  "Interest {name}": "Intérêts {name}",
  "Interest {year}": "Intérêts {year}",
+ "Into": "Dans",
  "Investments": "Placements",
  "Invoice {number}": "Facture {number}",
+ "It is remembered for this IBAN after the import.": "Il est retenu pour cet IBAN après l’import.",
  "Item": "Article",
  "Item {n}: enter a name": "Article {n} : saisir un nom",
  "Item {n}: enter a price": "Article {n} : saisir un prix",
@@ -686,6 +686,7 @@
  ],
  "Merge…": "Fusionner…",
  "Min amount": "Montant min.",
+ "Money in and out are the right way round": "Les entrées et sorties sont dans le bon sens",
  "Money put in": "Argent investi",
  "Money that arrived without a record": "Argent arrivé sans écriture",
  "Money that left without a record": "Argent sorti sans écriture",
@@ -693,7 +694,6 @@
  "Month End": "Fin de mois",
  "Month by Month": "Mois par mois",
  "Month by month, in {currency}": "Mois par mois, en {currency}",
- "Month-end balances": "Soldes de fin de mois",
  "Month-end balances by asset class": "Soldes de fin de mois par classe d’actifs",
  "Monthly totals or chosen categories": "Totaux mensuels ou catégories choisies",
  "Months": "Mois",
@@ -710,7 +710,6 @@
  "Net Income": "Revenu net",
  "Net dividends": "Dividendes nets",
  "Net {amount} to {account}": "Net {amount} sur {account}",
- "New": "Nouvelle",
  "New Account": "Nouveau compte",
  "New Advance Payment Account": "Nouveau compte d’avances",
  "New Budget Entry": "Nouveau poste budgétaire",
@@ -757,6 +756,7 @@
  "No income recorded": "Aucun revenu saisi",
  "No income this month.": "Aucun revenu ce mois-ci.",
  "No loans yet.": "Pas encore de prêt.",
+ "No month-end balances": "Aucun solde de fin de mois",
  "No open bills.": "Aucune facture ouverte.",
  "No pairing code is active. Show one in Settings on the computer.": "Aucun code de jumelage n’est actif. Affichez-en un dans les Réglages sur l’ordinateur.",
  "No payee matches.": "Aucun bénéficiaire ne correspond.",
@@ -791,6 +791,7 @@
  "Nothing is due.": "Rien à comptabiliser.",
  "Nothing is filed or sent; the exports are for you or your tax adviser.": "Rien n’est déposé ni envoyé ; les exports sont pour vous ou votre conseiller fiscal.",
  "Nothing is held on that day; the price counts from then on.": "Rien n’est détenu ce jour-là ; le cours vaut à partir de là.",
+ "Nothing is imported twice.": "Rien n’est importé deux fois.",
  "Nothing is planned: the loan is paid off.": "Rien de prévu: le prêt est remboursé.",
  "Nothing matches these filters.": "Aucune entrée ne correspond à ces filtres.",
  "Nothing open": "Rien d’ouvert",
@@ -815,6 +816,7 @@
  "Once": "Une fois",
  "Once a day, Budget asks GitHub for the number of the newest release. Nothing is downloaded or installed, and the request carries nothing about you or your data. Off by default; besides the ECB rates it is the only connection the app makes.": "Une fois par jour, Budget demande à GitHub le numéro de la version la plus récente. Rien n’est téléchargé ni installé, et la requête ne contient rien sur vous ni sur vos données. Désactivé par défaut ; avec les taux de la BCE, c’est la seule connexion de l’app.",
  "One amount column": "Une colonne de montant",
+ "One answer sorts every transaction of a payee.": "Une réponse classe toutes les transactions d’un bénéficiaire.",
  "One line per price: date, holding (name, ISIN or symbol) and price, separated by tabs, semicolons or commas, as copied from a bank or broker price list. A price already recorded for that day is replaced.": "Une ligne par cours : date, position (nom, ISIN ou symbole) et cours, séparés par des tabulations, des points-virgules ou des virgules, tels que copiés d’une liste de cours de la banque ou du courtier. Un cours déjà saisi pour ce jour est remplacé.",
  "Only PDF files and photos up to 20 MB": "Seulement des fichiers PDF et des photos jusqu’à 20 Mo",
  "Only an empty data folder can take the sample data.": "Les données d’exemple ne se chargent que dans un dossier de données vide.",
@@ -877,6 +879,7 @@
  "Payee contains “{word}”": "Le bénéficiaire contient «{word}»",
  "Payee not found": "Bénéficiaire introuvable",
  "Payees": "Bénéficiaires",
+ "Payees to sort": "Bénéficiaires à trier",
  "Paying Account": "Compte payeur",
  "Payments already booked stay as they are; the schedule continues on the new terms.": "Les échéances déjà comptabilisées restent telles quelles; le plan continue aux nouvelles conditions.",
  "Pay…": "Payer…",
@@ -897,7 +900,6 @@
   "Planification jusqu’à {month}, {n} postes budgétaires ajoutés"
  ],
  "Positive amounts are spending (typical for credit card statements)": "Les montants positifs sont des dépenses (typique des relevés de carte de crédit)",
- "Possible duplicate": "Doublon possible",
  "Previous month": "Mois précédent",
  "Previous or next month": "Mois précédent ou suivant",
  "Price": "Prix",
@@ -964,6 +966,8 @@
  "Red": "Rouge",
  "Ref. {reference}": "Réf. {reference}",
  "Releases page": "Page des versions",
+ "Remember for next time": "Retenir pour la prochaine fois",
+ "Remembered from the last statement of this IBAN.": "Retenu du dernier relevé de cet IBAN.",
  "Reminders": "Rappels",
  "Remove": "Retirer",
  "Remove Budget": "Supprimer le budget",
@@ -1024,8 +1028,8 @@
  "Rule not found": "Règle introuvable",
  "Rule: contains “{match}”": "Règle : contient «{match}»",
  "Rules…": "Règles…",
+ "Same account, day and amount as a transaction you have. Skipped, so nothing counts twice.": "Même compte, même jour et même montant qu’une transaction que vous avez. Ignorées, pour que rien ne compte deux fois.",
  "Same as the transaction": "Comme la transaction",
- "Same payee as a row you chose": "Même bénéficiaire qu’une ligne que vous avez choisie",
  "Sample Data": "Données d’exemple",
  "Sample data": "Données d’exemple",
  "Sample data can only be loaded into an empty data folder.": "Les données d’exemple ne se chargent que dans un dossier de données vide.",
@@ -1150,6 +1154,8 @@
  ],
  "Shared Expenses": "Dépenses partagées",
  "Show Payment": "Afficher le paiement",
+ "Show Them": "Afficher",
+ "Show Transactions": "Afficher les transactions",
  "Show all subcategories": "Afficher toutes les sous-catégories",
  "Show its transactions": "Afficher ses transactions",
  "Show or hide a scenario on the Overview": "Afficher ou masquer un scénario sur l’aperçu",
@@ -1166,21 +1172,23 @@
  "Skip": "Sauter",
  "Skip a loan payment": "Ignorer une échéance de prêt",
  "Skip a recurring transaction": "Sauter une transaction récurrente",
+ "Skip the rest: it waits under To Sort.": "Passer le reste : il attend sous « À trier ».",
  "Skip to content": "Aller au contenu",
  "Skipped the payment of {date}": "Échéance du {date} ignorée",
  "Skipped {name} on {date}": "Sauté : {name} le {date}",
  "Sold": "Vendu",
  "Some files were not attached: only PDF files, photos, office and text files up to 20 MB": "Certains fichiers n’ont pas été joints : seulement des PDF, des photos, des fichiers bureautiques et texte jusqu’à 20 Mo",
  "Some selected advance payments have repayments. Delete the repayments first (or select them as well).": "Certaines avances sélectionnées ont des remboursements. Supprimer d’abord les remboursements (ou les sélectionner aussi).",
+ "Something else…": "Autre chose…",
+ "Sort transactions": "Trier des transactions",
+ "Sorted as {category}. Is that right?": "Classé dans {category}. Est-ce juste ?",
  "Spending by Category": "Dépenses par catégorie",
  "Spending by Tag": "Dépenses par étiquette",
  "Spent in {year}, {currency}": "Dépenses {year}, {currency}",
  "Spread of the exchange against the ECB rate": "Écart de change par rapport au taux BCE",
  "Start Date": "Date de début",
  "Statement {month}": "Relevé {month}",
- "Status": "Statut",
  "Streaming, phone, gym, insurance: a charge that comes back at the same rhythm for about the same amount shows here once it was charged {n} times ({m} times for half-yearly and yearly ones). Nothing is booked for you.": "Streaming, téléphone, salle de sport, assurance : un débit qui revient au même rythme pour à peu près le même montant apparaît ici une fois débité {n} fois ({m} fois pour les semestriels et annuels). Rien n’est comptabilisé pour vous.",
- "Suggestion": "Suggestion",
  "Summary": "Résumé",
  "Summary for {name}": "Résumé pour {name}",
  "Summary…": "Résumé…",
@@ -1208,6 +1216,8 @@
  "That folder belongs to another profile": "Ce dossier appartient à un autre profil",
  "That is a file, not a folder": "C’est un fichier, pas un dossier",
  "That month has passed, so extend it first.": "Ce mois est déjà passé : prolonger d’abord la planification.",
+ "That's Wrong": "C’est faux",
+ "The Columns Look Wrong…": "Les colonnes ne vont pas…",
  "The From account must be in {currency}": "Le compte débité doit être tenu en {currency}",
  "The Overview then also shows the projected wealth without this goal’s money: what it holds now, growing by the monthly amount needed until the target date.": "L’aperçu montre alors aussi la fortune prévue sans l’argent de cet objectif : ce qu’il contient maintenant, augmenté du montant mensuel nécessaire jusqu’à la date cible.",
  "The QR bill doesn’t end with the trailer EPD": "La QR-facture ne se termine pas par la clôture EPD",
@@ -1221,7 +1231,7 @@
  "The To account must be in {currency}": "Le compte crédité doit être tenu en {currency}",
  "The XML file declares a document type, which bank statements never do": "Le fichier XML déclare un type de document, ce que les relevés bancaires ne font jamais",
  "The XML file is not a camt.053 or camt.054 bank statement": "Le fichier XML n’est pas un relevé bancaire camt.053 ou camt.054",
- "The account is remembered for this IBAN after the import.": "Le compte est mémorisé pour cet IBAN après l’importation.",
+ "The account of this bank's last file.": "Le compte du dernier fichier de cette banque.",
  "The address type “{value}” is unknown": "Le type d’adresse «{value}» est inconnu",
  "The advance payment account must be in {currency}": "Le compte d’avances doit être tenu en {currency}",
  "The advance share must be greater than 0 and at most the amount": "La part avancée pour d’autres doit être supérieure à 0 et ne pas dépasser le montant",
@@ -1241,6 +1251,7 @@
   "Les {n} soldes saisis à partir de {month} sont remplacés par la valeur des positions."
  ],
  "The balances in the file do not follow from its amounts, so no month-end balances are offered. Check the balance column.": "Les soldes du fichier ne découlent pas de ses montants, aucun solde de fin de mois n’est donc proposé. Vérifier la colonne du solde.",
+ "The bank hasn't booked them yet; they come with a later statement.": "La banque ne les a pas encore comptabilisées ; elles viendront avec un relevé ultérieur.",
  "The cash account must be in {currency}, the currency of {name}. Exchange the money first.": "Le compte de liquidités doit être en {currency}, la monnaie de {name}. Changez d’abord l’argent.",
  "The conversion month can’t be in the future": "Le mois de conversion ne peut pas être dans le futur",
  "The creditor reference {reference} is invalid": "La référence créancier {reference} n’est pas valable",
@@ -1324,6 +1335,7 @@
  "Then the sale on {date} would sell more than is held ({quantity})": "La vente du {date} vendrait alors plus que ce qui est détenu ({quantity})",
  "There is no complete month with records yet, so there is nothing to propose.": "Il n’y a pas encore de mois complet avec des écritures, il n’y a donc rien à proposer.",
  "There is no such profile": "Ce profil n’existe pas",
+ "They are skipped.": "Elles sont ignorées.",
  "Things to do": "À faire",
  "This QR bill is only a notice and is not to be paid": "Cette QR-facture n’est qu’un avis et ne doit pas être payée",
  "This QR code is not a Swiss QR bill": "Ce code QR n’est pas une QR-facture suisse",
@@ -1365,8 +1377,10 @@
  "Tick at least one category": "Cochez au moins une catégorie",
  "To": "Au",
  "To Account": "Compte crédité",
+ "To Sort": "À trier",
  "To end of": "Jusqu’à fin",
  "To send yourself; the app sends nothing.": "À envoyer vous-même; l’app n’envoie rien.",
+ "To sort": "À trier",
  "To the cent": "Au centime",
  "Total": "Total",
  "Total ({currency})": "Total ({currency})",
@@ -1404,6 +1418,7 @@
  "Type the recovery key you were given when encryption was turned on, and choose a new password.": "Saisissez la clé de récupération reçue à l’activation du chiffrement et choisissez un nouveau mot de passe.",
  "Unchanged": "Inchangée",
  "Undo": "Annuler",
+ "Undo the whole import from History at any time.": "Vous pouvez annuler tout l’import à tout moment depuis l’historique.",
  "Undo: {action}": "Annulation : {action}",
  "Undone: {action}": "Annulé : {action}",
  "Unexpected answer from the releases page": "Réponse inattendue de la page des versions",
@@ -1448,6 +1463,8 @@
  "Welcome": "Bienvenue",
  "What": "Quoi",
  "What did the account hold at the end of the month?": "Quel était le solde du compte à la fin du mois ?",
+ "What do you usually buy here?": "Qu’achetez-vous généralement ici ?",
+ "What is this money?": "D’où vient cet argent ?",
  "When you pay partly for others, turn on “Partly paid for others” in the transaction and name the debtor. What they owe shows here until you settle up.": "Quand vous payez en partie pour d’autres, activez «Payé en partie pour d’autres» dans la transaction et nommez le débiteur. Ce qu’il vous doit apparaît ici jusqu’au règlement.",
  "Who you pay and who pays you. Add one on a transaction, or import a bank file: after a rename or a merge, the next import of the same bank text uses the payee you kept.": "Qui vous payez et qui vous paie. Indiquez-en un sur une transaction ou importez un fichier bancaire : après un renommage ou une fusion, la prochaine importation du même texte bancaire utilise le bénéficiaire conservé.",
  "Withholding tax": "Impôt anticipé",
@@ -1462,10 +1479,13 @@
  "Year in review": "Bilan de l’année",
  "Year in review {year}": "Bilan de l’année {year}",
  "Yellow": "Jaune",
+ "Yes, {category}": "Oui, {category}",
+ "You have: {what}": "Vous avez : {what}",
  "Your New Recovery Key": "Votre nouvelle clé de récupération",
  "Your Own Data": "Vos propres données",
  "Your Recovery Key": "Votre clé de récupération",
  "Your Series": "Vos séries",
+ "Your Wealth page shows the bank's own balance at the end of each month.": "La page « Fortune » affiche le solde de la banque à la fin de chaque mois.",
  "Your budget stays on this computer: plain CSV files in your data folder, CHF as the base currency, ECB exchange rates and COICOP 2018 categories. Nothing is uploaded.": "Votre budget reste sur cet ordinateur : de simples fichiers CSV dans votre dossier de données, le CHF comme monnaie de base, les taux de change de la BCE et les catégories COICOP 2018. Rien n’est envoyé.",
  "Your income, spending, savings and wealth over a year, against the year before. The figures are the monthly statements added up; wealth is the recorded month-end balances.": "Vos revenus, dépenses, économies et votre fortune sur une année, comparés à l’année précédente. Les chiffres sont les relevés mensuels additionnés ; la fortune, les soldes de fin de mois saisis.",
  "Your records are kept here as CSV files. To use another folder, start Budget with --data-dir or set BUDGET_DATA_DIR.": "Vos données sont conservées ici en fichiers CSV. Pour un autre dossier, lancez Budget avec --data-dir ou définissez BUDGET_DATA_DIR.",
@@ -1479,6 +1499,10 @@
  "added": "ajouté",
  "after the one on {date}": "après celle du {date}",
  "already recorded": "déjà saisi",
+ "and {n} more": [
+  "et {n} de plus",
+  "et {n} de plus"
+ ],
  "behind": "en retard",
  "bill|Open": "Ouvertes",
  "books automatically": "comptabilisée automatiquement",
@@ -1549,6 +1573,7 @@
  "undone": "annulé",
  "until {date}": "jusqu’au {date}",
  "withholding tax {amount}, reclaimable": "impôt anticipé {amount}, récupérable",
+ "{account} is up to date to {date}": "{account} est à jour au {date}",
  "{account} is valued from its holdings from {month} on; earlier days belong to its recorded balances": "{account} est évalué à partir de ses positions dès {month} ; les jours antérieurs relèvent de ses soldes saisis",
  "{actual} of {budget}": "{actual} sur {budget}",
  "{amount} a month until {date}": "{amount} par mois jusqu’au {date}",
@@ -1576,17 +1601,12 @@
   "{category} + {n} autres"
  ],
  "{change} since the end of {month}": "{change} depuis fin {month}",
- "{counts}. Duplicates and unreadable lines are left out; tick them to import anyway.": "{counts}. Les doublons et les lignes illisibles sont exclus ; les cocher pour les importer quand même.",
  "{count} · matches the amount": "{count} · correspond au montant",
  "{count} · {difference} more than the amount": "{count} · {difference} de plus que le montant",
  "{count} · {difference} not itemised": "{count} · {difference} non ventilé",
  "{count} · {total}": "{count} · {total}",
  "{date} · {amount}": "{date} · {amount}",
  "{date} · {debtor} · {amount} open": "{date} · {debtor} · {amount} restant dû",
- "{details} · {n} entry": [
-  "{details} · {n} écriture",
-  "{details} · {n} écritures"
- ],
  "{month} so far": "{month} jusqu’à aujourd’hui",
  "{month} so far, against all of {reference}": "{month} jusqu’à aujourd’hui, comparé à tout {reference}",
  "{name} has transactions or recorded balances. They stay as its history up to the month before the conversion. From the conversion month on, it is valued from the holdings below, at their price on the first day of that month, and takes no other transactions or balances.": "{name} a des transactions ou des soldes saisis. Ils restent son historique jusqu’au mois précédant la conversion. Dès le mois de conversion, il est évalué à partir des positions ci-dessous, à leur prix du premier jour de ce mois, et n’accepte plus d’autres transactions ni soldes.",
@@ -1595,14 +1615,6 @@
  "{name} owes nothing": "{name} ne doit rien",
  "{name} owes nothing in {currency}": "{name} ne doit rien en {currency}",
  "{name} owes {amount}, not more": "{name} doit {amount}, pas plus",
- "{name} · {n} line": [
-  "{name} · {n} ligne",
-  "{name} · {n} lignes"
- ],
- "{name} · {n} line · recognised as “{profile}”": [
-  "{name} · {n} ligne · reconnu comme «{profile}»",
-  "{name} · {n} lignes · reconnu comme «{profile}»"
- ],
  "{name}: price {price}, before {before}": "{name} : cours {price}, avant {before}",
  "{n} Balance": [
   "{n} solde",
@@ -1612,10 +1624,6 @@
   "{n} transaction",
   "{n} transactions"
  ],
- "{n} already imported": [
-  "{n} déjà importée",
-  "{n} déjà importées"
- ],
  "{n} budget entry": [
   "{n} poste budgétaire",
   "{n} postes budgétaires"
@@ -1623,10 +1631,6 @@
  "{n} category": [
   "{n} catégorie",
   "{n} catégories"
- ],
- "{n} category is a suggestion (in italics): check it before importing.": [
-  "{n} catégorie est une suggestion (en italique) : à vérifier avant l’import.",
-  "{n} catégories sont des suggestions (en italique) : à vérifier avant l’import."
  ],
  "{n} change": [
   "{n} modification",
@@ -1640,6 +1644,10 @@
   "{n} n’a pas pu être comptabilisée : {reason}",
   "{n} n’ont pas pu être comptabilisées : {reason}"
  ],
+ "{n} entry is still pending": [
+  "{n} écriture est encore en attente",
+  "{n} écritures sont encore en attente"
+ ],
  "{n} file": [
   "{n} fichier",
   "{n} fichiers"
@@ -1652,9 +1660,21 @@
   "{n} objectif",
   "{n} objectifs"
  ],
+ "{n} is already in Budget": [
+  "{n} figure déjà dans Budget",
+  "{n} figurent déjà dans Budget"
+ ],
  "{n} item": [
   "{n} article",
   "{n} articles"
+ ],
+ "{n} line can't be read": [
+  "{n} ligne est illisible",
+  "{n} lignes sont illisibles"
+ ],
+ "{n} line in {source}": [
+  "{n} ligne dans {source}",
+  "{n} lignes dans {source}"
  ],
  "{n} line is left out": [
   "{n} ligne est ignorée",
@@ -1688,17 +1708,17 @@
   "{n} mois, {span}, prolongé avec la planification",
   "{n} mois, {span}, prolongés avec la planification"
  ],
- "{n} month-end balance recorded": [
-  "{n} solde de fin de mois saisi",
-  "{n} soldes de fin de mois saisis"
+ "{n} month-end balance found, none ticked": [
+  "{n} solde de fin de mois trouvé, aucun coché",
+  "{n} soldes de fin de mois trouvés, aucun coché"
  ],
- "{n} more row with the same payee got this category": [
-  "{n} autre ligne du même bénéficiaire a reçu cette catégorie",
-  "{n} autres lignes du même bénéficiaire ont reçu cette catégorie"
+ "{n} month-end balance recorded.": [
+  "{n} solde de fin de mois enregistré.",
+  "{n} soldes de fin de mois enregistrés."
  ],
- "{n} new": [
-  "{n} nouvelle",
-  "{n} nouvelles"
+ "{n} month-end balance to record": [
+  "{n} solde de fin de mois à enregistrer",
+  "{n} soldes de fin de mois à enregistrer"
  ],
  "{n} occurrence due since {date}": [
   "{n} échéance due depuis le {date}",
@@ -1732,45 +1752,33 @@
   "{n} bénéficiaire",
   "{n} bénéficiaires"
  ],
+ "{n} payee Budget doesn't know yet": [
+  "{n} bénéficiaire que Budget ne connaît pas encore",
+  "{n} bénéficiaires que Budget ne connaît pas encore"
+ ],
+ "{n} payment": [
+  "{n} paiement",
+  "{n} paiements"
+ ],
  "{n} payment due since {date}": [
   "{n} paiement échu depuis le {date}",
   "{n} paiements échus depuis le {date}"
- ],
- "{n} pending entry left out": [
-  "{n} écriture en attente omise",
-  "{n} écritures en attente omises"
  ],
  "{n} person owes you": [
   "{n} personne vous doit quelque chose",
   "{n} personnes vous doivent quelque chose"
  ],
- "{n} possible duplicate": [
-  "{n} doublon possible",
-  "{n} doublons possibles"
+ "{n} purchase": [
+  "{n} achat",
+  "{n} achats"
  ],
  "{n} row": [
   "{n} ligne",
   "{n} lignes"
  ],
- "{n} row has no category yet: give it one first": [
-  "{n} ligne n’a pas encore de catégorie : donnez-lui-en une d’abord",
-  "{n} lignes n’ont pas encore de catégorie : donnez-leur-en une d’abord"
- ],
  "{n} row is split by its items: only the rest in its own category changes": [
   "{n} transaction est ventilée par articles : seul le reste dans sa propre catégorie change",
   "{n} transactions sont ventilées par articles : seul le reste dans leur propre catégorie change"
- ],
- "{n} row skipped: that category is for money coming in only": [
-  "{n} ligne ignorée : cette catégorie est réservée aux revenus",
-  "{n} lignes ignorées : cette catégorie est réservée aux revenus"
- ],
- "{n} row skipped: that category is for spending only": [
-  "{n} ligne ignorée : cette catégorie est réservée aux dépenses",
-  "{n} lignes ignorées : cette catégorie est réservée aux dépenses"
- ],
- "{n} row without a category is left out: give it one (select it, choose a category, Apply) to import it now, or import it later from the same file.": [
-  "{n} ligne sans catégorie est laissée de côté : donnez-lui-en une (sélectionnez-la, choisissez une catégorie, Appliquer) pour l’importer maintenant, ou importez-la plus tard depuis le même fichier.",
-  "{n} lignes sans catégorie sont laissées de côté : donnez-leur-en une (sélectionnez-les, choisissez une catégorie, Appliquer) pour les importer maintenant, ou importez-les plus tard depuis le même fichier."
  ],
  "{n} rule": [
   "{n} règle",
@@ -1779,6 +1787,14 @@
  "{n} selected": [
   "Sélection : {n}",
   "Sélection : {n}"
+ ],
+ "{n} sorted only by a word in the name": [
+  "{n} classée seulement d’après un mot du nom",
+  "{n} classées seulement d’après un mot du nom"
+ ],
+ "{n} sorted the way you sorted before": [
+  "{n} classée comme vous l’avez fait jusqu’ici",
+  "{n} classées comme vous l’avez fait jusqu’ici"
  ],
  "{n} spread booking of a currency exchange keeps its note; it changes with its exchange.": [
   "{n} écart de change garde sa remarque ; il suit son opération de change.",
@@ -1816,9 +1832,21 @@
   "{n} transaction ne peut pas être modifiée, donc rien n’est enregistré :",
   "{n} transactions ne peuvent pas être modifiées, donc rien n’est enregistré :"
  ],
+ "{n} transaction from {source}, {first} to {last}": [
+  "{n} transaction de {source}, du {first} au {last}",
+  "{n} transactions de {source}, du {first} au {last}"
+ ],
+ "{n} transaction imported.": [
+  "{n} transaction importée.",
+  "{n} transactions importées."
+ ],
  "{n} transaction is in more than one section": [
   "{n} transaction est dans plus d’une rubrique",
   "{n} transactions sont dans plus d’une rubrique"
+ ],
+ "{n} transaction is now {category}": [
+  "{n} transaction est maintenant dans {category}",
+  "{n} transactions sont maintenant dans {category}"
  ],
  "{n} transaction loses this tag; nothing else changes.": [
   "{n} transaction perd cette étiquette ; rien d’autre ne change.",
@@ -1828,13 +1856,17 @@
   "{n} transaction de ce compte est datée de {month} ou plus tard. Choisissez un mois plus tardif, ou déplacez-la d’abord vers un autre compte.",
   "{n} transactions de ce compte sont datées de {month} ou plus tard. Choisissez un mois plus tardif, ou déplacez-les d’abord vers un autre compte."
  ],
- "{n} unreadable": [
-  "{n} illisible",
-  "{n} illisibles"
- ],
  "{n} was already in the list": [
   "{n} était déjà dans la liste",
   "{n} étaient déjà dans la liste"
+ ],
+ "{n} was imported before": [
+  "{n} a déjà été importée",
+  "{n} ont déjà été importées"
+ ],
+ "{n} withdrawal": [
+  "{n} retrait",
+  "{n} retraits"
  ],
  "{open} of {share}": "{open} sur {share}",
  "{pct} % of the money put in": "{pct} % de l’argent investi",
@@ -1845,6 +1877,7 @@
  "{position} on {date}": "{position} le {date}",
  "{quantity} held: worth {value}, a change of {change}.": "{quantity} détenus : valeur {value}, une variation de {change}.",
  "{rate} savings rate": "Taux d’épargne {rate}",
+ "{reason}. They are left out.": "{reason}. Elles sont laissées de côté.",
  "{repeat}, forever": "{repeat}, sans limite",
  "{series} (budget)": "{series} (budget)",
  "{shown} of {n} payee": [

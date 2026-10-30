@@ -30,6 +30,7 @@ from budget_app.services import profiles as profiles_svc
 from budget_app.services import recurring as recurring_svc
 from budget_app.services import reminders as reminders_svc
 from budget_app.services import security, sync
+from budget_app.services import sorting as sorting_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
 from budget_app.services import updates as updates_svc
@@ -54,6 +55,7 @@ SETTINGS = ("/settings", N_("Settings"), "o_settings")
 SECTIONS = {
     "/transactions": [
         ("/transactions", N_("Transactions")),
+        ("/to-sort", N_("To Sort")),
         ("/recurring", N_("Recurring")),
         ("/bills", N_("Bills")),
     ],
@@ -117,7 +119,9 @@ _sheets: weakref.WeakKeyDictionary[Client, weakref.WeakSet[ui.dialog]] = weakref
 _due_badges: weakref.WeakKeyDictionary[Client, dict[str, ui.badge]] = weakref.WeakKeyDictionary()
 BADGES = {
     "/": N_("Things to do"),  # in the sidebar: exactly the rows of the Overview's Due list (reminders.count)
-    "/recurring": N_("Due recurring transactions"),  # the others on their tabs
+    "/transactions": N_("Payees to sort"),  # in the sidebar too: imported transactions without a category
+    "/to-sort": N_("Payees to sort"),  # the others on their tabs
+    "/recurring": N_("Due recurring transactions"),
     "/bills": N_("Bills due within a week or overdue"),
     "/loans": N_("Due loan payments"),
 }
@@ -223,6 +227,8 @@ def refresh_due_badge() -> None:
     badges = _due_badges.get(ui.context.client, {})
     counts = {
         "/": reminders_svc.count,
+        "/transactions": lambda ctx, _today: sorting_svc.count(ctx),
+        "/to-sort": lambda ctx, _today: sorting_svc.count(ctx),
         "/recurring": recurring_svc.due_count,
         "/bills": bills_svc.due_count,
         "/loans": loan_svc.due_count,
@@ -269,7 +275,8 @@ def _section_tabs(place: str, path: str) -> None:
         for target, label in SECTIONS[place]:
             with ui.link(target=target).classes("section-tab") as link:
                 ui.label(t(label))
-                _badge(target)
+                if target != place:  # a place's own count is the sidebar's (Transactions: payees to sort)
+                    _badge(target)
             _mark(link, target == current)
 
 

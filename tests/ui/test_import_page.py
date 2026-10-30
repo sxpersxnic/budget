@@ -1,7 +1,7 @@
-"""The CSV import page: file → columns → review → import, with saved bank settings and duplicates."""
+"""The import page (decision 48): your file in one sentence with plain checks, one Import button, then a few
+questions about the payees Budget could not place."""
 
 import asyncio
-import re
 from datetime import date
 
 from nicegui import ElementFilter, ui
@@ -11,21 +11,15 @@ from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
 from test_importer import DE, UBS
 
-from budget_app.domain.coicop import get_coicop
-from budget_app.services import importer
+from budget_app.domain.models import TX_INCOME
+from budget_app.services import importer, sorting
 from budget_app.services import transactions as tx_svc
 from budget_app.services.transactions import TransactionInput
-
-SELECTED = re.compile(r".*getSelectedRows")
-WAITING_ONE = (
-    "1 row without a category is left out: give it one (select it, choose a category, Apply) to import it now, or "
-    "import it later from the same file."
-)
 
 
 # ------------------------------------------------------------------ helpers
 async def settle() -> None:
-    """Let async handlers (uploads, selection requests) finish."""
+    """Let async handlers (uploads) finish."""
     for _ in range(5):
         await asyncio.sleep(0.01)
 
@@ -51,42 +45,46 @@ def click(user: User, element) -> None:
     UserInteraction(user, {element}, None).click()
 
 
-def import_button(user: User) -> ui.button:
-    return next(b for b in user.find(kind=ui.button).elements if b.text.startswith("Import ") and "…" not in b.text)
-
-
-def rows(user: User) -> list[dict]:
-    [grid] = user.find(kind=ui.aggrid).elements
-    return grid.options["rowData"]
-
-
-def labels(user: User) -> list[str]:
-    return [e.text for e in user.find(kind=ui.label).elements if e.text]
-
-
-def status(user: User) -> str:
-    btn = import_button(user)
-    return next(c.text for c in btn.parent_slot.children if isinstance(c, ui.label))
-
-
 async def upload(user: User, name: str, data: bytes) -> None:
     [element] = user.find(kind=ui.upload).elements
     await element.handle_uploads([SmallFileUpload(name, "text/csv", data)])
     await settle()
 
 
-async def select(user: User, *indexes: int) -> None:
-    user.javascript_rules[SELECTED] = lambda _: [{"id": str(i)} for i in indexes]
-    [grid] = user.find(kind=ui.aggrid).elements
-    UserInteraction(user, {grid}, None).trigger("selectionChanged")
-    await user.should_see(f"{len(indexes)} selected")
+def import_button(user: User) -> ui.button:
+    return next(b for b in user.find(kind=ui.button).elements if b.text.startswith("Import ") and "…" not in b.text)
 
 
-async def categorise(user: User, category: str, *indexes: int) -> None:
-    await select(user, *indexes)
-    put(user, field(user, ui.select, "Category"), category)
-    click(user, button(user, "Apply"))
-    await settle()
+def headline(user: User) -> str:
+    return next(e.text for e in user.find(kind=ui.label).elements if "import-headline" in e.classes)
+
+
+def checks(user: User) -> list[str]:
+    """The checks of the file, as their titles."""
+    with user:
+        return [
+            label.text
+            for box in ElementFilter(kind=ui.element, local_scope=False)
+            if "import-check" in box.classes
+            for label in box.descendants()
+            if isinstance(label, ui.label) and "font-semibold" in label.classes
+        ]
+
+
+def detail(user: User, title: str) -> str:
+    """The line under a check's title."""
+    with user:
+        for box in ElementFilter(kind=ui.element, local_scope=False):
+            labels = (
+                [e.text for e in box.descendants() if isinstance(e, ui.label)] if "import-check" in box.classes else []
+            )
+            if title in labels:
+                return labels[labels.index(title) + 1]
+    raise AssertionError(f"no check {title!r}")
+
+
+def problem(user: User) -> str:
+    return next(e.text for e in user.find(kind=ui.label).elements if "import-problem" in e.classes)
 
 
 async def de_file_on_euro_account(user: User, setup) -> None:
@@ -96,172 +94,76 @@ async def de_file_on_euro_account(user: User, setup) -> None:
 
 
 # ------------------------------------------------------------------ the whole flow
-async def test_import_a_file_in_three_steps(user: User, ctx, setup) -> None:
+async def test_import_a_file_and_answer_the_one_question(user: User, ctx, setup) -> None:
     await user.open("/import")
-    await user.should_see("1 · File")
-    await user.should_not_see("3 · Review")
-
+    await user.should_see("Bring in a bank file")
     await upload(user, "de.csv", DE)
-    await user.should_see("de.csv · 4 lines")
-    await user.should_see("2 · Columns")
-    assert field(user, ui.select, "Date column").value == "Buchungsdatum"
-    assert field(user, ui.select, "Amount").value == "Betrag"
-    assert field(user, ui.select, "Description").value == ["Verwendungszweck"]
-    assert field(user, ui.select, "Separator").value == ";"
-    assert [(r["date"], r["amount"], r["status"]) for r in rows(user)] == [
-        ("2026-09-15", -12.3, "New"),
-        ("2026-09-15", -12.3, "New"),
-        ("2026-09-16", 1234.5, "New"),
-        ("", None, "No valid date"),
-    ]
-    assert status(user) == "Choose the account this file belongs to."
-    assert not import_button(user).enabled
+    assert headline(user) == "4 transactions from de.csv, 15 Sep 2026 to 16 Sep 2026"
+    assert problem(user) == "Choose the account this file belongs to."
+    assert checks(user) == [] and not import_button(user).enabled
 
     put(user, field(user, ui.select, "Account"), setup["eur"].id)
-    await user.should_see("3 new · 1 unreadable. Duplicates and unreadable lines are left out")
-    # the refund has no category: it waits, and the two categorized rows can be imported at once
-    assert status(user) == WAITING_ONE
-    assert import_button(user).text == "Import 2 Transactions" and import_button(user).enabled
-    # Coop is a shop the category picker knows: suggested, in italics, with the reason
-    assert [(r["category"], r["suggested"], r["reason"]) for r in rows(user)][:3] == [
-        ("01.1 Groceries", True, "Payee contains “Coop”"),
-        ("01.1 Groceries", True, "Payee contains “Coop”"),
-        ("", False, ""),
-    ]
+    assert problem(user) == ""
+    assert checks(user) == ["Money in and out are the right way round", "1 line can't be read"]
+    assert "+1'234.50" in detail(user, "Money in and out are the right way round")
+    assert detail(user, "1 line can't be read") == "No valid date. They are left out."
+    assert import_button(user).text == "Import 3 Transactions" and import_button(user).enabled
 
-    await categorise(user, "01.1", 0, 1)
-    assert status(user) == WAITING_ONE
-    await categorise(user, setup["salary"].id, 2)  # with a category it is ticked again
-    assert [r["category"] for r in rows(user)][:3] == ["01.1 Groceries", "01.1 Groceries", "Income · Salary"]
-    assert [r["include"] for r in rows(user)] == [True, True, True, False]
-    assert status(user) == "" and import_button(user).text == "Import 3 Transactions"
+    click(user, import_button(user))  # the refund has no category: it is imported all the same (decision 48)
+    await user.should_see("Euro account is up to date to 16 Sep 2026")
+    await user.should_see("3 transactions imported. Undo the whole import from History at any time.")
+    await user.should_see("1 payee Budget doesn't know yet")
+    await user.should_see("What is this money?")
+    assert len(ctx.store.transactions.all()) == 3
+    assert [g.name for g in sorting.groups(ctx)] == ["Rückerstattung"]
 
-    click(user, import_button(user))
-    await user.should_see("Transactions")
-    assert notified(user, "Imported 3 transactions")
-    stored = sorted(ctx.store.transactions.all(), key=lambda tx: (tx.date, tx.amount))
-    assert [(tx.date, tx.type, tx.amount, tx.currency, tx.category, tx.comment) for tx in stored] == [
-        (date(2026, 9, 15), "expenditure", 12.3, "EUR", "01.1", "Coop Pronto 1234"),
-        (date(2026, 9, 15), "expenditure", 12.3, "EUR", "01.1", "Coop Pronto 1234"),
-        (date(2026, 9, 16), "income", 1234.5, "EUR", setup["salary"].id, "Rückerstattung"),
-    ]
-    assert all(tx.import_ref.startswith("csv:") for tx in stored)
-    assert stored[0].from_account == setup["eur"].id and stored[2].to_account == setup["eur"].id
+    click(user, button(user, "Salary"))
+    await settle()
+    assert notified(user, "1 transaction is now Salary")
+    refund = next(tx for tx in ctx.store.transactions.all() if tx.type == TX_INCOME)
+    assert refund.category == setup["salary"].id and sorting.unsorted(ctx) == []
+    await user.should_see("2 sorted only by a word in the name")  # Coop → groceries, folded
 
 
-async def test_reimporting_the_same_file_skips_every_line(user: User, ctx, setup) -> None:
-    parsed = importer.read_file("de.csv", DE)
-    rows_ = importer.analyse(ctx, importer.parse_rows(parsed, importer.guess_profile(parsed)), setup["eur"].id)
-    for r in rows_[:2]:
-        r.category = "01.1"
-    rows_[2].category = setup["salary"].id
-    importer.hold_uncategorized(ctx, rows_)  # with its category the refund is in again
-    importer.commit(ctx, rows_, setup["eur"].id)
-
+async def test_a_file_read_the_wrong_way_round_is_swapped(user: User, ctx, setup) -> None:
     await de_file_on_euro_account(user, setup)
-    await user.should_see("0 new · 3 already imported · 1 unreadable.")
-    assert [r["status"] for r in rows(user)] == ["Already imported"] * 3 + ["No valid date"]
-    assert [r["include"] for r in rows(user)] == [False] * 4
-    assert import_button(user).text == "Import 0 Transactions" and not import_button(user).enabled
-    # categories are suggested from what was imported before, marked as suggestions with the reason (F07)
-    first = rows(user)[0]
-    assert (first["category"], first["suggested"]) == ("01.1 Groceries", True)
-    assert first["reason"] == "Used 2 times for this payee"
+    signs = "Money in and out are the right way round"
+    assert detail(user, signs).startswith("Rückerstattung +1'234.50")
+    click(user, button(user, "That's Wrong"))
+    assert "Rückerstattung −1'234.50" in detail(user, signs)  # now spending; the switch below says so too
+    with user:  # in the folded column settings
+        assert next(e for e in ElementFilter(kind=ui.switch, local_scope=False) if "Positive amounts" in e.text).value
 
 
-async def test_a_manual_entry_marks_a_possible_duplicate(user: User, ctx, setup) -> None:
-    tx_svc.save(
-        ctx,
-        TransactionInput(
-            date=date(2026, 9, 15),
-            amount=12.3,
-            currency="EUR",
-            category="01.1",
-            from_account=setup["eur"].id,
-        ),
+async def test_what_is_already_in_budget_is_skipped_and_can_be_imported_anyway(user: User, ctx, setup) -> None:
+    typed = TransactionInput(
+        date=date(2026, 9, 2), amount=45.80, currency="CHF", category="01.1", from_account=setup["chf"].id
     )
-    await de_file_on_euro_account(user, setup)
-    await user.should_see("2 new · 1 possible duplicate · 1 unreadable.")
-    assert [r["status"] for r in rows(user)][:2] == ["Possible duplicate", "New"]
+    tx_svc.save(ctx, typed)
+    await user.open("/import")
+    await upload(user, "ubs.csv", UBS)
+    put(user, field(user, ui.select, "Account"), setup["chf"].id)
+    assert "1 is already in Budget" in checks(user)
+    assert import_button(user).text == "Import 2 Transactions"
 
-
-# ------------------------------------------------------------------ review actions
-async def test_categories_only_fit_the_matching_direction(user: User, ctx, setup) -> None:
-    await de_file_on_euro_account(user, setup)
-    await select(user, 0, 2)
-    click(user, button(user, "Apply"))
-    await settle()
-    assert notified(user, "Choose a category first")
-
-    put(user, field(user, ui.select, "Category"), "01.1")
-    click(user, button(user, "Apply"))
-    await settle()
-    assert notified(user, "1 row skipped: that category is for spending only")
-    assert [r["category"] for r in rows(user)][:3] == ["01.1 Groceries", "01.1 Groceries", ""]
-
-    await categorise(user, setup["salary"].id, 0, 1, 2)
-    assert notified(user, "2 rows skipped: that category is for money coming in only")
-    assert [r["category"] for r in rows(user)][:3] == ["01.1 Groceries", "01.1 Groceries", "Income · Salary"]
-
-
-async def test_a_category_applied_to_one_row_is_suggested_for_its_payee(user: User, ctx, setup) -> None:
-    await de_file_on_euro_account(user, setup)
-    click(user, button(user, "Clear Suggestions"))
-    await settle()
-    await categorise(user, "05.6", 0)
-    assert notified(user, "1 more row with the same payee got this category")
-    assert [(r["category"], r["suggested"], r["reason"]) for r in rows(user)][:3] == [
-        (get_coicop().label("05.6"), False, ""),
-        (get_coicop().label("05.6"), True, "Same payee as a row you chose"),
-        ("", False, ""),
-    ]
-
-
-async def test_rows_without_a_category_wait_and_the_rest_import_at_once(user: User, ctx, setup) -> None:
-    await de_file_on_euro_account(user, setup)
-    assert [r["include"] for r in rows(user)] == [True, True, False, False]
-    assert status(user) == WAITING_ONE
-    assert import_button(user).text == "Import 2 Transactions" and import_button(user).enabled
-    click(user, import_button(user))
-    assert notified(user, "Imported 2 transactions")
-    assert len(ctx.store.transactions.all()) == 2  # the row left out comes back with the same file (test_importer)
-
-
-async def test_rows_can_be_excluded_and_included(user: User, ctx, setup) -> None:
-    await de_file_on_euro_account(user, setup)
-    await categorise(user, "01.1", 0, 1)
-    await categorise(user, setup["salary"].id, 2)
+    click(user, button(user, "Show Them"))
+    await user.should_see("You have: Groceries")
+    put(user, next(e for e in user.find(kind=ui.checkbox).elements if e.text == "Import anyway"), True)
     assert import_button(user).text == "Import 3 Transactions"
 
-    await select(user, 1, 2)
-    click(user, button(user, "Exclude"))
-    await settle()
-    assert [r["include"] for r in rows(user)] == [True, False, False, False]
-    assert import_button(user).text == "Import 1 Transaction"
 
-    await select(user, 1, 3)  # an unreadable line cannot be included
-    click(user, button(user, "Include"))
-    await settle()
-    assert [r["include"] for r in rows(user)] == [True, True, False, False]
+async def test_reimporting_the_same_file_imports_nothing(user: User, ctx, setup) -> None:
+    parsed = importer.read_file("de.csv", DE)
+    rows = importer.analyse(ctx, importer.parse_rows(parsed, importer.guess_profile(parsed)), setup["eur"].id)
+    importer.commit(ctx, rows, setup["eur"].id)
 
-    # the checkbox in the grid
-    [grid] = user.find(kind=ui.aggrid).elements
-    grid_events = UserInteraction(user, {grid}, None)
-    grid_events.trigger("cellValueChanged", {"data": {"id": "0"}, "colId": "include", "newValue": False})
-    grid_events.trigger("cellValueChanged", {"data": {"id": "3"}, "colId": "include", "newValue": True})
-    grid_events.trigger("cellValueChanged", {"data": {"id": "1"}, "colId": "text", "newValue": "edited"})
-    assert import_button(user).text == "Import 1 Transaction"
-
-    click(user, import_button(user))
-    assert notified(user, "Imported 1 transaction")
-    [tx] = ctx.store.transactions.all()
-    assert tx.amount == 12.3 and tx.date == date(2026, 9, 15)
+    await de_file_on_euro_account(user, setup)
+    assert checks(user)[0] == "Everything in this file is already in Budget"
+    assert import_button(user).text == "Import 0 Transactions" and not import_button(user).enabled
 
 
 async def test_import_reports_a_failure_and_saves_nothing(user: User, ctx, setup) -> None:
     await de_file_on_euro_account(user, setup)
-    await categorise(user, "01.1", 0, 1)
-    await categorise(user, setup["salary"].id, 2)
     ctx.store.accounts.delete([setup["eur"].id])  # removed in another window meanwhile
     click(user, import_button(user))
     assert notified(user, "Choose the account the file belongs to")
@@ -269,49 +171,54 @@ async def test_import_reports_a_failure_and_saves_nothing(user: User, ctx, setup
 
 
 # ------------------------------------------------------------------ columns
+async def test_the_columns_stay_folded_until_asked_for(user: User, ctx, setup) -> None:
+    await user.open("/import")
+    await upload(user, "ubs.csv", UBS)
+    await user.should_not_see("Date column")
+    click(user, button(user, "The Columns Look Wrong…"))
+    await user.should_see("Date column")
+
+
 async def test_debit_and_credit_columns_and_inverted_signs(user: User, ctx, setup) -> None:
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
-    await user.should_see("ubs.csv · 3 lines")
+    put(user, field(user, ui.select, "Account"), setup["chf"].id)
+    click(user, button(user, "The Columns Look Wrong…"))
     mode = next(e for e in user.find(kind=ui.toggle).elements if "split" in e.options)
     assert mode.value == "split"
     assert field(user, ui.select, "Debit (money out)").value == "Belastung"
     assert field(user, ui.select, "Credit (money in)").value == "Gutschrift"
     assert field(user, ui.number, "Header on line").value == 4
-    assert [r["amount"] for r in rows(user)] == [-45.8, 7800.0, -2150.0]
-
-    put(user, next(e for e in user.find(kind=ui.switch).elements if "Positive amounts" in e.text), True)
-    assert [r["amount"] for r in rows(user)] == [45.8, -7800.0, 2150.0]
+    signs = "Money in and out are the right way round"
+    assert detail(user, signs).endswith("+7'800.00 · Migros −45.80")
 
     put(user, mode, "single")
     assert not [e for e in user.find(kind=ui.select).elements if e.props.get("label") == "Debit (money out)"]
     put(user, field(user, ui.select, "Amount"), "Saldo")
-    assert [r["amount"] for r in rows(user)] == [-8154.2, -15954.2, -13804.2]
+    assert detail(user, signs) == "Firma AG +15'954.20"  # the balances: all of it reads as money coming in
 
 
 async def test_separator_and_header_line_reread_the_file(user: User, ctx, setup) -> None:
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
+    click(user, button(user, "The Columns Look Wrong…"))
 
     put(user, field(user, ui.number, "Header on line"), 1)
     assert field(user, ui.select, "Date column").options.get("Kontonummer:") == "Kontonummer:"
-    assert all(r["status"] == "No valid date" for r in rows(user))
+    assert "5 lines can't be read" in checks(user)
     assert field(user, ui.select, "Account").value == setup["chf"].id  # the account stays
 
     put(user, field(user, ui.number, "Header on line"), 4)
     assert field(user, ui.select, "Date column").value == "Abschlussdatum"
-    assert len(rows(user)) == 3
-
-    put(user, field(user, ui.select, "Separator"), ",")
-    assert all(r["status"] == "No valid date" for r in rows(user))  # nothing splits on commas
+    assert import_button(user).text == "Import 3 Transactions"
 
 
 async def test_saved_settings_recognise_the_next_file(user: User, ctx, setup) -> None:
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
-    put(user, field(user, ui.select, "Date format"), "%d.%m.%Y")
+    click(user, button(user, "The Columns Look Wrong…"))
     click(user, button(user, "Save Settings"))
     assert notified(user, "Enter a name for these settings")
     assert importer.load_profiles(ctx.store) == []
@@ -327,14 +234,13 @@ async def test_saved_settings_recognise_the_next_file(user: User, ctx, setup) ->
         "Belastung",
         3,
     )
-    assert field(user, ui.select, "Saved settings").value == "UBS Private"
 
     await user.open("/import")
     await upload(user, "ubs-october.csv", UBS)
-    await user.should_see("ubs-october.csv · 3 lines · recognised as “UBS Private”")
-    assert field(user, ui.select, "Saved settings").value == "UBS Private"
+    assert headline(user) == "3 transactions from UBS Private, 2 Sep 2026 to 26 Sep 2026"
     assert field(user, ui.select, "Account").value == setup["chf"].id
-    await user.should_see("3 new.")
+    await user.should_see("The account of this bank's last file.")
+    assert import_button(user).text == "Import 3 Transactions"
 
 
 async def test_choosing_saved_settings_rereads_the_file(user: User, ctx, setup) -> None:
@@ -347,16 +253,18 @@ async def test_choosing_saved_settings_rereads_the_file(user: User, ctx, setup) 
 
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
+    put(user, field(user, ui.select, "Account"), setup["chf"].id)
+    click(user, button(user, "The Columns Look Wrong…"))
     saved = field(user, ui.select, "Saved settings")
     assert saved.value == "UBS" and set(saved.options) == {"UBS", "Other bank"}
     put(user, field(user, ui.select, "Separator"), ",")
-    assert all(r["status"] == "No valid date" for r in rows(user))
+    assert "3 lines can't be read" in checks(user)  # nothing splits on commas
 
     put(user, saved, None)
     put(user, saved, "UBS")  # back to the saved separator and header line
     assert field(user, ui.select, "Separator").value == ";"
     assert field(user, ui.select, "Date column").value == "Abschlussdatum"
-    assert [r["amount"] for r in rows(user)] == [-45.8, 7800.0, -2150.0]
+    assert import_button(user).text == "Import 3 Transactions"
 
 
 async def test_save_settings_without_a_file_does_nothing(user: User, ctx) -> None:
@@ -373,14 +281,14 @@ async def test_an_empty_file_is_refused(user: User) -> None:
     await user.open("/import")
     await upload(user, "empty.csv", b"\n\n")
     assert notified(user, "The file is empty")
-    await user.should_not_see("2 · Columns")
+    await user.should_see("Bring in a bank file")
 
 
 async def test_the_choose_button_opens_the_file_dialog(user: User) -> None:
     await user.open("/import")
     choose = button(user, "Choose File…")
     click(user, choose)  # handled by the browser; must not fail
-    await user.should_see("1 · File")
+    await user.should_see("Bring in a bank file")
     # in the browser, during the click: a round trip to the server first loses the right to open the dialog (WebKit)
     [listener] = [lst for lst in choose._event_listeners.values() if lst.type == "click"]
     assert "'pickFiles'" in listener.js_handler and listener.handler is None

@@ -1,131 +1,112 @@
-"""Import transactions from a bank or card CSV export (file → columns → review → import) or from a
-camt.053 / camt.054 statement (file → review → import: the XML needs no column mapping).
+"""Import Transactions: a bank file in two screens, designed from the user's side (decision 48).
 
-The review step also offers the month-end balances the file shows (F36): from a CSV balance column, or
-the camt closing balance. Ticked ones are recorded after the transactions are saved.
+1 · Your file: what the file holds in one sentence ("1'900 transactions from UBS Private, 1 Nov 2023 to 30 Oct
+2026"), the account it goes into, and plain checks, each with a way out: money in and out the right way round (an
+example of each; *That's Wrong* swaps them), what is already in Budget (skipped; *Show Them* lists each match beside
+the transaction it matches, with *Import anyway*), lines that can't be read, and the month-end balances (F36). One
+button imports everything new, with a category or without one (those wait under To sort). The column settings of a
+CSV file stay folded behind *The Columns Look Wrong…*: a bank seen before needs none, and a camt.053 / camt.054
+statement (XML, F02) needs none at all.
 
-Rows without a category get the suggested one (F07: a rule, else the payee's history, else a shop or brand in the
-payee), shown in italics with the reason beside it until the user changes it; importing keeps what the preview
-shows. A category applied to some rows is suggested for the file's other rows of the same payee. A row without a
-category starts unticked and is ticked once it gets one (`importer.hold_uncategorized`), so the categorized rows import
-at once and the rest can follow later from the same file."""
+2 · A few questions: the account is up to date. The file's payees Budget could not place are asked about once each
+(ui/widgets/sort_cards.py, the cards of the To Sort tab), then the categories that were only a guess from a word in
+the payee's name (worth a second look); what was sorted from the rules and the history is listed, folded. Whatever
+is skipped waits under To Sort.
+"""
 
 from __future__ import annotations
+
+from collections import Counter
+from datetime import date
 
 from nicegui import events, ui
 
 from budget_app.domain import months
-from budget_app.domain.everyday import category_options
-from budget_app.domain.models import TX_INCOME
 from budget_app.i18n import N_, date_label, t, tn
-from budget_app.services import accounts as acc_svc
-from budget_app.services import camt, categorize, import_balances, importer
-from budget_app.services import transactions as tx_svc
-from budget_app.services.context import Context, ValidationError
-from budget_app.ui.layout import error, fmt, frame, picks_files, segmented, success
-from budget_app.ui.widgets.grid import date_col, make_grid, num_col
-from budget_app.ui.widgets.selects import CategorySelect, account_options
+from budget_app.services import camt, import_balances, importer, sorting
+from budget_app.services.context import ValidationError
+from budget_app.ui.layout import error, fmt, frame, picks_files, refresh_due_badge, segmented, success
+from budget_app.ui.widgets.selects import account_options
+from budget_app.ui.widgets.sort_cards import answer_label, guess_list, sort_cards
 
 DELIMITER_NAMES = {";": N_("Semicolon ;"), ",": N_("Comma ,"), "\t": N_("Tab"), "|": N_("Pipe |")}
-STATUS = {
-    importer.NEW: N_("New"),
-    importer.DUPLICATE: N_("Already imported"),
-    importer.POSSIBLE_DUPLICATE: N_("Possible duplicate"),
-}
 NONE = ""  # select value for "no column"
-
-
-def _columns(currency: str) -> list[dict]:
-    amount = num_col("amount", t("Amount"), width=140)
-    amount["cellClassRules"] = {"amt-in": "x > 0"}
-    amount[":valueFormatter"] = (
-        "p => p.value == null ? '' : (p.value > 0 ? '+' : '') + p.value.toLocaleString('de-CH', "
-        f"{{minimumFractionDigits: 2, maximumFractionDigits: 2}}).replace('-', '−') + ' {currency}'"
-    )
-    return [
-        {
-            "field": "include",
-            "headerName": t("Import"),
-            "width": 90,
-            "editable": True,
-            "cellRenderer": "agCheckboxCellRenderer",
-            "cellEditor": "agCheckboxCellEditor",
-        },
-        date_col("date", t("Date"), width=120),
-        {"field": "text", "headerName": t("Description"), "flex": 1, "minWidth": 200},
-        # the payee found for the row (F09); double-click to change it, the bank text is remembered for it
-        {"field": "payee", "headerName": t("Payee"), "width": 180, "editable": True},
-        amount,
-        # a suggested category is set in italics until the user changes it; the next column says why (F07)
-        {
-            "field": "category",
-            "headerName": t("Category"),
-            "width": 260,
-            "cellClassRules": {"suggested": "data.suggested"},
-        },
-        {"field": "reason", "headerName": t("Suggestion"), "width": 220, "cellClass": "muted"},
-        {"field": "status", "headerName": t("Status"), "width": 170, "cellClass": "muted"},
-    ]
-
-
-def _income_options(ctx: Context) -> dict[str, str]:
-    """Income categories, listed after the expenditure categories in the category picker."""
-    return {c.id: t("Income · {name}", name=c.name) for c in acc_svc.income_categories(ctx)}
+SHOWN = 50  # matches or unreadable lines listed before "and n more"
 
 
 def page() -> None:
-    with frame(t("Import Transactions"), "/import") as (ctx, _):
+    with frame(t("Import Transactions"), "/import", narrow=True) as (ctx, _):
         profiles = importer.load_profiles(ctx.store)
-        # parsed: the CSV file; statement: the camt file (one of them is set); problem: why it can't be imported
-        # balances: month-end balances the file offers; balance_problem: why its balances are not offered
+        # parsed: the CSV file; statement: the camt file (one of them is set); source: the bank or file named in
+        # the headline; problem: why the file can't be imported into the account; balances and balance_problem:
+        # the month-end balances the file offers, or why none; open: the checks whose list is shown
         state: dict = {
             "parsed": None,
             "statement": None,
+            "source": "",
             "rows": [],
             "problem": "",
             "balances": [],
             "balance_problem": "",
+            "open": set(),
         }
-        # the same labels and search as the other category pickers (F08), then the income categories
-        expenditure = category_options(tx_svc.recent_categories(ctx))
-        income = _income_options(ctx)
-        category_labels = {o.code: o.label for o in expenditure} | income
+        busy = {"value": False}
 
-        # ---------------------------------------------------------- 1 · file
-        with ui.element("div").classes("surface flex flex-col gap-3"):
-            ui.label(t("1 · File")).classes("section-title")
+        # Quasar's uploader panel is hidden; a plain button opens the system file dialog instead
+        upload = (
+            ui.upload(auto_upload=True, max_file_size=importer.MAX_BYTES, on_upload=lambda e: on_file(e))  # noqa: PLW0108 - defined below
+            .props('accept=".csv,.txt,.xml,text/csv,text/xml,application/xml"')
+            .classes("hidden")
+        )
+
+        # ---------------------------------------------------------- choose a file
+        with ui.element("div").classes("surface import-step") as choose_card:
+            ui.label(t("Bring in a bank file")).classes("import-headline")
             ui.label(
                 t(
                     "Export the transactions from your e-banking as CSV, or as a camt.053 or camt.054 "
                     "statement (XML). Nothing leaves your computer."
                 )
-            ).classes("caption -mt-2")
-            # Quasar's uploader panel is hidden; a plain button opens the system file dialog instead
-            upload = (
-                ui.upload(auto_upload=True, max_file_size=importer.MAX_BYTES, on_upload=lambda e: on_file(e))  # noqa: PLW0108 - defined below
-                .props('accept=".csv,.txt,.xml,text/csv,text/xml,application/xml"')
-                .classes("hidden")
-            )
-            with ui.row().classes("items-center gap-3"):
+            ).classes("caption")
+            with ui.row():
                 picks_files(ui.button(t("Choose File…"), icon="o_upload_file").props("unelevated"), upload)
-                file_info = ui.label().classes("caption")
 
-        # ---------------------------------------------------------- 2 · columns
+        # ---------------------------------------------------------- 1 · your file
+        with ui.element("div").classes("surface import-step") as file_card:
+            with ui.element("div").classes("import-file"):
+                kind = ui.label().classes("import-kind")
+                headline = ui.label().classes("import-headline")
+            with ui.row().classes("items-center gap-2"):
+                ui.label(t("Into")).classes("text-2")
+                account = (
+                    ui.select(account_options(ctx), label=t("Account"), with_input=True)
+                    .props("dense outlined")
+                    .classes("w-64")
+                )
+                account_hint = ui.label().classes("caption")
+            problem = ui.label().classes("import-problem")
+            checks = ui.element("div").classes("import-checks")
+            with ui.row().classes("w-full items-center gap-2"):
+                import_btn = ui.button(t("Import"), on_click=lambda: do_import()).props("unelevated")  # noqa: PLW0108 - defined below
+                ui.space()
+                columns_link = ui.button(t("The Columns Look Wrong…"), on_click=lambda: toggle_columns()).props(  # noqa: PLW0108 - defined below
+                    "flat no-caps"
+                )
+                columns_link.classes("text-primary")
+                picks_files(ui.button(t("Choose Another File…")).props("flat no-caps").classes("text-primary"), upload)
+        file_card.set_visibility(False)
+
+        # ---------------------------------------------------------- the columns of a CSV file, folded
         with ui.element("div").classes("surface flex flex-col gap-3") as columns_card:
             with ui.row().classes("w-full items-center gap-2"):
-                ui.label(t("2 · Columns")).classes("section-title")
+                ui.label(t("Columns")).classes("section-title")
                 ui.space()
                 profile_sel = (
                     ui.select({p.name: p.name for p in profiles}, label=t("Saved settings"), clearable=True)
                     .props("dense outlined options-dense")
                     .classes("w-56")
                 )
-            with ui.row().classes("w-full gap-3 items-start flex-wrap") as account_row:
-                account = (
-                    ui.select(account_options(ctx), label=t("Account"), with_input=True)
-                    .props("dense outlined")
-                    .classes("w-64")
-                )
+            with ui.row().classes("w-full gap-3 items-start flex-wrap"):
                 delimiter = (
                     ui.select({k: t(v) for k, v in DELIMITER_NAMES.items()}, label=t("Separator"))
                     .props("dense outlined options-dense")
@@ -165,46 +146,11 @@ def page() -> None:
                 ui.label(t("The next file with the same columns is recognised automatically.")).classes("caption")
         columns_card.set_visibility(False)
 
-        # ---------------------------------------------------------- 3 · review
-        with ui.element("div").classes("surface flex flex-col gap-3") as review_card:
-            review_title = ui.label(t("3 · Review")).classes("section-title")
-            with ui.row().classes("w-full items-center gap-x-2 gap-y-1 -mt-2"):
-                summary = ui.label().classes("caption flex-1 min-w-[16rem]")
-                clear_btn = (
-                    ui.button(t("Clear Suggestions"), icon="o_clear_all", on_click=lambda: clear_suggestions())  # noqa: PLW0108 - defined below
-                    .props("flat dense no-caps")
-                    .classes("text-primary")
-                )
-            # a camt statement skips the columns step: the account is chosen here (moved from step 2)
-            with ui.row().classes("w-full gap-3 items-center flex-wrap") as statement_row:
-                account_hint = ui.label().classes("caption")
-            statement_row.set_visibility(False)
-            with ui.element("div").classes("selection-bar") as bar:
-                selected_label = ui.label().classes("font-medium")
-                ui.space()
-                bulk_cat = (
-                    CategorySelect(expenditure, income, label=t("Category"))
-                    .props("dense outlined options-dense")
-                    .classes("w-72 bg-transparent")
-                )
-                ui.button(t("Apply"), on_click=lambda: apply_category()).props("flat dense").classes("text-primary")  # noqa: PLW0108 - defined below
-                ui.button(t("Include"), on_click=lambda: set_include(True)).props("flat dense").classes("text-primary")
-                ui.button(t("Exclude"), on_click=lambda: set_include(False)).props("flat dense").classes("text-primary")
-            bar.set_visibility(False)
-            grid = make_grid(_columns("CHF"), height="55vh")
-            with ui.element("div").classes("flex flex-col gap-1") as balances_box:
-                ui.label(t("Month-end balances")).classes("font-medium")
-                balances_list = ui.element("div").classes("flex flex-col gap-0")
-            balances_box.set_visibility(False)
-            with ui.row().classes("w-full items-center gap-2"):
-                status = ui.label().classes("caption")
-                ui.space()
-                import_btn = ui.button(t("Import"), on_click=lambda: do_import()).props("unelevated")  # noqa: PLW0108 - defined below
-        review_card.set_visibility(False)
+        # ---------------------------------------------------------- 2 · a few questions
+        done_area = ui.element("div").classes("flex flex-col gap-5 w-full")
+        done_area.set_visibility(False)
 
-        # ---------------------------------------------------------- logic
-        busy = {"value": False}
-
+        # ---------------------------------------------------------- reading the file
         def column_options() -> dict[str, str]:
             parsed = state["parsed"]
             return {NONE: "—"} | {h: h for h in parsed.headers} if parsed else {}
@@ -231,8 +177,10 @@ def page() -> None:
                 amount_mode.value = "single" if profile.amount_col or not profile.debit_col else "split"
                 decimal.value = profile.decimal
                 invert.value = profile.invert
-                if profile.account_id and ctx.store.accounts.get(profile.account_id):
+                known = bool(profile.account_id and ctx.store.accounts.get(profile.account_id))
+                if known:
                     account.value = profile.account_id
+                account_hint.set_text(t("The account of this bank's last file.") if known else "")
                 profile_name.value = profile.name
             finally:
                 busy["value"] = False
@@ -271,6 +219,9 @@ def page() -> None:
                 return
             finally:
                 upload.reset()
+            state["open"] = set()
+            choose_card.set_visibility(False)
+            file_card.set_visibility(True)
             if statement is not None:
                 open_statement(statement)
             elif parsed is not None:
@@ -278,29 +229,16 @@ def page() -> None:
 
         def open_statement(statement: camt.Statement) -> None:
             state["parsed"], state["statement"] = None, statement
-            period = (
-                f"{date_label(statement.start)} – {date_label(statement.end)}"
-                if statement.start and statement.end
-                else ""
-            )
-            details = " · ".join(
-                p for p in (statement.name, statement.message, camt.format_iban(statement.iban), period) if p
-            )
-            info = tn("{details} · {n} entry", "{details} · {n} entries", len(statement.rows), details=details)
-            if statement.pending:
-                info += " · " + tn("{n} pending entry left out", "{n} pending entries left out", statement.pending)
-            file_info.set_text(info)
+            state["source"] = camt.format_iban(statement.iban) or statement.name
+            kind.set_text("XML")
             columns_card.set_visibility(False)
-            review_card.set_visibility(True)
-            review_title.set_text(t("2 · Review"))
-            statement_row.set_visibility(True)
-            account.move(statement_row, 0)
+            columns_link.set_visibility(False)
             remembered = camt.remembered_account(ctx.store, statement.iban)
             known = bool(remembered and ctx.store.accounts.get(remembered))
             account_hint.set_text(
-                t("Account remembered from the last import of this IBAN.")
+                t("Remembered from the last statement of this IBAN.")
                 if known
-                else t("The account is remembered for this IBAN after the import.")
+                else t("It is remembered for this IBAN after the import.")
             )
             busy["value"] = True
             try:
@@ -310,30 +248,14 @@ def page() -> None:
             refresh_rows()
 
         def open_csv(parsed: importer.ParsedFile) -> None:
-            if state["statement"] is not None:  # back from a camt file to the CSV steps
-                state["statement"], state["problem"] = None, ""
-                account.move(account_row, 0)
-                statement_row.set_visibility(False)
-                review_title.set_text(t("3 · Review"))
+            state["statement"], state["problem"] = None, ""
             state["parsed"] = parsed
             profile = importer.guess_profile(parsed, profiles)
-            n = len(parsed.data)
-            if profile.name:
-                file_info.set_text(
-                    tn(
-                        "{name} · {n} line · recognised as “{profile}”",
-                        "{name} · {n} lines · recognised as “{profile}”",
-                        n,
-                        name=parsed.name,
-                        profile=profile.name,
-                    )
-                )
-            else:
-                file_info.set_text(tn("{name} · {n} line", "{name} · {n} lines", n, name=parsed.name))
+            state["source"] = profile.name or parsed.name
+            kind.set_text("CSV")
+            columns_link.set_visibility(True)
             if profile.name:
                 profile_sel.value = profile.name
-            columns_card.set_visibility(True)
-            review_card.set_visibility(True)
             apply_profile(profile)
 
         def reread() -> None:
@@ -349,69 +271,204 @@ def page() -> None:
         def refresh_rows() -> None:
             if busy["value"] or (state["parsed"] is None and state["statement"] is None):
                 return
-            if state["statement"] is not None:
-                refresh_statement()
-                return
-            amount_sel.set_visibility(amount_mode.value == "single")
-            debit_sel.set_visibility(amount_mode.value == "split")
-            credit_sel.set_visibility(amount_mode.value == "split")
-            rows = importer.parse_rows(state["parsed"], current_profile())
-            if account.value:
+            statement = state["statement"]
+            if statement is not None:
+                state["problem"] = camt.currency_problem(ctx, statement, account.value) if account.value else ""
+                rows = statement.fresh_rows()
+                offer = (
+                    import_balances.BalanceOffer() if state["problem"] else import_balances.from_statement(statement)
+                )
+            else:
+                amount_sel.set_visibility(amount_mode.value == "single")
+                debit_sel.set_visibility(amount_mode.value == "split")
+                credit_sel.set_visibility(amount_mode.value == "split")
+                rows = importer.parse_rows(state["parsed"], current_profile())
+                offer = None
+            if account.value and not state["problem"]:
                 rows = importer.analyse(ctx, rows, account.value)
             state["rows"] = rows
-            offer_balances(import_balances.from_rows(rows))
-            render()
-
-        def refresh_statement() -> None:
-            statement = state["statement"]
-            problem = camt.currency_problem(ctx, statement, account.value) if account.value else ""
-            rows = statement.fresh_rows()
-            if account.value and not problem:
-                rows = importer.analyse(ctx, rows, account.value)
-            elif problem:
-                error(problem)
-            state["rows"], state["problem"] = rows, problem
-            offer_balances(import_balances.BalanceOffer() if problem else import_balances.from_statement(statement))
-            render()
-
-        def offer_balances(offer: import_balances.BalanceOffer) -> None:
+            offer = offer or import_balances.from_rows(rows)
             state["balances"] = import_balances.compare(ctx, offer.candidates, account.value or "")
             state["balance_problem"] = offer.problem
+            render()
 
+        # ---------------------------------------------------------- 1 · your file
         def render() -> None:
-            importer.hold_uncategorized(ctx, state["rows"])  # a row without a category waits; one that got one is in
-            acc = ctx.store.accounts.get(account.value) if account.value else None
-            currency = state["statement"].currency if state["statement"] else acc.currency if acc else ""
-            grid.options["columnDefs"] = _columns(currency)
-            grid.options["rowData"] = [
-                {
-                    "id": str(r.index),
-                    "include": r.include,
-                    "date": r.date.isoformat() if r.date else "",
-                    "text": r.text,
-                    "payee": r.payee,
-                    "amount": r.amount,
-                    "category": category_labels.get(r.category, ""),
-                    "suggested": r.suggested,
-                    "reason": r.reason if r.suggested else "",
-                    "status": r.error or (t(STATUS[r.status]) if r.status in STATUS else ""),
-                }
-                for r in state["rows"]
-            ]
-            visible_rows = min(len(state["rows"]), 12)
-            grid.style(f"height: {visible_rows * 40 + 100}px; min-height: 180px")  # fit short files
-            grid.update()
-            bar.set_visibility(False)
-            render_balances(currency)
-            update_status()
+            rows = state["rows"]
+            dated = [r.date for r in rows if r.date]
+            first, last = (min(dated), max(dated)) if dated else (None, None)
+            statement = state["statement"]
+            if statement is not None and statement.start and statement.end:  # the period the statement covers
+                first, last = statement.start, statement.end
+            n = len(rows)
+            if first and last:
+                headline.set_text(
+                    tn(
+                        "{n} transaction from {source}, {first} to {last}",
+                        "{n} transactions from {source}, {first} to {last}",
+                        n,
+                        source=state["source"],
+                        first=date_label(first),
+                        last=date_label(last),
+                    )
+                )
+            else:
+                headline.set_text(tn("{n} line in {source}", "{n} lines in {source}", n, source=state["source"]))
+            if not account.value:
+                problem.set_text(t("Choose the account this file belongs to."))
+            else:
+                problem.set_text(state["problem"])
+            render_checks()
+            chosen = sum(1 for r in rows if r.include)
+            balances = [c for c in state["balances"] if c.include]
+            if balances:
+                import_btn.set_text(
+                    t(
+                        "Import {transactions} and {balances}",
+                        transactions=tn("{n} Transaction", "{n} Transactions", chosen),
+                        balances=tn("{n} Balance", "{n} Balances", len(balances)),
+                    )
+                )
+            else:
+                import_btn.set_text(tn("Import {n} Transaction", "Import {n} Transactions", chosen))
+            import_btn.set_enabled(bool(account.value and (chosen or balances) and not state["problem"]))
 
-        def render_balances(currency: str) -> None:
-            candidates, problem = state["balances"], state["balance_problem"]
-            balances_box.set_visibility(bool(candidates or problem))
-            balances_list.clear()
-            with balances_list:
-                if problem:
-                    ui.label(problem).classes("caption")
+        def toggle(name: str) -> None:
+            state["open"] ^= {name}
+            render_checks()
+
+        def check(title: str, detail: str = "", action: str = "", on_click=None, ok: bool = True) -> None:
+            with ui.element("div").classes("import-check"):
+                ui.label("✓" if ok else "!").classes("import-tick" + ("" if ok else " warn"))
+                with ui.element("div").classes("flex flex-col gap-0 min-w-0"):
+                    ui.label(title).classes("font-semibold")
+                    if detail:
+                        ui.label(detail).classes("caption")
+                if action:
+                    ui.button(action, on_click=on_click).props("flat dense no-caps").classes("text-primary")
+
+        def render_checks() -> None:
+            checks.clear()
+            rows = state["rows"]
+            if not account.value or state["problem"]:
+                return
+            readable = [r for r in rows if r.status != importer.ERROR and r.amount is not None]
+            new = [r for r in readable if r.status in (importer.NEW, importer.POSSIBLE_DUPLICATE)]
+            matched = [r for r in rows if r.status == importer.POSSIBLE_DUPLICATE]
+            before = [r for r in rows if r.status == importer.DUPLICATE]
+            unreadable = [r for r in rows if r.status == importer.ERROR]
+            with checks:
+                if new:
+                    signs_check(new)
+                if not new and before:
+                    check(t("Everything in this file is already in Budget"), t("Nothing is imported twice."))
+                elif before:
+                    check(
+                        tn("{n} was imported before", "{n} were imported before", len(before)),
+                        t("They are skipped."),
+                    )
+                if matched:
+                    matches_check(matched)
+                if unreadable:
+                    unreadable_check(unreadable)
+                if state["statement"] is not None and state["statement"].pending:
+                    n = state["statement"].pending
+                    check(
+                        tn("{n} entry is still pending", "{n} entries are still pending", n),
+                        t("The bank hasn't booked them yet; they come with a later statement."),
+                    )
+                balances_check()
+
+        def signs_check(new: list[importer.ImportRow]) -> None:
+            money_in = max((r for r in new if r.amount and r.amount > 0), key=lambda r: r.amount or 0, default=None)
+            outs = [r for r in new if r.amount and r.amount < 0]
+            common = Counter(r.payee or r.text for r in outs).most_common(1)
+            money_out = next((r for r in outs if (r.payee or r.text) == common[0][0]), None) if common else None
+            examples = [
+                f"{r.payee or r.text} {'+' if (r.amount or 0) > 0 else ''}{fmt(r.amount)}"
+                for r in (money_in, money_out)
+                if r
+            ]
+            check(
+                t("Money in and out are the right way round"),
+                " · ".join(examples),
+                t("That's Wrong") if state["statement"] is None else "",
+                lambda: invert.set_value(not invert.value),
+            )
+
+        def matches_check(matched: list[importer.ImportRow]) -> None:
+            check(
+                tn("{n} is already in Budget", "{n} are already in Budget", len(matched)),
+                t("Same account, day and amount as a transaction you have. Skipped, so nothing counts twice."),
+                t("Hide Them") if "matches" in state["open"] else t("Show Them"),
+                lambda: toggle("matches"),
+            )
+            if "matches" not in state["open"]:
+                return
+            with ui.element("div").classes("import-list"):
+                for r in matched[:SHOWN]:
+                    have = ctx.store.transactions.get(r.match_id)
+                    with ui.element("div").classes("import-pair"):
+                        ui.checkbox(
+                            t("Import anyway"), value=r.include, on_change=lambda e, r=r: include(r, e.value)
+                        ).props("dense")
+                        with ui.element("div").classes("flex flex-col gap-0 min-w-0"):
+                            when = f"{date_label(r.date)} · " if r.date else ""
+                            ui.label(f"{when}{r.payee or r.text} · {fmt(r.amount)}")
+                            if have is not None:
+                                category = answer_label(ctx, have.type, have.category) if have.category else ""
+                                ui.label(
+                                    t(
+                                        "You have: {what}",
+                                        what=" · ".join(p for p in (have.payee or have.comment, category) if p),
+                                    )
+                                ).classes("caption")
+                if len(matched) > SHOWN:
+                    ui.label(tn("and {n} more", "and {n} more", len(matched) - SHOWN)).classes("caption")
+
+        def include(row: importer.ImportRow, value: bool) -> None:
+            row.include = bool(value)
+            render()
+
+        def unreadable_check(unreadable: list[importer.ImportRow]) -> None:
+            check(
+                tn("{n} line can't be read", "{n} lines can't be read", len(unreadable)),
+                t("{reason}. They are left out.", reason=unreadable[0].error),
+                t("Hide Them") if "errors" in state["open"] else t("Show Them"),
+                lambda: toggle("errors"),
+                ok=False,
+            )
+            if "errors" in state["open"]:
+                with ui.element("div").classes("import-list"):
+                    for r in unreadable[:SHOWN]:
+                        ui.label(
+                            t("Line {n}: {error}", n=r.index + 1, error=r.error) + (f" · {r.text}" if r.text else "")
+                        ).classes("caption")
+
+        def balances_check() -> None:
+            candidates, reason = state["balances"], state["balance_problem"]
+            if reason and not candidates:
+                check(t("No month-end balances"), reason, ok=False)
+                return
+            if not candidates:
+                return
+            ticked = sum(1 for c in candidates if c.include)
+            check(
+                tn("{n} month-end balance to record", "{n} month-end balances to record", ticked)
+                if ticked
+                else tn(
+                    "{n} month-end balance found, none ticked",
+                    "{n} month-end balances found, none ticked",
+                    len(candidates),
+                ),
+                t("Your Wealth page shows the bank's own balance at the end of each month."),
+                t("Hide Them") if "balances" in state["open"] else t("Choose…"),
+                lambda: toggle("balances"),
+            )
+            if "balances" not in state["open"]:
+                return
+            currency = state["statement"].currency if state["statement"] else account_currency()
+            with ui.element("div").classes("import-list"):
                 for c in candidates:
                     with ui.row().classes("items-center gap-x-2 gap-y-0"):
                         text = t(
@@ -434,152 +491,16 @@ def page() -> None:
                         if notes:
                             ui.label(" · ".join(notes)).classes("caption")
 
+        def account_currency() -> str:
+            acc = ctx.store.accounts.get(account.value) if account.value else None
+            return acc.currency if acc else ""
+
         def tick_balance(candidate: import_balances.BalanceCandidate, value: bool) -> None:
             candidate.include = bool(value)
-            update_status()
-
-        def update_status() -> None:
-            rows = state["rows"]
-            counts = {s: sum(1 for r in rows if r.status == s) for s in STATUS}
-            errors = sum(1 for r in rows if r.status == importer.ERROR)
-            parts = [tn("{n} new", "{n} new", counts[importer.NEW])]
-            if counts[importer.DUPLICATE]:
-                parts.append(tn("{n} already imported", "{n} already imported", counts[importer.DUPLICATE]))
-            if counts[importer.POSSIBLE_DUPLICATE]:
-                n = counts[importer.POSSIBLE_DUPLICATE]
-                parts.append(tn("{n} possible duplicate", "{n} possible duplicates", n))
-            if errors:
-                parts.append(tn("{n} unreadable", "{n} unreadable", errors))
-            text = t(
-                "{counts}. Duplicates and unreadable lines are left out; tick them to import anyway.",
-                counts=" · ".join(parts),
-            )
-            chosen = [r for r in rows if r.include]
-            suggested = sum(1 for r in chosen if r.suggested)
-            if suggested:
-                text += " " + tn(
-                    "{n} category is a suggestion (in italics): check it before importing.",
-                    "{n} categories are suggestions (in italics): check them before importing.",
-                    suggested,
-                )
-            summary.set_text(text)
-            clear_btn.set_visibility(any(r.suggested for r in rows))
-            waiting = sum(1 for r in rows if r.waiting)
-            balances = [c for c in state["balances"] if c.include]
-            if balances:
-                import_btn.set_text(
-                    t(
-                        "Import {transactions} and {balances}",
-                        transactions=tn("{n} Transaction", "{n} Transactions", len(chosen)),
-                        balances=tn("{n} Balance", "{n} Balances", len(balances)),
-                    )
-                )
-            else:
-                import_btn.set_text(tn("Import {n} Transaction", "Import {n} Transactions", len(chosen)))
-            if not account.value:
-                status.set_text(t("Choose the account this file belongs to."))
-            elif state["problem"]:
-                status.set_text(state["problem"])
-            elif waiting:
-                status.set_text(
-                    tn(
-                        "{n} row without a category is left out: give it one (select it, choose a category, Apply) "
-                        "to import it now, or import it later from the same file.",
-                        "{n} rows without a category are left out: give them one (select them, choose a category, "
-                        "Apply) to import them now, or import them later from the same file.",
-                        waiting,
-                    )
-                )
-            else:
-                status.set_text("")
-            import_btn.set_enabled(bool(account.value and (chosen or balances) and not state["problem"]))
-
-        async def selected_rows() -> list[importer.ImportRow]:
-            ids = {int(r["id"]) for r in await grid.get_selected_rows()}
-            return [r for r in state["rows"] if r.index in ids]
-
-        async def selection_changed() -> None:
-            rows = await selected_rows()
-            bar.set_visibility(bool(rows))
-            selected_label.set_text(tn("{n} selected", "{n} selected", len(rows)))
-
-        async def apply_category() -> None:
-            if not bulk_cat.value:
-                error(t("Choose a category first"))
-                return
-            rows = await selected_rows()
-            fitting = [r for r in rows if importer.valid_category(ctx, r.type, bulk_cat.value)]
-            for r in fitting:  # chosen by hand: no longer a suggestion
-                r.category, r.suggested, r.reason = bulk_cat.value, False, ""
-            if spread := importer.spread(state["rows"], fitting):
-                success(
-                    tn(
-                        "{n} more row with the same payee got this category",
-                        "{n} more rows with the same payee got this category",
-                        spread,
-                    )
-                )
-            skipped = len(rows) - len(fitting)
-            if skipped:
-                if importer.valid_category(ctx, TX_INCOME, bulk_cat.value):
-                    error(
-                        tn(
-                            "{n} row skipped: that category is for money coming in only",
-                            "{n} rows skipped: that category is for money coming in only",
-                            skipped,
-                        )
-                    )
-                else:
-                    error(
-                        tn(
-                            "{n} row skipped: that category is for spending only",
-                            "{n} rows skipped: that category is for spending only",
-                            skipped,
-                        )
-                    )
             render()
 
-        async def set_include(value: bool) -> None:
-            rows = [r for r in await selected_rows() if r.status != importer.ERROR]
-            for r in rows:
-                r.include, r.waiting = value, False
-            render()  # a row ticked without a category goes back to waiting
-            if value and (held := sum(1 for r in rows if r.waiting)):
-                error(
-                    tn(
-                        "{n} row has no category yet: give it one first",
-                        "{n} rows have no category yet: give them one first",
-                        held,
-                    )
-                )
-
-        def cell_changed(e: events.GenericEventArguments) -> None:
-            data = e.args.get("data") or {}
-            row = next((r for r in state["rows"] if str(r.index) == data.get("id")), None)
-            if row is not None and e.args.get("colId") == "include":
-                row.include, row.waiting = bool(e.args.get("newValue")) and row.status != importer.ERROR, False
-                if row.include and not importer.valid_category(ctx, row.type, row.category):
-                    error(
-                        tn(
-                            "{n} row has no category yet: give it one first",
-                            "{n} rows have no category yet: give them one first",
-                            1,
-                        )
-                    )
-                    render()  # back to waiting, and the box unticked
-                else:
-                    update_status()
-            elif row is not None and e.args.get("colId") == "payee":
-                row.payee = " ".join(str(e.args.get("newValue") or "").split())
-                if row.suggested or not row.category:  # a suggestion follows the new payee; a choice stays
-                    importer.clear_suggestions([row])
-                    if account.value and row.status != importer.ERROR:
-                        importer.suggest(categorize.Suggester(ctx), row, account.value)
-                    render()
-
-        def clear_suggestions() -> None:
-            importer.clear_suggestions(state["rows"])
-            render()
+        def toggle_columns() -> None:
+            columns_card.set_visibility(not columns_card.visible)
 
         def save_settings() -> None:
             if state["parsed"] is None:
@@ -600,21 +521,84 @@ def page() -> None:
                     state["parsed"] = importer.reparse(state["parsed"], chosen.delimiter, chosen.header_row)
                 apply_profile(chosen)
 
+        # ---------------------------------------------------------- import, then 2 · a few questions
         def do_import() -> None:
+            rows = state["rows"]
             try:
-                if state["statement"] is not None:
-                    saved = camt.commit(ctx, state["statement"], state["rows"], account.value)
-                else:
-                    saved = importer.commit(ctx, state["rows"], account.value)
-                entries = import_balances.save(ctx, account.value, state["balances"])
+                saved, entries = import_balances.import_file(
+                    ctx, rows, account.value, state["balances"], state["statement"]
+                )
             except ValidationError as exc:
                 error(str(exc))
                 return
-            message = tn("Imported {n} transaction", "Imported {n} transactions", len(saved))
-            if entries:
-                message += " · " + tn("{n} month-end balance recorded", "{n} month-end balances recorded", len(entries))
-            success(message)
-            ui.navigate.to("/transactions")
+            included = [r for r in rows if r.include]  # saved in this order
+            guesses = {tx.id: r.reason for r, tx in zip(included, saved, strict=True) if r.guessed}
+            sorted_before = Counter(
+                (r.payee or r.text, r.type, r.category) for r in included if r.category and not r.guessed
+            )
+            # up to date to the file's last day, whether that day's rows were new or already in Budget
+            last = max((r.date for r in rows if r.date), default=None)
+            if state["statement"] is not None and state["statement"].end:
+                last = max(filter(None, (last, state["statement"].end)))
+            acc = ctx.store.accounts.get(account.value)
+            done(acc.name if acc else "", last, [tx.id for tx in saved], len(entries), guesses, sorted_before)
+            refresh_due_badge()  # the payees to sort
+
+        def done(
+            account_name: str,
+            last: date | None,
+            ids: list[str],
+            balances: int,
+            guesses: dict[str, str],
+            sorted_before: Counter,
+        ) -> None:
+            for card in (choose_card, file_card, columns_card):
+                card.set_visibility(False)
+            done_area.clear()
+            done_area.set_visibility(True)
+            with done_area, ui.element("div").classes("surface import-step"):
+                with ui.element("div").classes("import-file"):
+                    ui.label("✓").classes("import-tick big")
+                    ui.label(
+                        t("{account} is up to date to {date}", account=account_name, date=date_label(last))
+                        if last
+                        else t("Imported")
+                    ).classes("import-headline")
+                summary = tn("{n} transaction imported.", "{n} transactions imported.", len(ids))
+                if balances:
+                    summary += " " + tn("{n} month-end balance recorded.", "{n} month-end balances recorded.", balances)
+                ui.label(summary + " " + t("Undo the whole import from History at any time.")).classes("caption -mt-3")
+
+                @ui.refreshable
+                def head() -> None:
+                    waiting = len(sorting.groups(ctx, ids))
+                    if waiting:
+                        ui.label(
+                            tn("{n} payee Budget doesn't know yet", "{n} payees Budget doesn't know yet", waiting)
+                        ).classes("section-title")
+                        ui.label(t("One answer sorts every transaction of a payee.")).classes("caption -mt-3")
+
+                head()
+                if sorting.groups(ctx, ids):
+                    sort_cards(ctx, ids=ids, on_change=head.refresh)
+                guess_list(ctx, guesses)
+                if sorted_before:
+                    n = sum(sorted_before.values())
+                    with (
+                        ui.expansion(
+                            tn("{n} sorted the way you sorted before", "{n} sorted the way you sorted before", n)
+                        )
+                        .props("dense")
+                        .classes("import-sorted")
+                    ):
+                        for (name, type_, code), count in sorted_before.most_common(30):
+                            ui.label(f"{name} → {answer_label(ctx, type_, code)} · {count}").classes("caption")
+                with ui.row().classes("items-center gap-3"):
+                    ui.button(t("Show Transactions"), on_click=lambda: ui.navigate.to("/transactions")).props(
+                        "unelevated"
+                    )
+                    if sorting.groups(ctx, ids):
+                        ui.label(t("Skip the rest: it waits under To Sort.")).classes("caption")
 
         for el in (
             date_sel,
@@ -633,5 +617,3 @@ def page() -> None:
         delimiter.on_value_change(reread)
         header_line.on_value_change(reread)
         profile_sel.on_value_change(choose_profile)
-        grid.on("selectionChanged", selection_changed)
-        grid.on("cellValueChanged", cell_changed)
