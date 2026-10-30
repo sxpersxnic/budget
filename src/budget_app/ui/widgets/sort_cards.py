@@ -12,6 +12,7 @@ The To sort tab shows every waiting payee; the import (step 2) shows those of th
 from __future__ import annotations
 
 from collections.abc import Callable, Collection
+from functools import partial
 from urllib.parse import urlencode
 
 from nicegui import ui
@@ -70,7 +71,9 @@ def facts(group: sorting.Group, currency: str) -> str:
     return " · ".join(parts)
 
 
-def question(group: sorting.Group) -> str:
+def question(ctx: Context, group: sorting.Group) -> str:
+    if group.kind == sorting.GUESS:
+        return t("Sorted as {category}. Is that right?", category=answer_label(ctx, group.type, group.guess))
     return {
         sorting.ATM: t("Cash from a cash machine. What do you usually spend it on?"),
         sorting.PERSON: t("A person you paid by TWINT. What are these payments usually?"),
@@ -78,10 +81,70 @@ def question(group: sorting.Group) -> str:
     }.get(group.kind, t("What do you usually buy here?"))
 
 
-def sort_cards(ctx: Context, ids: Collection[str] | None = None, on_change: Callable[[], object] | None = None):
-    """The cards for the payees waiting to be sorted (of `ids`, when given). Returns the refreshable, so the
-    caller can redraw it after other changes."""
+def pick_sheet(ctx: Context, group: sorting.Group, on_code: Callable[[str], object]) -> None:
+    """*Something else…*: every category of the group's type in a sheet, the search open."""
+    with sheet(group.name, width="28rem") as dlg:
+        ui.label(facts(group, ctx.store.settings.display_currency)).classes("caption -mt-2")
+
+        def chosen(code: str | None) -> None:
+            if code:
+                dlg.close()
+                on_code(code)
+
+        picker = (
+            expenditure_category_select(on_change=lambda e: chosen(e.value), ctx=ctx)
+            if group.type == TX_EXPENDITURE
+            else income_category_select(ctx, on_change=lambda e: chosen(e.value))
+        )
+        picker.props("autofocus")
+        dlg.on("show", lambda: picker.run_method("showPopup"))
+
+
+def guess_list(ctx: Context, reasons: dict[str, str]) -> None:
+    """The import's second look, folded: what was sorted only because of a word in the payee's name, one line per
+    payee ("Kiosk am Bahnhof → Tobacco · 44", the reason on hover) with *Change…*. Most of these are right, so they
+    are listed rather than asked; a change is remembered as a rule."""
+    changed: set[str] = set()
+
+    def change(group: sorting.Group, code: str) -> None:
+        try:
+            n = sorting.answer(ctx, group, code, remember=True)
+        except ValidationError as exc:
+            error(str(exc))
+            return
+        changed.add(group.name)
+        label = answer_label(ctx, group.type, code)
+        undoable(tn("{n} transaction is now {category}", "{n} transactions are now {category}", n, category=label))
+        body.refresh()
+
+    @ui.refreshable
+    def body() -> None:
+        groups = [g for g in sorting.guesses(ctx, reasons) if g.name not in changed]
+        if not groups:
+            return
+        n = sum(g.count for g in groups)
+        title = tn("{n} sorted only by a word in the name", "{n} sorted only by a word in the name", n)
+        with ui.expansion(title).props("dense").classes("import-sorted"), ui.element("div").classes("guess-list"):
+            for g in groups:
+                ui.label(g.name).classes("font-medium")
+                ui.label(f"→ {answer_label(ctx, g.type, g.guess)} · {g.count}").classes("caption").tooltip(g.reason)
+                ui.button(t("Change…"), on_click=lambda g=g: pick_sheet(ctx, g, partial(change, g))).props(
+                    "flat dense no-caps"
+                ).classes("text-primary")
+
+    body()
+
+
+def sort_cards(
+    ctx: Context,
+    ids: Collection[str] | None = None,
+    on_change: Callable[[], object] | None = None,
+    source: Callable[[], list[sorting.Group]] | None = None,
+):
+    """The cards for the payees waiting to be sorted (of `ids`, when given), or for the groups `source` returns
+    (the import's second look, `sorting.guesses`). Returns the refreshable, so the caller can redraw it."""
     answered: list[tuple[str, str]] = []  # (payee, answer) given on this page, shown as one line each
+    done: set[tuple[str, str]] = set()  # (type, payee) answered here: a confirmed guess keeps its category
     currency = ctx.store.settings.display_currency
 
     def give(group: sorting.Group, code: str, remember: bool) -> None:
@@ -92,6 +155,7 @@ def sort_cards(ctx: Context, ids: Collection[str] | None = None, on_change: Call
             return
         label = answer_label(ctx, group.type, code)
         answered.append((group.name, label))
+        done.add((group.type, group.name))
         undoable(tn("{n} transaction is now {category}", "{n} transactions are now {category}", n, category=label))
         cards.refresh()
         refresh_due_badge()  # not the page's whole refresh: the answered lines stay
@@ -99,28 +163,14 @@ def sort_cards(ctx: Context, ids: Collection[str] | None = None, on_change: Call
             on_change()
 
     def other(group: sorting.Group, remember: bool) -> None:
-        with sheet(group.name, width="28rem") as dlg:
-            ui.label(facts(group, currency)).classes("caption -mt-2")
-
-            def chosen(code: str | None) -> None:
-                if code:
-                    dlg.close()
-                    give(group, code, remember)
-
-            picker = (
-                expenditure_category_select(on_change=lambda e: chosen(e.value), ctx=ctx)
-                if group.type == TX_EXPENDITURE
-                else income_category_select(ctx, on_change=lambda e: chosen(e.value))
-            )
-            picker.props("autofocus")
-            dlg.on("show", lambda: picker.run_method("showPopup"))
+        pick_sheet(ctx, group, lambda code: give(group, code, remember))
 
     def per_purchase(group: sorting.Group) -> None:
         ui.navigate.to("/transactions?" + urlencode({"category": sorting.FILTER, "payee": group.name}))
 
     @ui.refreshable
     def cards() -> None:
-        groups = sorting.groups(ctx, ids)
+        groups = [g for g in (source() if source else sorting.groups(ctx, ids)) if (g.type, g.name) not in done]
         with ui.element("div").classes("sort-cards"):
             for name, label in answered:
                 with ui.element("div").classes("sort-card answered"):
@@ -134,12 +184,15 @@ def sort_cards(ctx: Context, ids: Collection[str] | None = None, on_change: Call
                         ui.label(group.name).classes("sort-name")
                         ui.label(facts(group, currency)).classes("sort-facts")
                     with ui.element("div").classes("sort-ask"):
-                        ui.label(question(group)).classes("sort-question")
+                        ui.label(question(ctx, group)).classes("sort-question")
+                        if group.reason:
+                            ui.label(group.reason).classes("sort-facts")
                         remember = ui.checkbox(t("Remember for next time"), value=True).props("dense")
                         with ui.element("div").classes("sort-choices"):
                             for code in group.choices:
+                                label = answer_label(ctx, group.type, code)
                                 ui.button(
-                                    answer_label(ctx, group.type, code),
+                                    t("Yes, {category}", category=label) if code == group.guess else label,
                                     on_click=lambda g=group, c=code, r=remember: give(g, c, bool(r.value)),
                                 ).props("flat no-caps").classes("sort-choice")
                             ui.button(

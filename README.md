@@ -278,11 +278,12 @@ comes back. Sample data only goes into an empty data folder.
    statement (XML, the Swiss e-banking standard) needs no column step at all, and the app remembers its account by IBAN.
    When the file shows the account balance, the review step also offers each month's closing
    balance to record (the month the file ends inside stays unticked).
-   Rows without a category get a suggested one, shown in italics with the reason beside it: from your
-   rules, or the category the payee had most often. Check them before importing (importing keeps what
-   you see), choose another category for some rows, or **Clear Suggestions**. Rows still without a
-   category are left out until you give them one, so the rest can be imported at once; import the same
-   file again later and only the rows left out are offered.
+   The file is summed up in one sentence with a few checks (money in and out the right way round, what
+   is already in Budget and skipped, lines that can't be read); one button imports everything new.
+   Categories come from your rules and from what each payee had before. What Budget can't place is
+   imported all the same and waits under **To Sort** (a tab of Transactions, counted in the sidebar):
+   one question per payee, the likeliest answers as buttons, and **Remember for next time** to make the
+   answer a rule for the next file.
    To have a payee or bank text always suggest the same category, select a transaction and choose
    **Always Categorize Like This…** (also in the edit sheet): adjust the text it looks for ("migros")
    and save the rule. Taking a suggestion never creates a rule on its own.

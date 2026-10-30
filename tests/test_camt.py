@@ -405,7 +405,6 @@ def test_helpers():
 def categorise(ctx, rows: list[importer.ImportRow], salary: str) -> None:
     for r in rows:
         r.category = salary if r.type == TX_INCOME else "01.1"
-    importer.hold_uncategorized(ctx, rows)  # as the page does: rows that waited for a category are in again
 
 
 def test_import_marks_duplicates_and_remembers_the_account(ctx, setup):

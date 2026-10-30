@@ -51,6 +51,7 @@ CSS = r"""
   --accent-strong: #0066cc;
   --accent-fill: rgba(0, 113, 227, 0.12);
   --positive: #1f7a35;
+  --positive-fill: rgba(52, 199, 89, 0.14);
   --negative: #d70015;
   --negative-strong: #d70015;
   --warning: #b25000;
@@ -76,6 +77,7 @@ body.body--dark {
   --accent-strong: #0068d1;
   --accent-fill: rgba(10, 132, 255, 0.2);
   --positive: #30d158;
+  --positive-fill: rgba(48, 209, 88, 0.16);
   --negative: #ff6961;
   --negative-strong: #d70015;
   --warning: #ff9f0a;
@@ -533,6 +535,32 @@ input[type=number] { -moz-appearance: textfield; }
 .selection-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px 6px 14px;
   border-radius: 10px; background: var(--accent-fill); width: 100%; font-size: 14px; }
 .selection-bar .q-btn { white-space: nowrap; }  /* narrow windows: whole buttons wrap, not their words */
+
+/* the import, from the user's side (ui/pages/import_transactions.py) */
+.import-step { display: flex; flex-direction: column; gap: 22px; padding: 26px 30px !important; }
+.import-file { display: flex; align-items: center; gap: 14px; }
+.import-kind { width: 40px; height: 48px; flex: none; border-radius: 7px; background: var(--accent-fill);
+  color: var(--accent); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.import-headline { font-size: 21px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.25; text-wrap: balance; }
+.import-problem:empty { display: none; }
+.import-problem { color: var(--label-2); }
+.import-checks { display: flex; flex-direction: column; gap: 16px; }
+.import-checks:empty { display: none; }
+.import-check { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.import-tick { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px;
+  font-weight: 700; background: var(--positive-fill); color: var(--positive); }
+.import-tick.warn { background: var(--warning-fill); color: var(--warning); }
+.import-tick.big { width: 32px; height: 32px; font-size: 16px; flex: none; }
+.import-list { display: flex; flex-direction: column; gap: 10px; margin: -4px 0 4px 36px; padding: 12px 14px;
+  border-radius: 10px; background: var(--fill-2); max-height: 22rem; overflow-y: auto; }
+.import-pair { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; }
+.import-sorted .q-item { padding-left: 0; color: var(--accent); }
+.guess-list { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 14px; align-items: center;
+  padding: 4px 0 8px; }
+@media (max-width: 560px) {
+  .import-step { padding: 18px 16px !important; }
+  .import-check { grid-template-columns: 24px minmax(0, 1fr); }
+  .import-check > .q-btn { grid-column: 2; justify-self: start; } }
 
 /* To sort: one question per payee (ui/widgets/sort_cards.py) */
 .sort-cards { display: flex; flex-direction: column; gap: 12px; width: 100%; }

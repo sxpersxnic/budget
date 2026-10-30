@@ -4,13 +4,11 @@ form and the recurring sheet, the Transactions page's column, search and filter,
 from datetime import date
 
 from nicegui import ui
-from nicegui.events import GenericEventArguments
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
 from test_faster_entry_ui import menu_items
-from test_import_page import categorise, import_button, upload
-from test_import_page import rows as import_rows
+from test_import_page import import_button, upload
 from test_transactions_page import rows as grid_rows
 from test_transactions_page import show_filters
 
@@ -254,7 +252,7 @@ async def test_transactions_show_search_and_filter_payees(user: User, ctx, setup
 
 
 # ------------------------------------------------------------------ the import preview
-async def test_the_import_preview_shows_and_edits_payees(user: User, ctx, setup) -> None:
+async def test_an_import_finds_payees_and_remembers_the_bank_texts(user: User, ctx, setup) -> None:
     data = (
         b"Buchungsdatum;Buchungstext;Betrag\n"
         b"02.10.2026;Einkauf Debitkarte 02.10.2026 MIGROS ZUERICH HB 1234;-45.20\n"
@@ -263,19 +261,7 @@ async def test_the_import_preview_shows_and_edits_payees(user: User, ctx, setup)
     await user.open("/import")
     await upload(user, "bank.csv", data)
     put(user, newest(user, ui.select, "Account"), setup["chf"].id)
-    assert [r["payee"] for r in import_rows(user)] == ["Migros", "Brezelkönig"]
-
-    [grid] = user.find(kind=ui.aggrid).elements
-    assert any(c["field"] == "payee" and c["editable"] for c in grid.options["columnDefs"])
-    edit = GenericEventArguments(
-        sender=grid, client=grid.client, args={"data": {"id": "0"}, "colId": "payee", "newValue": " Migros  City "}
-    )
-    for listener in grid._event_listeners.values():
-        if listener.type == "cellValueChanged":
-            with user:
-                listener.handler(edit)
-    await categorise(user, "01.1", 0, 1)
     click(user, import_button(user))
-    assert notified(user, "Imported 2 transactions")
-    assert sorted(tx.payee for tx in ctx.store.transactions.all()) == ["Brezelkönig", "Migros City"]
-    assert payee_svc.find(ctx, "Migros City").alias_list == ["migros zuerich hb"]
+    await user.should_see("2 transactions imported", retries=30)
+    assert sorted(tx.payee for tx in ctx.store.transactions.all()) == ["Brezelkönig", "Migros"]
+    assert "migros zuerich hb" in payee_svc.find(ctx, "Migros").alias_list

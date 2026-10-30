@@ -1,7 +1,6 @@
 """Automatic categorization (F07) in the interface: the form's suggestion, the import preview, the rule sheet
 ("Always Categorize Like This…") and the Categorization Rules page."""
 
-import re
 from datetime import date
 
 import pytest
@@ -12,10 +11,9 @@ from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
 from test_bulk_edit_ui import select
 from test_camt import CAMT053
-from test_import_page import field, import_button, rows, settle, upload
+from test_import_page import field, import_button, settle, upload
 from test_payees_page import newest
 
-from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, Rule
 from budget_app.services import accounts as acc_svc
 from budget_app.services import rules as rules_svc
@@ -56,10 +54,6 @@ def spend(setup, payee: str, category: str = "01.1", **kw) -> TransactionInput:
         payee=payee,
     )
     return TransactionInput(**(base | kw))
-
-
-def summary(user: User) -> str:
-    return next(e.text for e in user.find(kind=ui.label).elements if re.match(r"\d+ new", e.text))
 
 
 def edit_cell(user: User, index: int, column: str, value) -> None:
@@ -285,69 +279,22 @@ async def test_payees_lead_to_the_rules(user: User, ctx, setup) -> None:
 
 
 # ------------------------------------------------------------------ the import preview
-async def test_the_import_preview_marks_suggestions_until_they_are_changed(user: User, ctx, setup) -> None:
+async def test_the_import_sorts_by_rules_and_history_and_lists_the_guesses(user: User, ctx, setup) -> None:
     rules_svc.save(ctx, RuleInput(match="migros", category="01.1"))
     tx_svc.save(ctx, spend(setup, "Brezelkönig", "11.1"))
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
     await settle()
-    assert [(r["payee"], r["category"], r["suggested"], r["reason"]) for r in rows(user)] == [
-        ("Migros", "01.1 Groceries", True, "Rule: contains “migros”"),
-        ("Brezelkönig", "11.1 Eating out", True, "Used 1 time for this payee"),
-        # a search word of the category in the payee (#20's keyword match, with the everyday names' words)
-        ("Papeterie Zumstein", get_coicop().label("09.7.4"), True, "Payee contains “Papeterie”"),
-    ]
-    [grid] = user.find(kind=ui.aggrid).elements
-    category = next(c for c in grid.options["columnDefs"] if c["field"] == "category")
-    assert category["cellClassRules"]["suggested"] == "data.suggested"  # in italics
-    assert "3 categories are suggestions (in italics): check them before importing." in summary(user)
-    clear = button(user, "Clear Suggestions")
-    assert clear.visible
-
-    # chosen by hand: no longer a suggestion
-    await select(user, "1")
-    put(user, field(user, ui.select, "Category"), "11.1.1")
-    click(user, button(user, "Apply"))
-    await settle()
-    assert [(r["suggested"], r["reason"]) for r in rows(user)][:2] == [(True, "Rule: contains “migros”"), (False, "")]
-    assert "2 categories are suggestions (in italics): check them before importing." in summary(user)
-
-    # a new payee brings its own suggestion; the one chosen by hand stays
-    edit_cell(user, 2, "payee", "Migros")
-    edit_cell(user, 1, "payee", "Migros")
-    assert [(r["category"], r["suggested"]) for r in rows(user)] == [
-        ("01.1 Groceries", True),
-        ("11.1.1 Restaurants and cafés", False),
-        ("01.1 Groceries", True),
-    ]
-    edit_cell(user, 2, "payee", "Somebody Else")
-    assert rows(user)[2]["category"] == "" and not rows(user)[2]["suggested"]
-
-    click(user, clear)
-    assert [(r["category"], r["suggested"]) for r in rows(user)] == [
-        ("", False),
-        ("11.1.1 Restaurants and cafés", False),
-        ("", False),
-    ]
-    assert not clear.visible
-    assert "suggestion" not in summary(user)
-
-
-async def test_importing_keeps_the_suggested_categories(user: User, ctx, setup) -> None:
-    rules_svc.save(ctx, RuleInput(match="migros", category="01.1"))
-    tx_svc.save(ctx, spend(setup, "Brezelkönig", "11.1"))
-    tx_svc.save(ctx, spend(setup, "Papeterie Zumstein", "09.7"))
-    await user.open("/import")
-    await upload(user, "ubs.csv", UBS)
-    put(user, field(user, ui.select, "Account"), setup["chf"].id)
-    await settle()
-    assert import_button(user).enabled
+    assert import_button(user).text == "Import 3 Transactions"
     click(user, import_button(user))
-    assert notified(user, "Imported 3 transactions")
+    await user.should_see("3 transactions imported. Undo the whole import from History at any time.")
+    # a search word of the category in the payee (#20's keyword match) is only a guess: listed, folded
+    await user.should_see("1 sorted only by a word in the name")
+    await user.should_see("2 sorted the way you sorted before")
     imported = sorted((tx for tx in ctx.store.transactions.all() if tx.import_ref), key=lambda tx: tx.date)
-    assert [tx.category for tx in imported] == ["01.1", "11.1", "09.7"]
-    assert len(ctx.store.rules.all()) == 1
+    assert [tx.category for tx in imported] == ["01.1", "11.1", "09.7.4"]
+    assert len(ctx.store.rules.all()) == 1  # importing a suggestion creates no rule
 
 
 async def test_a_camt_statement_gets_the_same_suggestions(user: User, ctx, setup) -> None:
@@ -359,7 +306,7 @@ async def test_a_camt_statement_gets_the_same_suggestions(user: User, ctx, setup
     await settle()
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
     await settle()
-    assert [(r["category"], r["reason"]) for r in rows(user)][:2] == [
-        ("01.1 Groceries", "Rule: contains “migros”"),
-        ("Income · Salary", "Rule: contains “lohn”"),
-    ]
+    click(user, import_button(user))
+    await user.should_see("6 transactions imported", retries=30)
+    by_date = sorted(ctx.store.transactions.all(), key=lambda tx: (tx.date, tx.amount))
+    assert [tx.category for tx in by_date if tx.import_ref][:2] == ["01.1", setup["salary"].id]

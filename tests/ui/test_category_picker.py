@@ -134,17 +134,6 @@ async def test_budget_forms_use_the_picker_with_recents(user: User, ctx, demo) -
     assert "07.3.1" in offered(sel, "sbb")
 
 
-async def test_the_import_page_uses_the_picker_with_income_categories(user: User, ctx, setup) -> None:
-    spend(ctx, setup, date(2026, 10, 2), "07.2.2")
-    await user.open("/import")
-    sel = picker(user)
-    codes = [o["code"] for o in options(sel)]
-    assert codes[0] == "07.2.2" and codes[-1] == setup["salary"].id
-    assert offered(sel, "migros")[0] == "01.1"
-    assert offered(sel, "salary") == [setup["salary"].id]
-    assert sel.options[setup["salary"].id] == "Income · Salary"
-
-
 async def test_typing_what_a_category_includes_offers_it(user: User, setup) -> None:
     """F40: the notes' words are searched after the names; what a category excludes is not."""
     await user.open("/add-transaction")

@@ -356,7 +356,6 @@ def import_csv(ctx, account_id: str) -> list:
     rows = importer.analyse(ctx, importer.parse_rows(parsed, profile), account_id)
     for r in rows:
         r.category = "01.1"
-    importer.hold_uncategorized(ctx, rows)
     return rows
 
 
@@ -401,7 +400,6 @@ def test_a_camt_import_reads_the_payee_from_the_counterparty(ctx, setup):
     assert [r.payee for r in rows] == ["Migros", "Firma AG", "", "Swisscom", "EWZ", "Spende Sammelauftrag"]
     for r in rows:
         r.category = setup["salary"].id if r.type == TX_INCOME else "01.1"
-    importer.hold_uncategorized(ctx, rows)
     camt.commit(ctx, st, rows, setup["chf"].id)
     assert payee_svc.find(ctx, "Migros").alias_list == ["migros zurich hb"]
     names = {p.name for p in payee_svc.all_payees(ctx)}

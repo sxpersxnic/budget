@@ -76,19 +76,14 @@ def test_import_values_at_booking_date_and_skips_duplicates_next_time(ctx, setup
     rows = importer.analyse(ctx, importer.parse_rows(parsed, profile), setup["eur"].id)
     assert [r.status for r in rows] == ["new", "new", "new", "error"]
     assert rows[0].import_ref != rows[1].import_ref  # identical lines stay two transactions
-    # the two Coop rows have a suggested category and are in; the refund has none and waits; unreadable is out
-    assert [(r.include, r.waiting) for r in rows] == [(True, False), (True, False), (False, True), (False, False)]
+    # every new row is in, with a category or without one: the refund waits under To sort (decision 48)
+    assert [(r.include, r.category) for r in rows] == [(True, "01.1"), (True, "01.1"), (True, ""), (False, "")]
+    assert rows[0].guessed  # "Coop" in the name is all the suggestion goes by
 
-    rows[2].include = True  # ticked by hand without a category
-    with pytest.raises(ValidationError, match="choose a category"):
-        importer.commit(ctx, rows, setup["eur"].id)
-    rows[2].category = setup["salary"].id
-    assert importer.hold_uncategorized(ctx, rows) == 0  # it got a category: nothing waits
-    assert [r.include for r in rows] == [True, True, True, False]
     saved = importer.commit(ctx, rows, setup["eur"].id)
     assert len(saved) == 3
     assert saved[0].type == TX_EXPENDITURE and saved[0].from_account == setup["eur"].id
-    assert saved[2].type == TX_INCOME and saved[2].to_account == setup["eur"].id
+    assert saved[2].type == TX_INCOME and saved[2].to_account == setup["eur"].id and saved[2].category == ""
     # booked 15 Sep: last ECB rate on or before is 29 Aug (0.95 CHF per EUR), not the latest
     assert saved[0].fx_date == date(2026, 8, 29) and saved[0].amount_chf == pytest.approx(12.30 * 0.95)
 
@@ -96,37 +91,15 @@ def test_import_values_at_booking_date_and_skips_duplicates_next_time(ctx, setup
     assert [r.status for r in again[:3]] == ["duplicate"] * 3
     assert not any(r.include for r in again)
     # a later file from the same account learns the categories
-    assert again[0].category == "01.1" and again[0].suggested
+    assert again[0].category == "01.1" and again[0].suggested and not again[0].guessed
 
 
-def test_a_chosen_category_is_suggested_for_the_same_payee():
-    def row(i: int, amount: float, payee: str, category: str = "", suggested: bool = False, **kw):
-        return importer.ImportRow(
-            i, date(2026, 9, 1), amount, payee, category=category, suggested=suggested, payee=payee, **kw
-        )
-
-    chosen = row(0, -5, "Kiosk Muster", "02.3")
-    rows = [
-        chosen,
-        row(1, -3, "KIOSK MUSTER"),  # no category: filled in
-        row(2, -4, "Kiosk Muster", "01.1", suggested=True),  # a suggestion: replaced
-        row(3, -6, "Kiosk Muster", "05.6"),  # chosen by hand: kept
-        row(4, 10, "Kiosk Muster"),  # money coming in: another type
-        row(5, -2, "Bäckerei Muster"),  # another payee
-        row(6, -2, "Kiosk Muster", status=importer.ERROR),
-    ]
-    assert importer.spread(rows, [chosen]) == 2
-    assert [(r.category, r.suggested) for r in rows] == [
-        ("02.3", False),
-        ("02.3", True),
-        ("02.3", True),
-        ("05.6", False),
-        ("", False),
-        ("", False),
-        ("", False),
-    ]
-    assert rows[1].reason == "Same payee as a row you chose"
-    assert importer.spread(rows, [row(7, -1, "", "02.3")]) == 0  # no payee, nothing to go by
+def test_a_category_that_does_not_fit_is_refused(ctx, setup):
+    parsed = importer.read_file("de.csv", DE)
+    rows = importer.analyse(ctx, importer.parse_rows(parsed, importer.guess_profile(parsed)), setup["eur"].id)
+    rows[2].category = "01.1"  # money coming in cannot be groceries
+    with pytest.raises(ValidationError, match="choose a category"):
+        importer.commit(ctx, rows, setup["eur"].id)
 
 
 def test_rows_left_out_come_back_when_the_file_is_imported_again(ctx, setup):
@@ -134,29 +107,15 @@ def test_rows_left_out_come_back_when_the_file_is_imported_again(ctx, setup):
     profile = importer.guess_profile(parsed)
     rows = importer.analyse(ctx, importer.parse_rows(parsed, profile), setup["chf"].id)
     assert [(r.category, r.suggested) for r in rows] == [("01.1", True), ("", False), ("", False)]
-    # the categorized row is in, the two without a category wait: the file imports at once
-    assert [(r.include, r.waiting) for r in rows] == [(True, False), (False, True), (False, True)]
-    assert len(importer.commit(ctx, rows, setup["chf"].id)) == 1
+    rows[1].include = False  # left out by hand
+    assert len(importer.commit(ctx, rows, setup["chf"].id)) == 2
 
     again = importer.analyse(ctx, importer.parse_rows(parsed, profile), setup["chf"].id)
-    assert [(r.status, r.include, r.waiting) for r in again] == [
-        ("duplicate", False, False),
-        ("new", False, True),  # offered again, still waiting for a category
-        ("new", False, True),
-    ]
-
-
-def test_a_row_the_user_left_out_stays_out_when_it_gets_a_category(ctx, setup):
-    parsed = importer.read_file("ubs.csv", UBS)
-    rows = importer.analyse(ctx, importer.parse_rows(parsed, importer.guess_profile(parsed)), setup["chf"].id)
-    rows[0].include = False  # left out by hand, with its category
-    rows[2].category = "01.1"  # the waiting expenditure gets one
-    assert importer.hold_uncategorized(ctx, rows) == 1  # the salary still waits
-    assert [r.include for r in rows] == [False, False, True]  # only the row that was waiting comes back
+    assert [(r.status, r.include) for r in again] == [("duplicate", False), ("new", True), ("duplicate", False)]
 
 
 def test_manual_entry_on_the_same_day_is_flagged(ctx, setup):
-    tx_svc.save(
+    typed = tx_svc.save(
         ctx,
         TransactionInput(
             date=date(2026, 9, 2),
@@ -170,6 +129,7 @@ def test_manual_entry_on_the_same_day_is_flagged(ctx, setup):
     parsed = importer.read_file("ubs.csv", UBS)
     rows = importer.analyse(ctx, importer.parse_rows(parsed, importer.guess_profile(parsed)), setup["chf"].id)
     assert rows[0].status == importer.POSSIBLE_DUPLICATE and not rows[0].include
+    assert rows[0].match_id == typed.id  # shown beside the file's row
     assert rows[1].status == rows[2].status == importer.NEW
 
 

@@ -36,7 +36,7 @@ from budget_app.services import rules as rules_svc
 from budget_app.services.context import Context
 from budget_app.services.undo import recorded
 
-SHOP, ATM, PERSON, INCOME = "shop", "atm", "person", "income"
+SHOP, ATM, PERSON, INCOME, GUESS = "shop", "atm", "person", "income", "guess"
 FILTER = "to-sort"  # the transaction list's category filter for what is to sort (an empty value is no filter)
 ATM_WORDS = ("bancomat", "geldautomat", "atm", "bargeld", "bargeldbezug", "postomat", "retrait", "prelevamento")
 GIFTS, EATING_OUT = "09.2.1.3", "11.1"
@@ -58,6 +58,8 @@ class Group:
     last: date | None = None
     kind: str = SHOP
     choices: list[str] = field(default_factory=list)  # category codes or income category ids, likeliest first
+    guess: str = ""  # GUESS: the category an import gave only because of a word in the name
+    reason: str = ""  # GUESS: why ("Payee contains “Kiosk”")
 
     @property
     def count(self) -> int:
@@ -95,6 +97,28 @@ def groups(ctx: Context, ids: Collection[str] | None = None) -> list[Group]:
     return out
 
 
+def guesses(ctx: Context, reasons: dict[str, str]) -> list[Group]:
+    """Worth a second look: transactions an import sorted only because of a word in the payee's name (`reasons`:
+    transaction id -> why), by payee, while they keep that category. The guess is the first answer."""
+    found: dict[tuple[str, str, str], Group] = {}
+    texts: dict[tuple[str, str, str], str] = {}
+    for tx in ctx.store.transactions.all():
+        if tx.id not in reasons or not tx.category:
+            continue
+        name = tx.payee or tx.comment or "?"
+        k = (tx.type, key(name), tx.category)
+        g = found.setdefault(k, Group(tx.type, name, kind=GUESS, guess=tx.category, reason=reasons[tx.id]))
+        texts.setdefault(k, tx.comment)
+        g.ids.append(tx.id)
+        g.total += tx.amount_chf
+        g.first = min(g.first, tx.date) if g.first else tx.date
+        g.last = max(g.last, tx.date) if g.last else tx.date
+    usage = _usage(ctx)
+    for k, g in found.items():
+        g.choices = list(dict.fromkeys([g.guess, *_choices(g, texts[k], usage)]))[:CHOICES]
+    return sorted(found.values(), key=lambda g: (-g.count, key(g.name)))
+
+
 def count(ctx: Context) -> int:
     """How many payees wait for an answer: the number in the sidebar."""
     return len({(tx.type, key(tx.payee or tx.comment)) for tx in unsorted(ctx)})
@@ -117,12 +141,14 @@ def _shop_answers() -> dict[str, list[str]]:
 
 
 def _usage(ctx: Context) -> dict[str, list[str]]:
-    """Per type, the categories used most, most first."""
+    """Per type, the categories used most, most first; the income categories never used follow (there are few)."""
     counts: dict[str, Counter[str]] = {TX_EXPENDITURE: Counter(), TX_INCOME: Counter()}
     for tx in ctx.store.transactions.all():
         if tx.type in counts and tx.category and not tx.is_advance and not tx.settles_id:
             counts[tx.type][tx.category] += 1
-    return {t: [c for c, _ in n.most_common()] for t, n in counts.items()}
+    usage = {t: [c for c, _ in n.most_common()] for t, n in counts.items()}
+    usage[TX_INCOME] += [c.id for c in ctx.store.income_categories.all() if c.id not in counts[TX_INCOME]]
+    return usage
 
 
 def _choices(g: Group, text: str, usage: dict[str, list[str]]) -> list[str]:
