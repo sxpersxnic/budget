@@ -16,6 +16,7 @@ from budget_app.services.payees import Usage
 from budget_app.ui.layout import error, fmt, frame, named, on_data_changed, row_value, sheet, sheet_buttons, undoable
 from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
+from budget_app.ui.widgets.sort_cards import logo
 
 ROW_ACTION = "flat dense round size=sm"
 
@@ -177,6 +178,7 @@ def page() -> None:
                     ui.checkbox(value=payee.id in selected, on_change=lambda e, p=payee: toggle(p.id, e.value)).props(
                         "dense"
                     )
+                logo(payee.name, small=True)
                 ui.label(payee.name).classes("truncate flex-1 min-w-0")
                 _value(use)
                 with ui.row().classes("row-actions gap-0 no-wrap"):

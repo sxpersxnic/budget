@@ -614,7 +614,9 @@ input[type=number] { -moz-appearance: textfield; }
   background: var(--surface); }
 .sort-card.answered { grid-template-columns: 40px auto minmax(0, 1fr); align-items: center; padding: 10px 20px; }
 .sort-logo { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; color: #fff;
-  font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+  font-size: 13px; font-weight: 600; letter-spacing: 0.02em; flex: none; overflow: hidden; }
+.sort-logo.brand svg { width: 100%; height: 100%; display: block; }
+.sort-logo.small { width: 28px; height: 28px; border-radius: 7px; font-size: 11px; }
 .sort-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sort-name { font-weight: 600; font-size: 15px; }
 .sort-facts { font-size: 13px; color: var(--label-3); font-variant-numeric: tabular-nums; }
