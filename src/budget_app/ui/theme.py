@@ -543,6 +543,13 @@ input[type=number] { -moz-appearance: textfield; }
   color: var(--accent); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
 .import-headline { font-size: 21px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.25; text-wrap: balance; }
 .import-problem:empty { display: none; }
+.import-mapping { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; border-radius: 12px;
+  background: var(--fill-2); }
+.import-subhead { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--label-3); }
+.import-preview { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 18px; font-size: 13px;
+  padding-top: 10px; border-top: 0.5px solid var(--separator); }
+.import-preview:empty { display: none; }
 .import-problem { color: var(--label-2); }
 .import-checks { display: flex; flex-direction: column; gap: 16px; }
 .import-checks:empty { display: none; }
