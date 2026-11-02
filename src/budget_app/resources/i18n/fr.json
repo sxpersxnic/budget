@@ -78,7 +78,7 @@
  "Add one with New Transaction, or import a bank statement.": "Ajoutez-en une avec «Nouvelle transaction», ou importez un relevé bancaire.",
  "Add to Budget": "Ajouter au budget",
  "Add to this budget": "Ajouter à ce budget",
- "Add your accounts, then record each account’s balance on the Budget page. Income categories are under Settings → Categories.": "Ajoutez vos comptes, puis saisissez le solde de chaque compte sur la page Budget. Les catégories de revenus se trouvent sous Réglages → Catégories.",
+ "Add your accounts and record each account’s balance under Wealth. Income categories are under Settings → Categories.": "Ajoutez vos comptes et saisissez le solde de chaque compte sous Fortune. Les catégories de revenus se trouvent sous Réglages → Catégories.",
  "Added the bill of {creditor}": "Facture de {creditor} ajoutée",
  "Added {name}": "{name} ajouté",
  "Added {n} bill": [
@@ -304,6 +304,7 @@
  "Close": "Fermer",
  "Close the open sheet": "Fermer la fenêtre ouverte",
  "Closing": "Clôture",
+ "Code": "Code",
  "Colour": "Couleur",
  "Comma ,": "Virgule ,",
  "Commuting by public transport, meals at work and further education": "Trajets en transports publics, repas hors du domicile et formation continue",

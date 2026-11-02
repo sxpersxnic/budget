@@ -102,7 +102,7 @@ def page() -> None:
                     _row(
                         t("Your Own Data"),
                         t(
-                            "Add your accounts, then record each account’s balance on the Budget page. "
+                            "Add your accounts and record each account’s balance under Wealth. "
                             "Income categories are under Settings → Categories."
                         ),
                     )

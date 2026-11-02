@@ -192,7 +192,11 @@ async def test_a_phone_shows_two_line_rows_and_a_tap_opens_one(user: User, ctx, 
     layout_js = options[":onGridReady"]
     assert layout_js == options[":onGridSizeChanged"] and "(max-width: 640px)" in layout_js
     assert all(f"'{c['field']}'" in layout_js or f'"{c["field"]}"' in layout_js for c in wide if not c.get("hide"))
-    assert not export_svc.view_frame(transactions_page._columns(), [], "").columns.str.contains("_phone").any()
+    exported = export_svc.view_frame(
+        transactions_page._columns(), [r for r in rows(user) if r["id"] == shop["receipt"].id]
+    )
+    assert "_phone" not in exported.columns
+    assert exported["Code"].tolist() == [shop["receipt"].category]  # the screen shows names; an export keeps the code
     grid = the_grid(user)
     UserInteraction(user, {grid}, None).trigger("cellClicked", {"data": {"id": shop["receipt"].id}, "colId": "date"})
     await user.should_not_see("Edit Transaction", retries=1)  # on a wide screen a click selects nothing new

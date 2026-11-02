@@ -96,6 +96,8 @@ def _columns() -> list[dict]:
         date_col("date", t("Date"), sort="desc", width=120),
         {"field": "payee", "headerName": t("Payee"), "width": 180},
         {"field": "category", "headerName": t("Category"), "width": 320, "tooltipField": "_category_tip"},
+        # names, not codes, on screen; an export keeps the COICOP code beside the name, to sort and group by
+        {"field": "code", "headerName": t("Code"), "hide": True},
         {"field": "tags", "headerName": t("Tags"), "width": 170, ":cellRenderer": CHIPS_RENDERER},  # F10
         money_col("amount", t("Amount"), width=150),
         {"field": "items", "headerName": t("Items"), "width": 90, "type": "rightAligned", "cellClass": "muted"},
@@ -193,6 +195,7 @@ def _row(
         "currency": tx.currency,
         "amount_chf": round(tx.amount_chf, 2),
         "category": category,
+        "code": ", ".join(split_codes or [tx.category]) if tx.type == TX_EXPENDITURE else "",
         "_category_tip": tip,
         "payee": tx.payee,
         "from": accs.get(tx.from_account, ""),
