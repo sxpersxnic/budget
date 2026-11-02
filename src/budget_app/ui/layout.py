@@ -58,6 +58,9 @@ SECTIONS = {
         ("/to-sort", N_("To Sort")),
         ("/recurring", N_("Recurring")),
         ("/bills", N_("Bills")),
+        # who you pay and what Budget files automatically, beside the transactions they act on (not in Settings)
+        ("/payees", N_("Payees")),
+        ("/rules", N_("Rules")),
     ],
     "/budget-entries": [
         ("/budget-entries", N_("Budget Plan")),
@@ -77,7 +80,6 @@ SECTIONS = {
     "/settings": [
         ("/settings", N_("General")),
         ("/categories", N_("Categories")),
-        ("/payees", N_("Payees")),
         ("/tags", N_("Tags")),
     ],
 }
@@ -87,7 +89,6 @@ TAB_PARENT = {
     "/import": "/transactions",
     "/add-budget": "/budget-entries",
     "/history": "/settings",
-    "/rules": "/payees",
 }
 # Every route that is not a place highlights its place in the sidebar.
 NAV_PARENT = {tab: place for place, tabs in SECTIONS.items() for tab, _ in tabs if tab != place}
@@ -104,6 +105,7 @@ SHORTCUTS = [
     ("Esc", N_("Close the open sheet")),
     ("?", N_("Keyboard Shortcuts")),
 ]
+SHOW_ACTIVE_TAB = "document.querySelector('.section-tab.active')?.scrollIntoView({inline: 'nearest', block: 'nearest'})"
 SEARCH_FOCUS = "document.querySelector('.search input')?.focus()"  # every page's search field has the class
 # the sheet keeps its Ctrl/⌘ Enter, so a sheet opened from a form doesn't also save the form
 SAVE_KEYS = (
@@ -278,6 +280,8 @@ def _section_tabs(place: str, path: str) -> None:
                 if target != place:  # a place's own count is the sidebar's (Transactions: payees to sort)
                     _badge(target)
             _mark(link, target == current)
+    # on a phone the tabs scroll sideways: the open one comes into view, not off the right edge
+    ui.run_javascript(SHOW_ACTIVE_TAB)
 
 
 def _new_transaction() -> None:

@@ -361,11 +361,11 @@ comes back. Sample data only goes into an empty data folder.
    includes (each row shows both names: "01.1 Food · Groceries"); the ⓘ
    beside a name shows what the category includes, also includes and excludes. The ones you used
    show what you spent in them this year.
-   **Payees** (sidebar) lists everyone you paid or who paid you, with the number of transactions and
+   **Payees** (a tab of Transactions) lists everyone you paid or who paid you, with the number of transactions and
    the amounts. Rename a payee, merge several into one (tick them, then **Merge…**) or delete one you
    no longer use; each can be undone. Imports keep using the name you chose. On **Transactions**,
-   search for a payee or choose one under **Filters**. **Payees → Rules…** (or **Settings → Rules…**)
-   lists your categorization rules, to add, change or delete them. When several rules match, the one
+   search for a payee or choose one under **Filters**. The **Rules** tab, next to **Payees** under
+   Transactions, lists your categorization rules, to add, change or delete them. When several rules match, the one
    with the longest text wins.
    **Tags** (sidebar) lists your tags with their number of transactions and what was spent and
    received. Click a tag to see its transactions. Give a tag a **budget** (piggy bank button: an

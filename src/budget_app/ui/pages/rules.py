@@ -1,6 +1,6 @@
 """Categorization rules (F07): every rule with its text, type, category and account; add, edit and delete.
 
-Reached from the Payees page and Settings. A rule suggests its category for new and imported transactions whose
+A tab of Transactions, beside Payees (decision 49). A rule suggests its category for new and imported transactions whose
 payee or bank text contains its text; the longest text wins, between equally long ones the newest."""
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def caption(ctx: Context, rule: Rule) -> str:
 
 def page() -> None:
     # each group adds its own type of rule with its "Add Rule…" row, so the header has no button of its own
-    with frame(t("Categorization Rules"), "/rules", narrow=True) as (ctx, _actions):
+    with frame(t("Rules"), "/rules", narrow=True) as (ctx, _actions):
 
         @ui.refreshable
         def rule_list() -> None:

@@ -89,7 +89,7 @@ async def test_the_page_lists_payees_with_counts_and_amounts(user: User, ctx, se
     await user.open("/payees")
     await user.should_see("No payees yet.")
     await user.should_see("Add one on a transaction, or import a bank file")  # the page's explanation, while empty
-    assert ("/payees", "Payees") in layout.SECTIONS["/settings"]  # a list, among the settings' tabs
+    assert ("/payees", "Payees") in layout.SECTIONS["/transactions"]  # beside the transactions (decision 49)
 
     shops(ctx, setup)
     await user.open("/payees")

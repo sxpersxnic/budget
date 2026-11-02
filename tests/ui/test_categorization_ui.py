@@ -185,7 +185,7 @@ async def test_only_expenditure_and_income_with_a_category_make_a_rule(user: Use
 # ------------------------------------------------------------------ the rule sheet's checks
 async def test_the_rule_sheet_checks_its_fields(user: User, ctx, setup) -> None:
     await user.open("/rules")
-    await user.should_see("Categorization Rules")
+    await user.should_see("A rule suggests its category")
     click(user, min((b for b in user.find(kind=ui.button).elements if b.text == "Add Rule…"), key=lambda b: b.id))
     await user.should_see("New Rule")
     save = button(user, "Save Rule")
@@ -224,7 +224,7 @@ async def test_the_rules_page_lists_edits_and_deletes(user: User, ctx, setup, th
     await user.should_see("Contains “Lohn”")
     await user.should_see("3 rules")
     active = {link.props["href"] for link in user.find(kind=ui.link).elements if "active" in link.classes}
-    assert active == {"/settings", "/payees"}  # Settings in the sidebar, its Payees tab
+    assert active == {"/transactions", "/rules"}  # Transactions in the sidebar, its Rules tab (decision 49)
 
     edit = min((b for b in user.find(kind=ui.button).elements if b.props.get("icon") == "o_edit"), key=lambda b: b.id)
     click(user, edit)
@@ -271,10 +271,20 @@ async def test_a_rule_whose_category_is_gone_says_so(user: User, ctx, setup) -> 
     await user.should_see("Category no longer exists · Account no longer exists")
 
 
-async def test_payees_lead_to_the_rules(user: User, ctx, setup) -> None:
+def section_tabs(user: User) -> list[ui.link]:
+    """The tabs under the title, in their order."""
+    links = [link for link in user.find(kind=ui.link).elements if "section-tab" in link.classes]
+    return sorted(links, key=lambda link: link.id)
+
+
+async def test_payees_and_rules_are_tabs_of_transactions(user: User, ctx, setup) -> None:
     await user.open("/payees")
-    click(user, button(user, "Rules…"))
-    await user.should_see("Categorization Rules")
+    tabs = [link.props["href"] for link in section_tabs(user)]
+    assert tabs == ["/transactions", "/to-sort", "/recurring", "/bills", "/payees", "/rules"]
+    await user.open("/settings")
+    tabs = [link.props["href"] for link in section_tabs(user)]
+    assert tabs == ["/settings", "/categories", "/tags"]
+    await user.open("/rules")
     await user.should_see("A rule suggests its category for new and imported transactions")
 
 
