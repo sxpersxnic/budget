@@ -63,12 +63,12 @@ SECTIONS = {
         ("/rules", N_("Rules")),
     ],
     "/budget-entries": [
-        ("/budget-entries", N_("Budget Plan")),
+        ("/budget-entries", N_("Plan")),
         ("/goals", N_("Goals")),
         ("/scenarios", N_("Scenarios")),
     ],
     "/accounts": [
-        ("/accounts", N_("Accounts")),
+        ("/accounts", N_("Wealth")),
         ("/investments", N_("Investments")),
         ("/loans", N_("Loans")),
         ("/shared", N_("Shared Expenses")),
