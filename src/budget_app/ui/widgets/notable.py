@@ -67,7 +67,9 @@ def notable_card(ctx: Context, currency: str, today: date | None = None) -> None
         for item in notable.items:
             title, sub = texts(item, notable)
             icon, colour = ICONS[item.kind]
-            with ui.link(target=link(item, notable.month)).classes("notable-row"):
+            with ui.link(target=link(item, notable.month)).classes("notable-row") as row:
+                if code := get_coicop().tooltip(item.category):  # names, not codes: the code on hover
+                    row._props["title"] = code
                 ui.icon(icon, size="20px").classes(colour)
                 with ui.column().classes("gap-0 min-w-0"):
                     ui.label(title).classes("n-title")

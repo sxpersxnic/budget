@@ -314,7 +314,7 @@ async def test_accounts_budget_and_overview_know_loan_accounts(user: User, ctx, 
     put(user, stepper, prev)
     await user.should_see("Outstanding debt of the loan")
     await user.should_see("−480'000.00 CHF")  # wealth: 20'000 − 500'000
-    click(user, page_button(user, "Record Balance"))
+    click(user, page_button(user, "Edit"))  # the Bank's balance: the sheet's accounts leave the loan out
     assert loan.account_id not in field(user, ui.select, "Account").options
 
     await user.open("/")

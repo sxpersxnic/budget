@@ -1,4 +1,4 @@
-"""Form for adding (recurring) budget entries, as a page and as a sheet on the Budget Plan page."""
+"""Form for adding (recurring) budget entries, as a page and as a sheet on the Plan page."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def budget_form(ctx: Context, on_saved: Callable[[], None] | None = None, on_can
             cur = currency_select(ctx, ctx.store.settings.display_currency)
         exp_cat = expenditure_category_select(ctx=ctx)
         inc_cat = income_category_select(ctx)
-        with ui.column().classes("w-full gap-1"):
+        with ui.column().classes("w-full gap-2"):  # the same 8 px between the schedule's fields as within a row
             with ui.row().classes("w-full gap-2 no-wrap"):
                 start = (
                     ui.select(

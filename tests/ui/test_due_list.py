@@ -91,10 +91,12 @@ def everything(ctx, setup) -> dict:
     return {"prev": prev, "rent": rent, "bill": bill, "goal": goal, "loan": loan}
 
 
-async def test_nothing_due_is_one_quiet_line(user: User, ctx) -> None:
+async def test_nothing_due_shows_no_card(user: User, ctx) -> None:
     ctx.store.settings.onboarding_done = True
     await user.open("/")
-    await user.should_see("Nothing due. Balances to record, bookings and bills show here when they need you.")
+    await user.should_see("Wealth")
+    await user.should_not_see("Due")
+    await user.should_not_see("Nothing due.")
     assert layout.BADGES["/"] == "Things to do"
     assert not due_badge(user).visible and not rows(user)
 
@@ -196,12 +198,8 @@ async def test_settings_switches_turn_kinds_off(user: User, ctx, setup) -> None:
     assert ctx.store.settings.reminders_off == [rem_svc.BALANCES]
     assert not due_badge(user).visible
     await user.open("/")
-    await user.should_see("Nothing due.")
-    for kind in rem_svc.KINDS:
-        rem_svc.set_enabled(ctx, kind, False)
-    await user.open("/")
     await user.should_see("Wealth")
-    await user.should_not_see("Nothing due.")  # every kind off: no Due list at all
+    await user.should_not_see("1 thing to do")  # the only thing due was a balance
     for kind in rem_svc.KINDS:
         rem_svc.set_enabled(ctx, kind, True)
     await user.open("/settings")

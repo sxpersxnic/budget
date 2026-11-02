@@ -289,10 +289,7 @@ def page(month: str = "", category: str = "") -> None:
             ):
                 ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))
                 ui.menu_item(t("Export as PDF…"), on_click=lambda: export("pdf"))
-            # secondary: the page is for reading the month; recording a balance is an occasional chore
-            ui.button(
-                t("Record Balance"), icon="add", on_click=lambda: account_entry_dialog(ctx, content.refresh)
-            ).props("flat no-caps").classes("text-primary")
+            # balances are recorded on Wealth (polish before 1.0); the month's own Record links stay where it needs one
 
         @ui.refreshable
         def content() -> None:
@@ -338,7 +335,8 @@ def page(month: str = "", category: str = "") -> None:
                     )
                 net = rep.total_income.actual - rep.total_expenditure.actual
                 net_budget = rep.total_income.budget - rep.total_expenditure.budget
-                metric(t("Net Income"), net, cur, t("Budgeted {amount}", amount=fmt(net_budget)))
+                budgeted = (fmt_signed(net_budget) or fmt(0)) + f" {cur}"  # signed, as the net income above it
+                metric(t("Net Income"), net, cur, t("Budgeted {amount}", amount=budgeted))
 
             if rep.complete:
                 reconciliation_card(rep)
@@ -371,6 +369,7 @@ def page(month: str = "", category: str = "") -> None:
                     ui.label(t("Appears once balances are recorded for this and the previous month.")).classes(
                         "caption"
                     )
+                    ui.link(t("Balances on Wealth"), "/accounts").classes("link-btn no-underline text-[13px]")
                     return
                 recorded = rep.total_income.actual - rep.total_expenditure.actual
                 with ui.element("div").classes("metrics pt-2").style("--n: 4"):
@@ -473,9 +472,9 @@ def page(month: str = "", category: str = "") -> None:
                     with ui.element("div").classes("ledger-row head"):
                         ui.label(t("Category"))
                         ui.element("div").classes("c-bar")
-                        ui.label(t("Actual")).classes("r")
+                        ui.label(t("Actual")).classes("r c-act")
                         if cmp is None:
-                            ui.label(t("Budget")).classes("r")
+                            ui.label(t("Budget")).classes("r c-bud")
                             ui.label(t("Difference")).classes("r c-diff")
                         else:
                             ui.label(months.label(cmp.month)).classes("r c-ref")
@@ -486,7 +485,7 @@ def page(month: str = "", category: str = "") -> None:
                     with ui.row().classes("w-full items-center pt-2"):
                         ui.space()
                         ui.switch(
-                            t("Show all subcategories"),
+                            t("Show All Categories"),
                             value=state["show_empty"],
                             on_change=lambda e: (state.update(show_empty=e.value), content.refresh()),
                         ).props("dense").classes("text-[13px] text-2")
@@ -498,11 +497,14 @@ def page(month: str = "", category: str = "") -> None:
             depth: int = 0,
             children=None,
             cmp: trends_svc.Comparison | None = None,
-        ) -> None:
+        ) -> bool:
+            """The row, unless it has nothing to show; False then."""
             expanded = line.key in state["expanded"]
             is_exp = type_ == BUDGET_EXPENDITURE
             change = cmp.change(line, income=not is_exp) if cmp is not None else None
             empty = _is_zero(line.actual) and (change.empty if change is not None else _is_zero(line.budget))
+            if empty and depth == 0 and not state["show_empty"] and line.key != state["target"]:
+                return False  # nothing budgeted, nothing spent: shown with Show All Categories (polish before 1.0)
             editable = not rep.complete and line.editable and line.key != "TOTAL" and cmp is None
             marked = " target" if line.key == state["target"] else ""
             with ui.element("div").classes("ledger-row" + (" dim" if empty else "") + marked) as row:
@@ -527,11 +529,12 @@ def page(month: str = "", category: str = "") -> None:
                     _change_cell(change, is_exp, rep.currency)
                 else:
                     _meter(line.actual, line.budget)
-                    _amount(line.actual)
-                    _amount(line.budget)
+                    _amount(line.actual, " c-act")
+                    _amount(line.budget, " c-bud")
                     diff = None if empty else line.diff
                     over = diff is not None and (diff > EPS if is_exp else diff < -EPS)
-                    ui.label(fmt_signed(diff)).classes("r c-diff " + ("text-neg" if over else "text-2"))
+                    text = "" if diff is None else fmt_signed(diff) or fmt(0)  # on budget: 0.00, not a blank on phones
+                    ui.label(text).classes("r c-diff " + ("text-neg" if over else "text-2"))
                 if editable:
                     named(
                         ui.button(
@@ -553,17 +556,21 @@ def page(month: str = "", category: str = "") -> None:
                     content.refresh()
 
                 label_cell.classes(add="cursor-pointer").on("click", toggle)
+            return True
 
         def expenditure_rows(rep: reports.MonthReport, cmp: trends_svc.Comparison | None = None) -> None:
-            def walk(line: reports.Line, depth: int) -> None:
+            def walk(line: reports.Line, depth: int) -> bool:
                 children = rep.children(line.key, include_empty=state["show_empty"]) if line.key != ADV else []
-                line_row(rep, line, BUDGET_EXPENDITURE, depth, children, cmp)
+                if not line_row(rep, line, BUDGET_EXPENDITURE, depth, children, cmp):
+                    return False
                 if line.key in state["expanded"]:
                     for child in children:
                         walk(child, depth + 1)
+                return True
 
-            for code in rep.top_expenditure:
-                walk(rep.expenditure_tree[code], 0)
+            shown = [walk(rep.expenditure_tree[code], 0) for code in rep.top_expenditure]
+            if not any(shown):
+                ui.label(t("No expenditure this month.")).classes("caption px-1 py-2")
 
         def income_rows(rep: reports.MonthReport, cmp: trends_svc.Comparison | None = None) -> None:
             if not rep.income_lines:

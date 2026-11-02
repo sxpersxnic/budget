@@ -121,7 +121,7 @@ async def test_the_budget_page_compares_with_the_month_before_and_the_year_befor
     housing = change_cell(ledger_row(user, "04"))  # nothing yet against 1'900
     assert housing.text == "▼ 100 %" and "text-neg" not in housing.classes
     assert "1'900.00" in row_texts(ledger_row(user, "04"))
-    assert change_cell(ledger_row(user, "02")).text == "—"
+    assert not [e for e in find_all(user, ui.html) if e.props.get("data-code") == "02"]  # nothing either month
     assert f"{months.label(CM)} so far, against all of {months.label(PREV)}" in texts(user)
     assert any(t.startswith("70 % less than in") for t in texts(user))  # 800 against 2'660
     income = f"100 % less than in {months.label(PREV)} (6'200.00 CHF)"

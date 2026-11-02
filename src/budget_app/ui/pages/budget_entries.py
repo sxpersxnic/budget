@@ -1,4 +1,4 @@
-"""Budget Plan: the plan as series (one row per budget, the default), and the months grid for editing one month."""
+"""Plan: the plan as series (one row per budget, the default), and the months grid for editing one month."""
 
 from __future__ import annotations
 
@@ -33,6 +33,7 @@ from budget_app.ui.pages.add_budget import (
     until_options,
 )
 from budget_app.ui.pages.budget_proposal import open_proposal_sheet
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm, export_items, make_grid, money_col, month_col, num_col
 from budget_app.ui.widgets.selects import currency_select, expenditure_category_select, income_category_select
 
@@ -85,6 +86,12 @@ def period(s: Series) -> str:
     if s.once:
         return months.label(s.first)
     return f"{months.label(s.first)} – {months.label(s.last)}"
+
+
+def plain(s: Series, cm: str) -> bool:
+    """Every month for as long as the plan runs, and running already: the usual budget, whose schedule goes unsaid
+    on its row (polish before 1.0: the same line on every row said nothing)."""
+    return s.forever and not s.once and s.current.recur_months == 1 and s.first <= cm
 
 
 def signed(amount: float, currency: str, type_: str) -> str:
@@ -289,7 +296,7 @@ def series_dialog(ctx: Context, s: Series, on_saved, on_delete) -> None:
 
 
 def page() -> None:
-    with frame(t("Budget Plan"), "/budget-entries") as (ctx, actions):
+    with frame(t("Plan"), "/budget-entries") as (ctx, actions):
         first, last = data_month_range(ctx)
         shown: list[dict] = []  # the months the filters let through, for the export
         shown_series: list[dict] = []  # the budgets the search lets through, for the export
@@ -307,11 +314,11 @@ def page() -> None:
                 ui.separator()
                 export_items(
                     "budget-plan",
-                    t("Budget Plan"),
+                    t("Plan"),
                     lambda: _series_columns() if view.value == SERIES else _columns(),
                     lambda: shown_series if view.value == SERIES else shown,
                 )
-            ui.button(t("New Budget Entry"), icon="add", on_click=lambda: open_budget_sheet(ctx, refresh)).props(
+            new = ui.button(t("New Budget Entry"), icon="add", on_click=lambda: open_budget_sheet(ctx, refresh)).props(
                 "unelevated"
             )
         with ui.row().classes("w-full items-center gap-2") as toolbar:
@@ -340,24 +347,13 @@ def page() -> None:
         filter_btn.on_click(lambda: filters.set_visibility(not filters.visible))
 
         # ------------------------------------------------------------ nothing planned yet
-        with ui.element("div").classes("group") as empty, ui.column().classes("gap-3 p-5 items-start"):
-            ui.label(t("Nothing planned yet")).classes("section-title")
-            ui.label(
-                t(
-                    "A budget entry is an amount you plan to earn or spend in a category: once, every month or "
-                    "every few months, until a month or for as long as the plan runs. The Budget page compares it "
-                    "with what happened."
-                )
-            ).classes("text-2 max-w-prose")
-            with ui.row().classes("gap-2 items-center -ml-3"):  # the header's button stays the one primary action
-                ui.button(t("New Budget Entry"), icon="add", on_click=lambda: open_budget_sheet(ctx, refresh)).props(
-                    "flat"
-                ).classes("text-primary")
-                ui.button(
-                    t("Propose from History…"),
-                    icon="o_auto_awesome",
-                    on_click=lambda: open_proposal_sheet(ctx, refresh),
-                ).props("flat").classes("text-primary")
+        with ui.element("div").classes("group") as empty:  # Propose from History… stays in the header's "···"
+            empty_state(
+                t("Nothing planned yet."),
+                t("Plan what you earn or spend in a category, once or every month."),
+                t("New Budget Entry"),
+                lambda: open_budget_sheet(ctx, refresh),
+            )
 
         # ------------------------------------------------------------ Series view
         series_box = ui.column().classes("w-full gap-5")
@@ -427,10 +423,11 @@ def page() -> None:
                         ui.label(category_label(ctx, s.current)).classes(
                             "truncate max-sm:whitespace-normal" + (" text-2" if ended else "")
                         )
-                        caption = f"{rhythm(s)} · {period(s)}"
+                        parts = [] if plain(s, cm) else [rhythm(s), period(s)]
                         if s.differing:
-                            caption += " · " + tn("{n} month differs", "{n} months differ", s.differing)
-                        ui.label(caption).classes("caption")
+                            parts.append(tn("{n} month differs", "{n} months differ", s.differing))
+                        if parts:
+                            ui.label(" · ".join(parts)).classes("caption")
                         if s.current.comment:
                             ui.label(s.current.comment).classes("caption truncate")
                     tone = " text-2" if ended else " text-pos" if s.type == BUDGET_INCOME else ""
@@ -529,6 +526,7 @@ def page() -> None:
             """The chosen view, or what a budget entry is while nothing is planned."""
             has = bool(ctx.store.budget.all())
             empty.set_visibility(not has)
+            new.set_visibility(has)  # while there is nothing, the empty state offers it
             toolbar.set_visibility(has)
             text.set_visibility(has)
             series_box.set_visibility(has and view.value == SERIES)
