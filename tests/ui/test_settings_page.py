@@ -1,6 +1,8 @@
 """Settings page: language, plan horizon, display currency, accounts and income categories."""
 
 import asyncio
+import html
+import re
 from datetime import date
 from pathlib import Path
 
@@ -75,6 +77,38 @@ async def no_label(user: User, text: str) -> None:
     raise AssertionError(f"still showing {text!r}")
 
 
+def read_amount(e: ui.html) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", " ", e.content)).replace("  ", " ").strip()
+
+
+def amounts(user: User) -> list[str]:
+    """The amounts on the page as read: '1'234.50 CHF'."""
+    with user:
+        found = [e for e in user.client.elements.values() if isinstance(e, ui.html)]
+    return [read_amount(e) for e in found]
+
+
+async def row_texts(user: User, name: str) -> list[str]:
+    """The texts, amounts and buttons of the list row that shows `name`, in order (once a refresh has shown it)."""
+    for _ in range(40):
+        with user:
+            labels = [e for e in user.client.elements.values() if isinstance(e, ui.label) and e.text == name]
+        if labels:
+            break
+        await asyncio.sleep(0.05)
+    assert labels, f"no row {name!r}"
+    row = labels[0]
+    while "group-row" not in row.classes:
+        row = row.parent_slot.parent
+    out = []
+    for e in row.descendants():
+        if isinstance(e, ui.html):
+            out.append(read_amount(e))
+        elif isinstance(e, ui.label | ui.button) and e.text:
+            out.append(e.text)
+    return out
+
+
 def set_value(user: User, element, value) -> None:
     with user:
         element.value = value
@@ -112,10 +146,9 @@ async def test_rows_show_balances_and_outstanding_advances(user: User, ctx, setu
     )
     await user.open("/accounts")  # Wealth's first page, out of Settings (UX review before 1.0)
     await user.should_see("Accounts")
-    await user.should_see("1'234.50 CHF at the end of Sep 2026")
-    await user.should_see("No balance recorded")  # the euro account has none
-    await user.should_see("Flatmates")
-    await user.should_see("40.00 CHF outstanding")
+    assert amounts(user).count("1'234.50 CHF") == 2  # the net worth and the bank's balance
+    assert await row_texts(user, "Euro account") == ["Euro account", "Record Balance…"]  # none recorded yet
+    assert await row_texts(user, "Flatmates") == ["Flatmates", "40.00 CHF", "Outstanding"]
     await user.open("/categories")  # income categories beside the COICOP ones
     await user.should_see("Salary")
     await user.open("/settings")  # preferences only
@@ -137,7 +170,7 @@ async def test_add_account(user: User, ctx) -> None:
     assert acc is not None
     assert (acc.currency, acc.kind) == ("USD", ACCOUNT_REGULAR)
     await user.should_see("Savings")
-    await user.should_see("No balance recorded")
+    assert await row_texts(user, "Savings") == ["Savings", "Record Balance…"]
     # the sheet closed after saving
     with user:
         assert not any(isinstance(e, ui.dialog) and e.value for e in user.client.elements.values())
@@ -176,7 +209,8 @@ async def test_add_advance_payment_account(user: User, ctx) -> None:
     dialog_button(user, "Add").click()
     acc = account_named(ctx, "Club")
     assert (acc.kind, acc.currency) == (ACCOUNT_ADVANCE, "EUR")
-    await user.should_see("0.00 EUR outstanding")
+    await user.should_see("Club")
+    assert await row_texts(user, "Club") == ["Club", "0.00 EUR", "Outstanding"]
 
 
 async def test_edit_account_name_and_currency(user: User, ctx, setup) -> None:
