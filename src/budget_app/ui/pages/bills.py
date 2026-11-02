@@ -132,10 +132,7 @@ def page() -> None:
                     if not rows:
                         empty_state(
                             t("No open bills."),
-                            t(
-                                "Drop the PDF or a photo of a Swiss QR bill above. It waits here until you pay it; "
-                                "the file stays with the payment. Nothing leaves your computer."
-                            ),
+                            t("Drop a Swiss QR bill above: it waits here until you pay it."),
                         )
                     for bill in rows:
                         _open_row(bill, today)
@@ -153,10 +150,10 @@ def page() -> None:
                         details.append(qrbill.format_reference(bill.reference_type, bill.reference))
                     ui.label(" · ".join(x for x in details if x)).classes("caption truncate")
                     _file_link(ctx, bill)
-                with ui.row().classes("items-center gap-1 no-wrap ml-auto"):
-                    ui.button(t("Mark Paid…"), on_click=lambda: pay(bill)).props("flat dense no-caps").classes(
-                        "text-primary"
-                    )
+                ui.button(t("Mark Paid…"), on_click=lambda: pay(bill)).props("flat dense no-caps").classes(
+                    "text-primary ml-auto"
+                )
+                with ui.row().classes("row-actions items-center gap-1 no-wrap"):  # on hover (polish before 1.0)
                     with (
                         named(
                             ui.button(icon="o_event").props(ROW_ACTION).classes("text-primary"), t("Set the due date")

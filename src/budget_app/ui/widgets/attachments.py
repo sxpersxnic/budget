@@ -22,7 +22,7 @@ from nicegui import app, events, ui
 from budget_app import i18n
 from budget_app.domain import attachments as files
 from budget_app.domain.models import Attachment
-from budget_app.i18n import t, tn
+from budget_app.i18n import t
 from budget_app.services import attachments as attachments_svc
 from budget_app.services import security
 from budget_app.services.context import Context, ValidationError, get_ctx
@@ -85,11 +85,8 @@ class AttachmentList:
         self.bill_id = "" if tx_id else bill_id
         self._pending: list[tuple[str, bytes]] = []  # new transaction: (name, content) until it is saved
         self._preview_id = ""
+        # no heading: the drop zone says what the section is (polish before 1.0)
         with ui.column().classes("w-full gap-1") as self._root:
-            with ui.row().classes("w-full items-center gap-2"):
-                ui.label(t("Attachments")).classes("text-[13px] font-semibold text-2")
-                ui.space()
-                self._summary = ui.label().classes("caption")
             self.upload = (
                 ui.upload(
                     multiple=True,
@@ -196,8 +193,6 @@ class AttachmentList:
         stored = attachments_svc.list_for(self.ctx, self.tx_id) if self.tx_id else []
         from_bill = attachments_svc.list_for_bill(self.ctx, self.bill_id) if self.bill_id else []
         stored += [a for a in from_bill if not a.transaction_id]
-        n = len(stored) + len(self._pending)
-        self._summary.set_text(tn("{n} file", "{n} files", n) if n else "")
         self._list.clear()
         with self._list:
             for att in stored:

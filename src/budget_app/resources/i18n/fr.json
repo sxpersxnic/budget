@@ -4,6 +4,7 @@
  "A QR reference needs a QR-IBAN": "Une référence QR nécessite un QR-IBAN",
  "A QR-IBAN needs a QR reference": "Un QR-IBAN nécessite une référence QR",
  "A bill is paid with an expenditure": "Une facture se paie par une dépense",
+ "A charge that comes back at the same rhythm for about the same amount shows here once it was charged {n} times ({m} times for half-yearly and yearly ones). Nothing is booked for you.": "Un débit qui revient au même rythme pour à peu près le même montant apparaît ici une fois débité {n} fois ({m} fois pour les semestriels et annuels). Rien n’est comptabilisé pour vous.",
  "A gain of {amount}": "Un gain de {amount}",
  "A goal called “{name}” already exists": "Un objectif «{name}» existe déjà",
  "A holding with trades or prices stays in its account": "Une position avec des opérations ou des cours reste dans son compte",
@@ -23,8 +24,9 @@
  "A revaluation is entered in the currency of its account": "Une réévaluation se saisit dans la monnaie de son compte",
  "A rule for “{match}” already exists": "Une règle pour «{match}» existe déjà",
  "A rule for “{match}” already exists ({category}). Saving replaces it.": "Une règle pour «{match}» existe déjà ({category}). L’enregistrement la remplace.",
+ "A rule gives new and imported transactions their category by payee or bank text.": "Une règle donne leur catégorie aux transactions nouvelles et importées d’après le bénéficiaire ou le texte bancaire.",
  "A rule is for expenditure or income": "Une règle s’applique aux dépenses ou aux revenus",
- "A rule suggests its category for new and imported transactions whose payee or bank text contains its text; the longest text wins. Create one here, or with “Always Categorize Like This…” on a transaction.": "Une règle propose sa catégorie pour les transactions nouvelles et importées dont le bénéficiaire ou le texte bancaire contient son texte ; le texte le plus long l’emporte. Créez-en une ici, ou avec «Toujours catégoriser ainsi…» sur une transaction.",
+ "A rule looks for its text in the payee and in the bank text or note. When several match, the longest text wins. “Always Categorize Like This…” on a transaction makes one too.": "Une règle cherche son texte dans le bénéficiaire et dans le texte bancaire ou la note. Si plusieurs correspondent, le texte le plus long l’emporte. «Toujours catégoriser ainsi…» sur une transaction en crée une aussi.",
  "A scenario called “{name}” already exists": "Un scénario «{name}» existe déjà",
  "A securities or crypto account is valued from its holdings, not from balances": "Un compte titres ou crypto est évalué d’après ses positions, pas d’après des soldes",
  "A tag called “{name}” already exists": "Une étiquette «{name}» existe déjà",
@@ -57,7 +59,6 @@
  "Add Loan": "Ajouter le prêt",
  "Add Profile…": "Ajouter un profil…",
  "Add Recurring Transaction": "Ajouter une transaction récurrente",
- "Add Rule…": "Ajouter une règle…",
  "Add Scenario": "Ajouter le scénario",
  "Add Tag": "Ajouter l’étiquette",
  "Add Tags": "Ajouter des étiquettes",
@@ -74,6 +75,7 @@
  "Add an income category": "Ajouter une catégorie de revenus",
  "Add at least one holding": "Ajoutez au moins une position",
  "Add budget entries from history": "Ajouter des postes budgétaires d’après l’historique",
+ "Add one with New Transaction, or import a bank statement.": "Ajoutez-en une avec «Nouvelle transaction», ou importez un relevé bancaire.",
  "Add to Budget": "Ajouter au budget",
  "Add to this budget": "Ajouter à ce budget",
  "Add your accounts, then record each account’s balance on the Budget page. Income categories are under Settings → Categories.": "Ajoutez vos comptes, puis saisissez le solde de chaque compte sur la page Budget. Les catégories de revenus se trouvent sous Réglages → Catégories.",
@@ -418,9 +420,9 @@
  "Donations to charities and memberships of non-profits": "Dons à des œuvres d’entraide et cotisations à des organisations d’utilité publique",
  "Done": "Terminé",
  "Drop QR bills (PDF or photo)": "Déposez des QR-factures (PDF ou photo)",
+ "Drop a Swiss QR bill above: it waits here until you pay it.": "Déposez une QR-facture suisse ci-dessus : elle attend ici jusqu’à ce que vous la payiez.",
  "Drop a receipt (PDF or photo)": "Déposez un ticket de caisse (PDF ou photo)",
  "Drop files here or click to choose": "Déposez des fichiers ici ou cliquez pour les choisir",
- "Drop the PDF or a photo of a Swiss QR bill above. It waits here until you pay it; the file stays with the payment. Nothing leaves your computer.": "Déposez ci-dessus le PDF ou une photo d’une QR-facture suisse. Elle attend ici jusqu’à ce que vous la payiez ; le fichier reste avec le paiement. Rien ne quitte votre ordinateur.",
  "Drop the PDF or a photo of a till receipt and type the amount, date and payee from it; the file stays with the transaction. Reading receipts automatically isn’t available on this computer.": "Déposez le PDF ou une photo d’un ticket de caisse et saisissez le montant, la date et le bénéficiaire qui y figurent ; le fichier reste avec la transaction. La lecture automatique des tickets n’est pas disponible sur cet ordinateur.",
  "Drop the PDF or a photo of a till receipt. It is read on your computer – nothing leaves it – and the expenditure is filled in for you to check. The file stays with the transaction.": "Déposez le PDF ou une photo d’un ticket de caisse. Il est lu sur votre ordinateur – rien ne le quitte – et la dépense est préremplie pour que vous la vérifiiez. Le fichier reste avec la transaction.",
  "Due": "À comptabiliser",
@@ -572,9 +574,9 @@
  "Ignore a subscription": "Ignorer un abonnement",
  "Ignored subscription": "Abonnement ignoré",
  "Ignored {name}": "{name} ignoré",
- "Ignored · {n} subscription": [
-  "Ignorés · {n} abonnement",
-  "Ignorés · {n} abonnements"
+ "Ignored · {n} regular payment": [
+  "Ignorés · {n} paiement régulier",
+  "Ignorés · {n} paiements réguliers"
  ],
  "Import": "Importer",
  "Import Transactions": "Importer des transactions",
@@ -586,7 +588,7 @@
  ],
  "Import {transactions} and {balances}": "Importer {transactions} et {balances}",
  "Imported": "Importé",
- "Imported transactions Budget can't place wait here, one question per payee.": "Les transactions importées que Budget ne sait pas classer attendent ici : une question par bénéficiaire.",
+ "Imported transactions Budget can’t place wait here, one question per payee.": "Les transactions importées que Budget ne sait pas classer attendent ici : une question par bénéficiaire.",
  "Import…": "Importer…",
  "In CHF": "En CHF",
  "In {currency}": "En {currency}",
@@ -733,6 +735,7 @@
  "New Tag": "Nouvelle étiquette",
  "New Trade": "Nouvelle opération",
  "New Transaction": "Nouvelle transaction",
+ "New and imported transactions get the category of the rule whose text they contain.": "Les transactions nouvelles et importées reçoivent la catégorie de la règle dont elles contiennent le texte.",
  "New folder": "Nouveau dossier",
  "New password": "Nouveau mot de passe",
  "New value": "Nouvelle valeur",
@@ -770,6 +773,8 @@
  "No payees yet.": "Pas encore de bénéficiaires.",
  "No payment booked yet.": "Aucune échéance comptabilisée pour l’instant.",
  "No price yet": "Pas encore de cours",
+ "No recurring transactions yet.": "Aucune transaction récurrente pour l’instant.",
+ "No regular payments found yet.": "Aucun paiement régulier trouvé pour l’instant.",
  "No rules yet.": "Aucune règle pour l’instant.",
  "No scenarios yet.": "Pas encore de scénarios.",
  "No securities or crypto accounts yet.": "Pas encore de comptes titres ou crypto.",
@@ -779,6 +784,7 @@
  "No tags yet.": "Pas encore d’étiquettes.",
  "No trades or prices yet.": "Pas encore d’opérations ni de cours.",
  "No transactions": "Aucune transaction",
+ "No transactions yet.": "Aucune transaction pour l’instant.",
  "No valid amount": "Montant non valable",
  "No valid date": "Date non valable",
  "Nobody of that name owes anything": "Personne de ce nom ne doit quelque chose",
@@ -995,7 +1001,7 @@
  "Rename a tag": "Renommer une étiquette",
  "Rename an income category": "Renommer une catégorie de revenus",
  "Renamed to “{name}”": "Renommé en «{name}»",
- "Rent, premiums, a salary: add what repeats with New Recurring Transaction, or make one of the charges found in your transactions recurring. When one is due, book it here or on the Overview; one that books automatically needs no confirmation.": "Loyer, primes, salaire : ajoutez ce qui se répète avec « Nouvelle transaction récurrente », ou rendez récurrent l’un des débits trouvés dans vos transactions. Quand l’une est échue, comptabilisez-la ici ou dans l’Aperçu ; celle qui se comptabilise automatiquement n’a pas besoin de confirmation.",
+ "Rent, premiums, a salary: when one is due, you book it here or on the Overview.": "Loyer, primes, salaire : quand l’une est échue, vous la comptabilisez ici ou dans l’Aperçu.",
  "Reopen": "Rouvrir",
  "Reopen a bill": "Rouvrir une facture",
  "Reopened the bill of {creditor}": "Facture de {creditor} rouverte",
@@ -1127,6 +1133,7 @@
  "Select the interest category": "Choisissez la catégorie des intérêts",
  "Select the kind of revaluation": "Choisir le type de réévaluation",
  "Select the outstanding advance payment that is repaid": "Choisir l’avance ouverte qui est remboursée",
+ "Select the payees to merge.": "Sélectionnez les bénéficiaires à fusionner.",
  "Select the paying account": "Choisissez le compte payeur",
  "Select the start date": "Choisissez la date de début",
  "Select the type of transaction": "Choisir le type de transaction",
@@ -1197,7 +1204,7 @@
  "Spread of the exchange against the ECB rate": "Écart de change par rapport au taux BCE",
  "Start Date": "Date de début",
  "Statement {month}": "Relevé {month}",
- "Streaming, phone, gym, insurance: a charge that comes back at the same rhythm for about the same amount shows here once it was charged {n} times ({m} times for half-yearly and yearly ones). Nothing is booked for you.": "Streaming, téléphone, salle de sport, assurance : un débit qui revient au même rythme pour à peu près le même montant apparaît ici une fois débité {n} fois ({m} fois pour les semestriels et annuels). Rien n’est comptabilisé pour vous.",
+ "Streaming, phone, insurance: what you pay at a steady rhythm shows here.": "Streaming, téléphone, assurance : ce que vous payez à un rythme régulier apparaît ici.",
  "Summary": "Résumé",
  "Summary for {name}": "Résumé pour {name}",
  "Summary…": "Résumé…",
@@ -1220,7 +1227,6 @@
  "Tax withheld ({currency})": "Impôt retenu ({currency})",
  "Taxes": "Impôts",
  "Teal": "Turquoise",
- "Templates": "Modèles",
  "Text contains": "Le texte contient",
  "That folder belongs to another profile": "Ce dossier appartient à un autre profil",
  "That is a file, not a folder": "C’est un fichier, pas un dossier",
@@ -1407,6 +1413,7 @@
  "Transactions it categorized keep their category.": "Les transactions qu’elle a catégorisées gardent leur catégorie.",
  "Transactions it has already booked stay.": "Les transactions déjà comptabilisées sont conservées.",
  "Transactions keep the tag; only its name and colour change.": "Les transactions gardent l’étiquette ; seuls son nom et sa couleur changent.",
+ "Transfer": "Virement",
  "Transfers to accounts of the asset class pillar 3a": "Virements sur des comptes de la classe pilier 3a",
  "Transfers to pillar 3a accounts": "Virements sur des comptes du pilier 3a",
  "Transfers, exchanges and revaluations keep their accounts.": "Les virements, opérations de change et réévaluations gardent leurs comptes.",
@@ -1473,7 +1480,7 @@
  "What do you usually buy here?": "Qu’achetez-vous généralement ici ?",
  "What is this money?": "D’où vient cet argent ?",
  "When you pay partly for others, turn on “Partly paid for others” in the transaction and name the debtor. What they owe shows here until you settle up.": "Quand vous payez en partie pour d’autres, activez «Payé en partie pour d’autres» dans la transaction et nommez le débiteur. Ce qu’il vous doit apparaît ici jusqu’au règlement.",
- "Who you pay and who pays you. Add one on a transaction, or import a bank file: after a rename or a merge, the next import of the same bank text uses the payee you kept.": "Qui vous payez et qui vous paie. Indiquez-en un sur une transaction ou importez un fichier bancaire : après un renommage ou une fusion, la prochaine importation du même texte bancaire utilise le bénéficiaire conservé.",
+ "Who you pay and who pays you. Add one on a transaction, or import a bank file.": "Qui vous payez et qui vous paie. Indiquez-en un sur une transaction ou importez un fichier bancaire.",
  "Withholding tax": "Impôt anticipé",
  "Withholding tax to reclaim": "Impôt anticipé à récupérer",
  "Withholding tax: {dividend}": "Impôt retenu : {dividend}",
@@ -1502,6 +1509,7 @@
   "Vos écritures commencent en {month}, donc {n} mois compte : {span}. Montants en CHF.",
   "Vos écritures commencent en {month}, donc {n} mois comptent : {span}. Montants en CHF."
  ],
+ "a year": "par an",
  "account|From": "Du compte",
  "account|To": "Au compte",
  "added": "ajouté",
@@ -1568,7 +1576,6 @@
  "reserved in the projection": "réservé dans la prévision",
  "settled in {year}: {amount}": "réglé en {year}: {amount}",
  "spending about {amount} a year": "dépenses d’environ {amount} par an",
- "spent {amount}": "dépensé {amount}",
  "tax withheld {amount}": "impôt retenu {amount}",
  "term ended": "durée échue",
  "the backup of {date}": "la sauvegarde du {date}",
@@ -1585,7 +1592,6 @@
  "{account} is valued from its holdings from {month} on; earlier days belong to its recorded balances": "{account} est évalué à partir de ses positions dès {month} ; les jours antérieurs relèvent de ses soldes saisis",
  "{actual} of {budget}": "{actual} sur {budget}",
  "{amount} a month until {date}": "{amount} par mois jusqu’au {date}",
- "{amount} a year": "{amount} par an",
  "{amount} above the {budget} budget": "{amount} de plus que le budget de {budget}",
  "{amount} at the end of {month}": "{amount} à fin {month}",
  "{amount} by the end of the plan": "{amount} à la fin de la planification",
@@ -1776,6 +1782,10 @@
   "{n} achat",
   "{n} achats"
  ],
+ "{n} regular payment · about {amount} a year": [
+  "{n} paiement régulier · environ {amount} par an",
+  "{n} paiements réguliers · environ {amount} par an"
+ ],
  "{n} row": [
   "{n} ligne",
   "{n} lignes"
@@ -1783,10 +1793,6 @@
  "{n} row is split by its items: only the rest in its own category changes": [
   "{n} transaction est ventilée par articles : seul le reste dans sa propre catégorie change",
   "{n} transactions sont ventilées par articles : seul le reste dans leur propre catégorie change"
- ],
- "{n} rule": [
-  "{n} règle",
-  "{n} règles"
  ],
  "{n} selected": [
   "Sélection : {n}",
@@ -1803,10 +1809,6 @@
  "{n} spread booking of a currency exchange keeps its note; it changes with its exchange.": [
   "{n} écart de change garde sa remarque ; il suit son opération de change.",
   "{n} écarts de change gardent leur remarque ; ils suivent leur opération de change."
- ],
- "{n} subscription · about {amount} a year": [
-  "{n} abonnement · environ {amount} par an",
-  "{n} abonnements · environ {amount} par an"
  ],
  "{n} tag": [
   "{n} étiquette",

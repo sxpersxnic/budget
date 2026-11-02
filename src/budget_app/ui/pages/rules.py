@@ -1,18 +1,20 @@
 """Categorization rules (F07): every rule with its text, type, category and account; add, edit and delete.
 
-A tab of Transactions, beside Payees (decision 49). A rule suggests its category for new and imported transactions whose
-payee or bank text contains its text; the longest text wins, between equally long ones the newest."""
+A tab of Transactions, beside Payees (decision 49): one *New Rule* (its sheet chooses the type), the rules grouped by
+type. A rule suggests its category for new and imported transactions whose payee or bank text contains its text; the
+longest text wins, between equally long ones the newest."""
 
 from __future__ import annotations
 
 from nicegui import ui
 
-from budget_app.domain.models import TX_TYPES, Rule
-from budget_app.i18n import t, tn
+from budget_app.domain.coicop import get_coicop
+from budget_app.domain.models import TX_EXPENDITURE, TX_TYPES, Rule
+from budget_app.i18n import t
 from budget_app.services import accounts as acc_svc
 from budget_app.services import rules as rules_svc
 from budget_app.services.context import Context
-from budget_app.ui.layout import frame, named, on_data_changed, undoable
+from budget_app.ui.layout import frame, info, named, on_data_changed, undoable
 from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.rule_sheet import open_rule_sheet
@@ -33,44 +35,52 @@ def caption(ctx: Context, rule: Rule) -> str:
 
 
 def page() -> None:
-    # each group adds its own type of rule with its "Add Rule…" row, so the header has no button of its own
-    with frame(t("Rules"), "/rules", narrow=True) as (ctx, _actions):
+    with frame(t("Rules"), "/rules", narrow=True) as (ctx, actions):
+        with actions:  # flat: the sidebar's New Transaction is the filled one; while there are none, the empty
+            # state offers it
+            new = ui.button(t("New Rule"), icon="add", on_click=lambda: add()).props("flat").classes("text-primary")  # noqa: PLW0108 - defined below
 
         @ui.refreshable
         def rule_list() -> None:
             rules = rules_svc.all_rules(ctx)
-            for i, kind in enumerate(rules_svc.RULE_TYPES):
+            new.set_visibility(bool(rules))
+            if not rules:
+                with ui.element("div").classes("group"):
+                    empty_state(
+                        t("No rules yet."),
+                        t("A rule gives new and imported transactions their category by payee or bank text."),
+                        t("New Rule"),
+                        add,
+                    )
+                return
+            # one plain line; how rules compete behind ⓘ (polish before 1.0)
+            with ui.row().classes("w-full items-center gap-0 px-1 -mb-2"):
+                ui.label(
+                    t("New and imported transactions get the category of the rule whose text they contain.")
+                ).classes("caption")
+                info(
+                    t(
+                        "A rule looks for its text in the payee and in the bank text or note. When several match, "
+                        "the longest text wins. “Always Categorize Like This…” on a transaction makes one too."
+                    )
+                )
+            for kind in rules_svc.RULE_TYPES:
                 shown = [r for r in rules if r.type == kind]
+                if not shown:
+                    continue
                 with ui.column().classes("w-full gap-0"):
                     ui.label(t(TX_TYPES[kind])).classes("group-header")
                     with ui.element("div").classes("group"):
-                        if not shown:
-                            empty_state(
-                                t("No rules yet."),
-                                t(
-                                    "A rule suggests its category for new and imported transactions whose payee or "
-                                    "bank text contains its text; the longest text wins. Create one here, or with "
-                                    "“Always Categorize Like This…” on a transaction."
-                                )
-                                if not rules and i == 0
-                                else "",
-                            )
                         for rule in shown:
                             _row(rule)
-                        with ui.element("div").classes("group-row"):
-                            ui.button(
-                                t("Add Rule…"),
-                                on_click=lambda kind=kind: open_rule_sheet(
-                                    ctx, refresh, prefill=rules_svc.RuleInput(type=kind)
-                                ),
-                            ).props("flat dense no-caps").classes("link-btn -ml-2")
-            ui.label(tn("{n} rule", "{n} rules", len(rules))).classes("caption px-1")
 
         def _row(rule: Rule) -> None:
             with ui.element("div").classes("group-row"):
                 with ui.column().classes("gap-0 flex-1 min-w-0"):
                     ui.label(t("Contains “{match}”", match=rule.match)).classes("truncate")
-                    ui.label(caption(ctx, rule)).classes("caption")
+                    text = ui.label(caption(ctx, rule)).classes("caption")
+                    if tip := get_coicop().tooltip(rule.category) if rule.type == TX_EXPENDITURE else "":
+                        text.tooltip(tip)  # "COICOP 01.1 Food"
                 with ui.row().classes("row-actions gap-0 no-wrap"):
                     named(
                         ui.button(icon="o_edit", on_click=lambda r=rule: open_rule_sheet(ctx, refresh, editing=r))
@@ -87,6 +97,9 @@ def page() -> None:
 
         def refresh() -> None:
             rule_list.refresh()
+
+        def add() -> None:
+            open_rule_sheet(ctx, refresh)
 
         def delete(rule: Rule) -> None:
             def do() -> None:

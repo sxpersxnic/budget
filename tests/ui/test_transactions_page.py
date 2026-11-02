@@ -12,10 +12,13 @@ from notifications import notified
 
 from budget_app import i18n
 from budget_app.services import accounts as acc_svc
+from budget_app.services import attachments as att_svc
+from budget_app.services import export as export_svc
 from budget_app.services import items as items_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.items import ItemInput
 from budget_app.services.transactions import TransactionInput
+from budget_app.ui.pages import transactions as transactions_page
 from budget_app.ui.widgets import grid as grid_mod
 
 SELECTED = re.compile(r".*getSelectedRows")
@@ -148,8 +151,53 @@ def shop(ctx, setup):
 # ------------------------------------------------------------------ listing
 async def test_empty_list(user: User) -> None:
     await user.open("/transactions")
-    await user.should_see("0 transactions")
-    assert rows(user) == []
+    await user.should_see("No transactions yet.")  # one empty state, no "0 transactions" above an empty grid
+    await user.should_not_see("0 transactions")
+    for kind, text in ((ui.aggrid, None), (ui.button, "Filters")):  # the grid, the search and Filters wait
+        with pytest.raises(AssertionError):
+            user.find(kind=kind, content=text)
+    click(user, button(user, "Import…"))
+    await user.should_see("Import Transactions")
+
+
+async def test_the_count_once_above_the_list_and_no_page_size(user: User, ctx, demo, shop) -> None:
+    await user.open("/transactions")
+    total = len(ctx.store.transactions.all())
+    counts = [lb for lb in user.find(kind=ui.label).elements if lb.text == f"{total} transactions"]
+    assert len(counts) == 1 and "group-header" in counts[0].classes  # a heading above the grid, not a footnote
+    options = the_grid(user).options
+    assert options["paginationPageSizeSelector"] is False  # the grid's own summary is hidden by theme.py
+
+
+async def test_items_and_attachments_columns_only_when_used(user: User, ctx, setup, shop) -> None:
+    await user.open("/transactions")
+    hidden = {c["field"] for c in the_grid(user).options["columnDefs"] if c.get("hide")}
+    assert "items" not in hidden  # the receipt has items
+    assert "attachments" in hidden  # nothing has a file
+    items_svc.replace(ctx, shop["receipt"].id, [])
+    att_svc.add(ctx, shop["exchange"].id, "Beleg.pdf", b"%PDF-1.4 x")
+    await user.open("/transactions")
+    hidden = {c["field"] for c in the_grid(user).options["columnDefs"] if c.get("hide")}
+    assert "items" in hidden and "attachments" not in hidden
+    category = next(c for c in the_grid(user).options["columnDefs"] if c["field"] == "category")
+    assert category["width"] >= 300  # names, with room
+
+
+async def test_a_phone_shows_two_line_rows_and_a_tap_opens_one(user: User, ctx, demo, shop) -> None:
+    await user.open("/transactions")
+    options = the_grid(user).options
+    phone, *wide = options["columnDefs"]
+    assert phone["field"] == "_phone" and phone["hide"]  # the browser shows it below 640 px
+    assert "d.payee || d.category" in phone[":cellRenderer"] and "textContent" in phone[":cellRenderer"]
+    layout_js = options[":onGridReady"]
+    assert layout_js == options[":onGridSizeChanged"] and "(max-width: 640px)" in layout_js
+    assert all(f"'{c['field']}'" in layout_js or f'"{c["field"]}"' in layout_js for c in wide if not c.get("hide"))
+    assert not export_svc.view_frame(transactions_page._columns(), [], "").columns.str.contains("_phone").any()
+    grid = the_grid(user)
+    UserInteraction(user, {grid}, None).trigger("cellClicked", {"data": {"id": shop["receipt"].id}, "colId": "date"})
+    await user.should_not_see("Edit Transaction", retries=1)  # on a wide screen a click selects nothing new
+    UserInteraction(user, {grid}, None).trigger("cellClicked", {"data": {"id": shop["receipt"].id}, "colId": "_phone"})
+    await user.should_see("Edit Transaction")
 
 
 async def test_rows_show_category_accounts_and_advances(user: User, ctx, demo, shop) -> None:
@@ -346,7 +394,7 @@ async def test_double_click_opens_the_editor(user: User, ctx, demo, shop) -> Non
 
 async def test_new_transaction_from_the_sidebar_refreshes_the_list(user: User, ctx, setup) -> None:
     await user.open("/transactions")
-    await user.should_see("0 transactions")
+    await user.should_see("No transactions yet.")
     assert len([b for b in user.find(kind=ui.button).elements if b.text == "New Transaction"]) == 1  # the sidebar's
     click(user, button(user, "New Transaction"))
     await user.should_see("Add Transaction")

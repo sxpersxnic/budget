@@ -91,14 +91,20 @@ async def settle() -> None:
 
 
 # ------------------------------------------------------------------ the page
-async def test_empty_page(user: User, ctx) -> None:
+async def test_empty_page(user: User, ctx, setup) -> None:
     await user.open("/recurring")
-    await user.should_see("Rent, premiums, a salary: add what repeats with New Recurring Transaction")
+    await user.should_see("No recurring transactions yet.")
     await user.should_not_see("Nothing is due.")  # without a series nothing can be due
     await user.should_not_see("Book All")
-    # one primary action, in the header; no second "Add Recurring Transaction…" in the list
-    assert len(page_buttons(user, "New Recurring Transaction")) == 1
+    # one primary action, in the empty state; the header's waits for the first series
+    [new] = page_buttons(user, "New Recurring Transaction")
+    assert new.props.get("unelevated") and "empty-state" in new.parent_slot.parent.classes
     assert not page_buttons(user, "Add Recurring Transaction…")
+
+    rec_svc.save(ctx, rent(setup, start=first_of(1)))
+    await user.open("/recurring")
+    [new] = page_buttons(user, "New Recurring Transaction")
+    assert new.props.get("flat") and not new.props.get("unelevated")  # beside the sidebar's filled New Transaction
 
 
 async def test_nothing_due_with_a_series(user: User, ctx, setup) -> None:
