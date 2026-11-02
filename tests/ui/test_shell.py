@@ -164,14 +164,14 @@ async def test_back_forward_and_reload_open_the_page(user: User) -> None:
     assert active(user) == ["/budget"] and drawers(user) == [drawer]
     user.navigate.forward()
     await arrives(user, "/payees")
-    assert active(user) == ["/settings"]
+    assert active(user) == ["/transactions"]
     user.navigate.reload()  # a new document, on the page of the URL
     for _ in range(50):
         if user.client.id != drawer.client.id:
             break
         await asyncio.sleep(0.02)
-    await user.should_see("Rules…")
-    assert drawers(user) != [drawer] and active(user) == ["/settings"]
+    await user.should_see("No payees yet.")
+    assert drawers(user) != [drawer] and active(user) == ["/transactions"]
 
 
 @pytest.mark.parametrize("path", ["/goals", "/tax", f"/budget?month={PREV}"])

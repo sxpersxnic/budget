@@ -607,8 +607,8 @@ is fixed, an account is suggested too: the rule's, else the one the payee had mo
 "Use 01.1 Groceries" with the reason under the category of a new expenditure or income once it has a payee; a
 click fills the category (and the account, if still empty). The **import** (CSV and camt) imports the suggestions;
 afterwards it lists, folded, what was sorted from rules and history and, with *Change…*, what was sorted only because of
-a word in the name; what it could not place waits under To sort (F48). Taking a suggestion never makes a rule. **Categorization Rules** (`/rules`, under
-Payees; *Rules…* on the Payees page and in Settings) lists the rules per type, with add, edit and delete; every
+a word in the name; what it could not place waits under To sort (F48). Taking a suggestion never makes a rule. **Rules** (`/rules`, a tab of
+Transactions beside Payees, decision 49) lists the rules per type, with add, edit and delete; every
 change is undoable. Not built: the AI level, conditions on amount or account, and applying a new rule to stored
 transactions (bulk edit, F13, does that).
 

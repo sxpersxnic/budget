@@ -142,9 +142,11 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
    left-aligned under the title (UX review before 1.0) */
 .page.narrow > * { max-width: 46rem; }
 /* the pages of a place, as tabs under the title */
-.section-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: -8px; border-bottom: 0.5px solid var(--separator);
-  width: 100%; }
-.section-tab { display: flex; align-items: center; gap: 6px; padding: 6px 12px 8px; margin-bottom: -0.5px;
+.section-tabs { display: flex; gap: 4px; margin-top: -8px; border-bottom: 0.5px solid var(--separator);
+  width: 100%; overflow-x: auto; scrollbar-width: none; }  /* a narrow window scrolls the tabs, it doesn't wrap them */
+.section-tabs::-webkit-scrollbar { display: none; }
+.section-tab { display: flex; align-items: center; gap: 6px; padding: 6px 12px 8px; margin-bottom: -0.5px; flex: none;
+  white-space: nowrap;
   color: var(--label-2); font-size: 14px; text-decoration: none; border-bottom: 2px solid transparent; }
 .section-tab:hover { color: var(--label); }
 .section-tab.active { color: var(--label); font-weight: 600; border-bottom-color: var(--accent); }

@@ -91,8 +91,8 @@ async def test_the_page_lists_tags_with_totals_and_budgets(user: User, ctx, setu
     await user.should_see("Labels across categories")  # the page's explanation, while empty
     new_tag = [b for b in user.find(kind=ui.button).elements if b.text == "New Tag"]
     assert len(new_tag) == 1  # the empty state's: the header's waits until there is a tag
-    tabs = [p for p, _ in layout.SECTIONS["/settings"]]  # a list, after Payees
-    assert tabs.index("/tags") == tabs.index("/payees") + 1
+    tabs = [p for p, _ in layout.SECTIONS["/settings"]]  # a list, after Categories
+    assert tabs.index("/tags") == tabs.index("/categories") + 1
 
 
 async def test_tags_with_their_numbers(user: User, ctx, tagged) -> None:

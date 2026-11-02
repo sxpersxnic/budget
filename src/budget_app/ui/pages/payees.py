@@ -90,10 +90,6 @@ def page() -> None:
             )
             with search.add_slot("prepend"):
                 ui.icon("search", size="18px").classes("text-3")
-            # categorization rules (F07) mostly name payees, so they live next door
-            ui.button(t("Rules…"), icon="o_rule", on_click=lambda: ui.navigate.to("/rules")).props("flat").classes(
-                "text-primary"
-            )
         selected: set[str] = set()
         with ui.element("div").classes("selection-bar") as bar:
             selected_label = ui.label().classes("font-medium")
