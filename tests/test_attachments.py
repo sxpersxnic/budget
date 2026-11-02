@@ -74,7 +74,8 @@ def test_accepted_types(name, data, content_type, kind):
     ("name", "data", "message"),
     [
         ("empty.pdf", b"", "“empty.pdf” is empty"),
-        ("big.pdf", b"%PDF-" + b"x" * files.MAX_BYTES, "larger than 20 MB"),
+        # a short id: pytest names a test by its parameters, and 20 MB of them made the run crawl on Windows
+        pytest.param("big.pdf", b"%PDF-" + b"x" * files.MAX_BYTES, "larger than 20 MB", id="big.pdf"),
         ("setup.exe", b"MZ\x90\x00", "can’t be attached"),
         ("page.html", b"<html><script>alert(1)</script>", "can’t be attached"),
         ("logo.svg", b"<svg onload=alert(1)>", "can’t be attached"),

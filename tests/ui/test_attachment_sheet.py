@@ -9,6 +9,7 @@ from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified, undo_toasts
 
+from budget_app.i18n import date_label
 from budget_app.services import attachments as att_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
@@ -89,7 +90,7 @@ async def test_files_are_attached_at_once_in_the_edit_sheet(user: User, ctx, set
     assert notified(user, "Attached “Quittung.pdf”") and notified(user, "Attached “photo.png”")
     await user.should_see("2 files")
     await user.should_see("Quittung.pdf")
-    caption = label(user, f"15 bytes · {date.today().strftime('%-d %b %Y')}")
+    caption = label(user, f"15 bytes · {date_label(date.today())}")
     assert caption.visible
     # the photo shows itself as a thumbnail, served by the attachment route
     photo = next(a for a in att_svc.list_for(ctx, tx.id) if a.name == "photo.png")

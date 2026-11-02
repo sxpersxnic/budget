@@ -12,6 +12,7 @@ from notifications import notified, undo_toasts
 
 from budget_app.domain import qrbill
 from budget_app.domain.models import BILL_DISMISSED, BILL_OPEN, BILL_PAID
+from budget_app.i18n import date_label
 from budget_app.services import attachments as att_svc
 from budget_app.services import bills as bills_svc
 from budget_app.services import rules as rules_svc
@@ -101,7 +102,7 @@ async def test_dropping_a_pdf_and_a_photo_lists_the_bills(user: User, ctx, setup
     assert due_soon.amount == 1949.75 and undated.amount == 0
     await user.should_see("1'949.75 CHF")
     await user.should_see("Amount to fill in (CHF)")
-    due_label = newest(user, ui.label, text=f"Due on {(TODAY + timedelta(days=5)).strftime('%-d %b %Y')}")
+    due_label = newest(user, ui.label, text=f"Due on {date_label(TODAY + timedelta(days=5))}")
     assert "due-soon" in due_label.classes
     await user.should_see("No due date")
     await user.should_see("Auftrag vom 15.06.2020 · 21 00000 00003 13947 14300 09017")
@@ -138,7 +139,7 @@ async def test_mark_paid_opens_the_prefilled_sheet_and_books_the_bill(user: User
     history_for(ctx, setup, "Robert Schneider AG")
     [bill] = bills_svc.scan(ctx, "Rechnung.pdf", fx.pdf(fx.payload(bill_info=swico_due_in(-2)))).added
     await user.open("/bills")
-    due_label = newest(user, ui.label, text=f"Overdue since {(TODAY - timedelta(days=2)).strftime('%-d %b %Y')}")
+    due_label = newest(user, ui.label, text=f"Overdue since {date_label(TODAY - timedelta(days=2))}")
     assert "due-late" in due_label.classes
     assert bills_badge(user).text == "1"
     click(user, newest(user, ui.button, text="Mark Paid…"))
@@ -238,7 +239,7 @@ async def test_dismiss_reopen_due_date_and_delete(user: User, ctx, setup) -> Non
     click(user, newest(user, ui.button, text="Set"))
     await settle()
     assert bills_svc.get(ctx, bill.id).due_date == in_three
-    assert notified(user, f"Robert Schneider AG: Due on {in_three.strftime('%-d %b %Y')}")
+    assert notified(user, f"Robert Schneider AG: Due on {date_label(in_three)}")
     assert bills_badge(user).text == "1"
     click(user, newest(user, ui.button, text="No Due Date"))
     await settle()

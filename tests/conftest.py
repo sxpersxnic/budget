@@ -20,6 +20,19 @@ NOW = datetime(2026, 10, 30, 12, 0)
 
 
 _travel = time_machine.travel(NOW, tick=True)
+# pytest names a parametrized test by its parameters: a 20 MB payload made a 20 MB name, sent between the xdist
+# workers and printed in full, and the Windows build crawled for over ten minutes and drowned in "xxx…"
+LONGEST_ID = 2000
+
+
+def pytest_collection_modifyitems(config, items):
+    """Refuse a test whose name is longer than `LONGEST_ID`: give its large parameters a short `id=`."""
+    for item in items:
+        if len(item.nodeid) > LONGEST_ID:
+            raise pytest.UsageError(
+                f"{item.nodeid[:120]}… is named by {len(item.nodeid):,} characters of its parameters: "
+                "give them a short id (pytest.param(..., id=...))"
+            )
 
 
 def pytest_configure(config):
