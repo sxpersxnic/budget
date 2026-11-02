@@ -87,14 +87,13 @@ async def test_balances_that_do_not_add_up_are_explained_not_offered(user: User,
     assert detail(user, "No month-end balances").startswith("The balances in the file do not follow from its amounts")
     assert import_button(user).text == "Import 6 Transactions"
 
-    click(user, button(user, "The Columns Look Wrong…"))
     put(user, field(user, ui.select, "Balance column"), "")  # no balance column: nothing to say about balances
     assert "No month-end balances" not in checks(user)
 
 
 async def test_the_balance_column_is_saved_with_the_settings(user: User, ctx, setup) -> None:
     await oldest_first_on_chf(user, setup)
-    click(user, button(user, "The Columns Look Wrong…"))
+    click(user, button(user, "More Settings…"))
     name = next(e for e in user.find(kind=ui.input).elements if e.props.get("placeholder") == "Name, e.g. UBS Private")
     put(user, name, "Bank")
     click(user, next(b for b in user.find(kind=ui.button).elements if b.text == "Save Settings"))

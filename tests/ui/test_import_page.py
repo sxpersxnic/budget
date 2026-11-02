@@ -171,19 +171,24 @@ async def test_import_reports_a_failure_and_saves_nothing(user: User, ctx, setup
 
 
 # ------------------------------------------------------------------ columns
-async def test_the_columns_stay_folded_until_asked_for(user: User, ctx, setup) -> None:
+async def test_the_file_shows_how_it_is_read(user: User, ctx, setup) -> None:
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
-    await user.should_not_see("Date column")
-    click(user, button(user, "The Columns Look Wrong…"))
-    await user.should_see("Date column")
+    await user.should_see("How the file is read")  # at once: which column is what, and the first rows as read
+    assert field(user, ui.select, "Date column").value == "Abschlussdatum"
+    assert field(user, ui.select, "Description").value == ["Buchungstext"]
+    await user.should_see("Migros Zürich HB")
+    await user.should_see("+7'800.00")
+    await user.should_not_see("Header on line")  # the rest of the settings stay folded
+    click(user, button(user, "More Settings…"))
+    await user.should_see("Header on line")
 
 
 async def test_debit_and_credit_columns_and_inverted_signs(user: User, ctx, setup) -> None:
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
-    click(user, button(user, "The Columns Look Wrong…"))
+    click(user, button(user, "More Settings…"))
     mode = next(e for e in user.find(kind=ui.toggle).elements if "split" in e.options)
     assert mode.value == "split"
     assert field(user, ui.select, "Debit (money out)").value == "Belastung"
@@ -202,7 +207,7 @@ async def test_separator_and_header_line_reread_the_file(user: User, ctx, setup)
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
-    click(user, button(user, "The Columns Look Wrong…"))
+    click(user, button(user, "More Settings…"))
 
     put(user, field(user, ui.number, "Header on line"), 1)
     assert field(user, ui.select, "Date column").options.get("Kontonummer:") == "Kontonummer:"
@@ -218,7 +223,7 @@ async def test_saved_settings_recognise_the_next_file(user: User, ctx, setup) ->
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
-    click(user, button(user, "The Columns Look Wrong…"))
+    click(user, button(user, "More Settings…"))
     click(user, button(user, "Save Settings"))
     assert notified(user, "Enter a name for these settings")
     assert importer.load_profiles(ctx.store) == []
@@ -254,7 +259,7 @@ async def test_choosing_saved_settings_rereads_the_file(user: User, ctx, setup) 
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
-    click(user, button(user, "The Columns Look Wrong…"))
+    click(user, button(user, "More Settings…"))
     saved = field(user, ui.select, "Saved settings")
     assert saved.value == "UBS" and set(saved.options) == {"UBS", "Other bank"}
     put(user, field(user, ui.select, "Separator"), ",")

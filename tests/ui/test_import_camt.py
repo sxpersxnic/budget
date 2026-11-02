@@ -29,7 +29,8 @@ async def test_a_statement_needs_no_columns(user: User, ctx, setup) -> None:
     await user.should_see("camt.054 statement (XML)")
     await upload_xml(user, "september.xml", CAMT053)
     assert headline(user) == "6 transactions from CH93 0076 2011 6238 5295 7, 1 Sep 2026 to 30 Sep 2026"
-    await user.should_not_see("The Columns Look Wrong…")
+    await user.should_not_see("How the file is read")  # a statement says itself which column is what
+    await user.should_not_see("More Settings…")
     await user.should_see("It is remembered for this IBAN after the import.")
     assert problem(user) == "Choose the account this file belongs to."
     assert not import_button(user).enabled
@@ -91,7 +92,7 @@ async def test_a_csv_file_after_a_statement_brings_the_columns_back(user: User, 
     await upload_xml(user, "september.xml", CAMT053)
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
     await upload_xml(user, "de.csv", DE)
-    click(user, button(user, "The Columns Look Wrong…"))
+    await user.should_see("How the file is read")
     assert field(user, ui.select, "Date column").value == "Buchungsdatum"
     assert len(accounts(user)) == 1
     assert headline(user).startswith("4 transactions from de.csv")
