@@ -8,7 +8,7 @@ PAGES = {
     "/recurring": "Recurring",
     "/add-transaction": "New Transaction",
     "/import": "Import",
-    "/budget-entries": "Budget Plan",
+    "/budget-entries": "Plan",
     "/add-budget": "New Budget Entry",
     "/categories": "Categories",
     "/settings": "Settings",

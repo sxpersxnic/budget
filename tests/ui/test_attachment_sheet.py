@@ -88,8 +88,7 @@ async def test_files_are_attached_at_once_in_the_edit_sheet(user: User, ctx, set
     names = [a.name for a in att_svc.list_for(ctx, tx.id)]
     assert names == ["Quittung.pdf", "photo.png"]
     assert notified(user, "Attached “Quittung.pdf”") and notified(user, "Attached “photo.png”")
-    await user.should_see("2 files")
-    await user.should_see("Quittung.pdf")
+    await user.should_see("Quittung.pdf")  # listed, without a heading or a count above them
     caption = label(user, f"15 bytes · {date_label(date.today())}")
     assert caption.visible
     # the photo shows itself as a thumbnail, served by the attachment route
@@ -235,7 +234,8 @@ async def test_a_new_transaction_stores_its_files_when_saved(user: User, ctx, se
     [_, drop_png] = icon_button(user, "Remove")
     click(user, drop_png)
     await settle()
-    await user.should_see("1 file")
+    await user.should_not_see("extra.png")
+    await user.should_see("Beleg.pdf")
 
     with user:
         amount = next(e for e in user.find(kind=ui.number).elements if e.props.get("label") == "Amount")
@@ -258,7 +258,7 @@ async def test_a_new_transaction_stores_its_files_when_saved(user: User, ctx, se
 async def test_the_add_page_forgets_waiting_files_after_saving(user: User, ctx, setup) -> None:
     await user.open("/add-transaction")
     await upload(user, ("Beleg.pdf", PDF))
-    await user.should_see("1 file")
+    await user.should_see("Beleg.pdf")
     with user:
         next(e for e in user.find(kind=ui.number).elements if e.props.get("label") == "Amount").value = 9
         next(e for e in user.find(kind=ui.select).elements if e.props.get("label") == "Category").value = "01.1"
@@ -268,7 +268,7 @@ async def test_the_add_page_forgets_waiting_files_after_saving(user: User, ctx, 
     await settle()
     assert len(ctx.store.attachments.all()) == 1
     await user.should_not_see("Attached when you save")
-    await user.should_not_see("1 file")
+    await user.should_not_see("Beleg.pdf")
 
 
 # ------------------------------------------------------------------ Transactions page

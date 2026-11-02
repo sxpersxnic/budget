@@ -48,8 +48,15 @@ class Category:
 
     @property
     def label(self) -> str:
-        """The one label of a category in lists, reports, charts and the picker: code, then the everyday name
-        ("01.1 Groceries"); Taxes and Advance payments have no code."""
+        """The label of a category in lists, reports and charts: its name alone ("Groceries"); the code and the
+        official name are its tooltip (`Coicop.tooltip`). Names, not codes (polish before 1.0)."""
+        return self.display_name
+
+    @property
+    def coded_label(self) -> str:
+        """Code, then the everyday name ("01.1 Groceries"), where a category is chosen (the picker, a select) or
+        managed (the Categories page): a parent and its only child can share a name. Taxes and Advance payments
+        have no code."""
         if self.code in PSEUDO_NAMES:
             return self.display_name
         return f"{self.code} {self.display_name}"
@@ -81,18 +88,25 @@ class Coicop:
         return self.categories.get(code)
 
     def label(self, code: str) -> str:
-        """The category's label ("01.1 Groceries", see `Category.label`); "To sort" for none; `code` itself when
+        """The category's label ("Groceries", see `Category.label`); "To sort" for none; `code` itself when
         unknown."""
         if code == TO_SORT:
             return t(TO_SORT_NAME)
         cat = self.categories.get(code)
         return cat.label if cat else code
 
-    def tooltip(self, code: str) -> str:
-        """The official COICOP code and name ("COICOP 01.1 Food") where the label shows an everyday name;
-        empty where the label already is the official name, or for codes outside COICOP."""
+    def coded_label(self, code: str) -> str:
+        """The category's label with its code ("01.1 Groceries", see `Category.coded_label`)."""
+        if code == TO_SORT:
+            return t(TO_SORT_NAME)
         cat = self.categories.get(code)
-        if cat is None or cat.code in PSEUDO_NAMES or cat.display_name == cat.official_name:
+        return cat.coded_label if cat else code
+
+    def tooltip(self, code: str) -> str:
+        """The official COICOP code and name ("COICOP 01.1 Food") of a label that shows the name alone; empty
+        for codes outside COICOP (Taxes, Advance payments, an income category)."""
+        cat = self.categories.get(code)
+        if cat is None or cat.code in PSEUDO_NAMES:
             return ""
         return f"COICOP {cat.official_label}"
 

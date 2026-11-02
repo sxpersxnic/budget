@@ -82,13 +82,13 @@ def _option(cat: Category, lang: str) -> CategoryOption:
     name = everyday_name(cat.code, lang)
     if not name:
         search = _search_text((cat.code, official, cat.name))
-        return CategoryOption(cat.code, cat.label, "", cat.level, search, note_search=notes)
+        return CategoryOption(cat.code, cat.coded_label, "", cat.level, search, note_search=notes)
     caption = "" if cat.code in PSEUDO_NAMES or name == official else official  # Taxes: no official name
     common = everyday().get(cat.code)
     # an inherited name is not searched: typing "Krankenkasse" offers 12.1.2, not 12.1.2.0 below it as well
     names = (*common.names.values(), *common.keywords) if common else ()
     words = (cat.code, *names, official, cat.name)
-    return CategoryOption(cat.code, cat.label, caption, cat.level, _search_text(words), note_search=notes)
+    return CategoryOption(cat.code, cat.coded_label, caption, cat.level, _search_text(words), note_search=notes)
 
 
 def _search_text(words: Iterable[str]) -> str:

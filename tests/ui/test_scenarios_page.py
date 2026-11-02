@@ -41,6 +41,11 @@ def texts(user: User) -> list[str]:
     return [lb.text for lb in sorted(user.find(kind=ui.label).elements, key=lambda e: e.id)]
 
 
+def outcomes(user: User) -> list[str]:
+    """Where each scenario ends against the plan: HTML, its difference in a coloured span."""
+    return [h.content for h in sorted(user.find(kind=ui.html).elements, key=lambda e: e.id) if "Projected" in h.content]
+
+
 # ------------------------------------------------------------------ the page
 async def test_the_page_without_scenarios(user: User, ctx) -> None:
     await user.open("/scenarios")
@@ -75,11 +80,14 @@ async def test_scenarios_with_their_changes_and_outcome(user: User, ctx, demo) -
     await user.should_see("No changes yet: the scenario is the plan.")
     out = scen_svc.outcome(ctx, s.id, "CHF")
     horizon = months.label(ctx.horizon())
-    line = next(lb for lb in texts(user) if lb.startswith(f"Projected for {horizon}: {fmt(out.scenario, 'CHF')}"))
-    assert line.endswith(f"· −{fmt(-out.delta, 'CHF')} against the plan")
+    line, same = outcomes(user)
+    assert line == (  # only the difference coloured, in the card with the scenario's name
+        f"Projected for {horizon}: {fmt(out.scenario, 'CHF').replace(chr(39), '&#x27;')} · "
+        f'<span class="text-neg">−{fmt(-out.delta, "CHF").replace(chr(39), "&#x27;")}</span> against the plan'
+    )
     assert out.delta < 0
     plan = wealth_svc.projected_wealth(ctx, ctx.horizon(), "CHF")
-    await user.should_see(f"Projected for {horizon}: {fmt(plan, 'CHF')} · as in the plan")
+    assert same == f"Projected for {horizon}: {fmt(plan, 'CHF')} · as in the plan".replace("'", "&#x27;")
     order = [x for x in texts(user) if x in {"80 % work", "Nothing yet"}]
     assert order == ["80 % work", "Nothing yet"]
     assert len([b for b in user.find(kind=ui.button).elements if b.text == "Adopt into Plan…"]) == 1  # not for `empty`
@@ -124,7 +132,8 @@ async def test_add_a_scenario_and_a_change_through_the_sheets(user: User, ctx, d
         "",
         1,
     )
-    await user.should_see(f"−{fmt(1240 * n, 'CHF')} against the plan")
+    await settle()
+    assert f"−{fmt(1240 * n, 'CHF')}</span> against the plan".replace("'", "&#x27;") in outcomes(user)[0]
 
     click(user, newest(user, ui.button, text="Add Change…"))
     put(user, newest(user, ui.number, "Amount"), 500)
@@ -142,7 +151,8 @@ async def test_edit_and_delete_changes_and_scenarios(user: User, ctx, demo) -> N
     s = scenario(ctx)
     c = cut(ctx, s, demo)
     await user.open("/scenarios")
-    click(user, icon_buttons(user, "o_edit")[1])  # the change's pencil; the scenario's comes first
+    assert len(icon_buttons(user, "o_edit")) == 1  # the change's pencil; the scenario's Edit… is in its "···"
+    click(user, icon_buttons(user, "o_edit")[0])
     await user.should_see("Edit Change")
     assert newest(user, ui.number, "Amount").value == 4960
     assert newest(user, ui.select, "Income category").value == demo["salary"].id
@@ -154,7 +164,7 @@ async def test_edit_and_delete_changes_and_scenarios(user: User, ctx, demo) -> N
     assert (edited.amount, edited.end_month) == (3100, in_months(3))
     await user.should_see(f"3'100.00 CHF every month · {months.label(in_months(2))} – {months.label(in_months(3))}")
 
-    click(user, icon_buttons(user, "o_edit")[0])
+    await menu_item(user, "Edit…")
     await user.should_see("Edit Scenario")
     put(user, newest(user, ui.input, "Name"), "Part time")
     click(user, newest(user, ui.button, text="Save"))
@@ -171,14 +181,14 @@ async def test_edit_and_delete_changes_and_scenarios(user: User, ctx, demo) -> N
     assert notified(user, "“Part time” is shown on the Overview")
     await settle()
 
-    click(user, icon_buttons(user, "o_delete")[1])  # the change
+    click(user, icon_buttons(user, "o_delete")[0])  # the change; the scenario's Delete… is in its "···"
     assert notified(user, "Removed the change for Salary")
     assert ctx.store.scenario_changes.all() == []
     await user.should_see("No changes yet: the scenario is the plan.")
 
     cut(ctx, s, demo)
     await settle()
-    click(user, icon_buttons(user, "o_delete")[0])  # the scenario
+    await menu_item(user, "Delete…")
     await user.should_see("Delete “Part time”?")
     await user.should_see("Its 1 change goes with it. The plan doesn’t change.")
     click(user, newest(user, ui.button, text="Delete"))
@@ -186,6 +196,18 @@ async def test_edit_and_delete_changes_and_scenarios(user: User, ctx, demo) -> N
     assert ctx.store.scenarios.all() == [] and ctx.store.scenario_changes.all() == []
     assert undo_svc.latest(ctx).label == "Delete a scenario"
     await user.should_see("No scenarios yet.")
+
+
+async def test_a_phone_shows_or_hides_a_scenario_from_its_menu(user: User, ctx) -> None:
+    """The switch has no room on a phone (it hides there by CSS); the card's "···" offers the same."""
+    s = scenario(ctx)
+    await user.open("/scenarios")
+    await menu_item(user, "Hide on the Overview")
+    assert notified(user, "“80 % work” is hidden on the Overview")
+    assert not ctx.store.scenarios.get(s.id).shown
+    await settle()
+    await menu_item(user, "Show on the Overview")
+    assert ctx.store.scenarios.get(s.id).shown
 
 
 async def test_a_scenario_gone_meanwhile_is_reported(user: User, ctx, demo) -> None:

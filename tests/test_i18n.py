@@ -87,7 +87,7 @@ def test_switching_language(german):
     assert i18n.set_language("de") == "de"
     assert months.label("2026-03") == "März 2026"
     assert get_coicop().get("01.1").official_label == "01.1 Nahrungsmittel"
-    assert get_coicop().label("01.1") == "01.1 Lebensmittel"  # the everyday name
+    assert get_coicop().label("01.1") == "Lebensmittel"  # the everyday name
     assert get_coicop().label("TAX") == german["Taxes"]
     assert i18n.tn("{n} transaction", "{n} transactions", 2) == german["{n} transaction"][1].format(n=2)
     i18n.set_language("en")
@@ -110,7 +110,7 @@ def test_french_and_italian_dates(lang, month, day):
         assert i18n.t("Settings") == load(f"{lang}.json")["Settings"]
         official = load(f"coicop_{lang}.json")["Food and non-alcoholic beverages"]
         assert get_coicop().get("01").official_label == "01 " + official
-        assert get_coicop().label("01") == "01 " + json.loads(EVERYDAY_FILE.read_text("utf-8"))["01"][lang]
+        assert get_coicop().label("01") == json.loads(EVERYDAY_FILE.read_text("utf-8"))["01"][lang]
     finally:
         i18n.set_language("en")
 

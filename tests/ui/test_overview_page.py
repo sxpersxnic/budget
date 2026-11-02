@@ -223,11 +223,12 @@ async def test_negative_wealth_keeps_the_zero_baseline(user: User, demo, ctx) ->
     ("title", "hint"),
     [
         ("Wealth Over Time", "Recorded balances, then the budget projection"),
-        ("Income and Expenditure", "Monthly totals or chosen categories"),
-        ("Change per Account", "How each account moved between two month ends"),
+        ("Income and Expenditure", f"{months.label(months.add_months(CM, -6))} – {months.label(CM)}"),
+        ("Change per Account", f"{months.label(months.add_months(PREV, -1))} – {months.label(PREV)}"),
     ],
 )
 async def test_add_chart(user: User, demo, title: str, hint: str) -> None:
+    """A chart with controls says the period they chose in place of its description."""
     await open_overview(user)
     await menu_item(user, title)
     shown = cards(user)
@@ -235,6 +236,23 @@ async def test_add_chart(user: User, demo, title: str, hint: str) -> None:
     assert card_title(user, shown[0]) == title  # the new chart goes first
     assert "just-added" in shown[0].classes
     await user.should_see(hint)
+
+
+async def test_chart_controls_wait_behind_a_button(user: User, demo) -> None:
+    await open_overview(user)
+    chart = card(user, "Income and Expenditure")
+    [popover] = find_all(user, ui.menu, chart)[:1]  # the first menu: the controls' (the second: Export)
+    controls = find_all(user, ui.select, chart)
+    assert controls and controls == find_all(user, ui.select, popover)  # the card shows the chart, not a toolbar
+    assert control(user, chart, "From").value == months.add_months(CM, -6)
+
+    def options(card_el: Element) -> list:
+        return [b for b in find_all(user, ui.button, card_el) if b.props.get("aria-label") == "Chart Options"]
+
+    assert len(options(chart)) == 1
+    assert not options(card(user, "Wealth Over Time"))  # nothing to choose there
+    add = next(b for b in find_all(user, ui.button) if b.text == "Add Chart")
+    assert "flat" in add.props and "unelevated" not in add.props  # the sidebar's button is the filled one
 
 
 async def test_waterfall_shows_each_account(user: User, demo, ctx) -> None:
@@ -351,8 +369,8 @@ async def test_flows_months_and_categories(user: User, demo) -> None:
     await set_value(user, control(user, chart, "Categories"), ["EXP:04", "EXP:07"])
     flows = traces(user, chart)
     assert [tr["name"] for tr in flows] == [
-        "04 Housing and energy",
-        "07 Transport",
+        "Housing and energy",
+        "Transport",
     ]
     assert values(flows[0]["y"]) == [1900, 1900]
     await set_value(user, control(user, chart, "Categories"), [])

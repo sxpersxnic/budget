@@ -3,6 +3,7 @@ form and the recurring sheet, the Transactions page's column, search and filter,
 
 from datetime import date
 
+import pytest
 from nicegui import ui
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
@@ -94,9 +95,14 @@ async def test_the_page_lists_payees_with_counts_and_amounts(user: User, ctx, se
     shops(ctx, setup)
     await user.open("/payees")
     await user.should_see("4 payees")
-    await user.should_see("2 transactions · spent 42.50 CHF")
-    await user.should_see("1 transaction · received 100.00 CHF")
+    await user.should_see("All time, CHF")  # the one currency, said once above the rows
+    values = sorted((h for h in user.find(kind=ui.html).elements if "row-amount" in h.classes), key=lambda h: h.id)
+    assert [h.content.split("<")[0] for h in values] == ["42.50", "45.20", "100.00"]  # Coop, Migros, Muster AG
+    assert "positive" in values[-1].classes  # Muster AG only paid
+    await user.should_see("2 transactions")  # the small line under Coop's amount
     await user.should_see("No transactions")
+    with pytest.raises(AssertionError):  # no checkboxes until Select
+        user.find(kind=ui.checkbox)
     assert len(icon_buttons(user, "o_delete")) == 1  # only the unused payee can be deleted
 
     payee_svc.learn(ctx, [("Einkauf MIGROS ZUERICH HB 1234", "Migros")])
@@ -128,6 +134,8 @@ async def test_rename_a_payee_and_its_transactions(user: User, ctx, setup) -> No
 async def test_merge_selected_payees(user: User, ctx, setup) -> None:
     shops(ctx, setup)
     await user.open("/payees")
+    click(user, newest(user, ui.button, text="Select"))
+    await user.should_see("Select the payees to merge.")
     boxes = checkboxes(user)  # Coop, Migros, Muster AG, Unused Shop
     click(user, boxes[0])
     await user.should_see("1 selected")
@@ -145,8 +153,12 @@ async def test_merge_selected_payees(user: User, ctx, setup) -> None:
     assert payee_svc.find(ctx, "Migros").alias_list == ["coop"]
     await user.should_see("3 payees")
     await user.should_not_see("2 selected")
+    with pytest.raises(AssertionError):  # merged: the checkboxes go again
+        user.find(kind=ui.checkbox)
 
     # a payee merged elsewhere while the sheet is open
+    click(user, newest(user, ui.button, text="Select"))
+    await user.should_see("Select the payees to merge.")
     click(user, checkboxes(user)[0])
     click(user, checkboxes(user)[1])
     click(user, newest(user, ui.button, text="Merge…"))
@@ -162,6 +174,11 @@ async def test_merge_selected_payees(user: User, ctx, setup) -> None:
     await user.should_see("1 selected")
     click(user, newest(user, ui.button, text="Clear Selection"))
     await user.should_not_see("1 selected")
+    click(user, newest(user, ui.button, text="Done"))  # Done hides the checkboxes and the bar
+    await user.should_not_see("Select the payees to merge.")
+    with pytest.raises(AssertionError):
+        user.find(kind=ui.checkbox)
+    assert newest(user, ui.button, text="Select").props.get("flat")
 
 
 async def test_delete_an_unused_payee(user: User, ctx, setup) -> None:
@@ -230,7 +247,7 @@ async def test_the_recurring_sheet_has_a_payee(user: User, ctx, setup) -> None:
     assert notified(user, "Recurring transaction added")
     [series] = ctx.store.recurring.all()
     assert series.payee == "Swisscom"
-    await user.should_see("Swisscom · 08.3 Phone and internet")
+    await user.should_see("Swisscom · Phone and internet")
 
 
 # ------------------------------------------------------------------ the Transactions page

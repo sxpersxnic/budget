@@ -26,21 +26,32 @@ def all_nodes(nodes: list[dict]) -> list[dict]:
 async def test_the_page_lists_every_coicop_category(user: User) -> None:
     await user.open("/categories")
     await user.should_see("Categories")
-    await user.should_see("01 Food and non-alcoholic beverages")
-    await user.should_see("12 Insurance and financial services")
-    await user.should_see("602 categories")
-    await user.should_see("Taxes", kind=ui.label)  # the app's own categories, in a note
+    await user.should_see("01 Food and drinks")
+    await user.should_see("12 Insurance and banking")
+    await user.should_not_see("602 categories")  # no counts: the tree says it
     tree = the_tree(user)
     nodes = {n["id"]: n for n in all_nodes(tree.props["nodes"])}
     assert len(nodes) == 602 and "TAX" not in nodes and "ADV" not in nodes
+    assert not any("sub" in n for n in nodes.values())  # nor "3 subcategories" on every row
     deep = nodes["01.1.1.1"]
-    assert deep["label"] == "01.1.1.1 Cereals" and deep["level"] == 4 and deep["sub"] == ""
-    assert nodes["01"]["level"] == 1 and nodes["01"]["sub"] == "3 subcategories"
-    assert nodes["01.1.1"]["sub"] == "6 subcategories"
-    # the official name first, and the everyday name the rest of the app shows beside it (F08)
-    assert (nodes["01.1"]["name"], nodes["01.1"]["everyday"]) == ("Food", "Groceries")
-    assert deep["everyday"] == "" and nodes["06"]["everyday"] == ""  # none, or the same as the official name
+    assert deep["label"] == "01.1.1.1 Cereals" and deep["level"] == 4
+    assert nodes["01"]["level"] == 1
+    # the everyday name the rest of the app shows first (F08), the official name smaller beside it, whole on hover
+    assert (nodes["01.1"]["name"], nodes["01.1"]["official"]) == ("Groceries", "Food")
+    assert nodes["01.1"]["tip"] == "COICOP 01.1 Food"
+    assert deep["official"] == "" and nodes["06"]["official"] == ""  # none, or the same as the everyday name
     assert ":filter-method" in tree.props and tree.props["expanded"] == []
+
+
+async def test_the_page_is_as_wide_as_its_siblings_and_explains_coicop_in_one_line(user: User) -> None:
+    await user.open("/categories")
+    with user:
+        pages = [e for e in user.client.elements.values() if "page" in e.classes]
+    assert pages and all("narrow" in p.classes for p in pages)  # like General and Tags
+    await user.should_see("COICOP 2018, the UN classification of spending by purpose")
+    note = next(e for e in user.find(kind=ui.icon).elements if "Besides COICOP" in e.props.get("aria-label", ""))
+    assert "Taxes" in note.props["aria-label"] and "Advance payments" in note.props["aria-label"]
+    assert "COICOP 2018 publication; translations of them" in note.props["aria-label"]
 
 
 async def test_the_sidebar_links_to_the_page(user: User) -> None:
@@ -71,7 +82,7 @@ async def test_search_narrows_and_opens_the_matches(user: User) -> None:
     assert not any("search" in node for node in categories.all_nodes(tree.props["nodes"]))  # searched in Python
 
     search.clear()
-    await user.should_see("602 categories")
+    await user.should_not_see("1 match")
     assert not tree.props["filter"]
     assert tree.props["expanded"] == ["04"]  # back to what was open before searching
 
@@ -116,7 +127,6 @@ async def test_search_by_code_and_without_matches(user: User) -> None:
 
 async def test_each_category_opens_its_notes(user: User) -> None:
     await user.open("/categories")
-    await user.should_see("The notes are those of the UN's COICOP 2018 publication", kind=ui.label)
     tree = the_tree(user)
     nodes = {n["id"]: n for n in categories.all_nodes(tree.props["nodes"])}
     assert nodes["01.1.1.1"]["has_notes"] and not nodes["01"]["has_notes"]
@@ -146,13 +156,12 @@ async def test_the_page_speaks_german(user: User) -> None:
     try:
         await user.open("/categories")
         await user.should_see("Kategorien")
-        await user.should_see("01 Nahrungsmittel und alkoholfreie Getränke")
-        await user.should_see("602 Kategorien")
+        await user.should_see("01 Essen und Getränke")
         user.find(ui.input).type("getranke")  # finds "Getränke" without the umlaut
         await user.should_see("Treffer")
         tree = the_tree(user)
         assert "01" in tree.props["expanded"]
-        await user.should_see("01.1 Nahrungsmittel")
+        await user.should_see("01.1 Lebensmittel")
         user.find(ui.input).clear().type("hirse")  # the German notes
         await user.should_see("1 Treffer")
         assert filtered(tree) == ["01.1.1.1"]

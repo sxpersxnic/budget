@@ -1,4 +1,4 @@
-"""*Propose from History…* on the Budget Plan page (F16): a budget per category from the last complete months.
+"""*Propose from History…* on the Plan page (F16): a budget per category from the last complete months.
 
 The sheet reads the proposal from `services.budget_history` whenever an input changes and lists one row per
 category: a checkbox, the months' values, the budget already planned and the proposed monthly amount, which can be

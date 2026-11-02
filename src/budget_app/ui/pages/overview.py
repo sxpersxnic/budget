@@ -4,6 +4,7 @@ side by side)."""
 from __future__ import annotations
 
 import base64
+from contextlib import nullcontext
 from datetime import date
 
 import pandas as pd
@@ -80,8 +81,14 @@ class ChartCard:
             with ui.row().classes("w-full items-start gap-2 no-wrap"):
                 with ui.column().classes("gap-0 min-w-0"):
                     ui.label(t(CHART_TYPES[kind])).classes("section-title")
-                    ui.label(t(CHART_HINTS[kind])).classes("caption")
+                    self.caption = ui.label(t(CHART_HINTS[kind])).classes("caption")
                 ui.space()
+                # the controls wait behind a button, so the card shows the chart (polish before 1.0)
+                box = None
+                if kind != "wealth":
+                    options = ui.button(icon="o_tune").props("flat round dense").classes("text-primary")
+                    with named(options, t("Chart Options")), ui.menu().classes("chart-options"):
+                        box = ui.row().classes("chart-controls items-start gap-2 flex-wrap p-4")
                 with (
                     named(ui.button(icon="more_horiz").props("flat round dense").classes("text-primary"), t("Export")),
                     ui.menu().props("auto-close"),
@@ -92,7 +99,7 @@ class ChartCard:
                     ui.menu_item(t("Export Data as Excel…"), on_click=lambda: self.download("xlsx"))
                     ui.separator()
                     ui.menu_item(t("Remove Chart"), on_click=lambda: on_remove(self)).classes("text-negative")
-            with ui.row().classes("w-full items-start gap-2 flex-wrap"):
+            with box if box is not None else nullcontext():  # the wealth chart has none
                 opts = month_options(first, last)
                 if kind == "flows":
                     self.start = (
@@ -204,6 +211,9 @@ class ChartCard:
     # ------------------------------------------------------------------ figures
     def render(self) -> None:
         cur = self.currency["value"]
+        if hasattr(self, "start"):  # the period the hidden controls chose, in place of the chart's description
+            start, end = sorted([self.start.value, self.end.value])
+            self.caption.set_text(f"{months.label(start)} – {months.label(end)}" if start != end else months.label(end))
         try:
             fig = getattr(self, f"_fig_{self.kind}")(cur)
         except Exception as exc:
@@ -529,7 +539,7 @@ def page() -> None:
 
         @ui.refreshable
         def goals() -> None:
-            goals_card(ctx, currency["value"])  # F14; hidden without goals
+            goals_card(ctx)  # F14; hidden without goals
 
         def set_currency(e) -> None:
             currency["value"] = e.value
@@ -546,7 +556,9 @@ def page() -> None:
 
         with actions:
             currency_select(ctx, currency["value"], on_change=set_currency, label=t("Currency"))
-            with ui.button(t("Add Chart"), icon="add").props("unelevated"), ui.menu().props("auto-close"):
+            # flat: the sidebar's New Transaction is the one filled button (A8)
+            add_chart = ui.button(t("Add Chart"), icon="add").props("flat").classes("text-primary")
+            with add_chart, ui.menu().props("auto-close"):
                 for key, title in CHART_TYPES.items():
                     with ui.menu_item(on_click=lambda k=key: add(k)), ui.column().classes("gap-0 py-1"):
                         ui.label(t(title))

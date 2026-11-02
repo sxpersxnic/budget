@@ -10,7 +10,7 @@ from nicegui.testing import User
 from notifications import notified
 from test_investments_page import field, settle, sheet_button, sheet_texts, top_sheet
 from test_payees_page import click, icon_buttons, newest, put
-from test_settings_page import row_button
+from test_settings_page import amounts, row_button, row_texts
 
 from budget_app import i18n
 from budget_app.domain import months
@@ -70,8 +70,8 @@ def page_button(user: User, text: str) -> ui.button:
 async def test_the_page_without_loans(user: User, ctx) -> None:
     await user.open("/loans")
     await user.should_see("No loans yet.")
-    await user.should_see("0 loans")
-    await user.should_see("A mortgage or loan counts against your wealth")  # the empty state explains the page
+    await user.should_see("A mortgage or loan, with its payments ready to book when they are due.")  # one line
+    await user.should_not_see("0 loans")  # no count above the empty state
     await user.should_not_see("Nothing is due.")  # no Due group without a loan
     tabs = [p for p, _ in layout.SECTIONS["/accounts"]]  # a tab of Wealth, after Investments
     assert tabs.index("/loans") == tabs.index("/investments") + 1
@@ -279,7 +279,7 @@ async def test_delete_a_loan(user: User, ctx, setup, loan) -> None:
     click(user, newest(user, ui.button, text="Delete"))
     assert notified(user, "Deleted Mortgage")
     assert ctx.store.loans.all() == [] and ctx.store.accounts.get(loan.account_id) is None
-    await user.should_see("0 loans")
+    await user.should_see("No loans yet.")
 
 
 async def test_a_change_elsewhere_refreshes_the_page(user: User, ctx, setup) -> None:
@@ -295,7 +295,9 @@ async def test_accounts_budget_and_overview_know_loan_accounts(user: User, ctx, 
     prev = months.previous_month()
     wealth_svc.upsert_entry(ctx, setup["chf"].id, prev, 20_000)
     await user.open("/accounts")
-    await user.should_see("Loans and mortgages · 500'000.00 CHF outstanding")
+    # the debt counts against the net worth; no balance to record on the loan's account
+    assert await row_texts(user, "Mortgage") == ["Mortgage", "Loans and mortgages", "−500'000.00 CHF"]
+    assert "−480'000.00 CHF" in amounts(user)  # the net worth: 20'000 − 500'000
     row_button(user, "Mortgage", "o_edit").click()
     await settle()
     sheet = top_sheet(user)
@@ -314,7 +316,7 @@ async def test_accounts_budget_and_overview_know_loan_accounts(user: User, ctx, 
     put(user, stepper, prev)
     await user.should_see("Outstanding debt of the loan")
     await user.should_see("−480'000.00 CHF")  # wealth: 20'000 − 500'000
-    click(user, page_button(user, "Record Balance"))
+    click(user, page_button(user, "Edit"))  # the Bank's balance: the sheet's accounts leave the loan out
     assert loan.account_id not in field(user, ui.select, "Account").options
 
     await user.open("/")

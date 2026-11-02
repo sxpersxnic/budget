@@ -151,6 +151,30 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 .section-tab:hover { color: var(--label); }
 .section-tab.active { color: var(--label); font-weight: 600; border-bottom-color: var(--accent); }
 .page.wide { max-width: 100rem; }  /* the budget page: room for two tables side by side */
+/* the title, its actions and the tabs (layout.frame): one width and height on every tab of a place */
+.page-head { width: 100%; gap: 12px; }
+.page.narrow > .page-head { max-width: none; }
+.page-head .section-tabs { margin-top: 0; }
+.page-title-row { display: flex; width: 100%; align-items: flex-end; gap: 12px; flex-wrap: wrap; min-height: 42px; }
+@media (max-width: 1023px) {  /* the phone header holds the title: a row with nothing else in it goes */
+  .page-title-row { min-height: 0; }
+  .page-title-row:not(:has(.title-sub)):has(> .nicegui-row:empty) { display: none; } }
+.back-link { display: inline-flex; align-items: center; gap: 2px; align-self: flex-start; margin: -6px 0 -4px -6px;
+  color: var(--accent); font-size: 14px; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.back-link .q-icon { font-size: 20px; }
+/* the amount of a list row (layout.row_value): right-aligned, so the rows compare */
+.row-value { margin-left: auto; text-align: right; flex: none; display: flex; flex-direction: column;
+  align-items: flex-end; gap: 0; }
+.row-amount { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap;
+  color: var(--label); }
+.row-amount .cur { font-size: 12px; font-weight: 400; color: var(--label-2); margin-left: 4px; }
+.row-amount.positive { color: var(--positive); }
+.row-amount.negative { color: var(--negative); }
+/* an explanation behind ⓘ (layout.info) */
+.info-dot { color: var(--label-3); cursor: help; vertical-align: middle; margin-left: 4px; }
+.info-dot:hover, .info-dot:focus-visible { color: var(--accent); }
+.info-tip { max-width: 22rem; white-space: normal; }
 @media (max-width: 640px) { .page { padding: 16px 16px 48px; gap: 16px; } }
 .large-title { font-size: 28px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.15; color: var(--label); }
 .title-sub { font-size: 13px; color: var(--label-2); margin-top: 2px; }
@@ -166,6 +190,8 @@ body.body--dark .q-card, body.body--dark .surface { border: 0.5px solid var(--se
 /* a card the user just added: a short accent ring so the eye finds it */
 @keyframes just-added { from { box-shadow: 0 0 0 3px var(--q-primary), var(--shadow); } }
 .just-added { animation: just-added 1.6s ease-out; scroll-margin-top: 16px; }
+/* an Overview chart's controls, in the popover behind its tune button */
+.chart-controls { width: 24rem; max-width: calc(100vw - 32px); }
 .sheet { padding: 20px 22px 18px !important; border-radius: 14px !important;
   background: var(--surface-raised) !important;
   gap: 14px; }
@@ -234,7 +260,6 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .nicegui-link.due-text:hover { opacity: 1; }
 .nicegui-link.due-text:hover .n-title { color: var(--accent); }
 .due-row .due-action { justify-self: end; }
-.due-empty { font-size: 13px; color: var(--label-2); padding: 0 4px; }
 @media (max-width: 640px) {
   .due-row { grid-template-columns: 22px minmax(0, 1fr) auto; }
   .due-row .due-icon { grid-row: 1 / span 2; }
@@ -272,7 +297,6 @@ body.body--dark .lock-card { border: 0.5px solid var(--separator); }
 .ledger-row .r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ledger-row .cell-label { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .ledger-row .cell-label .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ledger-row .code { color: var(--label-3); font-variant-numeric: tabular-nums; margin-right: 6px; font-size: 13px; }
 .ledger-row.dim .name { color: var(--label-2); }
 .ledger-row .edit { opacity: 0; transition: opacity .12s; color: var(--label-2); }
 .ledger-row:hover .edit, .ledger-row .edit:focus { opacity: 1; }
@@ -281,9 +305,10 @@ body.body--dark .lock-card { border: 0.5px solid var(--separator); }
 .ledger-row .chev.open { transform: rotate(90deg); }
 /* the tables follow their own width, not the window's (the sidebar comes and goes) */
 .ledger { container-type: inline-size; }
+/* a phone: the name and the difference against the budget (polish before 1.0); the amounts are a wider window's */
 @container (max-width: 560px) {
-  .ledger-row { grid-template-columns: minmax(0, 1fr) auto auto 1.5rem; column-gap: 10px; padding: 0 2px; }
-  .ledger-row .c-bar, .ledger-row .c-diff { display: none; }
+  .ledger-row { grid-template-columns: minmax(0, 1fr) auto 1.5rem; column-gap: 10px; padding: 0 2px; }
+  .ledger-row .c-bar, .ledger-row .c-act, .ledger-row .c-bud { display: none; }
 }
 @container (min-width: 561px) and (max-width: 800px) {  /* the bar goes first, so names stay readable */
   .ledger-row { grid-template-columns: minmax(0, 1fr) 6rem 6rem 6rem 1.75rem; }
@@ -293,7 +318,7 @@ body.body--dark .lock-card { border: 0.5px solid var(--separator); }
    narrow tables keep the change instead of the other month's amount */
 @container (max-width: 560px) {
   .ledger.compare .ledger-row { grid-template-columns: minmax(0, 1fr) auto 4.5rem 1.5rem; }  /* changes align */
-  .ledger.compare .ledger-row .c-diff { display: block; }
+  .ledger.compare .ledger-row .c-act { display: block; }
   .ledger.compare .ledger-row .c-ref { display: none; }
 }
 .ledger-row.target { background: var(--accent-fill); }  /* the row a link from the Overview opened */
@@ -332,20 +357,21 @@ body.body--dark .lock-card { border: 0.5px solid var(--separator); }
   .acct-row .c-change { font-size: 12px; }
   .acct-row .c-unexpl { display: none; }
 }
-/* COICOP tree (F37): code · name · subcategories · spent this year */
+/* COICOP tree (F37): code · the name the app shows · the official name · spent this year */
 .cat-tree .q-tree__node-header { padding: 3px 6px; border-radius: 6px; margin-top: 0; }
 .cat-tree .q-tree__node-header:hover { background: var(--fill-2); }
 .cat-tree .q-tree__node-header-content { min-width: 0; }
 .cat-node { display: flex; align-items: baseline; gap: 8px; width: 100%; min-width: 0; font-size: 14px;
   color: var(--label); }
-.cat-node .code { color: var(--label-3); font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
-.cat-node .name { min-width: 0; overflow-wrap: anywhere; }  /* an information page: names wrap, never cut */
+.cat-node .code { color: var(--label-3); font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap; }
+.cat-node .name { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }  /* the app's name (F08): never cut */
 .cat-node.lvl-1 .name { font-weight: 600; }
-.cat-node .name .everyday { color: var(--label-2); font-weight: 400; }  /* the name the app shows (F08) */
-.cat-node .caption { white-space: nowrap; }
+/* the official COICOP name: quieter, and cut off long before the name wraps; the row's tooltip holds it whole */
+.cat-node .official { flex: 0 1000 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px; color: var(--label-3); }
 .cat-node .spent { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;
   color: var(--label-2); }
-@media (max-width: 640px) { .cat-node .caption { display: none; } }
+@media (max-width: 640px) { .cat-node .official { display: none; } }
 /* COICOP notes (F40): in the picker's tooltip, inside a picker option (touch) and below a tree row */
 .cat-item { display: flex; flex-direction: column; width: 100%; min-width: 0; }
 .cat-node .notes-btn { align-self: center; margin: -4px 0; color: var(--label-3); }
@@ -398,6 +424,9 @@ body.body--dark .q-field--outlined .q-field__control { background: var(--fill-2)
 .hero-amount input { font-size: 28px !important; font-weight: 600; letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums; }
 .hero-amount .q-field__control { height: 64px !important; }
+/* the field beside the amount (its currency) is as tall as it (transaction form, recurring sheet) */
+.hero-side .q-field__control, .hero-side .q-field__native, .hero-side .q-field__marginal {
+  height: 64px !important; min-height: 64px !important; }
 
 /* segmented control */
 .segmented { background: var(--fill) !important; border-radius: 9px !important; padding: 2px;
@@ -444,6 +473,10 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
 .bill-amount { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 500; }
 .closed-bills .nicegui-expansion-content { padding: 0; gap: 0; align-items: stretch; }
 
+/* Wealth: a balance that records the account's balance when clicked */
+.balance-value { cursor: pointer; border-radius: 6px; padding: 2px 6px; margin: -2px -6px; }
+.balance-value:hover .row-amount, .balance-value:focus-visible .row-amount { color: var(--accent); }
+
 /* tax summary (F20) */
 .tax-section + .tax-section { border-top: 0.5px solid var(--separator); }
 .tax-section .q-item { padding: 6px 16px; }
@@ -451,7 +484,6 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
 .tax-section .group-row { padding-left: 28px; }
 .tax-section .group-row + .group-row::before { left: 28px; }
 .tax-tags { min-height: 36px; flex-wrap: wrap; gap: 6px; }
-.tax-note { align-items: flex-start; }
 .tax-links { max-height: 62vh; overflow-y: auto; padding-right: 4px; }
 
 /* attachments in the transaction form (F12) */
@@ -515,9 +547,16 @@ body.body--dark .nicegui-aggrid { border: 0.5px solid var(--separator); }
 .nicegui-aggrid .ag-cell { font-variant-numeric: tabular-nums; }
 .nicegui-aggrid .amt-in { color: var(--positive); }
 .nicegui-aggrid .muted { color: var(--label-2); }
-/* a phone has room for the page stepper only; the row count shows below the grid */
-@media (max-width: 640px) {
-  .nicegui-aggrid .ag-paging-page-size, .nicegui-aggrid .ag-paging-row-summary-panel { display: none; } }
+/* the pager is the page stepper only: the page says the number of rows itself, once */
+.nicegui-aggrid .ag-paging-row-summary-panel { display: none; }
+/* Transactions on a phone: one column of two-line rows (pages/transactions.py) */
+.nicegui-aggrid .tx-phone { display: flex; flex-direction: column; justify-content: center; height: 100%;
+  line-height: 1.3; cursor: pointer; }
+.nicegui-aggrid .tx-phone-top { display: flex; gap: 12px; align-items: baseline; }
+.nicegui-aggrid .tx-phone-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-size: 14px; }
+.nicegui-aggrid .tx-phone-amount { white-space: nowrap; font-size: 14px; font-weight: 500; }
+.nicegui-aggrid .tx-phone-date { font-size: 12px; color: var(--label-2); }
 /* a category the import suggested (F07): not the user's choice until they keep it */
 .nicegui-aggrid .suggested { color: var(--label-2); font-style: italic; }
 /* the import's category cell opens a picker on click; an empty one invites the choice */
@@ -578,7 +617,9 @@ input[type=number] { -moz-appearance: textfield; }
   background: var(--surface); }
 .sort-card.answered { grid-template-columns: 40px auto minmax(0, 1fr); align-items: center; padding: 10px 20px; }
 .sort-logo { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; color: #fff;
-  font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+  font-size: 13px; font-weight: 600; letter-spacing: 0.02em; flex: none; overflow: hidden; }
+.sort-logo.brand svg { width: 100%; height: 100%; display: block; }
+.sort-logo.small { width: 28px; height: 28px; border-radius: 7px; font-size: 11px; }
 .sort-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sort-name { font-weight: 600; font-size: 15px; }
 .sort-facts { font-size: 13px; color: var(--label-3); font-variant-numeric: tabular-nums; }

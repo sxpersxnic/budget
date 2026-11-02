@@ -323,7 +323,7 @@ def test_create_without_replace_adds_alongside_and_respects_until(ctx, setup):
 
 def test_create_is_all_or_nothing(ctx, setup):
     before = len(ctx.store.history.actions())
-    with pytest.raises(ValidationError, match=r"^07\.3 .*: Amount must be a positive number$"):
+    with pytest.raises(ValidationError, match=r"^Public transport: Amount must be a positive number$"):
         hist_svc.create(ctx, opts(), [Choice("expenditure", "01.1", 300), Choice("expenditure", "07.3", 0)])
     with pytest.raises(ValidationError, match=r"^Salary: Amount must be a positive number$"):
         hist_svc.create(ctx, opts(), [Choice("income", setup["salary"].id, None)])
@@ -345,4 +345,4 @@ def test_category_labels(ctx, setup):
     assert hist_svc.category_label(ctx, "income", setup["salary"].id) == "Salary"
     assert hist_svc.category_label(ctx, "income", "gone") == "gone"
     assert hist_svc.category_label(ctx, "expenditure", TAX) == "Taxes"
-    assert hist_svc.category_label(ctx, "expenditure", "01.1").startswith("01.1 ")
+    assert hist_svc.category_label(ctx, "expenditure", "01.1") == "Groceries"

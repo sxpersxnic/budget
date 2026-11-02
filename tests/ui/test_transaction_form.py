@@ -261,6 +261,53 @@ async def test_income_repays_an_open_advance(user: User, ctx, setup, advance) ->
     assert field(user, ui.select, "Outstanding Payment").value is None
 
 
+# ------------------------------------------------------------------ the type switch
+def menu_item(user: User, text: str) -> ui.menu_item:
+    """A menu's item; menus are closed in the simulation, so their items count as hidden."""
+    with user:
+        from nicegui import ElementFilter  # noqa: PLC0415
+
+        found = [
+            i
+            for i in ElementFilter(kind=ui.menu_item, local_scope=False)
+            if any(getattr(e, "text", None) == text for e in [i, *i.descendants()])
+        ]
+    assert found, f"no menu item {text!r}"
+    return max(found, key=lambda i: i.id)
+
+
+@pytest.mark.parametrize("where", ["page", "sheet"])
+async def test_the_switch_has_three_types_and_the_rarer_ones_wait_under_more(user: User, ctx, setup, where) -> None:
+    if where == "page":
+        await user.open("/add-transaction")
+    else:  # the sidebar's sheet: the same form
+        await user.open("/transactions")
+        click(user, button(user, "New Transaction"))
+        await user.should_see("Add Transaction")
+    switch = type_toggle(user)
+    assert switch.options == {"expenditure": "Expenditure", "income": "Income", "transfer": "Transfer"}  # fits a phone
+    click(user, menu_item(user, "Currency exchange"))
+    assert switch.value == "exchange"
+    assert list(switch.options) == ["expenditure", "income", "transfer", "exchange"]  # it joins while chosen
+    assert switch.props["model-value"] == 3  # and shows as chosen
+    await user.should_see("Amount Received")
+    put(user, switch, "revaluation")  # a rare type set from code joins too
+    assert list(switch.options)[-1] == "revaluation"
+    put(user, switch, "income")
+    assert list(switch.options) == ["expenditure", "income", "transfer"]  # and leaves again
+    assert switch.props["model-value"] == 1
+
+
+async def test_the_form_has_no_headings_over_its_buttons(user: User, ctx, setup) -> None:
+    await user.open("/add-transaction")
+    texts = {lb.text for lb in user.find(kind=ui.label).elements}
+    assert "Items" not in texts and "Attachments" not in texts  # "Add Item" and the drop zone say it
+    await user.should_see("Add Item")
+    await user.should_see("Drop files here or click to choose")
+    assert "hero-side" in field(user, ui.select, "Currency").classes  # as tall as the amount beside it
+    assert field(user, ui.number, "Amount").props.get("hide-bottom-space")
+
+
 # ------------------------------------------------------------------ transfer and exchange
 async def test_account_transfer(user: User, ctx, setup) -> None:
     savings = acc_svc.add_account(ctx, "Savings", "CHF")

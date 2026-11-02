@@ -16,7 +16,6 @@ from budget_app.domain import months
 from budget_app.domain.models import GOAL_MONTHS
 from budget_app.services import goals as goal_svc
 from budget_app.services import undo as undo_svc
-from budget_app.services import wealth as wealth_svc
 from budget_app.services.goals import GoalInput
 from budget_app.ui import layout
 from budget_app.ui.layout import fmt
@@ -64,7 +63,7 @@ async def test_the_page_without_goals(user: User, ctx) -> None:
     await user.open("/goals")
     await user.should_see("No goals yet.")
     await user.should_see("Save towards a holiday")  # the explanation is the empty state's, not the header's
-    await user.should_see("0 goals")
+    await user.should_not_see("0 goals")  # no count above an empty list
     [new] = [b for b in user.find(kind=ui.button).elements if b.text == "New Goal"]  # the header's is hidden
     click(user, new)
     await user.should_see("Add Goal")
@@ -195,7 +194,7 @@ async def test_archive_restore_and_delete(user: User, ctx) -> None:
     click(user, icon_buttons(user, "o_archive")[0])
     assert notified(user, "Archived “Holiday”")
     assert ctx.store.goals.get(g.id).archived
-    await user.should_see("0 goals")
+    await user.should_see("No goals yet.")
     await user.should_see("Archived · 1 goal")
     click(user, newest(user, ui.button, text="Restore"))
     assert notified(user, "Restored “Holiday”")
@@ -215,7 +214,7 @@ async def test_archive_restore_and_delete(user: User, ctx) -> None:
     ctx.store.goals.delete([other.id])  # gone in the meantime
     click(user, icon_buttons(user, "o_archive")[0])
     assert notified(user, "This goal no longer exists")
-    await user.should_see("0 goals")
+    await user.should_see("No goals yet.")
 
 
 async def test_a_change_elsewhere_refreshes_the_page(user: User, ctx) -> None:
@@ -236,13 +235,12 @@ async def test_the_overview_card_and_the_free_wealth_line(user: User, ctx, demo)
     await user.should_see("All Goals")
     shown = [n for n in texts(user) if n in {"Holiday", "Car", "Bike", "Later"}]
     assert shown == ["Bike", "Holiday", "Later"]  # the first three by target date
+    await user.should_see("25 %")  # name, bar and how far; the rest is the Goals page's
+    await user.should_not_see("1'000.00 of 4'000.00 CHF")
+    await user.should_not_see("reserved for goals")
     horizon = ctx.horizon()
     reserved = goal_svc.reserve_at(ctx, horizon, "CHF")
     assert reserved == 4000  # in full by the horizon, 12 months away
-    free = wealth_svc.projected_wealth(ctx, horizon, "CHF") - reserved
-    await user.should_see(
-        f"Projected for {months.label(horizon)}: {fmt(free, 'CHF')} free after 4'000.00 CHF reserved for goals"
-    )
     wealth = traces(user, card(user, "Wealth Over Time"))
     assert [tr["name"] for tr in wealth] == ["Recorded", "Projected", "Free after goals"]
     plan_line, free_line = wealth[1], wealth[2]
@@ -252,20 +250,17 @@ async def test_the_overview_card_and_the_free_wealth_line(user: User, ctx, demo)
     assert gap == sorted(gap)
 
 
-async def test_the_card_follows_the_currency_and_hides_without_reserve(user: User, ctx, demo) -> None:
+async def test_the_free_wealth_line_follows_the_currency(user: User, ctx, demo) -> None:
     goal(ctx, "Holiday", saved=1000)
     await open_overview(user)
     await user.should_see("Holiday")
-    await user.should_not_see("reserved for goals")
     assert [tr["name"] for tr in traces(user, card(user, "Wealth Over Time"))] == ["Recorded", "Projected"]
     g = ctx.store.goals.all()[0]
     g.reserve = True
     ctx.store.goals.update(g)
     currency = next(s for s in user.find(kind=ui.select).elements if s.props.get("label") == "Currency")
     put(user, currency, "EUR")
-    await user.should_see("reserved for goals")
     reserved = goal_svc.reserve_at(ctx, ctx.horizon(), "EUR")
-    await user.should_see(f"after {fmt(reserved, 'EUR')} reserved for goals")
     await menu_item(user, "Export Data as CSV…", card(user, "Wealth Over Time"))
     data = pd.read_csv(io.BytesIO((await downloaded(user)).content))
     assert list(data.columns) == ["month", "wealth", "type", "free_after_goals"]

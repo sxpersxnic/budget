@@ -79,7 +79,7 @@ async def test_arrows_do_nothing_without_a_month(user: User) -> None:
 async def test_slash_focuses_the_search(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
     ran: list[str] = []
     monkeypatch.setattr(ui, "run_javascript", lambda code, **_: ran.append(code))
-    await user.open("/transactions")
+    await user.open("/payees")  # an empty transaction list has no search to focus
     key(user, page_keys(user), "/")
     assert ran == [layout.SHOW_ACTIVE_TAB, layout.SEARCH_FOCUS]  # the page's tab into view, then the key
     assert any("search" in el.classes for el in user.find(kind=ui.input).elements)  # the field it focuses

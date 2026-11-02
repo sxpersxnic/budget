@@ -659,7 +659,7 @@ def test_series_keys(ctx, setup, english):
     keys = reports.series_keys(ctx)
     assert keys["EXP:TOTAL"] == "Total expenditure"
     assert keys["INC:TOTAL"] == "Total income"
-    assert keys["EXP:01"].startswith("01")
+    assert keys["EXP:01"] == "Food and drinks"
     assert keys["EXP:TAX"] == "Taxes"
     assert keys[f"INC:{setup['salary'].id}"] == "Income: Salary"
     assert keys["INC:ADV_REPAY"] == "Income: Advance repayments"
