@@ -100,7 +100,8 @@ async def test_empty_history_and_the_settings_link(user: User, ctx) -> None:
     assert undo_svc.recent(ctx) == []
     await user.open("/history")
     await user.should_see("No changes yet.")
+    await user.should_see("Your changes show here, each with Undo.")  # one line, no button (one empty state)
     await user.open("/settings")
     await user.should_see("Change History")
     user.find("Show…").click()
-    await user.should_see("The last changes to your records. Undo puts the records back")
+    await user.should_see("Your changes show here, each with Undo.")
