@@ -123,10 +123,15 @@ def label_cell(user: User, code: str) -> Element:
 
 async def open_budget(user: User, month: str | None = None) -> None:
     await user.open("/budget")
-    await user.should_see("Record Balance")
+    await user.should_see("Compare with")  # always there, whatever the month
     if month:
         await set_value(user, month_select(user), month)
         await user.should_see(months.label(month))
+
+
+async def show_all(user: User) -> None:
+    """Show All Categories: the rows with nothing budgeted and nothing spent, such as one to budget first."""
+    await click(user, next(s for s in find_all(user, ui.switch) if s.text == "Show All Categories"))
 
 
 async def edit_budget(user: User, code: str) -> ui.dialog:
@@ -147,6 +152,7 @@ async def test_current_month_shows_projection_and_ledger(user: User, demo) -> No
     # nothing booked yet this month: the whole salary is still to come
     await user.should_see("6'200.00 still expected of 6'200.00 CHF")
     await user.should_see("2'750.00 left of 2'750.00 CHF")
+    await user.should_see("Budgeted +3'450.00 CHF")  # signed and with its currency, as the net income above it
     await user.should_not_see("Balances · End of")
 
 
@@ -264,10 +270,25 @@ async def test_show_all_subcategories_lists_empty_ones(user: User, demo) -> None
     await open_budget(user, PREV)
     await click(user, label_cell(user, "01"))
     assert not [e for e in find_all(user, ui.html) if 'class="code">01.2<' in e.content]
-    switch = next(s for s in find_all(user, ui.switch) if s.text == "Show all subcategories")
+    switch = next(s for s in find_all(user, ui.switch) if s.text == "Show All Categories")
     await click(user, switch)
     row = ledger_row(user, "01.2")  # empty, but listed now
     assert "dim" in row.classes
+
+
+async def test_rows_with_nothing_wait_for_show_all_categories(user: User, demo) -> None:
+    await open_budget(user, PREV)
+    assert not [e for e in find_all(user, ui.html) if e.props.get("data-code") == "02"]  # nothing budgeted or spent
+    await show_all(user)
+    assert "dim" in ledger_row(user, "02").classes
+
+
+async def test_a_phone_keeps_the_name_and_the_difference(user: User, demo) -> None:
+    """The amounts carry classes a narrow table hides (theme.py); the difference stays, 0.00 when on budget."""
+    await open_budget(user, PREV)
+    cells = [c for c in ledger_row(user, "04").default_slot.children if isinstance(c, ui.label)]
+    assert [c.classes[1] for c in cells] == ["c-act", "c-bud", "c-diff"]
+    assert cells[2].text == "0.00"  # the rent as budgeted
 
 
 async def test_past_month_cannot_be_edited(user: User, demo) -> None:
@@ -288,9 +309,19 @@ async def test_accounts_card_lists_balances_of_a_past_month(user: User, demo) ->
     assert len([b for b in find_all(user, ui.button) if b.text == "Edit"]) == 2
 
 
-async def test_record_balance_for_a_new_month(user: User, demo, ctx) -> None:
+async def test_balances_are_recorded_on_wealth_not_in_the_header(user: User, demo) -> None:
     await open_budget(user)
-    await click(user, button(user, "Record Balance"))
+    assert not [b for b in find_all(user, ui.button) if b.text == "Record Balance"]
+    await open_budget(user, months.add_months(CM, -6))  # the first month: the reconciliation waits for balances
+    [link] = [lk for lk in find_all(user, ui.link) if lk.text == "Balances on Wealth"]
+    assert link.props["href"] == "/accounts"
+
+
+async def test_record_balance_for_another_month(user: User, demo, ctx) -> None:
+    entry = wealth_svc.entry_for(ctx, demo["eur"].id, PREV)
+    ctx.store.account_entries.delete([entry.id])
+    await open_budget(user, PREV)
+    await click(user, button(user, "Record"))  # the month's own link to the sheet
     dlg = open_dialog(user)
     await user.should_see("What did the account hold at the end of the month?")
     save = button(user, "Save", dlg)
@@ -330,10 +361,9 @@ async def test_record_balance_reports_errors(user: User, demo, monkeypatch) -> N
         raise RuntimeError("disk full")
 
     monkeypatch.setattr(wealth_svc, "upsert_entry", broken)
-    await open_budget(user)
-    await click(user, button(user, "Record Balance"))
+    await open_budget(user, PREV)
+    await click(user, next(b for b in find_all(user, ui.button) if b.text == "Edit"))  # Bank's balance
     dlg = open_dialog(user)
-    await set_value(user, find_one(user, ui.select, dlg, label="Account"), demo["chf"].id)
     await click(user, button(user, "Save", dlg))
     await user.should_see("disk full")
     assert dlg.value  # stays open to correct the input
@@ -441,6 +471,7 @@ async def test_replan_hides_the_later_months_switch(user: User, demo) -> None:
 
 async def test_add_a_budget_to_an_empty_category(user: User, demo, ctx) -> None:
     await open_budget(user)
+    await show_all(user)
     dlg = await edit_budget(user, "02")
     await user.should_see("Alcohol and tobacco")  # the sheet is titled with the label
     assert not find_all(user, ui.checkbox, dlg)  # nothing to remove
@@ -488,6 +519,7 @@ async def test_invalid_kept_amount_changes_nothing(user: User, demo, ctx) -> Non
 async def test_invalid_new_entry_is_rejected(user: User, demo, ctx) -> None:
     count = len(ctx.store.budget.all())
     await open_budget(user)
+    await show_all(user)
     dlg = await edit_budget(user, "03")
     await set_value(user, find_one(user, ui.number, dlg, label="Amount"), 80)
     await set_value(user, find_one(user, ui.select, dlg, label="Currency"), None)
@@ -541,6 +573,7 @@ async def test_budget_another_income_category(user: User, demo, ctx) -> None:
 async def test_cancel_leaves_the_budget_alone(user: User, demo, ctx) -> None:
     before = len(ctx.store.budget.all())
     await open_budget(user)
+    await show_all(user)
     dlg = await edit_budget(user, "05")
     await set_value(user, find_one(user, ui.number, dlg, label="Amount"), 99)
     await click(user, button(user, "Cancel", dlg))

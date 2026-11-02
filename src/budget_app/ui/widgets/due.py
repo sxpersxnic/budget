@@ -97,14 +97,11 @@ def row(ctx: Context, item: Reminder) -> None:
 
 
 def due_card(ctx: Context, currency: str, today: date | None = None) -> None:
-    """The card; one quiet line when nothing is due, nothing at all when every kind is turned off in Settings."""
+    """The card, only while something is due (polish before 1.0: an empty card explained itself, which is noise)."""
     if not any(rem_svc.enabled(ctx, kind) for kind in rem_svc.KINDS):
         return
     items = rem_svc.due_list(ctx, currency, today)
     if not items:
-        with ui.row().classes("due-empty items-center gap-2 no-wrap"):
-            ui.icon("o_task_alt", size="18px").classes("text-3")
-            ui.label(t("Nothing due. Balances to record, bookings and bills show here when they need you."))
         return
     state = {"all": len(items) <= SHOWN}
     with ui.element("div").classes("surface flex flex-col gap-1 due"):

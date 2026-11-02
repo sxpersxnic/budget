@@ -189,6 +189,8 @@ body.body--dark .q-card, body.body--dark .surface { border: 0.5px solid var(--se
 /* a card the user just added: a short accent ring so the eye finds it */
 @keyframes just-added { from { box-shadow: 0 0 0 3px var(--q-primary), var(--shadow); } }
 .just-added { animation: just-added 1.6s ease-out; scroll-margin-top: 16px; }
+/* an Overview chart's controls, in the popover behind its tune button */
+.chart-controls { width: 24rem; max-width: calc(100vw - 32px); }
 .sheet { padding: 20px 22px 18px !important; border-radius: 14px !important;
   background: var(--surface-raised) !important;
   gap: 14px; }
@@ -257,7 +259,6 @@ body.body--dark .group { border: 0.5px solid var(--separator); }
 .nicegui-link.due-text:hover { opacity: 1; }
 .nicegui-link.due-text:hover .n-title { color: var(--accent); }
 .due-row .due-action { justify-self: end; }
-.due-empty { font-size: 13px; color: var(--label-2); padding: 0 4px; }
 @media (max-width: 640px) {
   .due-row { grid-template-columns: 22px minmax(0, 1fr) auto; }
   .due-row .due-icon { grid-row: 1 / span 2; }
@@ -303,9 +304,10 @@ body.body--dark .lock-card { border: 0.5px solid var(--separator); }
 .ledger-row .chev.open { transform: rotate(90deg); }
 /* the tables follow their own width, not the window's (the sidebar comes and goes) */
 .ledger { container-type: inline-size; }
+/* a phone: the name and the difference against the budget (polish before 1.0); the amounts are a wider window's */
 @container (max-width: 560px) {
-  .ledger-row { grid-template-columns: minmax(0, 1fr) auto auto 1.5rem; column-gap: 10px; padding: 0 2px; }
-  .ledger-row .c-bar, .ledger-row .c-diff { display: none; }
+  .ledger-row { grid-template-columns: minmax(0, 1fr) auto 1.5rem; column-gap: 10px; padding: 0 2px; }
+  .ledger-row .c-bar, .ledger-row .c-act, .ledger-row .c-bud { display: none; }
 }
 @container (min-width: 561px) and (max-width: 800px) {  /* the bar goes first, so names stay readable */
   .ledger-row { grid-template-columns: minmax(0, 1fr) 6rem 6rem 6rem 1.75rem; }
@@ -315,7 +317,7 @@ body.body--dark .lock-card { border: 0.5px solid var(--separator); }
    narrow tables keep the change instead of the other month's amount */
 @container (max-width: 560px) {
   .ledger.compare .ledger-row { grid-template-columns: minmax(0, 1fr) auto 4.5rem 1.5rem; }  /* changes align */
-  .ledger.compare .ledger-row .c-diff { display: block; }
+  .ledger.compare .ledger-row .c-act { display: block; }
   .ledger.compare .ledger-row .c-ref { display: none; }
 }
 .ledger-row.target { background: var(--accent-fill); }  /* the row a link from the Overview opened */

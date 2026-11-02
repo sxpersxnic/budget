@@ -1,4 +1,4 @@
-"""*Propose from History…* on the Budget Plan page (F16): the sheet, its inputs, conflicts, flags and creating."""
+"""*Propose from History…* on the Plan page (F16): the sheet, its inputs, conflicts, flags and creating."""
 
 from datetime import date
 

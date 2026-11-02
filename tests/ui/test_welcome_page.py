@@ -124,7 +124,7 @@ async def test_add_accounts_passes_the_screen(user: User, first_run, tmp_path) -
 async def test_loading_the_sample_data_opens_the_budget_page(user: User, first_run) -> None:
     await user.open("/welcome")
     user.find("Load Sample Data").click()
-    await user.should_see("Record Balance", retries=200)  # the Budget page, once the set is written
+    await user.should_see("Compare with", retries=200)  # the Budget page, once the set is written
     store = first_run.store
     assert store.settings.sample_data and store.settings.onboarding_done
     assert {a.name for a in store.accounts.all()} >= {"Bank", "Savings", "Depot"}
@@ -151,7 +151,7 @@ async def test_settings_loads_and_removes_the_sample_data(user: User, first_run)
     await user.open("/settings")
     await user.should_see("A year of example records to explore the app with. It can be removed again here.")
     user.find("Load Sample Data").click()
-    await user.should_see("Record Balance", retries=200)
+    await user.should_see("Compare with", retries=200)
     assert first_run.store.settings.sample_data
     await user.open("/settings")
     await user.should_see("This folder holds the sample set. Removing it empties the folder, as on the first start.")
