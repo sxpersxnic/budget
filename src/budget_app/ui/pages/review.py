@@ -154,15 +154,15 @@ def _biggest(ctx: Context, review: YearReview, refresh) -> None:
                         caption.classes("caption w-full truncate")
                         if code := coicop.tooltip(item.category):
                             caption.props(f'title="{code}"')
-                    ui.label(fmt(item.amount, review.currency)).classes("num font-medium whitespace-nowrap")
                     tx = ctx.store.transactions.get(item.transaction_id)
-                    if tx is not None:
+                    if tx is not None:  # before the amount, so the amounts line up with the lists above
                         named(
                             ui.button(icon="o_open_in_new", on_click=lambda tx=tx: show(tx))
                             .props(ROW_ACTION)
                             .classes("text-primary row-actions"),
                             t("Show the transaction"),
                         )
+                    ui.label(fmt(item.amount, review.currency)).classes("num font-medium whitespace-nowrap")
 
 
 # ------------------------------------------------------------------ the page
