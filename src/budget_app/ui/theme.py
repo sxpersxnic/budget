@@ -151,6 +151,29 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 .section-tab:hover { color: var(--label); }
 .section-tab.active { color: var(--label); font-weight: 600; border-bottom-color: var(--accent); }
 .page.wide { max-width: 100rem; }  /* the budget page: room for two tables side by side */
+/* the title, its actions and the tabs (layout.frame): one width and height on every tab of a place */
+.page-head { width: 100%; gap: 12px; }
+.page.narrow > .page-head { max-width: none; }
+.page-head .section-tabs { margin-top: 0; }
+.page-title-row { display: flex; width: 100%; align-items: flex-end; gap: 12px; flex-wrap: wrap; min-height: 42px; }
+@media (max-width: 1023px) {  /* the phone header holds the title: a row with nothing else in it goes */
+  .page-title-row { min-height: 0; }
+  .page-title-row:not(:has(.title-sub)):has(> .nicegui-row:empty) { display: none; } }
+.back-link { display: inline-flex; align-items: center; gap: 2px; align-self: flex-start; margin: -6px 0 -4px -6px;
+  color: var(--accent); font-size: 14px; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.back-link .q-icon { font-size: 20px; }
+/* the amount of a list row (layout.row_value): right-aligned, so the rows compare */
+.row-value { margin-left: auto; text-align: right; flex: none; display: flex; flex-direction: column;
+  align-items: flex-end; gap: 0; }
+.row-amount { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap;
+  color: var(--label); }
+.row-amount .cur { font-size: 12px; font-weight: 400; color: var(--label-2); margin-left: 4px; }
+.row-amount.positive { color: var(--positive); }
+.row-amount.negative { color: var(--negative); }
+/* an explanation behind ⓘ (layout.info) */
+.info-dot { color: var(--label-3); cursor: help; vertical-align: middle; margin-left: 4px; }
+.info-dot:hover, .info-dot:focus-visible { color: var(--accent); }
 @media (max-width: 640px) { .page { padding: 16px 16px 48px; gap: 16px; } }
 .large-title { font-size: 28px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.15; color: var(--label); }
 .title-sub { font-size: 13px; color: var(--label-2); margin-top: 2px; }
