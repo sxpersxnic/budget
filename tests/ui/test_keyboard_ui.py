@@ -81,7 +81,7 @@ async def test_slash_focuses_the_search(user: User, monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(ui, "run_javascript", lambda code, **_: ran.append(code))
     await user.open("/transactions")
     key(user, page_keys(user), "/")
-    assert ran == [layout.SEARCH_FOCUS]
+    assert ran == [layout.SHOW_ACTIVE_TAB, layout.SEARCH_FOCUS]  # the page's tab into view, then the key
     assert any("search" in el.classes for el in user.find(kind=ui.input).elements)  # the field it focuses
 
 
