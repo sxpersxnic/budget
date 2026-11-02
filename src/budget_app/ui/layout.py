@@ -626,12 +626,10 @@ def row_value(value: float | None, currency: str = "", sub: str = "", tone: str 
 def info(text: str) -> ui.icon:
     """An ⓘ beside a label that holds the explanation as its tooltip: one plain line on the page where it helps, the
     rest here (polish before 1.0). Reachable by keyboard; screen readers read the text."""
-    icon = (
-        ui.icon("o_info", size="16px")
-        .classes("info-dot")
-        .props(f'tabindex=0 role=img aria-label="{html.escape(text)}"')
-    )
-    icon.tooltip(text).props("max-width=22rem")
+    icon = ui.icon("o_info", size="16px").classes("info-dot").props("tabindex=0 role=img")
+    icon.props["aria-label"] = text  # a prop, not a props string: no quoting, nothing escaped for the reader
+    with icon:
+        ui.tooltip(text).classes("info-tip")
     return icon
 
 

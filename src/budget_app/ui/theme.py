@@ -174,6 +174,7 @@ body.body--dark .sidebar.q-drawer { background: #161618 !important; }
 /* an explanation behind ⓘ (layout.info) */
 .info-dot { color: var(--label-3); cursor: help; vertical-align: middle; margin-left: 4px; }
 .info-dot:hover, .info-dot:focus-visible { color: var(--accent); }
+.info-tip { max-width: 22rem; white-space: normal; }
 @media (max-width: 640px) { .page { padding: 16px 16px 48px; gap: 16px; } }
 .large-title { font-size: 28px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.15; color: var(--label); }
 .title-sub { font-size: 13px; color: var(--label-2); margin-top: 2px; }
