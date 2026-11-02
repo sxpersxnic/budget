@@ -1296,6 +1296,9 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 
 ## 8. Testing
 
+- The suite runs on a fixed day, 30 Oct 2026 (`NOW` in `tests/conftest.py`, `time-machine`, set before the test modules
+  are collected and running on from there): what is due, the sample data's months and the recent categories follow
+  today, and on 2 Nov 2026 tests of loans, the budget plan, the filters and the category picker failed on the real date.
 - `uv run pytest` runs the tests in parallel, one worker per CPU taking whole files (`pytest-xdist`, `addopts` in
   `pyproject.toml`): about a minute on ten cores instead of twelve in one process; `-n 0` runs them in one process.
   `-n auto` takes as many workers as the memory holds too, at 1 GB each and one kept spare (`worker_count` in
