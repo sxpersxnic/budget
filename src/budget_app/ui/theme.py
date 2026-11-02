@@ -272,7 +272,6 @@ body.body--dark .lock-card { border: 0.5px solid var(--separator); }
 .ledger-row .r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ledger-row .cell-label { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .ledger-row .cell-label .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ledger-row .code { color: var(--label-3); font-variant-numeric: tabular-nums; margin-right: 6px; font-size: 13px; }
 .ledger-row.dim .name { color: var(--label-2); }
 .ledger-row .edit { opacity: 0; transition: opacity .12s; color: var(--label-2); }
 .ledger-row:hover .edit, .ledger-row .edit:focus { opacity: 1; }

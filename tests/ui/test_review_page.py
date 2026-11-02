@@ -110,12 +110,12 @@ async def test_the_page_reviews_last_year(user: User, ctx, setup) -> None:
     assert f"+4'000.00 since the end of Dec {LAST - 1}" in shown
     # the groups
     assert "Spending by Category" in shown and "Biggest Expenses" in shown
-    assert "04 Housing and energy" in shown and "3'800.00 CHF" in shown
+    assert "Housing and energy" in shown and "3'800.00 CHF" in shown
     assert "▲ 6 %" in shown and f"{LAST - 1}: 3'600.00 CHF · 61 % of spending" in shown  # the rent rose
     assert "new" in shown  # the washing machine's division had nothing the year before
     assert f"Nothing in {LAST - 1} · 39 % of spending" in shown  # the caption of a new line
     assert "▼ 100 %" in shown and f"{LAST - 1}: 400.00 CHF" in shown  # groceries stopped
-    assert "Fust" in shown and f"20 Aug {LAST} · 05.3 Household appliances" in shown
+    assert "Fust" in shown and f"20 Aug {LAST} · Household appliances" in shown
     assert "Salary" in shown and "▲ 20 %" in shown
     # the chart: one bar series each for income and expenditure, over the twelve months
     data = plot(user).figure["data"]

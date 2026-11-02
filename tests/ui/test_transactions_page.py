@@ -159,7 +159,7 @@ async def test_rows_show_category_accounts_and_advances(user: User, ctx, demo, s
     by_id = {r["id"]: r for r in rows(user)}
 
     receipt = by_id[shop["receipt"].id]
-    assert receipt["category"] == "01.1 Groceries" and receipt["from"] == "Bank (CHF)"
+    assert receipt["category"] == "Groceries" and receipt["from"] == "Bank (CHF)"
     assert receipt["_category_tip"] == "COICOP 01.1 Food"  # the official name, on hover
     assert receipt["items"] == 2 and receipt["type"] == "Expenditure" and receipt["comment"] == "Saturday market"
     exchange = by_id[shop["exchange"].id]

@@ -436,7 +436,7 @@ async def test_lists_every_budget_entry(user: User, ctx, demo) -> None:
     salary = next(r for r in rows(user) if r["_type"] == "income")
     assert (salary["category"], salary["type"], salary["amount"]) == ("Salary", "Income", 6200)
     assert salary["recurrence"] == "Every month, forever"
-    food = next(r for r in rows(user) if r["category"].startswith("01.1"))
+    food = next(r for r in rows(user) if r["category"] == "Groceries")
     assert food["type"] == "Expenditure"
     assert food["amount_chf"] == 700
 

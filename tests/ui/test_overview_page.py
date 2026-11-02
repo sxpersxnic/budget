@@ -351,8 +351,8 @@ async def test_flows_months_and_categories(user: User, demo) -> None:
     await set_value(user, control(user, chart, "Categories"), ["EXP:04", "EXP:07"])
     flows = traces(user, chart)
     assert [tr["name"] for tr in flows] == [
-        "04 Housing and energy",
-        "07 Transport",
+        "Housing and energy",
+        "Transport",
     ]
     assert values(flows[0]["y"]) == [1900, 1900]
     await set_value(user, control(user, chart, "Categories"), [])

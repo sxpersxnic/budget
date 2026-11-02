@@ -516,9 +516,8 @@ def page(month: str = "", category: str = "") -> None:
                         ui.icon("chevron_right", size="18px").classes("chev" + (" open" if expanded else ""))
                     else:
                         ui.element("span").style("width: 18px; flex: none")
-                    code, name = _split_code(line)
-                    code_html = f'<span class="code">{html.escape(code)}</span>' if code else ""
-                    lbl = ui.html(code_html + html.escape(name), tag="span").classes("name")
+                    lbl = ui.html(html.escape(line.label), tag="span").classes("name")
+                    lbl._props["data-code"] = line.key  # names, not codes: the code is the tooltip's
                     # on hover the full name (long names are truncated) and the official COICOP name
                     lbl._props["title"] = "\n".join(filter(None, (line.label, get_coicop().tooltip(line.key))))
                 if change is not None:  # F18: the compared month instead of the budget
@@ -707,11 +706,3 @@ def _summary(total: reports.Line, is_exp: bool, currency: str) -> str:
     if left < -EPS:
         return t("{amount} still expected of {budget}", amount=fmt(-left), budget=fmt(total.budget, currency))
     return t("On budget, {budget}", budget=fmt(total.budget, currency))
-
-
-def _split_code(line: reports.Line) -> tuple[str, str]:
-    """'01.1 Food' -> ('01.1', 'Food'); labels without a leading code are returned whole."""
-    prefix = f"{line.key} "
-    if line.label.startswith(prefix):
-        return line.key, line.label[len(prefix) :]
-    return "", line.label

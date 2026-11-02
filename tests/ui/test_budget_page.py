@@ -106,12 +106,12 @@ def month_select(user: User) -> ui.select:
 
 
 def ledger_row(user: User, code: str) -> Element:
-    """The ledger row of a category, found by its code cell."""
+    """The ledger row of a category, found by its code (the label's `data-code`)."""
     with user:
         cell = next(
             e
             for e in ElementFilter(kind=ui.html, only_visible=True, local_scope=False)
-            if f'class="code">{code}<' in e.content
+            if e.props.get("data-code") == code
         )
     return cell.parent_slot.parent.parent_slot.parent  # html -> label cell -> row
 
@@ -247,17 +247,17 @@ async def test_over_and_above_budget_summaries(user: User, demo, ctx) -> None:
 # ------------------------------------------------------------------ the expenditure tree
 async def test_expanding_a_division_shows_its_subcategories(user: User, demo) -> None:
     await open_budget(user, PREV)
-    assert not [e for e in find_all(user, ui.html) if 'class="code">01.1<' in e.content]
+    assert not [e for e in find_all(user, ui.html) if e.props.get("data-code") == "01.1"]
     await click(user, label_cell(user, "01"))
-    sub = next(e for e in find_all(user, ui.html) if 'class="code">01.1<' in e.content)
-    assert sub.props["title"] == "01.1 Groceries\nCOICOP 01.1 Food"  # the label, and the official name on hover
-    assert sub.content.endswith("Groceries")
+    sub = next(e for e in find_all(user, ui.html) if e.props.get("data-code") == "01.1")
+    assert sub.props["title"] == "Groceries\nCOICOP 01.1 Food"  # the label, and the official name on hover
+    assert sub.content == "Groceries"  # names, not codes
     assert sub.parent_slot.parent._style["padding-left"] == "18px"  # indented one level
     assert any("open" in i.classes for i in find_all(user, ui.icon, label_cell(user, "01")))
     assert not [e for e in find_all(user, ui.html) if 'class="code">01.2<' in e.content]  # empty: hidden
     # collapse again
     await click(user, label_cell(user, "01"))
-    assert not [e for e in find_all(user, ui.html) if 'class="code">01.1<' in e.content]
+    assert not [e for e in find_all(user, ui.html) if e.props.get("data-code") == "01.1"]
 
 
 async def test_show_all_subcategories_lists_empty_ones(user: User, demo) -> None:
@@ -442,7 +442,7 @@ async def test_replan_hides_the_later_months_switch(user: User, demo) -> None:
 async def test_add_a_budget_to_an_empty_category(user: User, demo, ctx) -> None:
     await open_budget(user)
     dlg = await edit_budget(user, "02")
-    await user.should_see("02 Alcohol and tobacco")  # the sheet is titled with the label
+    await user.should_see("Alcohol and tobacco")  # the sheet is titled with the label
     assert not find_all(user, ui.checkbox, dlg)  # nothing to remove
     await set_value(user, find_one(user, ui.number, dlg, label="Amount"), 45)
     await set_value(user, find_one(user, ui.select, dlg, label="Until"), months.add_months(CM, 6))

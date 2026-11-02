@@ -73,7 +73,7 @@ def ledger_row(user: User, code: str = "", name: str = "") -> Element:
         cell = next(
             e
             for e in ElementFilter(kind=ui.html, only_visible=True, local_scope=False)
-            if (code and f'class="code">{code}<' in e.content) or (name and e.content == name)
+            if (code and e.props.get("data-code") == code) or (name and e.content == name)
         )
     return cell.parent_slot.parent.parent_slot.parent  # html -> label cell -> row
 
@@ -183,11 +183,11 @@ async def test_the_card_lists_what_stands_out_and_links_to_it(user: User, ctx, d
     await user.open("/")
     await user.should_see("Notable This Month")
     await user.should_see(f"{months.label(CM)} so far")
-    await user.should_see("07.3 Public transport")
+    await user.should_see("Public transport")
     await user.should_see("150.00 over the 150.00 CHF budget")
     await user.should_see("Fust")
     await user.should_see("1'290.00 CHF")
-    sub = next(t for t in texts(user) if "05.3 Household appliances" in t)
+    sub = next(t for t in texts(user) if "Household appliances" in t)
     assert sub.endswith("· 48 % of a usual month")  # 1'290 of 2'660
     assert [lk.props["href"] for lk in notable_links(user)] == [
         f"/budget?month={CM}&category=07.3",
@@ -265,9 +265,9 @@ async def test_transactions_filtered_by_month_and_category(user: User, ctx, setu
 def test_the_wording_of_each_kind_and_change():
     result = trends.Notable(CM, "CHF", history_months=6)
     pace = trends.Item(trends.PACE, "01.1", 400, 600, projected=688.89)
-    assert notable.texts(pace, result) == ("01.1 Groceries", "On pace for 688.89 of the 600.00 CHF budget")
+    assert notable.texts(pace, result) == ("Groceries", "On pace for 688.89 of the 600.00 CHF budget")
     usual = trends.Item(trends.ABOVE_USUAL, "11.1", 360, 120)
-    assert notable.texts(usual, result) == ("11.1 Eating out", "Usually 120.00 CHF a month")
+    assert notable.texts(usual, result) == ("Eating out", "Usually 120.00 CHF a month")
     new = trends.Item(trends.ABOVE_USUAL, "09.4", 150, 0)
     assert notable.texts(new, result)[1] == "Nothing in the 6 months before"
     bare = trends.Item(trends.LARGE, TAX, 900, 0)  # no usual month to compare with

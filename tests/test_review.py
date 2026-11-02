@@ -132,7 +132,7 @@ def test_spending_lines_are_the_top_level_rows_in_coicop_order(ctx, year_2025):
     assert lines["05"].amount == pytest.approx(2520) and lines["05"].previous == 0  # 120 detergent + 2'400
     assert lines["05"].change.ratio is None  # new
     assert lines["11"].amount == pytest.approx(120) and lines[ADV].amount == pytest.approx(120)
-    assert lines["04"].label.startswith("04 ") and lines[ADV].label == "Advance payments"
+    assert lines["04"].label == "Housing and energy" and lines[ADV].label == "Advance payments"
     assert lines["04"].change.ratio == pytest.approx(3800 / 3600 - 1)
 
 
@@ -245,13 +245,13 @@ def test_frames_and_excel(ctx, year_2025):
     assert summary.loc["Wealth at the end (Dec 2025)", "2025"] == 14000
     assert summary.loc["Wealth change", "2025"] == 4000 and summary.loc["Wealth change", "2024"] == 1000
     exp = frames["Expenditure"].set_index("Category")
-    assert exp.loc["05 Household and furniture", "Change"] == "new"
-    assert exp.loc["01 Food and drinks", "Change"] == "+27 %"
+    assert exp.loc["Household and furniture", "Change"] == "new"
+    assert exp.loc["Food and drinks", "Change"] == "+27 %"
     assert list(frames["Biggest Expenses"].columns) == ["Date", "Payee", "Category", "Amount (CHF)"]
     assert frames["Biggest Expenses"].iloc[0].tolist() == [
         "2025-08-20",
         "Fust",
-        "05.3 Household appliances",
+        "Household appliances",
         2400,
     ]
     assert frames["Months"].iloc[2].tolist() == ["2025-03", 6000, 1900, 4100]
