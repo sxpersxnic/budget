@@ -40,6 +40,8 @@ async def test_one_answer_sorts_a_payee_and_the_count_follows(user: User, ctx, s
     UserInteraction(user, {answer_button(user, "Gifts and party supplies")}, None).click()
     await settle()
     await user.should_see("Everything is sorted.")
+    [title] = [lb for lb in user.find(kind=ui.label).elements if lb.text == "Everything is sorted."]
+    assert "group" in title.parent_slot.parent.parent_slot.parent.classes  # a card, like every empty state
     assert sorting.unsorted(ctx) == []
 
 

@@ -144,7 +144,7 @@ AG_GRID_LOCALE["it"] = {
 
 
 # ISO values keep sorting and filtering exact; the formatters only change what is shown.
-def _date_fmt() -> str:
+def date_fmt() -> str:
     return (
         f"p => p.value ? new Date(p.value + 'T00:00').toLocaleDateString('{i18n.browser_locale()}', "
         "{day: 'numeric', month: 'short', year: 'numeric'}) : ''"
@@ -176,7 +176,7 @@ def money_col(field: str, header: str, **extra) -> dict:
 
 
 def date_col(field: str, header: str, **extra) -> dict:
-    col = {"field": field, "headerName": header, ":valueFormatter": _date_fmt()}
+    col = {"field": field, "headerName": header, ":valueFormatter": date_fmt()}
     col.update(extra)
     return col
 
@@ -198,7 +198,8 @@ def make_grid(columns: list[dict], height: str = "calc(100vh - 230px)") -> ui.ag
             ":getRowId": "p => p.data.id",
             "pagination": True,
             "paginationPageSize": 100,
-            "paginationPageSizeSelector": [50, 100, 500, 1000],
+            # the page says how many rows there are, once, and a hundred to a page is enough (polish before 1.0)
+            "paginationPageSizeSelector": False,
             "overlayNoRowsTemplate": '<span style="color: var(--label-2)">'
             + html.escape(t("Nothing matches these filters."))
             + "</span>",

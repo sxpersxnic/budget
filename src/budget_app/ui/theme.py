@@ -420,6 +420,9 @@ body.body--dark .q-field--outlined .q-field__control { background: var(--fill-2)
 .hero-amount input { font-size: 28px !important; font-weight: 600; letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums; }
 .hero-amount .q-field__control { height: 64px !important; }
+/* the field beside the amount (its currency) is as tall as it (transaction form, recurring sheet) */
+.hero-side .q-field__control, .hero-side .q-field__native, .hero-side .q-field__marginal {
+  height: 64px !important; min-height: 64px !important; }
 
 /* segmented control */
 .segmented { background: var(--fill) !important; border-radius: 9px !important; padding: 2px;
@@ -537,9 +540,16 @@ body.body--dark .nicegui-aggrid { border: 0.5px solid var(--separator); }
 .nicegui-aggrid .ag-cell { font-variant-numeric: tabular-nums; }
 .nicegui-aggrid .amt-in { color: var(--positive); }
 .nicegui-aggrid .muted { color: var(--label-2); }
-/* a phone has room for the page stepper only; the row count shows below the grid */
-@media (max-width: 640px) {
-  .nicegui-aggrid .ag-paging-page-size, .nicegui-aggrid .ag-paging-row-summary-panel { display: none; } }
+/* the pager is the page stepper only: the page says the number of rows itself, once */
+.nicegui-aggrid .ag-paging-row-summary-panel { display: none; }
+/* Transactions on a phone: one column of two-line rows (pages/transactions.py) */
+.nicegui-aggrid .tx-phone { display: flex; flex-direction: column; justify-content: center; height: 100%;
+  line-height: 1.3; cursor: pointer; }
+.nicegui-aggrid .tx-phone-top { display: flex; gap: 12px; align-items: baseline; }
+.nicegui-aggrid .tx-phone-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-size: 14px; }
+.nicegui-aggrid .tx-phone-amount { white-space: nowrap; font-size: 14px; font-weight: 500; }
+.nicegui-aggrid .tx-phone-date { font-size: 12px; color: var(--label-2); }
 /* a category the import suggested (F07): not the user's choice until they keep it */
 .nicegui-aggrid .suggested { color: var(--label-2); font-style: italic; }
 /* the import's category cell opens a picker on click; an empty one invites the choice */

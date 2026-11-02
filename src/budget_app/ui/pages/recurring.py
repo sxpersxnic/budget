@@ -28,15 +28,18 @@ from budget_app.ui.layout import (
     error,
     fmt,
     frame,
+    info,
     named,
     on_data_changed,
     parse_date,
     refresh_due_badge,
+    row_value,
     segmented,
     sheet,
     undoable,
 )
 from budget_app.ui.pages.add_budget import recurrence_label, recurrence_options
+from budget_app.ui.widgets.empty import empty_state
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import (
     account_options,
@@ -76,7 +79,7 @@ def open_recurring_sheet(
                 .props("outlined inputmode=decimal")
                 .classes("hero-amount flex-1 min-w-0")
             )
-            cur = currency_select(ctx, init.currency)
+            cur = currency_select(ctx, init.currency).classes("hero-side")
         exp_cat = expenditure_category_select(init.category if init.type == TX_EXPENDITURE else None)
         inc_cat = income_category_select(ctx, init.category if init.type == TX_INCOME else None)
         payee = payee_input(ctx, init.payee)
@@ -221,13 +224,18 @@ def details(sub: Subscription) -> str:
     )
 
 
-def yearly_label(amount: float, currency: str) -> str:
-    return t("{amount} a year", amount=fmt(amount, currency))
+def whole(amount: float, currency: str) -> str:
+    """A rough yearly sum in whole units ("29'756 CHF"): "about … a year" needs no cents."""
+    return f"{round(amount):,}".replace(",", "'") + f" {currency}"
 
 
-def _header(title: str, note: str = "") -> None:
+def _header(title: str, note: str = "", explained: str = "") -> None:
+    """A group's title with `explained` behind an ⓘ (polish before 1.0) and a `note` at the end."""
     with ui.row().classes("w-full items-end gap-2"):
-        ui.label(title).classes("group-header")
+        with ui.row().classes("group-header items-center gap-0"):
+            ui.label(title)
+            if explained:
+                info(explained)
         ui.space()
         if note:
             ui.label(note).classes("caption pb-1.5 pr-1")
@@ -241,10 +249,12 @@ def _empty(text: str) -> None:
 def page() -> None:
     with frame(t("Recurring"), "/recurring", narrow=True) as (ctx, actions):
         currency = ctx.store.settings.display_currency
-        with actions:
-            ui.button(
+        with actions:  # flat: the sidebar's New Transaction is the filled one; while there are none, the empty
+            # state offers it
+            new = ui.button(
                 t("New Recurring Transaction"), icon="add", on_click=lambda: open_recurring_sheet(ctx, refresh)
-            ).props("unelevated")
+            ).props("flat")
+            new.classes("text-primary")
         inputs: dict[tuple[str, date], tuple[ui.number, ui.input]] = {}
 
         def changes() -> rec_svc.Changes:
@@ -302,17 +312,17 @@ def page() -> None:
             rows = rec_svc.series(ctx)
             last = rec_svc.last_booked(ctx)
             spend = sub_svc.recurring_spend(ctx, currency)  # F17: what the running expenditure series cost a year
-            note = t("spending about {amount} a year", amount=fmt(sum(r.yearly_view for r in spend), currency))
+            new.set_visibility(bool(rows))
             with ui.column().classes("w-full gap-0"):
-                _header(t("Your Series"), note if spend else "")
+                yearly = whole(sum(r.yearly_view for r in spend), currency)
+                _header(t("Your Series"), t("spending about {amount} a year", amount=yearly) if spend else "")
                 with ui.element("div").classes("group"):
                     if not rows:
-                        _empty(
-                            t(
-                                "Rent, premiums, a salary: add what repeats with New Recurring Transaction, or make "
-                                "one of the charges found in your transactions recurring. When one is due, book it "
-                                "here or on the Overview; one that books automatically needs no confirmation."
-                            )
+                        empty_state(
+                            t("No recurring transactions yet."),
+                            t("Rent, premiums, a salary: when one is due, you book it here or on the Overview."),
+                            t("New Recurring Transaction"),
+                            lambda: open_recurring_sheet(ctx, refresh),
                         )
                     for series in rows:
                         with ui.element("div").classes("group-row"):
@@ -344,39 +354,46 @@ def page() -> None:
         def found_list() -> None:
             subs = sub_svc.detect(ctx, currency)
             note = ""
-            if subs:
+            if subs:  # rent and insurance as much as streaming: "regular payments", not "subscriptions"
                 total = sum(s.yearly_view for s in subs)
                 note = tn(
-                    "{n} subscription · about {amount} a year",
-                    "{n} subscriptions · about {amount} a year",
+                    "{n} regular payment · about {amount} a year",
+                    "{n} regular payments · about {amount} a year",
                     len(subs),
-                    amount=fmt(total, currency),
+                    amount=whole(total, currency),
                 )
             with ui.column().classes("w-full gap-0"):
-                _header(t("Found in Your Transactions"), note)
+                _header(
+                    t("Found in Your Transactions"),
+                    note,
+                    t(
+                        "A charge that comes back at the same rhythm for about the same amount shows here once it was "
+                        "charged {n} times ({m} times for half-yearly and yearly ones). Nothing is booked for you.",
+                        n=rules.MIN_CHARGES,
+                        m=rules.MIN_CHARGES_LONG,
+                    ),
+                )
                 with ui.element("div").classes("group"):
                     if not subs:
-                        _empty(
-                            t(
-                                "Streaming, phone, gym, insurance: a charge that comes back at the same rhythm for "
-                                "about the same amount shows here once it was charged {n} times ({m} times for "
-                                "half-yearly and yearly ones). Nothing is booked for you.",
-                                n=rules.MIN_CHARGES,
-                                m=rules.MIN_CHARGES_LONG,
-                            )
+                        empty_state(
+                            t("No regular payments found yet."),
+                            t("Streaming, phone, insurance: what you pay at a steady rhythm shows here."),
                         )
                     for sub in subs:
-                        with ui.element("div").classes("group-row flex-wrap"):
-                            with ui.column().classes("gap-0 flex-1 min-w-[12rem]") as text:
+                        with ui.element("div").classes("group-row"):
+                            with ui.column().classes("gap-0 flex-1 min-w-0") as text:
                                 ui.label(sub.name).classes("truncate")
                                 ui.label(caption(sub)).classes("caption")
                             text.tooltip(details(sub))
-                            # the cost and the actions stay together, on the row or on a line of their own
-                            with ui.row().classes("items-center gap-0 no-wrap ml-auto"):
-                                ui.label(yearly_label(sub.yearly, sub.currency)).classes("num whitespace-nowrap pr-2")
-                                ui.button(t("Make Recurring…"), on_click=lambda s=sub: make_recurring(s)).props(
-                                    "flat dense no-caps no-wrap"
-                                ).classes("text-primary")
+                            # the cost, then the actions, which show on hover (polish before 1.0)
+                            row_value(sub.yearly, sub.currency, sub=t("a year"))
+                            with ui.row().classes("row-actions items-center gap-0 no-wrap"):
+                                named(
+                                    ui.button(icon="o_event_repeat", on_click=lambda s=sub: make_recurring(s))
+                                    .props(ROW_ACTION)
+                                    .classes("text-primary"),
+                                    t("Make Recurring…"),
+                                )
                                 named(
                                     ui.button(icon="o_visibility_off", on_click=lambda s=sub: ignore(s))
                                     .props(ROW_ACTION)
@@ -389,7 +406,7 @@ def page() -> None:
             items = sub_svc.ignored(ctx)
             if not items:
                 return
-            title = tn("Ignored · {n} subscription", "Ignored · {n} subscriptions", len(items))
+            title = tn("Ignored · {n} regular payment", "Ignored · {n} regular payments", len(items))
             with ui.expansion(title).classes("w-full group closed-bills").props("dense"):
                 for item in items:
                     with ui.element("div").classes("group-row"):

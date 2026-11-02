@@ -252,6 +252,8 @@ async def test_dismiss_reopen_due_date_and_delete(user: User, ctx, setup) -> Non
     await user.should_see("Due today")
 
     [dismiss] = icon_buttons(user, "o_do_not_disturb_on")
+    assert "row-actions" in dismiss.parent_slot.parent.classes  # the icons show on hover; Mark Paid… always
+    assert "row-actions" not in newest(user, ui.button, text="Mark Paid…").parent_slot.parent.classes
     click(user, dismiss)
     await settle()
     assert bills_svc.get(ctx, bill.id).status == BILL_DISMISSED
