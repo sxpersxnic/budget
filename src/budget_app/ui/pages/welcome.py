@@ -84,7 +84,10 @@ def page() -> None:
                     currency_select(ctx, ctx.store.settings.display_currency, on_change=set_currency, label=None)
                 with ui.element("div").classes("group-row"), ui.column().classes("gap-0 flex-1 min-w-0"):
                     ui.label(t("Data Folder"))
-                    ui.label(str(ctx.store.data_dir)).classes("caption break-all select-all")
+                    from budget_app.ui.pages.settings import short_path  # noqa: PLC0415 - settings builds on this
+
+                    folder = ui.label(short_path(ctx.store.data_dir)).classes("caption truncate max-w-full")
+                    folder.props["title"] = str(ctx.store.data_dir)  # the whole path on hover
                     ui.label(
                         t(
                             "Your records are kept here as CSV files. To use another folder, start Budget with "

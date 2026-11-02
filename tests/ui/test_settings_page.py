@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import date
+from pathlib import Path
 
 import pytest
 from nicegui import ui
@@ -17,6 +18,7 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.transactions import TransactionInput
 from budget_app.storage.store import Store
+from budget_app.ui.pages import settings
 
 
 # ------------------------------------------------------------------ helpers
@@ -390,3 +392,52 @@ async def test_projection_rule_is_chosen_in_settings(user: User, ctx) -> None:
     assert ctx.store.settings.projection == PROJECTION_BUDGET
     assert Store(ctx.store.data_dir).settings.projection == PROJECTION_BUDGET  # saved with the settings
     assert notified(user, "Projected wealth: Budget only")
+    rule_options = {k: str(v) for k, v in rule.options.items()}
+    assert rule_options == {PROJECTION_BUDGET: "Budget only", PROJECTION_HIGHER: "Actual spending when higher"}
+
+
+async def test_the_projection_rule_says_what_it_does(user: User, ctx) -> None:
+    """One line under the setting; how each choice counts a month is behind the ⓘ (polish before 1.0)."""
+    await user.open("/settings")
+    await user.should_see("How months without recorded balances are estimated.")
+    note = next(e for e in user.find(kind=ui.icon).elements if "Budget only:" in e.props.get("aria-label", ""))
+    assert "Actual spending when higher: per category" in note.props["aria-label"]
+
+
+# ------------------------------------------------------------------ the data folder
+def test_a_long_folder_is_shortened_to_one_line(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(settings.Path, "home", lambda: tmp_path)
+    assert settings.short_path(tmp_path / "Budget") == str(Path("~/Budget"))  # the home folder as ~
+    deep = tmp_path / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "Finance" / "Budget" / "Household"
+    assert settings.short_path(deep) == str(Path("~/Library/…/Finance/Budget/Household"))
+    outside = Path("/srv/budget")
+    assert settings.short_path(outside) == str(outside)  # short enough as it is
+    one_long = Path("/data") / ("x" * 80)
+    shortened = settings.short_path(one_long)
+    assert len(shortened) <= 48 and "…" in shortened and shortened.startswith(str(Path("/data")))
+
+
+@pytest.mark.parametrize(
+    ("platform", "label", "opener"),
+    [
+        ("darwin", "Show in Finder", "open"),
+        ("win32", "Show in Explorer", "explorer"),
+        ("linux", "Open Folder", "xdg-open"),
+    ],
+)
+def test_the_folder_opens_in_the_systems_file_manager(monkeypatch, tmp_path, platform, label, opener) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(settings.subprocess, "Popen", calls.append)
+    assert settings.file_manager_label(platform) == label
+    settings.open_folder(tmp_path, platform)
+    assert calls == [[opener, str(tmp_path)]]
+
+
+async def test_the_data_folder_row_shows_the_folder(user: User, ctx, monkeypatch) -> None:
+    opened: list[Path] = []
+    monkeypatch.setattr(settings, "open_folder", opened.append)
+    await user.open("/settings")
+    folder = next(lb for lb in user.find(kind=ui.label).elements if lb.props.get("title") == str(ctx.store.data_dir))
+    assert folder.text == settings.short_path(ctx.store.data_dir) and "truncate" in folder.classes
+    user.find(kind=ui.button, content=settings.file_manager_label()).click()
+    assert opened == [ctx.store.data_dir]

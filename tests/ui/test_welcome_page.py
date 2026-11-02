@@ -12,6 +12,7 @@ from budget_app import i18n
 from budget_app.services import demo as demo_svc
 from budget_app.services.context import ValidationError
 from budget_app.storage.store import Store
+from budget_app.ui.pages import settings
 
 
 @pytest.fixture(autouse=True)
@@ -63,7 +64,8 @@ async def test_the_first_start_opens_the_welcome_screen(user: User, first_run, t
     await user.open("/")
     await user.should_see("Welcome")
     await user.should_see("Before You Start")
-    await user.should_see(str(tmp_path))  # the data folder
+    folder = next(lb for lb in user.find(kind=ui.label).elements if lb.props.get("title") == str(tmp_path))
+    assert folder.text == settings.short_path(tmp_path)  # the data folder, on one line; whole on hover
     await user.should_see("Load Sample Data")
     await user.should_see("Add Accounts")
     # no sidebar on the first screen
