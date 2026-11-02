@@ -12,6 +12,7 @@ from test_lock_page import button, field, set_value, settle
 from budget_app.services import profiles, sync
 from budget_app.storage import claim
 from budget_app.ui import layout
+from budget_app.ui.pages import settings
 
 
 @pytest.fixture
@@ -25,7 +26,7 @@ async def test_the_records_move_to_a_cloud_folder(user: User, ctx, moved, tmp_pa
     icloud = tmp_path_factory.mktemp("iCloud")
     monkeypatch.setattr(sync, "cloud_folders", lambda: [("iCloud Drive", icloud)])
     await user.open("/settings")
-    await user.should_see(str(ctx.store.data_dir))
+    await user.should_see(settings.short_path(ctx.store.data_dir))
     button(user, "Move…").click()
     await user.should_see("one at a time: there, add the folder under Profiles")
     button(user, "Move").click()

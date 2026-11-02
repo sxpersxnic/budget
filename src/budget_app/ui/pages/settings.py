@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from datetime import date
+from pathlib import Path
 
 from nicegui import events, run, ui
 
@@ -27,6 +30,7 @@ from budget_app.ui.layout import (
     error,
     frame,
     full_load,
+    info,
     lock_now,
     month_options,
     named,
@@ -635,7 +639,11 @@ def _data_group(ctx: Context) -> None:
             with ui.element("div").classes("group-row"):
                 with ui.column().classes("gap-0 flex-1 min-w-0"):
                     ui.label(t("Data Folder"))
-                    ui.label(str(ctx.store.data_dir)).classes("caption break-all select-all")
+                    folder = ui.label(short_path(ctx.store.data_dir)).classes("caption truncate max-w-full")
+                    folder.props["title"] = str(ctx.store.data_dir)  # the whole path on hover
+                ui.button(t(file_manager_label()), on_click=lambda: open_folder(ctx.store.data_dir)).props(
+                    "flat dense no-caps"
+                ).classes("text-primary")
                 ui.button(t("Move…"), on_click=_move_sheet).props("flat dense no-caps").classes("text-primary")
             _sample_row(ctx)
 
@@ -661,34 +669,34 @@ def _data_group(ctx: Context) -> None:
 
 
 def _updates_group(ctx: Context) -> None:
-    """F33: the update check, off by default; it says what it does and what it never does."""
+    """F33: the update check, off by default; one line says what it does, the ⓘ what it never does."""
     settings = ctx.store.settings
 
     @ui.refreshable
     def status() -> None:
-        with ui.column().classes("gap-0 flex-1 min-w-0"):
-            ui.label(t("Newest Release"))
-            release = updates_svc.available(ctx)
-            if not settings.update_check:
-                text = t("Off: the app never asks on its own. The releases page lists the installers.")
-            elif not settings.update_checked:
-                text = t("Not checked yet.")
-            else:
-                text = t(
-                    "Checked on {date}: the newest release is {version}.",
-                    date=i18n.date_label(date.fromisoformat(settings.update_checked)),
-                    version=updates_svc.latest_version(ctx),
-                )
-            ui.label(text).classes("caption")
-            if release:
-                ui.link(t("Budget {version} is available", version=release.version), release.url, new_tab=True).classes(
-                    "caption text-primary"
-                )
-            else:
-                ui.link(t("Releases page"), RELEASES_URL, new_tab=True).classes("caption text-primary")
-        check_btn = ui.button(t("Check Now")).props("flat dense no-caps").classes("text-primary")
-        check_btn.on_click(lambda: check_now(check_btn))
-        check_btn.set_visibility(settings.update_check)
+        if not settings.update_check:  # off: nothing to report
+            return
+        with ui.element("div").classes("group-row"):
+            with ui.column().classes("gap-0 flex-1 min-w-0"):
+                ui.label(t("Newest Release"))
+                release = updates_svc.available(ctx)
+                if not settings.update_checked:
+                    text = t("Not checked yet.")
+                else:
+                    text = t(
+                        "Checked on {date}: the newest release is {version}.",
+                        date=i18n.date_label(date.fromisoformat(settings.update_checked)),
+                        version=updates_svc.latest_version(ctx),
+                    )
+                ui.label(text).classes("caption")
+                if release:
+                    ui.link(
+                        t("Budget {version} is available", version=release.version), release.url, new_tab=True
+                    ).classes("caption text-primary no-underline")
+                else:
+                    ui.link(t("Releases page"), RELEASES_URL, new_tab=True).classes("caption text-primary no-underline")
+            check_btn = ui.button(t("Check Now")).props("flat dense no-caps").classes("text-primary")
+            check_btn.on_click(lambda: check_now(check_btn))
 
     async def check_now(button: ui.button) -> None:
         button.props(add="loading")
@@ -716,26 +724,64 @@ def _updates_group(ctx: Context) -> None:
         with ui.element("div").classes("group"):
             with ui.element("div").classes("group-row"):
                 with ui.column().classes("gap-0 flex-1 min-w-0"):
-                    ui.label(t("Check for Updates"))
-                    ui.label(
-                        t(
-                            "Once a day, Budget asks GitHub for the number of the newest release. Nothing is "
-                            "downloaded or installed, and the request carries nothing about you or your data. Off by "
-                            "default; besides the ECB rates it is the only connection the app makes."
+                    with ui.label(t("Check for Updates")):
+                        info(
+                            t(
+                                "Budget asks GitHub for the number of the newest release. Nothing is downloaded or "
+                                "installed, and the request carries nothing about you or your data. Off by default; "
+                                "besides the ECB rates it is the only connection the app makes."
+                            )
                         )
-                    ).classes("caption")
+                    ui.label(t("Once a day. Sends nothing about you.")).classes("caption")
                 ui.switch(value=settings.update_check, on_change=toggle).props("dense").mark("update-check")
-            with ui.element("div").classes("group-row"):
-                status()
+            status()
 
 
 def _backup_date(b: archive.SavedBackup) -> str:
     return f"{i18n.date_label(b.created.date())}, {b.created:%H:%M}"
 
 
+def short_path(path: Path | str, limit: int = 48) -> str:
+    """A folder as a caption shows it, on one line: the home folder as "~" and, when still long, the middle elided
+    ("~/Library/…/Finance/Budget"); the full path is its tooltip."""
+    folder, home = Path(path), Path.home()
+    if folder.is_relative_to(home):
+        folder = Path("~") / folder.relative_to(home)
+    text = str(folder)
+    if len(text) <= limit:
+        return text
+    parts = folder.parts
+    head, tail = Path(*parts[:2]), list(parts[-1:])  # "~/Library" or "/private", and the last folder
+    for part in reversed(parts[2:-1]):
+        if len(str(head.joinpath("…", part, *tail))) > limit:
+            break
+        tail.insert(0, part)
+    shortened = str(head.joinpath("…", *tail))
+    if len(shortened) > limit:  # one long folder name: elide inside it
+        keep = (limit - 1) // 2
+        return text[:keep] + "…" + text[-keep:]
+    return shortened
+
+
+FILE_MANAGERS = {"darwin": N_("Show in Finder"), "win32": N_("Show in Explorer")}
+
+
+def file_manager_label(platform: str | None = None) -> str:
+    """The text of the button that opens the data folder, after the system's file manager; translate it with t."""
+    return FILE_MANAGERS.get(platform or sys.platform, N_("Open Folder"))
+
+
+def open_folder(path: Path | str, platform: str | None = None) -> None:
+    """Open `path` in the system's file manager. The app's server runs on the user's own computer, so this opens a
+    window there."""
+    platform = platform or sys.platform
+    opener = "open" if platform == "darwin" else "explorer" if platform == "win32" else "xdg-open"
+    subprocess.Popen([opener, str(path)])  # noqa: S603 - the system's own opener and the app's data folder
+
+
 PROJECTION_LABELS = {  # the choice in Settings, in its order (decision 36)
     PROJECTION_BUDGET: N_("Budget only"),
-    PROJECTION_HIGHER: N_("Recorded where higher"),
+    PROJECTION_HIGHER: N_("Actual spending when higher"),
 }
 
 
@@ -793,13 +839,16 @@ def page() -> None:
                     sel.on_value_change(lambda e: apply_btn.set_visibility(e.value != ctx.horizon()))
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
-                        ui.label(t("Projected Wealth"))
-                        ui.label(
-                            t(
-                                "For months without recorded balances: the budgets alone, or per top-level "
-                                "category the recorded amount where it exceeds the budget."
+                        with ui.label(t("Projected Wealth")):
+                            info(
+                                t(
+                                    "Budget only: a month adds its budgeted income and subtracts its budgeted "
+                                    "spending. Actual spending when higher: per category, spending already recorded "
+                                    "above the budget counts, as does extra income; a budget not used yet still "
+                                    "counts."
+                                )
                             )
-                        ).classes("caption")
+                        ui.label(t("How months without recorded balances are estimated.")).classes("caption")
 
                     def set_projection(e):
                         ctx.store.settings.projection = e.value
@@ -810,7 +859,7 @@ def page() -> None:
                         {k: t(v) for k, v in PROJECTION_LABELS.items()},
                         value=ctx.store.settings.projection,
                         on_change=set_projection,
-                    ).props("dense outlined options-dense").classes("w-56").mark("projection-rule")
+                    ).props("dense outlined options-dense").classes("w-72 max-sm:w-44").mark("projection-rule")
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
                         ui.label(t("Display Currency"))
