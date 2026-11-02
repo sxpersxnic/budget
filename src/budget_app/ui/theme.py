@@ -466,6 +466,10 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
 .bill-amount { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 500; }
 .closed-bills .nicegui-expansion-content { padding: 0; gap: 0; align-items: stretch; }
 
+/* Wealth: a balance that records the account's balance when clicked */
+.balance-value { cursor: pointer; border-radius: 6px; padding: 2px 6px; margin: -2px -6px; }
+.balance-value:hover .row-amount, .balance-value:focus-visible .row-amount { color: var(--accent); }
+
 /* tax summary (F20) */
 .tax-section + .tax-section { border-top: 0.5px solid var(--separator); }
 .tax-section .q-item { padding: 6px 16px; }
@@ -473,7 +477,6 @@ body.body--dark .segmented .q-btn[aria-pressed=true] { background: #636366 !impo
 .tax-section .group-row { padding-left: 28px; }
 .tax-section .group-row + .group-row::before { left: 28px; }
 .tax-tags { min-height: 36px; flex-wrap: wrap; gap: 6px; }
-.tax-note { align-items: flex-start; }
 .tax-links { max-height: 62vh; overflow-y: auto; padding-right: 4px; }
 
 /* attachments in the transaction form (F12) */

@@ -12,6 +12,7 @@ from test_budget_page import find_all
 from test_investments_page import field, settle, sheet_button, sheet_texts, top_sheet
 from test_overview_page import downloaded
 from test_payees_page import click, icon_buttons, newest, put
+from test_settings_page import amounts, row_texts
 from test_shared import advance, repay
 
 from budget_app import i18n
@@ -55,7 +56,8 @@ def debts(ctx, setup):
 async def test_the_page_without_debts(user: User, ctx) -> None:
     await user.open("/shared")
     await user.should_see("Nobody owes you anything.")
-    await user.should_see("0 people owe you")
+    await user.should_see("Turn on “Partly paid for others” in a transaction to see here what is owed.")
+    await user.should_not_see("0 people owe you")  # no count above the empty state
     tabs = [p for p, _ in layout.SECTIONS["/accounts"]]  # a tab of Wealth, after Loans
     assert tabs.index("/shared") == tabs.index("/loans") + 1
 
@@ -63,10 +65,20 @@ async def test_the_page_without_debts(user: User, ctx) -> None:
 async def test_people_with_their_items(user: User, ctx, debts) -> None:
     await user.open("/shared")
     await user.should_see("2 people owe you")
-    await user.should_see(f"40.00 CHF + 45.00 EUR open · 2 items · oldest {label(D(TODAY.year, 1, 15))}")
-    await user.should_see(f"settled in {TODAY.year}: 20.00 CHF")
-    await user.should_see(f"50.00 CHF open · 1 item · oldest {label(D(TODAY.year, 3, 5))}")
-    await user.should_see(f"nothing settled in {TODAY.year}")
+    # what a person owes is the row's value, one line per currency; the small line says what it is made of
+    assert await row_texts(user, "Anna") == [
+        "Anna",
+        f"2 items · since {label(D(TODAY.year, 1, 15))}",
+        "40.00 CHF",
+        "45.00 EUR",
+        "Settle Up…",
+        f"{label(D(TODAY.year, 1, 15))} · Restaurant X · 40.00 of 60.00 CHF open",
+        f"{label(D(TODAY.year, 3, 1))} · Public transport · 45.00 EUR open",
+        f"settled in {TODAY.year}: 20.00 CHF",  # what came back, and the summary, in the opened row
+        "Summary…",
+    ]
+    await user.should_see(f"1 item · since {label(D(TODAY.year, 3, 5))}")
+    assert "50.00 CHF" in amounts(user)
     names = [x for x in texts(user) if x in {"Anna", "Ben", "Carla"}]
     assert names == ["Anna", "Ben", "Carla"]  # by the oldest open item; settled people last
     await user.should_see("Settled · 1 person")
@@ -76,7 +88,7 @@ async def test_people_with_their_items(user: User, ctx, debts) -> None:
     assert not items.visible  # the items are folded
     toggle = icon_buttons(user, "expand_more")[0]
     assert toggle.props["aria-label"] == "Open items"
-    assert icon_buttons(user, "o_description")[0].props["aria-label"] == "Summary…"
+    assert [b.props["aria-label"] for b in icon_buttons(user, "o_description")] == ["Summary…"]  # Carla's, settled
     click(user, toggle)
     await settle()
     assert items.visible and toggle.props["icon"] == "expand_less"
@@ -116,7 +128,8 @@ async def test_settle_up_in_the_sheet(user: User, ctx, debts) -> None:
         "Ben",
     )
     assert undo_svc.latest(ctx).label == "Settle up"
-    await user.should_see(f"20.00 CHF open · 1 item · oldest {label(D(TODAY.year, 3, 5))}")
+    await user.should_see(f"1 item · since {label(D(TODAY.year, 3, 5))}")
+    assert "20.00 CHF" in amounts(user)
 
 
 async def test_settle_up_with_two_currencies(user: User, ctx, debts) -> None:
@@ -156,7 +169,7 @@ async def test_settle_up_errors(user: User, ctx, debts) -> None:
 # ------------------------------------------------------------------ the summary
 async def test_the_summary_sheet(user: User, ctx, debts) -> None:
     await user.open("/shared")
-    click(user, icon_buttons(user, "o_description")[0])  # Anna's
+    click(user, next(b for b in find_all(user, ui.button, hidden=True) if b.text == "Summary…"))  # Anna's
     await settle()
     assert "Summary for Anna" in sheet_texts(user)
     text = next(e for e in top_sheet(user).descendants() if isinstance(e, ui.textarea)).value

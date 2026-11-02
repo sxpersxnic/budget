@@ -67,11 +67,16 @@ async def test_the_page_lists_the_sections_of_last_year(user: User, ctx, setup) 
     await user.open("/tax")
     assert layout.SECTIONS["/review"][-1] == ("/tax", "Tax Summary")  # the last tab of Reports
     await user.should_see("Tax Summary")
-    await user.should_see("Cantonal rules differ", kind=ui.label)
-    await user.should_see("Sections can overlap", kind=ui.label)
+    # one plain line above the amounts, the rest behind its ⓘ
+    await user.should_see("Cantonal rules differ: whether you can deduct an amount is for you to judge.", kind=ui.label)
+    assert not [lb for lb in user.find(kind=ui.label).elements if lb.text.startswith("Sections can overlap")]
+    [tip] = [tip for tip in user.find(kind=ui.tooltip).elements if tip.text.startswith("Sections can overlap")]
+    assert tip.text.endswith("Nothing is filed or sent; the exports are for you or your tax adviser.")
+    assert not [e for e in user.find(kind=ui.element).elements if "callout" in e.classes]  # no banner
     await user.should_see(f"{LAST} · amounts in CHF")
     shown = labels(user)
-    assert "Medical and dental costs" in shown and "240.00 CHF" in shown and "1 row · 1 file" in shown
+    assert "Medical and dental costs" in shown and "240.00 CHF" in shown and "1 payment · 1 receipt" in shown
+    assert "2 payments" not in shown
     assert "Professional expenses" in shown and "85.00 CHF" in shown
     assert shown.count(f"Nothing in {LAST}") == 2 * 7  # the header and the body of each empty section
     assert "Dr. Muster" in shown and f"10 Mar {LAST} · Doctor and dentist" in shown

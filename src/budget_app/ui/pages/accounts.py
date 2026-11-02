@@ -1,10 +1,12 @@
-"""Wealth: every account's balance, the advance-payment accounts, and the sheets that add an account and record a
-balance."""
+"""Wealth: the net worth as the page's headline, every account's balance at the end of the same month (an older one
+says its month), the advance-payment accounts, and the sheets that add an account and record a balance (from the
+header, or by clicking an account's balance)."""
 
 from __future__ import annotations
 
 from nicegui import ui
 
+from budget_app import i18n
 from budget_app.domain import months
 from budget_app.domain.models import (
     ACCOUNT_ADVANCE,
@@ -13,21 +15,23 @@ from budget_app.domain.models import (
     ASSET_CLASSES,
     ASSET_LOAN,
     HOLDING_CLASSES,
+    Account,
 )
 from budget_app.i18n import t
 from budget_app.services import accounts as acc_svc
 from budget_app.services import investments as inv_svc
-from budget_app.services import loans as loan_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import (
     data_month_range,
     error,
-    fmt,
     frame,
+    metric,
     month_options,
     named,
+    on_data_changed,
+    row_value,
     sheet,
     sheet_buttons,
     undoable,
@@ -172,57 +176,77 @@ def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
         name.on("keydown.enter", save)
 
 
-def accounts_group(ctx: Context, kind: str, title: str) -> None:
-    @ui.refreshable
-    def body():
-        rows = acc_svc.accounts(ctx, kind)
+def shown_month(ctx: Context) -> str:
+    """The month the page shows: last month, or a later one with a balance already recorded (never past this one)."""
+    last = wealth_svc.last_recorded_month(ctx) or ""
+    return min(max(months.previous_month(), last), months.current_month())
+
+
+def records_balances(acc: Account) -> bool:
+    """Whether the user records the account's balances (not a loan's, not one valued from its holdings)."""
+    return acc.kind == ACCOUNT_REGULAR and not acc.is_loan and not acc.holds_securities
+
+
+def _net_worth(ctx: Context, month: str) -> None:
+    """What the accounts hold minus what the loans owe, in the display currency: the page's headline."""
+    if not wealth_svc.has_wealth_data(ctx, month):
+        return
+    view = ctx.store.settings.display_currency
+    year, mon = months.parse(month)
+    with ui.element("div").classes("surface"), ui.element("div").classes("metrics").style("--n: 1"):
+        metric(
+            t("Net worth"),
+            wealth_svc.wealth(ctx, month, view),
+            view,
+            t("End of {month}", month=i18n.month_label(year, mon, long=True)),
+            hero=True,
+        )
+
+
+def _balance(ctx: Context, acc: Account, month: str, record) -> None:
+    """The account's balance at the end of `month` as the row's value; the month only when it is an older one. A
+    click on it records the account's balance."""
+    entry = wealth_svc.balance_entry(ctx, acc.id, month)
+    if entry is None and records_balances(acc):
+        ui.button(t("Record Balance…"), on_click=lambda: record(acc.id)).props("flat dense no-caps").classes("link-btn")
+        return
+    amount = entry.amount if entry else 0.0  # a securities account before its first trade holds nothing
+    older = t("End of {month}", month=months.label(entry.month)) if entry and entry.month < month else ""
+    box = row_value(amount, acc.currency, older)
+    if records_balances(acc):
+        box.classes("balance-value").props(f'role=button tabindex=0 aria-label="{t("Record Balance…")}"')
+        box.on("click", lambda: record(acc.id)).on("keydown.enter", lambda: record(acc.id))
+        box.tooltip(t("Record Balance…"))
+
+
+def _kind_caption(acc: Account) -> str:
+    """What the account holds, unless it is plain cash."""
+    text = "" if acc.asset_class == ASSET_CASH else t(ASSET_CLASSES.get(acc.asset_class, ASSET_CLASSES[ASSET_CASH]))
+    return "" if text.casefold() == acc.name.casefold() else text  # "Pillar 3a" once, not twice
+
+
+def accounts_group(ctx: Context, kind: str, title: str, refresh, month: str = "") -> None:
+    rows = acc_svc.accounts(ctx, kind)
+
+    def record(account_id: str) -> None:
+        account_entry_dialog(ctx, refresh, month=month or None, account_id=account_id)
+
+    with ui.column().classes("w-full gap-0"):
+        ui.label(title).classes("group-header")
         with ui.element("div").classes("group"):
             for acc in rows:
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
-                        ui.label(acc.name).classes("truncate")
-                        if kind == ACCOUNT_REGULAR and acc.holds_securities:
-                            ui.label(
-                                t(
-                                    "{asset_class} · {amount} in holdings",
-                                    asset_class=t(ASSET_CLASSES[acc.asset_class]),
-                                    amount=fmt(inv_svc.account_value(ctx, acc.id), acc.currency),
-                                )
-                            ).classes("caption")
-                        elif kind == ACCOUNT_REGULAR and acc.is_loan:  # F22
-                            loan = loan_svc.of_account(ctx, acc.id)
-                            owed = t(
-                                "{amount} outstanding",
-                                amount=fmt(loan_svc.debt(ctx, loan) if loan else 0, acc.currency),
-                            )
-                            ui.label(f"{t(ASSET_CLASSES[ASSET_LOAN])} · {owed}").classes("caption")
-                        elif kind == ACCOUNT_REGULAR:
-                            last = wealth_svc.balance_entry(ctx, acc.id, "9999-12")
-                            balance = (
-                                t(
-                                    "{amount} at the end of {month}",
-                                    amount=fmt(last.amount, acc.currency),
-                                    month=months.label(last.month),
-                                )
-                                if last
-                                else t("No balance recorded")
-                            )
-                            if acc.asset_class != ASSET_CASH:
-                                balance = (
-                                    f"{t(ASSET_CLASSES.get(acc.asset_class, ASSET_CLASSES[ASSET_CASH]))} · {balance}"
-                                )
-                            ui.label(balance).classes("caption")
-                        else:
-                            ui.label(
-                                t(
-                                    "{amount} outstanding",
-                                    amount=fmt(tx_svc.advance_account_balance(ctx, acc.id), acc.currency),
-                                )
-                            ).classes("caption")
-                    ui.label(acc.currency).classes("text-2 text-[13px]")
+                        ui.label(acc.name).classes("truncate w-full")
+                        if kind == ACCOUNT_REGULAR and (caption := _kind_caption(acc)):
+                            ui.label(caption).classes("caption")
+                    if kind == ACCOUNT_REGULAR:
+                        _balance(ctx, acc, month, record)
+                    else:
+                        row_value(tx_svc.advance_account_balance(ctx, acc.id), acc.currency, t("Outstanding"))
                     with ui.row().classes("row-actions gap-0 no-wrap"):
                         named(
-                            ui.button(icon="o_edit", on_click=lambda a=acc: _account_sheet(ctx, kind, body.refresh, a))
+                            ui.button(icon="o_edit", on_click=lambda a=acc: _account_sheet(ctx, kind, refresh, a))
                             .props(ROW_ACTION)
                             .classes("text-primary"),
                             t("Edit"),
@@ -235,7 +259,7 @@ def accounts_group(ctx: Context, kind: str, title: str) -> None:
                                     undoable(t("Deleted {name}", name=a.name))
                                 except ValidationError as exc:
                                     error(str(exc))
-                                body.refresh()
+                                refresh()
 
                             confirm(
                                 t("Delete “{name}”?", name=a.name),
@@ -253,15 +277,32 @@ def accounts_group(ctx: Context, kind: str, title: str) -> None:
             with ui.element("div").classes("group-row"):
                 ui.button(
                     t("Add Advance Payment Account…") if kind == ACCOUNT_ADVANCE else t("Add Account…"),
-                    on_click=lambda: _account_sheet(ctx, kind, body.refresh),
+                    on_click=lambda: _account_sheet(ctx, kind, refresh),
                 ).props("flat dense no-caps").classes("link-btn -ml-2")
-
-    with ui.column().classes("w-full gap-0"):
-        ui.label(title).classes("group-header")
-        body()
 
 
 def page() -> None:
-    with frame(t("Accounts"), "/accounts", narrow=True) as (ctx, _):
-        accounts_group(ctx, ACCOUNT_REGULAR, t("Accounts"))
-        accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"))
+    with frame(t("Wealth"), "/accounts", narrow=True) as (ctx, actions):
+
+        @ui.refreshable
+        def header() -> None:
+            if any(records_balances(a) for a in acc_svc.accounts(ctx, ACCOUNT_REGULAR)):
+                ui.button(t("Record Balance…"), on_click=lambda: account_entry_dialog(ctx, refresh)).props(
+                    "flat no-caps"
+                ).classes("text-primary")
+
+        @ui.refreshable
+        def content() -> None:
+            month = shown_month(ctx)
+            _net_worth(ctx, month)
+            accounts_group(ctx, ACCOUNT_REGULAR, t("Accounts"), refresh, month)
+            accounts_group(ctx, ACCOUNT_ADVANCE, t("Advance Payment Accounts"), refresh)
+
+        def refresh() -> None:
+            header.refresh()
+            content.refresh()
+
+        with actions:
+            header()
+        content()
+        on_data_changed(refresh)

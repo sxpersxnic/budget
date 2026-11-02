@@ -10,9 +10,11 @@ from nicegui.element_filter import ElementFilter
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
+from test_data_io import menu_item
+from test_settings_page import amounts, row_texts
 
 from budget_app.domain import months
-from budget_app.domain.models import ASSET_PILLAR3A, ASSET_SECURITIES, TRADE_BUY, TX_INCOME
+from budget_app.domain.models import ASSET_PILLAR3A, ASSET_SECURITIES, TRADE_BUY, TRADE_SELL, TX_INCOME
 from budget_app.services import accounts as acc_svc
 from budget_app.services import investments as inv_svc
 from budget_app.services import wealth as wealth_svc
@@ -90,10 +92,9 @@ def bought(ctx, depot):
 # ------------------------------------------------------------------ the page
 async def test_without_investment_accounts(user: User, ctx, setup) -> None:
     await user.open("/investments")
-    await user.should_see("Give an account the asset class Securities or Crypto under Accounts")
-    assert not [b for b in user.find(kind=ui.button).elements if b.text == "Buy"]
-    await click(user, page_button(user, "Accounts…"))
-    await user.should_see("Add Account…", retries=20)
+    await user.should_see("No securities or crypto accounts yet.")
+    await user.should_see("Give an account the asset class Securities or Crypto on the Wealth page.")
+    assert not [b for b in user.find(kind=ui.button).elements if b.text in {"Buy", "Accounts…"}]
 
 
 async def test_add_a_holding(user: User, ctx, depot) -> None:
@@ -122,6 +123,31 @@ async def test_holdings_show_value_and_gain(user: User, ctx, bought) -> None:
     await user.should_see("Gain = value − money put in")
 
 
+async def test_buy_in_the_header_and_the_rest_on_the_holding(user: User, ctx, bought) -> None:
+    etf = inv_svc.add_holding(ctx, bought["acc"].id, "World ETF")
+    inv_svc.save_trade(ctx, TradeInput(TRADE_BUY, etf.id, EARLIER, 2, 100, cash_account=bought["bank"].id))
+    await user.open("/investments")
+    await user.should_see("World ETF")
+    shown = {b.text for b in user.find(kind=ui.button).elements if b.text}
+    assert "Buy" in shown and not shown & {"Sell", "Dividend", "Update Price", "Paste Prices…"}  # one main button
+    filled = [b.text for b in user.find(kind=ui.button).elements if b.props.get("unelevated")]
+    assert sorted(filled) == ["Buy", "New Transaction"]  # beside the sidebar's
+    # the formula is behind the ⓘ beside Gain, not a paragraph under the figures
+    assert not [lb for lb in user.find(kind=ui.label).elements if lb.text.startswith("Gain = ")]
+    assert [tip for tip in user.find(kind=ui.tooltip).elements if tip.text.startswith("Gain = value − money put in")]
+    # a holding's own "···": Sell…, Dividend… and Update Price… for that holding (the ETF's are the second)
+    with user:
+        items = [
+            i
+            for i in ElementFilter(kind=ui.menu_item, local_scope=False)
+            if any(getattr(e, "text", None) == "Sell…" for e in i.descendants())
+        ]
+    assert len(items) == 2
+    await click(user, items[1])
+    assert field(user, ui.select, "Holding").value == etf.id
+    assert next(e for e in top_sheet(user).descendants() if isinstance(e, ui.toggle)).value == TRADE_SELL
+
+
 async def test_buy_in_the_sheet(user: User, ctx, depot) -> None:
     await user.open("/investments")
     await click(user, page_button(user, "Buy"))
@@ -143,7 +169,7 @@ async def test_buy_in_the_sheet(user: User, ctx, depot) -> None:
 
 async def test_selling_more_than_held_is_explained(user: User, ctx, bought) -> None:
     await user.open("/investments")
-    await click(user, page_button(user, "Sell"))
+    await menu_item(user, "Sell…")
     await put(user, field(user, ui.number, "Quantity"), 11)
     await put(user, field(user, ui.number, "Price"), 99)
     assert "Only 10 held on" in sheet_texts(user)
@@ -156,7 +182,7 @@ async def test_selling_more_than_held_is_explained(user: User, ctx, bought) -> N
 async def test_a_dividend_in_the_sheet(user: User, ctx, bought) -> None:
     await user.open("/investments")
     await user.should_not_see("Reclaimable withholding tax")
-    await click(user, page_button(user, "Dividend"))
+    await menu_item(user, "Dividend…")
     gross, tax = field(user, ui.number, "Gross dividend"), field(user, ui.number, "Withholding tax")
     assert gross.visible and tax.visible
     await put(user, gross, 28.6)
@@ -177,8 +203,8 @@ async def test_a_dividend_in_the_sheet(user: User, ctx, bought) -> None:
     [withheld] = [tx for tx in ctx.store.transactions.all() if tx.category == "TAX"]
     assert withheld.amount == 30 and withheld.invest_id == income.invest_id
     await user.should_see(f"Reclaimable withholding tax {TODAY.year}")
-    await user.should_see("30.00 CHF")
-    await user.should_see("Claim it back with your tax return")
+    assert "30.00 CHF" in amounts(user)
+    await user.should_see("Claim it back with your tax return")  # behind its ⓘ
     # the holding sheet: net dividends and the tax apart, and the tax in the dividend's history line
     rows = [e for e in user.find(kind=ui.element).elements if "cursor-pointer" in e.classes]
     await click(user, rows[0])
@@ -211,7 +237,7 @@ async def test_a_foreign_dividend_has_no_tax_prefilled(user: User, ctx, setup) -
     apple = inv_svc.add_holding(ctx, broker.id, "Apple")
     inv_svc.save_trade(ctx, TradeInput(TRADE_BUY, apple.id, EARLIER, 2, 200, cash_account=usd.id))
     await user.open("/investments")
-    await click(user, page_button(user, "Dividend"))
+    await menu_item(user, "Dividend…")
     await put(user, field(user, ui.number, "Gross dividend"), 10)
     assert field(user, ui.number, "Withholding tax").value == 0
     await put(user, field(user, ui.number, "Withholding tax"), 1.5)
@@ -224,13 +250,13 @@ async def test_a_foreign_dividend_has_no_tax_prefilled(user: User, ctx, setup) -
 
 async def test_update_a_price(user: User, ctx, bought) -> None:
     await user.open("/investments")
-    await click(user, page_button(user, "Update Price"))
+    await menu_item(user, "Update Price…")
     await put(user, field(user, ui.number, "Price"), 97)
     assert "10 held: worth 970.00 CHF, a change of +15.00 CHF." in sheet_texts(user)
     await click(user, sheet_button(user, "Save Price"))
     assert notified(user, "Price saved")
     assert inv_svc.account_value(ctx, bought["acc"].id) == 970
-    await click(user, page_button(user, "Update Price"))
+    await menu_item(user, "Update Price…")
     await put(user, field(user, ui.input, "Date"), (EARLIER - timedelta(days=1)).isoformat())
     await put(user, field(user, ui.number, "Price"), 90)
     assert "Nothing is held on that day" in sheet_texts(user)
@@ -242,7 +268,7 @@ async def test_update_a_price(user: User, ctx, bought) -> None:
 
 async def test_paste_a_price_list(user: User, ctx, bought) -> None:
     await user.open("/investments")
-    await click(user, page_button(user, "Paste Prices…"))
+    await menu_item(user, "Paste Prices…")
     assert not sheet_button(user, "Save Prices").enabled
     day = LAST_MONTH.strftime("%d.%m.%Y")
     text = f"Datum\tTitel\tKurs\n{day}\tNESN\t101,20\n{day}\tUnknown\t3\n{TODAY:%d.%m.%Y}\tNestlé\t102"
@@ -356,10 +382,10 @@ async def test_the_accounts_page_sets_the_asset_class(user: User, ctx, setup) ->
     await click(user, sheet_button(user, "Add"))
     acc = next(a for a in ctx.store.accounts.all() if a.name == "Broker")
     assert acc.asset_class == ASSET_SECURITIES
-    await user.should_see("Securities · 0.00 CHF in holdings")
+    assert await row_texts(user, "Broker") == ["Broker", "Securities", "0.00 CHF"]  # no balances to record
     acc_svc.edit_account(ctx, setup["eur"].id, "Euro account", "EUR", ASSET_PILLAR3A)
     await user.open("/accounts")
-    await user.should_see("Pillar 3a · No balance recorded")
+    assert await row_texts(user, "Euro account") == ["Euro account", "Pillar 3a", "Record Balance…"]
 
 
 async def test_the_overview_shows_wealth_by_asset_class(user: User, ctx, bought) -> None:
@@ -449,7 +475,7 @@ async def test_deletes_that_fail(user: User, ctx, bought) -> None:
 
 async def test_a_pasted_list_whose_holding_goes(user: User, ctx, bought) -> None:
     await user.open("/investments")
-    await click(user, page_button(user, "Paste Prices…"))
+    await menu_item(user, "Paste Prices…")
     await put(user, field(user, ui.textarea, None), f"{TODAY:%Y-%m-%d};NESN;100")
     inv_svc.delete_holding(ctx, bought["nestle"].id)
     await click(user, sheet_button(user, "Save 1 Price"))

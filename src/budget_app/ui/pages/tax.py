@@ -20,7 +20,18 @@ from budget_app.services import tax as tax_svc
 from budget_app.services import tax_export
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.tax import CURRENCY, Entry, SectionSummary
-from budget_app.ui.layout import error, fmt, frame, named, on_data_changed, save_file, sheet, sheet_buttons, undoable
+from budget_app.ui.layout import (
+    error,
+    fmt,
+    frame,
+    info,
+    named,
+    on_data_changed,
+    save_file,
+    sheet,
+    sheet_buttons,
+    undoable,
+)
 from budget_app.ui.widgets import attachments as att_ui
 from budget_app.ui.widgets.tags import TagSelect, chip
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
@@ -42,9 +53,9 @@ def basis(section: Section) -> str:
 def section_caption(s: SectionSummary, year: int) -> str:
     if not s.entries:
         return t("Nothing in {year}", year=str(year))
-    parts = [tn("{n} row", "{n} rows", len(s.entries))]
+    parts = [tn("{n} payment", "{n} payments", len(s.entries))]
     if s.attachments:
-        parts.append(tn("{n} file", "{n} files", s.attachments))
+        parts.append(tn("{n} receipt", "{n} receipts", s.attachments))
     return " · ".join(parts)
 
 
@@ -170,12 +181,19 @@ def page() -> None:
                 ui.menu_item(t("Export as PDF…"), on_click=lambda: export("pdf"))
                 ui.menu_item(t("Export as CSV…"), on_click=lambda: export("csv"))
                 ui.menu_item(t("Proofs as ZIP…"), on_click=lambda: export("zip"))
-        with ui.element("div").classes("callout tax-note"):  # the notes that must be read stay above the amounts
-            ui.icon("o_info")
-            with ui.column().classes("gap-0.5"):
-                ui.label(tax_export.note())
-                ui.label(tax_export.overlap_note()).classes("caption")
-                ui.label(t("Nothing is filed or sent; the exports are for you or your tax adviser.")).classes("caption")
+        # what must be read stays above the amounts, in one plain line; the rest behind its ⓘ
+        with ui.row().classes("w-full items-center gap-0 no-wrap px-1 -mb-2"):
+            ui.label(t("Cantonal rules differ: whether you can deduct an amount is for you to judge.")).classes(
+                "caption"
+            )
+            info(
+                " ".join(
+                    (
+                        tax_export.overlap_note(),
+                        t("Nothing is filed or sent; the exports are for you or your tax adviser."),
+                    )
+                )
+            )
 
         def toggled(key: str, value: bool) -> None:
             if value:
