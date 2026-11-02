@@ -45,61 +45,15 @@ from budget_app.ui.layout import (
     sheet_buttons,
     undoable,
 )
+from budget_app.ui.pages.accounts import account_entry_dialog
 from budget_app.ui.pages.add_budget import FOREVER, recurrence_options, until_options
-from budget_app.ui.widgets.selects import account_options, currency_select
+from budget_app.ui.widgets.selects import currency_select
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 EPS = 0.005
 
 
 # ------------------------------------------------------------------ dialogs
-def account_entry_dialog(ctx: Context, on_saved, month: str | None = None, account_id: str | None = None) -> None:
-    """Add or edit the recorded balance of an account at the end of a month."""
-    first, _ = data_month_range(ctx, back=60)
-    with sheet(t("Record Balance"), width="26rem") as dlg:
-        ui.label(t("What did the account hold at the end of the month?")).classes("footnote -mt-2")
-        month_sel = (
-            ui.select(
-                month_options(first, months.current_month()), value=month or months.previous_month(), label=t("Month")
-            )
-            .props("dense outlined options-dense")
-            .classes("w-full")
-        )
-        acc_sel = ui.select(
-            account_options(ctx, converted=True, loans=False), value=account_id, label=t("Account"), with_input=True
-        )
-        acc_sel.props("dense outlined").classes("w-full")
-        amount = (
-            ui.number(t("Balance"), format="%.2f").props("outlined inputmode=decimal").classes("hero-amount w-full")
-        )
-        hint = ui.label().classes("caption px-1 -mt-2")
-
-        def load() -> None:
-            acc = ctx.store.accounts.get(acc_sel.value) if acc_sel.value else None
-            amount.props(f"suffix={acc.currency}" if acc else "suffix=")
-            entry = wealth_svc.entry_for(ctx, acc_sel.value, month_sel.value) if acc and month_sel.value else None
-            amount.value = entry.amount if entry else None
-            hint.set_text(t("Already recorded. Saving replaces it.") if entry else "")
-            check()
-
-        def check() -> None:
-            save_btn.set_enabled(bool(month_sel.value and acc_sel.value and amount.value is not None))
-
-        def save() -> None:
-            try:
-                wealth_svc.upsert_entry(ctx, acc_sel.value, month_sel.value, amount.value)
-            except Exception as exc:
-                error(str(exc))
-                return
-            dlg.close()
-            undoable(t("Balance recorded"))
-            on_saved()
-
-        save_btn = sheet_buttons(dlg, t("Save"), save)
-        month_sel.on_value_change(load)
-        acc_sel.on_value_change(load)
-        amount.on_value_change(check)
-        load()
 
 
 def budget_edit_dialog(ctx: Context, month: str, type_: str, category: str, label: str, on_saved) -> None:

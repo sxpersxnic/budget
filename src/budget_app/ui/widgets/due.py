@@ -23,7 +23,7 @@ from budget_app.services import reminders as rem_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.reminders import Reminder
 from budget_app.ui.layout import data_changed, error, fmt, undoable
-from budget_app.ui.pages.budget_overview import account_entry_dialog
+from budget_app.ui.pages.accounts import account_entry_dialog
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 ICONS = {
