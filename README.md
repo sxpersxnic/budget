@@ -556,6 +556,9 @@ types, tests and coverage before each push.
   the UN's; the German, French and Italian translations are the app's own and unofficial, as
   the app says beside them.
 - **QR bills:** read according to SIX, *Swiss Implementation Guidelines for the QR-bill*, version 2.3.
+- **Payee logos:** the marks of 35 well-known brands (Apple, IKEA, Netflix …) from
+  [Simple Icons](https://simpleicons.org) 16.30.0, CC0 1.0 (`resources/logos.json`). The logos are
+  trademarks of their owners and only name the payee; every other payee shows its initials.
 
 ### Libraries for QR bills and receipts
 
