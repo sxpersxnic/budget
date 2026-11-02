@@ -354,20 +354,21 @@ body.body--dark .lock-card { border: 0.5px solid var(--separator); }
   .acct-row .c-change { font-size: 12px; }
   .acct-row .c-unexpl { display: none; }
 }
-/* COICOP tree (F37): code · name · subcategories · spent this year */
+/* COICOP tree (F37): code · the name the app shows · the official name · spent this year */
 .cat-tree .q-tree__node-header { padding: 3px 6px; border-radius: 6px; margin-top: 0; }
 .cat-tree .q-tree__node-header:hover { background: var(--fill-2); }
 .cat-tree .q-tree__node-header-content { min-width: 0; }
 .cat-node { display: flex; align-items: baseline; gap: 8px; width: 100%; min-width: 0; font-size: 14px;
   color: var(--label); }
-.cat-node .code { color: var(--label-3); font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
-.cat-node .name { min-width: 0; overflow-wrap: anywhere; }  /* an information page: names wrap, never cut */
+.cat-node .code { color: var(--label-3); font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap; }
+.cat-node .name { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }  /* the app's name (F08): never cut */
 .cat-node.lvl-1 .name { font-weight: 600; }
-.cat-node .name .everyday { color: var(--label-2); font-weight: 400; }  /* the name the app shows (F08) */
-.cat-node .caption { white-space: nowrap; }
+/* the official COICOP name: quieter, and cut off long before the name wraps; the row's tooltip holds it whole */
+.cat-node .official { flex: 0 1000 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px; color: var(--label-3); }
 .cat-node .spent { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;
   color: var(--label-2); }
-@media (max-width: 640px) { .cat-node .caption { display: none; } }
+@media (max-width: 640px) { .cat-node .official { display: none; } }
 /* COICOP notes (F40): in the picker's tooltip, inside a picker option (touch) and below a tree row */
 .cat-item { display: flex; flex-direction: column; width: 100%; min-width: 0; }
 .cat-node .notes-btn { align-self: center; margin: -4px 0; color: var(--label-3); }
