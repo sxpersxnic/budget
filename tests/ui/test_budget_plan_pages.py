@@ -1,4 +1,4 @@
-"""Budget Plan: the Series view (one row per budget: change, delete), the Months grid (filters, edit, delete), and
+"""Plan: the Series view (one row per budget: change, delete), the Months grid (filters, edit, delete), and
 the New Budget Entry form (page and sheet)."""
 
 import asyncio
@@ -161,7 +161,7 @@ def by_class(user: User, cls: str) -> ui.element:
         return next(e for e in user.client.elements.values() if cls in e.classes)
 
 
-# ------------------------------------------------------------------ Budget Plan · Series
+# ------------------------------------------------------------------ Plan · Series
 async def test_series_view_shows_one_row_per_budget(user: User, ctx, demo) -> None:
     await user.open("/budget-entries")
     cm, start = months.current_month(), months.add_months(months.current_month(), -6)
@@ -172,9 +172,10 @@ async def test_series_view_shows_one_row_per_budget(user: User, ctx, demo) -> No
         label("04.1"),
         label("07.3"),
     ]
-    since = f"Every month · from {months.label(start)}, forever"
-    assert row_texts(series_row(user, "Salary")) == ["Salary", since, "+6'200.00 CHF"]
-    assert row_texts(series_row(user, label("01.1")))[1:] == [since, "700.00 CHF"]
+    # every month for as long as the plan runs: the usual schedule goes unsaid (the sheet says it)
+    assert row_texts(series_row(user, "Salary")) == ["Salary", "+6'200.00 CHF"]
+    assert row_texts(series_row(user, label("01.1")))[1:] == ["700.00 CHF"]
+    assert start < cm
     assert "text-pos" in [e for e in series_row(user, "Salary").descendants() if isinstance(e, ui.label)][-1].classes
     await user.should_see(f"+6'200.00 CHF planned for {months.label(cm)}")
     await user.should_see(f"2'750.00 CHF planned for {months.label(cm)}")
@@ -243,6 +244,10 @@ async def test_series_captions(user: User, ctx, setup) -> None:
     ended = [e for e in series_row(user, label("01.1")).descendants() if isinstance(e, ui.label)]
     assert "text-2" in ended[0].classes and "text-2" in ended[-1].classes
     await user.should_see(f"+101.00 CHF planned for {months.label(cm)}")
+    later = months.add_months(cm, 2)  # every month and forever, but not yet: when it starts is worth saying
+    budget_svc.create(ctx, BudgetInput(start_month=later, forever=True, currency="CHF", amount=9, category="09.4"))
+    await user.open("/budget-entries")
+    assert row_texts(series_row(user, label("09.4")))[1] == f"Every month · from {months.label(later)}, forever"
 
     ctx.store.income_categories.delete([bonus.id])  # a category removed behind the app's back shows its id
     await user.open("/budget-entries")
@@ -304,7 +309,7 @@ async def test_series_sheet_changes_a_budget_from_this_month(user: User, ctx, de
     assert [(b.month, b.amount) for b in now if b.month < cm] == [(b.month, 700) for b in food if b.month < cm]
     assert all((b.amount, b.comment, b.forever) == (750, "more", True) for b in now if b.month >= cm)
     assert undo_svc.latest(ctx).label == "Replan a budget"
-    assert row_texts(series_row(user, label("01.1")))[2:] == ["more", "750.00 CHF"]
+    assert row_texts(series_row(user, label("01.1")))[1:] == ["more", "750.00 CHF"]
     await user.should_see(f"2'800.00 CHF planned for {months.label(cm)}")
 
 
@@ -403,10 +408,13 @@ async def test_a_vanished_budget_does_nothing(user: User, ctx, demo) -> None:
 
 async def test_nothing_planned_explains_a_budget_entry(user: User, ctx, setup) -> None:
     await user.open("/budget-entries")
-    await user.should_see("Nothing planned yet")
-    await user.should_see("A budget entry is an amount you plan to earn or spend in a category", retries=1)
+    await user.should_see("Nothing planned yet.")
+    await user.should_see("Plan what you earn or spend in a category, once or every month.", retries=1)
     assert not view_toggle(user).parent_slot.parent.visible
     empty = by_class(user, "group")
+    with user:  # one New Budget Entry: the empty state's; the header's waits for the first budget
+        news = [e for e in user.client.elements.values() if isinstance(e, ui.button) and e.text == "New Budget Entry"]
+    assert [b.visible for b in news] == [False, True]
     button(user, empty, "New Budget Entry").click()
     dlg = top_dialog(user)
     cm = months.current_month()
@@ -419,13 +427,21 @@ async def test_nothing_planned_explains_a_budget_entry(user: User, ctx, setup) -
     assert [row_texts(r)[0] for r in series_rows(user)] == [label("09.1")]
 
 
-async def test_propose_from_history_in_the_empty_state(user: User, ctx, setup) -> None:
+async def test_propose_from_history_without_a_plan(user: User, ctx, setup) -> None:
     await user.open("/budget-entries")
-    button(user, by_class(user, "group"), "Propose from History…").click()
+    with user:  # in the header's "···", beside the empty state's one button
+        [item] = [
+            e
+            for e in user.client.elements.values()
+            if isinstance(e, ui.menu_item)
+            and any(getattr(c, "text", "") == "Propose from History…" for c in e.descendants())
+        ]
+    UserInteraction(user, {item}, None).click()
+    await asyncio.sleep(0.05)
     assert "Propose from History" in labels(top_dialog(user))
 
 
-# ------------------------------------------------------------------ Budget Plan · Months
+# ------------------------------------------------------------------ Plan · Months
 async def test_lists_every_budget_entry(user: User, ctx, demo) -> None:
     await user.open("/budget-entries")
     months_view(user)
@@ -436,7 +452,7 @@ async def test_lists_every_budget_entry(user: User, ctx, demo) -> None:
     salary = next(r for r in rows(user) if r["_type"] == "income")
     assert (salary["category"], salary["type"], salary["amount"]) == ("Salary", "Income", 6200)
     assert salary["recurrence"] == "Every month, forever"
-    food = next(r for r in rows(user) if r["category"].startswith("01.1"))
+    food = next(r for r in rows(user) if r["category"] == "Groceries")
     assert food["type"] == "Expenditure"
     assert food["amount_chf"] == 700
 

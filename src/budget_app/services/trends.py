@@ -139,9 +139,9 @@ class Notable:
 
 
 def group_of(code: str) -> str:
-    """The COICOP group (level 2) a code belongs to; a division, Taxes or an unknown code stands for itself."""
+    """The COICOP group (level 2) a code belongs to; a division, Taxes, To sort or an unknown code stands for itself."""
     chain = get_coicop().ancestors(code)
-    return chain[-2] if len(chain) >= 2 else chain[0]
+    return chain[-2] if len(chain) >= 2 else chain[0] if chain else code
 
 
 def _related(a: str, b: str) -> bool:

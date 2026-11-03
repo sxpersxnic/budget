@@ -1,6 +1,9 @@
 """Tags (F10): every tag with its number of transactions, what was spent and received, and its budget; add, edit
 (name and colour), merge, delete and set a budget. A tag's chip opens Transactions filtered by it. Each change is
-one undoable action, however many transactions it touches."""
+one undoable action, however many transactions it touches.
+
+What a tag cost is the row's value at its end, so the rows compare; the checkboxes for Merge appear only after
+Select (polish before 1.0)."""
 
 from __future__ import annotations
 
@@ -24,6 +27,7 @@ from budget_app.ui.layout import (
     named,
     on_data_changed,
     parse_date,
+    row_value,
     sheet,
     sheet_buttons,
     undoable,
@@ -36,15 +40,23 @@ from budget_app.ui.widgets.tags import ColourPicker, chip
 ROW_ACTION = "flat dense round size=sm"
 
 
-def caption(total: TagTotal | None, currency: str) -> str:
+def caption(total: TagTotal | None) -> str:
     if total is None or not total.count:
         return t("No transactions")
-    parts = [tn("{n} transaction", "{n} transactions", total.count)]
-    if abs(total.spent) >= 0.005:
-        parts.append(t("spent {amount}", amount=fmt(total.spent, currency)))
-    if abs(total.received) >= 0.005:
-        parts.append(t("received {amount}", amount=fmt(total.received, currency)))
-    return " · ".join(parts)
+    return tn("{n} transaction", "{n} transactions", total.count)
+
+
+def tag_value(total: TagTotal | None) -> None:
+    """The row's value: what was spent with the tag, or, for a tag only on income, what was received (in green);
+    a tag with both says what was received below. The currency is said once above the list."""
+    if total is None or not total.count:
+        return
+    spent, received = abs(total.spent) >= 0.005, abs(total.received) >= 0.005
+    if spent:
+        sub = t("received {amount}", amount=fmt(total.received)) if received else ""
+        row_value(total.spent, sub=sub)
+    elif received:
+        row_value(total.received, tone="positive")
 
 
 def period_label(start: date | None, end: date | None) -> str:
@@ -179,6 +191,7 @@ def open_merge_sheet(ctx: Context, tags: list[Tag], totals: dict[str, TagTotal],
 # ------------------------------------------------------------------ the page
 def page() -> None:
     with frame(t("Tags"), "/tags", narrow=True) as (ctx, actions):
+        state: dict = {"totals": {}, "selecting": False}
         with actions:
             search = (
                 ui.input(placeholder=t("Search"))
@@ -187,7 +200,16 @@ def page() -> None:
             )
             with search.add_slot("prepend"):
                 ui.icon("search", size="18px").classes("text-3")
-            new = ui.button(t("New Tag"), icon="add", on_click=lambda: open_tag_sheet(ctx, refresh)).props("unelevated")
+            select_btn = (
+                ui.button(t("Select"), on_click=lambda: set_selecting(not state["selecting"]))
+                .props("flat no-caps")
+                .classes("text-primary")
+            )
+            new = (
+                ui.button(t("New Tag"), icon="add", on_click=lambda: open_tag_sheet(ctx, refresh))
+                .props("flat no-caps")
+                .classes("text-primary")
+            )
         selected: set[str] = set()
         with ui.element("div").classes("selection-bar") as bar:
             selected_label = ui.label().classes("font-medium")
@@ -200,13 +222,19 @@ def page() -> None:
                 "text-primary"
             )
         bar.set_visibility(False)
-        state: dict = {"totals": {}}
 
         def update_bar() -> None:
             n = len(selected)
-            bar.set_visibility(n > 0)
+            bar.set_visibility(state["selecting"])
             selected_label.set_text(tn("{n} selected", "{n} selected", n))
             merge_btn.set_enabled(n >= 2)
+
+        def set_selecting(on: bool) -> None:
+            """Select shows a checkbox on every row and the bar with Merge…; Done hides them again."""
+            state["selecting"] = on
+            selected.clear()
+            select_btn.set_text(t("Done") if on else t("Select"))
+            refresh()
 
         def toggle(tag_id: str, value: bool) -> None:
             if value:
@@ -224,17 +252,22 @@ def page() -> None:
             query = key(search.value or "")
             shown = [g for g in tags if not query or query in key(g.name)]
             new.set_visibility(bool(tags))  # while there are none, the empty state offers it
+            select_btn.set_visibility(len(tags) >= 2)  # Merge needs two
+            if state["selecting"] and len(tags) < 2:  # merged or deleted meanwhile: nothing left to choose from
+                state["selecting"] = False
+                select_btn.set_text(t("Select"))
             with ui.column().classes("w-full gap-0"):
-                with ui.row().classes("w-full items-end gap-2"):
-                    header = (
-                        tn("{shown} of {n} tag", "{shown} of {n} tags", len(tags), shown=len(shown))
-                        if query
-                        else tn("{n} tag", "{n} tags", len(tags))
-                    )
-                    ui.label(header).classes("group-header")
-                    ui.space()
-                    if totals:
-                        ui.label(t("All time, {currency}", currency=currency)).classes("caption pb-1.5 pr-1")
+                if tags:
+                    with ui.row().classes("w-full items-end gap-2"):
+                        header = (
+                            tn("{shown} of {n} tag", "{shown} of {n} tags", len(tags), shown=len(shown))
+                            if query
+                            else tn("{n} tag", "{n} tags", len(tags))
+                        )
+                        ui.label(header).classes("group-header")
+                        ui.space()
+                        if totals:
+                            ui.label(t("All time, {currency}", currency=currency)).classes("caption pb-1.5 pr-1")
                 with ui.element("div").classes("group"):
                     if tags and not shown:
                         with ui.element("div").classes("group-row"):
@@ -242,10 +275,7 @@ def page() -> None:
                     elif not tags:
                         empty_state(
                             t("No tags yet."),
-                            t(
-                                "Labels across categories, such as a holiday or a renovation. A transaction can have "
-                                "several; give a tag a budget to follow its spending."
-                            ),
+                            t("Labels across categories, such as a holiday or a renovation."),
                             t("New Tag"),
                             lambda: open_tag_sheet(ctx, refresh),
                         )
@@ -256,34 +286,43 @@ def page() -> None:
         def _row(tag: Tag, total: TagTotal | None, currency: str) -> None:
             status = tag_svc.budget_status(ctx, tag, currency)
             with ui.element("div").classes("group-row items-start py-2.5"):
-                ui.checkbox(value=tag.id in selected, on_change=lambda e, g=tag: toggle(g.id, e.value)).props("dense")
+                if state["selecting"]:
+                    ui.checkbox(value=tag.id in selected, on_change=lambda e, g=tag: toggle(g.id, e.value)).props(
+                        "dense"
+                    )
                 with ui.column().classes("gap-1 flex-1 min-w-0"):
                     chip(tag, on_click=lambda g=tag: ui.navigate.to(f"/transactions?tag={g.id}")).tooltip(
                         t("Show its transactions")
                     )
-                    ui.label(caption(total, currency)).classes("caption")
+                    ui.label(caption(total)).classes("caption")
                     if status is not None:
                         budget_meter(status)
                         ui.label(budget_line(status)).classes("caption" + (" text-neg" if status.over else ""))
-                with ui.row().classes("row-actions gap-0 no-wrap"):
-                    named(
-                        ui.button(icon="o_edit", on_click=lambda g=tag: open_tag_sheet(ctx, refresh, g))
-                        .props(ROW_ACTION)
-                        .classes("text-primary"),
-                        t("Edit"),
-                    )
-                    named(
-                        ui.button(icon="o_savings", on_click=lambda g=tag: open_budget_sheet(ctx, g, refresh))
-                        .props(ROW_ACTION)
-                        .classes("text-primary"),
-                        t("Budget"),
-                    )
-                    named(
-                        ui.button(icon="o_delete", on_click=lambda g=tag, n=total: delete(g, n))
-                        .props(ROW_ACTION)
-                        .classes("text-negative"),
-                        t("Delete"),
-                    )
+                if not state["selecting"]:  # choosing what to merge: the row's own actions wait
+                    _actions(tag, total)
+                tag_value(total)  # last, so the amounts line up at the row's end
+
+        def _actions(tag: Tag, total: TagTotal | None) -> None:
+            """Edit, Budget and Delete, shown while the pointer is on the row."""
+            with ui.row().classes("row-actions gap-0 no-wrap self-center"):
+                named(
+                    ui.button(icon="o_edit", on_click=lambda g=tag: open_tag_sheet(ctx, refresh, g))
+                    .props(ROW_ACTION)
+                    .classes("text-primary"),
+                    t("Edit"),
+                )
+                named(
+                    ui.button(icon="o_savings", on_click=lambda g=tag: open_budget_sheet(ctx, g, refresh))
+                    .props(ROW_ACTION)
+                    .classes("text-primary"),
+                    t("Budget"),
+                )
+                named(
+                    ui.button(icon="o_delete", on_click=lambda g=tag, n=total: delete(g, n))
+                    .props(ROW_ACTION)
+                    .classes("text-negative"),
+                    t("Delete"),
+                )
 
         def refresh() -> None:
             tag_list.refresh()
@@ -294,7 +333,7 @@ def page() -> None:
 
         def merge_selected() -> None:
             tags = [g for g in tag_svc.all_tags(ctx) if g.id in selected]  # Merge… needs two
-            open_merge_sheet(ctx, tags, state["totals"], clear_selection)
+            open_merge_sheet(ctx, tags, state["totals"], lambda: set_selecting(False))
 
         def delete(tag: Tag, total: TagTotal | None) -> None:
             n = total.count if total else 0

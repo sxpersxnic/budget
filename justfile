@@ -84,6 +84,10 @@ build:
 build:
     ./packaging/linux/build.sh
 
+# Release <version> from this machine: version PR, then tag, build, draft release (docs/RELEASE.md; --dry-run, --yes)
+pre-release version *flags:
+    uv run python scripts/release.py {{ version }} {{ flags }}
+
 # Regenerate the app icons in packaging/assets/
 icons:
     uv run --group build python packaging/make_icons.py

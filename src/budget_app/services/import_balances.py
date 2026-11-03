@@ -20,9 +20,9 @@ from datetime import date
 from itertools import pairwise
 
 from budget_app.domain import months
-from budget_app.domain.models import AccountEntry
+from budget_app.domain.models import AccountEntry, Transaction
 from budget_app.i18n import N_, t
-from budget_app.services import wealth
+from budget_app.services import camt, importer, wealth
 from budget_app.services.camt import Statement
 from budget_app.services.context import Context
 from budget_app.services.importer import ImportRow
@@ -157,3 +157,17 @@ def compare(ctx: Context, candidates: list[BalanceCandidate], account_id: str) -
 def save(ctx: Context, account_id: str, candidates: list[BalanceCandidate]) -> list[AccountEntry]:
     """Record every ticked balance as the account's balance at the end of its month."""
     return [wealth.upsert_entry(ctx, account_id, c.month, c.amount) for c in candidates if c.include]
+
+
+@recorded(N_("Import transactions"))
+def import_file(
+    ctx: Context,
+    rows: list[ImportRow],
+    account_id: str,
+    candidates: list[BalanceCandidate],
+    statement: Statement | None = None,
+) -> tuple[list[Transaction], list[AccountEntry]]:
+    """Save the chosen rows, then the ticked month-end balances, as one undoable step: undoing the import takes
+    back both. A camt statement also remembers its account for the IBAN (`camt.commit`)."""
+    saved = camt.commit(ctx, statement, rows, account_id) if statement else importer.commit(ctx, rows, account_id)
+    return saved, save(ctx, account_id, candidates)

@@ -3,14 +3,13 @@ form and the recurring sheet, the Transactions page's column, search and filter,
 
 from datetime import date
 
+import pytest
 from nicegui import ui
-from nicegui.events import GenericEventArguments
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
 from test_faster_entry_ui import menu_items
-from test_import_page import categorise, import_button, upload
-from test_import_page import rows as import_rows
+from test_import_page import import_button, upload
 from test_transactions_page import rows as grid_rows
 from test_transactions_page import show_filters
 
@@ -91,14 +90,19 @@ async def test_the_page_lists_payees_with_counts_and_amounts(user: User, ctx, se
     await user.open("/payees")
     await user.should_see("No payees yet.")
     await user.should_see("Add one on a transaction, or import a bank file")  # the page's explanation, while empty
-    assert ("/payees", "Payees") in layout.SECTIONS["/settings"]  # a list, among the settings' tabs
+    assert ("/payees", "Payees") in layout.SECTIONS["/transactions"]  # beside the transactions (decision 49)
 
     shops(ctx, setup)
     await user.open("/payees")
     await user.should_see("4 payees")
-    await user.should_see("2 transactions · spent 42.50 CHF")
-    await user.should_see("1 transaction · received 100.00 CHF")
+    await user.should_see("All time, CHF")  # the one currency, said once above the rows
+    values = sorted((h for h in user.find(kind=ui.html).elements if "row-amount" in h.classes), key=lambda h: h.id)
+    assert [h.content.split("<")[0] for h in values] == ["42.50", "45.20", "100.00"]  # Coop, Migros, Muster AG
+    assert "positive" in values[-1].classes  # Muster AG only paid
+    await user.should_see("2 transactions")  # the small line under Coop's amount
     await user.should_see("No transactions")
+    with pytest.raises(AssertionError):  # no checkboxes until Select
+        user.find(kind=ui.checkbox)
     assert len(icon_buttons(user, "o_delete")) == 1  # only the unused payee can be deleted
 
     payee_svc.learn(ctx, [("Einkauf MIGROS ZUERICH HB 1234", "Migros")])
@@ -130,6 +134,8 @@ async def test_rename_a_payee_and_its_transactions(user: User, ctx, setup) -> No
 async def test_merge_selected_payees(user: User, ctx, setup) -> None:
     shops(ctx, setup)
     await user.open("/payees")
+    click(user, newest(user, ui.button, text="Select"))
+    await user.should_see("Select the payees to merge.")
     boxes = checkboxes(user)  # Coop, Migros, Muster AG, Unused Shop
     click(user, boxes[0])
     await user.should_see("1 selected")
@@ -147,8 +153,12 @@ async def test_merge_selected_payees(user: User, ctx, setup) -> None:
     assert payee_svc.find(ctx, "Migros").alias_list == ["coop"]
     await user.should_see("3 payees")
     await user.should_not_see("2 selected")
+    with pytest.raises(AssertionError):  # merged: the checkboxes go again
+        user.find(kind=ui.checkbox)
 
     # a payee merged elsewhere while the sheet is open
+    click(user, newest(user, ui.button, text="Select"))
+    await user.should_see("Select the payees to merge.")
     click(user, checkboxes(user)[0])
     click(user, checkboxes(user)[1])
     click(user, newest(user, ui.button, text="Merge…"))
@@ -164,6 +174,11 @@ async def test_merge_selected_payees(user: User, ctx, setup) -> None:
     await user.should_see("1 selected")
     click(user, newest(user, ui.button, text="Clear Selection"))
     await user.should_not_see("1 selected")
+    click(user, newest(user, ui.button, text="Done"))  # Done hides the checkboxes and the bar
+    await user.should_not_see("Select the payees to merge.")
+    with pytest.raises(AssertionError):
+        user.find(kind=ui.checkbox)
+    assert newest(user, ui.button, text="Select").props.get("flat")
 
 
 async def test_delete_an_unused_payee(user: User, ctx, setup) -> None:
@@ -232,7 +247,7 @@ async def test_the_recurring_sheet_has_a_payee(user: User, ctx, setup) -> None:
     assert notified(user, "Recurring transaction added")
     [series] = ctx.store.recurring.all()
     assert series.payee == "Swisscom"
-    await user.should_see("Swisscom · 08.3 Phone and internet")
+    await user.should_see("Swisscom · Phone and internet")
 
 
 # ------------------------------------------------------------------ the Transactions page
@@ -254,7 +269,7 @@ async def test_transactions_show_search_and_filter_payees(user: User, ctx, setup
 
 
 # ------------------------------------------------------------------ the import preview
-async def test_the_import_preview_shows_and_edits_payees(user: User, ctx, setup) -> None:
+async def test_an_import_finds_payees_and_remembers_the_bank_texts(user: User, ctx, setup) -> None:
     data = (
         b"Buchungsdatum;Buchungstext;Betrag\n"
         b"02.10.2026;Einkauf Debitkarte 02.10.2026 MIGROS ZUERICH HB 1234;-45.20\n"
@@ -263,19 +278,7 @@ async def test_the_import_preview_shows_and_edits_payees(user: User, ctx, setup)
     await user.open("/import")
     await upload(user, "bank.csv", data)
     put(user, newest(user, ui.select, "Account"), setup["chf"].id)
-    assert [r["payee"] for r in import_rows(user)] == ["Migros", "Brezelkönig"]
-
-    [grid] = user.find(kind=ui.aggrid).elements
-    assert any(c["field"] == "payee" and c["editable"] for c in grid.options["columnDefs"])
-    edit = GenericEventArguments(
-        sender=grid, client=grid.client, args={"data": {"id": "0"}, "colId": "payee", "newValue": " Migros  City "}
-    )
-    for listener in grid._event_listeners.values():
-        if listener.type == "cellValueChanged":
-            with user:
-                listener.handler(edit)
-    await categorise(user, "01.1", 0, 1)
     click(user, import_button(user))
-    assert notified(user, "Imported 2 transactions")
-    assert sorted(tx.payee for tx in ctx.store.transactions.all()) == ["Brezelkönig", "Migros City"]
-    assert payee_svc.find(ctx, "Migros City").alias_list == ["migros zuerich hb"]
+    await user.should_see("2 transactions imported", retries=30)
+    assert sorted(tx.payee for tx in ctx.store.transactions.all()) == ["Brezelkönig", "Migros"]
+    assert "migros zuerich hb" in payee_svc.find(ctx, "Migros").alias_list

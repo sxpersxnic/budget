@@ -1,6 +1,6 @@
-"""Who owes what (F23): one row per person you paid for, with what is open, the oldest item and what came back this
-year; the open items below each (a click opens the transaction); *Settle Up…* records the repayment as one undoable
-step, *Summary…* gives the open items as text to copy or as a PDF or text file to save."""
+"""Who owes what (F23): one row per person you paid for, with what they owe as its value; opened, the open items (a
+click opens the transaction), what came back this year and *Summary…*, which gives the open items as text to copy or
+as a PDF or text file to save. *Settle Up…* records the repayment as one undoable step."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import date
 from functools import partial
 
-from nicegui import ui
+from nicegui import run, ui
 
 from budget_app import i18n
 from budget_app.domain.models import Transaction
@@ -22,6 +22,7 @@ from budget_app.ui.layout import (
     error,
     fmt,
     frame,
+    money_html,
     named,
     on_data_changed,
     page_area,
@@ -46,12 +47,10 @@ def amounts(values: dict[str, float]) -> str:
 
 
 def open_line(p: Person) -> str:
-    """ "120.00 CHF open · 2 items · oldest 12 Sep 2026"."""
-    if not p.items:
-        return t("Nothing open")
-    parts = [t("{amount} open", amount=amounts(p.open)), shared_svc.count_label(len(p.items))]
+    """ "2 items · since 12 Sep 2026": what the amount on the row is made of."""
+    parts = [shared_svc.count_label(len(p.items))]
     if p.oldest is not None:
-        parts.append(t("oldest {date}", date=i18n.date_label(p.oldest)))
+        parts.append(t("since {date}", date=i18n.date_label(p.oldest)))
     return " · ".join(parts)
 
 
@@ -164,7 +163,7 @@ def open_summary_sheet(ctx: Context, key: str) -> None:
             success(t("Copied"))
 
         async def save_pdf() -> None:
-            await save_file(shared_svc.summary_pdf(p), shared_svc.file_name(p, "pdf"))
+            await save_file(await run.io_bound(shared_svc.summary_pdf, p), shared_svc.file_name(p, "pdf"))
 
         async def save_text() -> None:
             await save_file(text.encode("utf-8"), shared_svc.file_name(p, "txt"))
@@ -177,6 +176,13 @@ def open_summary_sheet(ctx: Context, key: str) -> None:
 
 
 # ------------------------------------------------------------------ the page
+def _owed(p: Person) -> None:
+    """What the person owes as the row's value, one line per currency."""
+    with ui.element("div").classes("row-value"):
+        for cur, value in p.open.items():
+            ui.html(money_html(value, cur)).classes("row-amount")
+
+
 def _icon_button(icon: str, tip: str, on_click: Callable[[], object]) -> ui.button:
     """A row's icon-only button: the tooltip doubles as its accessible name (F32)."""
     return named(ui.button(icon=icon, on_click=on_click).props(ROW_ACTION).classes("text-primary"), tip)
@@ -194,17 +200,15 @@ def page() -> None:
             owing = [p for p in rows if p.items]
             settled = [p for p in rows if not p.items]
             with ui.column().classes("w-full gap-0"):
-                ui.label(tn("{n} person owes you", "{n} people owe you", len(owing))).classes("group-header")
+                if owing:  # no count above the empty state
+                    ui.label(tn("{n} person owes you", "{n} people owe you", len(owing))).classes("group-header")
                 with ui.element("div").classes("group"):
                     if not owing:
                         empty_state(
                             t("Nobody owes you anything."),
                             ""
                             if settled
-                            else t(
-                                "When you pay partly for others, turn on “Partly paid for others” in the transaction "
-                                "and name the debtor. What they owe shows here until you settle up."
-                            ),
+                            else t("Turn on “Partly paid for others” in a transaction to see here what is owed."),
                         )
                     for p in owing:
                         _row(p)
@@ -219,16 +223,15 @@ def page() -> None:
                             _icon_button("o_description", t("Summary…"), partial(open_summary_sheet, ctx, p.key))
 
         def _row(p: Person) -> None:
-            with ui.element("div").classes("group-row items-start py-2.5 flex-wrap"):
-                with ui.column().classes("gap-0 flex-1 min-w-[12rem]"):
-                    ui.label(p.name).classes("font-medium truncate")
+            with ui.element("div").classes("group-row py-2.5 flex-wrap"):
+                with ui.column().classes("gap-0 flex-1 min-w-[8rem]"):
+                    ui.label(p.name).classes("font-medium truncate w-full")
                     ui.label(open_line(p)).classes("caption")
-                    ui.label(settled_line(p)).classes("caption")
+                _owed(p)
                 with ui.row().classes("items-center gap-1 no-wrap"):
                     ui.button(t("Settle Up…"), on_click=lambda: open_settle_sheet(ctx, p.key, refresh)).props(
                         "flat dense no-caps"
                     ).classes("text-primary")
-                    _icon_button("o_description", t("Summary…"), lambda: open_summary_sheet(ctx, p.key))
                     toggle = _icon_button(
                         "expand_less" if p.key in opened else "expand_more", t("Open items"), lambda: show(p.key)
                     )
@@ -249,6 +252,12 @@ def page() -> None:
                         ):
                             row.on("click", edit).on("keydown.enter", edit)
                             ui.label(item_line(item)).classes("caption truncate")
+                    with ui.row().classes("w-full items-center gap-2 pt-1"):
+                        ui.label(settled_line(p)).classes("caption")
+                        ui.space()
+                        ui.button(t("Summary…"), on_click=lambda: open_summary_sheet(ctx, p.key)).props(
+                            "flat dense no-caps"
+                        ).classes("link-btn")
 
                 def show(key: str, items: ui.column = items, toggle: ui.button = toggle) -> None:
                     if key in opened:

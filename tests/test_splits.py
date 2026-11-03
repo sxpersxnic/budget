@@ -7,7 +7,7 @@ from datetime import date
 import pytest
 
 from budget_app.domain import splits
-from budget_app.domain.coicop import ADV, TAX
+from budget_app.domain.coicop import ADV, TAX, get_coicop
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME
 from budget_app.domain.splits import Line, Part
 from budget_app.services import aggregates, reports
@@ -233,7 +233,7 @@ def test_reports_budgets_and_charts_count_each_line_in_its_category(ctx, setup):
     # the statement export and the COICOP page
     frames = export_svc.statement_frames(rep)
     sheet = next(df for name, df in frames.items() if "xpenditure" in name)
-    assert "09.1" in " ".join(sheet.iloc[:, 0].astype(str))
+    assert get_coicop().label("09.1") in " ".join(sheet.iloc[:, 0].astype(str))
     assert spent_this_year(ctx, TODAY)["09"] == pytest.approx(14.5)
 
 

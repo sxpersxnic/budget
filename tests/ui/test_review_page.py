@@ -110,17 +110,17 @@ async def test_the_page_reviews_last_year(user: User, ctx, setup) -> None:
     assert f"+4'000.00 since the end of Dec {LAST - 1}" in shown
     # the groups
     assert "Spending by Category" in shown and "Biggest Expenses" in shown
-    assert "04 Housing and energy" in shown and "3'800.00 CHF" in shown
+    assert "Housing and energy" in shown and "3'800.00 CHF" in shown
     assert "▲ 6 %" in shown and f"{LAST - 1}: 3'600.00 CHF · 61 % of spending" in shown  # the rent rose
     assert "new" in shown  # the washing machine's division had nothing the year before
     assert f"Nothing in {LAST - 1} · 39 % of spending" in shown  # the caption of a new line
     assert "▼ 100 %" in shown and f"{LAST - 1}: 400.00 CHF" in shown  # groceries stopped
-    assert "Fust" in shown and f"20 Aug {LAST} · 05.3 Household appliances" in shown
+    assert "Fust" in shown and f"20 Aug {LAST} · Household appliances" in shown
     assert "Salary" in shown and "▲ 20 %" in shown
-    # the chart: one bar series each for income and expenditure, over the twelve months
+    # the chart: one bar series each for income and expenditure, from February, the first month with either
     data = plot(user).figure["data"]
     assert [trace["name"] for trace in data] == ["Income", "Expenditure"]
-    assert len(data[0]["x"]) == 12
+    assert data[0]["x"][0] == f"{LAST}-02" and len(data[0]["x"]) == 11
 
 
 async def test_change_colours_and_labels() -> None:
@@ -184,8 +184,29 @@ async def test_a_year_without_balances_or_payments(user: User, ctx, setup) -> No
     with user:
         layout.data_changed()
     await settle()
-    await user.should_see(f"No balances at the end of Dec {LAST - 1}")
+    await user.should_see(f"End of Dec {LAST}")  # nothing the year before: when, not what is missing
     assert labels(user).count("Nothing recorded") == 2  # no spending: no categories, no biggest payments
+
+
+async def test_a_first_year_is_not_compared_with_an_empty_one(user: User, ctx, setup) -> None:
+    earn(ctx, setup, 6000, date(LAST, 11, 25))
+    spend(ctx, setup, 1900, "04.1", date(LAST, 11, 1))
+    spend(ctx, setup, 640, "01.1", date(LAST, 12, 10))
+    wealth_svc.upsert_entry(ctx, setup["chf"].id, f"{LAST}-12", 3460)
+    await user.open("/review")
+    await user.should_see("Housing and energy")
+    shown = labels(user)
+    assert not [x for x in shown if str(LAST - 1) in x]  # no "compared with", "Nothing in", "2025 · 2024"
+    assert "new" not in shown
+    assert "75 % of spending" in shown  # the share stays
+    assert f"End of Dec {LAST}" in shown
+    assert plot(user).figure["data"][0]["x"] == [f"{LAST}-11", f"{LAST}-12"]  # not ten empty months first
+    # a year before with anything in it brings the comparison back
+    spend(ctx, setup, 100, "07.3", date(LAST - 1, 6, 1))
+    with user:
+        layout.data_changed()
+    await user.should_see(f"compared with {LAST - 1}")
+    await user.should_see(f"Nothing in {LAST - 1} · 75 % of spending")
 
 
 async def test_the_pdf_of_an_empty_year_has_no_chart_to_ask_for(user: User, ctx, setup, monkeypatch) -> None:

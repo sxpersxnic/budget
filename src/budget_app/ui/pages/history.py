@@ -30,10 +30,7 @@ def page() -> None:
             actions = undo_svc.recent(ctx, LIMIT)
             with ui.element("div").classes("group"):
                 if not actions:
-                    empty_state(
-                        t("No changes yet."),
-                        t("The last changes to your records. Undo puts the records back as they were before a change."),
-                    )
+                    empty_state(t("No changes yet."), t("Your changes show here, each with Undo."))
                 for act in actions:
                     with ui.element("div").classes("group-row history-row"):
                         with ui.column().classes("gap-0 flex-1 min-w-0"):

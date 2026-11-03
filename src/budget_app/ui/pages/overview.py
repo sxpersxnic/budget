@@ -4,11 +4,12 @@ side by side)."""
 from __future__ import annotations
 
 import base64
+from contextlib import nullcontext
 from datetime import date
 
 import pandas as pd
 import plotly.graph_objects as go
-from nicegui import ui
+from nicegui import run, ui
 
 from budget_app.domain import months
 from budget_app.domain.models import ASSET_CLASSES
@@ -80,8 +81,14 @@ class ChartCard:
             with ui.row().classes("w-full items-start gap-2 no-wrap"):
                 with ui.column().classes("gap-0 min-w-0"):
                     ui.label(t(CHART_TYPES[kind])).classes("section-title")
-                    ui.label(t(CHART_HINTS[kind])).classes("caption")
+                    self.caption = ui.label(t(CHART_HINTS[kind])).classes("caption")
                 ui.space()
+                # the controls wait behind a button, so the card shows the chart (polish before 1.0)
+                box = None
+                if kind != "wealth":
+                    options = ui.button(icon="o_tune").props("flat round dense").classes("text-primary")
+                    with named(options, t("Chart Options")), ui.menu().classes("chart-options"):
+                        box = ui.row().classes("chart-controls items-start gap-2 flex-wrap p-4")
                 with (
                     named(ui.button(icon="more_horiz").props("flat round dense").classes("text-primary"), t("Export")),
                     ui.menu().props("auto-close"),
@@ -92,7 +99,7 @@ class ChartCard:
                     ui.menu_item(t("Export Data as Excel…"), on_click=lambda: self.download("xlsx"))
                     ui.separator()
                     ui.menu_item(t("Remove Chart"), on_click=lambda: on_remove(self)).classes("text-negative")
-            with ui.row().classes("w-full items-start gap-2 flex-wrap"):
+            with box if box is not None else nullcontext():  # the wealth chart has none
                 opts = month_options(first, last)
                 if kind == "flows":
                     self.start = (
@@ -204,6 +211,9 @@ class ChartCard:
     # ------------------------------------------------------------------ figures
     def render(self) -> None:
         cur = self.currency["value"]
+        if hasattr(self, "start"):  # the period the hidden controls chose, in place of the chart's description
+            start, end = sorted([self.start.value, self.end.value])
+            self.caption.set_text(f"{months.label(start)} – {months.label(end)}" if start != end else months.label(end))
         try:
             fig = getattr(self, f"_fig_{self.kind}")(cur)
         except Exception as exc:
@@ -444,7 +454,10 @@ class ChartCard:
         return f"{self.kind}_chart_{self.currency['value']}.{ext}"
 
     async def download(self, kind: str) -> None:
-        data = export_svc.frame_csv(self.data) if kind == "csv" else export_svc.frame_xlsx(self.data, self.kind)
+        if kind == "csv":
+            data: bytes | None = export_svc.frame_csv(self.data)
+        else:  # off the event loop: Excel takes a moment, the first file longer (openpyxl loads then)
+            data = await run.io_bound(export_svc.frame_xlsx, self.data, self.kind)
         await save_file(data, self.file_name(kind))
 
     async def save_image(self, kind: str) -> None:
@@ -453,10 +466,12 @@ class ChartCard:
             url = await self.plot.run_plot_method(
                 "toImage", {"format": "png", "width": 1200, "height": 600, "scale": 2}, timeout=15
             )
-            data = base64.b64decode(str(url).split(",", 1)[1])
+            png = base64.b64decode(str(url).split(",", 1)[1])
+            data: bytes | None = png
             if kind == "pdf":
                 title = t(CHART_TYPES[self.kind])
-                data = export_svc.chart_pdf(data, title, t("Amounts in {currency}", currency=self.currency["value"]))
+                subtitle = t("Amounts in {currency}", currency=self.currency["value"])
+                data = await run.io_bound(export_svc.chart_pdf, png, title, subtitle)
         except Exception as exc:
             error(t("Could not create the image: {error}", error=exc))
             return
@@ -529,7 +544,7 @@ def page() -> None:
 
         @ui.refreshable
         def goals() -> None:
-            goals_card(ctx, currency["value"])  # F14; hidden without goals
+            goals_card(ctx)  # F14; hidden without goals
 
         def set_currency(e) -> None:
             currency["value"] = e.value
@@ -546,7 +561,9 @@ def page() -> None:
 
         with actions:
             currency_select(ctx, currency["value"], on_change=set_currency, label=t("Currency"))
-            with ui.button(t("Add Chart"), icon="add").props("unelevated"), ui.menu().props("auto-close"):
+            # flat: the sidebar's New Transaction is the one filled button (A8)
+            add_chart = ui.button(t("Add Chart"), icon="add").props("flat").classes("text-primary")
+            with add_chart, ui.menu().props("auto-close"):
                 for key, title in CHART_TYPES.items():
                     with ui.menu_item(on_click=lambda k=key: add(k)), ui.column().classes("gap-0 py-1"):
                         ui.label(t(title))

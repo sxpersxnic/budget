@@ -421,15 +421,13 @@ def page() -> None:
             rows = loan_svc.statuses(ctx)
             new.set_visibility(bool(rows))  # while there are none, the empty state offers it
             with ui.column().classes("w-full gap-0"):
-                ui.label(tn("{n} loan", "{n} loans", len(rows))).classes("group-header")
+                if rows:  # no count above the empty state
+                    ui.label(tn("{n} loan", "{n} loans", len(rows))).classes("group-header")
                 with ui.element("div").classes("group"):
                     if not rows:
                         empty_state(
                             t("No loans yet."),
-                            t(
-                                "A mortgage or loan counts against your wealth. When a payment is due, it is listed "
-                                "here with its interest and repayment, ready to book."
-                            ),
+                            t("A mortgage or loan, with its payments ready to book when they are due."),
                             t("New Loan"),
                             lambda: open_loan_sheet(ctx, refresh),
                         )

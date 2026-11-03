@@ -104,7 +104,7 @@ def test_options_show_the_code_and_the_everyday_name_as_the_app_does() -> None:
     assert (options["02.3"].label, options["02.3"].caption) == ("02.3 Tobacco", "")  # the same name: no caption
     assert (options[TAX].label, options[TAX].caption) == ("Taxes", "")
     for code, option in options.items():
-        assert option.label == get_coicop().label(code) == ev.label(code)  # one label everywhere
+        assert option.label == get_coicop().coded_label(code) == ev.label(code)  # the picker shows the code
 
 
 def test_options_keep_the_coicop_order_with_taxes_last() -> None:

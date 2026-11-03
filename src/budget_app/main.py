@@ -53,6 +53,7 @@ from budget_app.ui.pages import (
     shared,
     tags,
     tax,
+    to_sort,
     transactions,
     welcome,
 )
@@ -68,6 +69,7 @@ PAGES = {
     "/transactions": transactions.page,
     "/recurring": recurring.page,
     "/bills": bills.page,
+    "/to-sort": to_sort.page,
     "/import": import_transactions.page,
     "/add-budget": add_budget.page,
     "/budget-entries": budget_entries.page,

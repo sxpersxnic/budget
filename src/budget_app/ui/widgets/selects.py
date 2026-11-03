@@ -100,11 +100,18 @@ def payee_input(ctx: Context, value: str = "", on_change=None) -> PayeeInput:
 
 
 def expenditure_category_select(
-    value: str | None = None, on_change=None, label: str | None = None, ctx: Context | None = None
+    value: str | None = None,
+    on_change=None,
+    label: str | None = None,
+    ctx: Context | None = None,
+    extra: dict[str, str] | None = None,
 ) -> ui.select:
-    """COICOP (any level) + Taxes, with a search field; with `ctx`, the recently used categories come first."""
+    """COICOP (any level) + Taxes, with a search field; with `ctx`, the recently used categories come first;
+    `extra` adds options after them (the transaction list's *To sort*)."""
     recent = tx_svc.recent_categories(ctx) if ctx else []
-    sel = CategorySelect(category_options(recent), label=label or t("Category"), value=value, on_change=on_change)
+    sel = CategorySelect(
+        category_options(recent), extra, label=label or t("Category"), value=value, on_change=on_change
+    )
     return sel.props("dense outlined options-dense clearable").classes("w-full")
 
 

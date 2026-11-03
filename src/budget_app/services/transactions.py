@@ -7,7 +7,7 @@ from datetime import date
 
 from budget_app import i18n
 from budget_app.domain import tags as tag_codec
-from budget_app.domain.coicop import TAX, get_coicop
+from budget_app.domain.coicop import TAX, TO_SORT, get_coicop
 from budget_app.domain.models import (
     ACCOUNT_ADVANCE,
     ACCOUNT_REGULAR,
@@ -187,8 +187,10 @@ def validate(ctx: Context, inp: TransactionInput, editing_id: str = "") -> None:
     if not inp.currency:
         raise ValidationError(t("Currency is required"))
 
+    # an imported transaction may wait for its category under To sort (services/sorting.py); one typed in has one
+    to_sort = inp.category == TO_SORT and bool(inp.import_ref) and not inp.is_advance
     if inp.type == TX_EXPENDITURE:
-        if inp.category != TAX and get_coicop().get(inp.category) is None:
+        if not to_sort and inp.category != TAX and get_coicop().get(inp.category) is None:
             raise ValidationError(t("Select an expenditure category"))
         _account(ctx, inp.date, inp.from_account, FROM, ACCOUNT_REGULAR, inp.currency)
         if inp.is_advance:
@@ -215,7 +217,7 @@ def validate(ctx: Context, inp: TransactionInput, editing_id: str = "") -> None:
                         amount=f"{left:,.2f} {adv.currency}",
                     )
                 )
-        elif ctx.store.income_categories.get(inp.category) is None:
+        elif not to_sort and ctx.store.income_categories.get(inp.category) is None:
             raise ValidationError(t("Select an income category"))
 
     elif inp.type == TX_TRANSFER:

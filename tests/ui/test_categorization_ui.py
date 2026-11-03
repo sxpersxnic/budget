@@ -11,10 +11,9 @@ from nicegui.testing.user_interaction import UserInteraction
 from notifications import notified
 from test_bulk_edit_ui import select
 from test_camt import CAMT053
-from test_import_page import field, import_button, rows, settle, upload
+from test_import_page import field, import_button, settle, upload
 from test_payees_page import newest
 
-from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import TX_EXPENDITURE, TX_INCOME, Rule
 from budget_app.services import accounts as acc_svc
 from budget_app.services import rules as rules_svc
@@ -57,10 +56,6 @@ def spend(setup, payee: str, category: str = "01.1", **kw) -> TransactionInput:
     return TransactionInput(**(base | kw))
 
 
-def summary(user: User) -> str:
-    return next(e.text for e in user.find(kind=ui.label).elements if "Duplicates and unreadable" in e.text)
-
-
 def edit_cell(user: User, index: int, column: str, value) -> None:
     [grid] = user.find(kind=ui.aggrid).elements
     UserInteraction(user, {grid}, None).trigger(
@@ -80,7 +75,7 @@ async def test_the_form_suggests_a_category_and_fills_it_only_when_clicked(user:
     category, account = newest(user, ui.select, "Category"), newest(user, ui.select, "From Account")
     assert category.value is None and account.value is None  # shown, never filled in on its own
 
-    click(user, button(user, "Use 01.1 Groceries"))
+    click(user, button(user, "Use Groceries"))
     assert (category.value, account.value) == ("01.1", setup["chf"].id)
     await user.should_not_see("Used 2 times for this payee")
     click(user, button(user, "Add Transaction"))
@@ -115,7 +110,7 @@ async def test_a_rule_can_match_the_note(user: User, ctx, setup) -> None:
     rules_svc.save(ctx, RuleInput(match="Wocheneinkauf", category="01.1"))
     await user.open("/add-transaction")
     put(user, newest(user, PayeeInput, "Payee"), "Market Stall")
-    await user.should_not_see("Use 01.1 Groceries")
+    await user.should_not_see("Use Groceries")
     put(user, newest(user, ui.textarea, "Note"), "wocheneinkauf am Samstag")
     await user.should_see("Rule: contains “Wocheneinkauf”")
 
@@ -126,7 +121,7 @@ async def test_the_edit_sheet_offers_always_categorize_like_this(user: User, ctx
     await select(user, tx.id)
     click(user, button(user, "Edit"))
     await user.should_see("Edit Transaction")
-    await user.should_not_see("Use 01.1 Groceries")  # editing shows no suggestions
+    await user.should_not_see("Use Groceries")  # editing shows no suggestions
     form_category, make_rule = newest(user, ui.select, "Category"), button(user, "Always Categorize Like This…")
     click(user, make_rule)
     await user.should_see("Always Categorize Like This")
@@ -159,7 +154,7 @@ async def test_the_selection_bar_makes_a_rule_and_warns_about_the_same_text(user
 
     await select(user, coop.id)
     click(user, button(user, "Always Categorize Like This…"))
-    await user.should_see("A rule for “COOP” already exists (01.1 Groceries). Saving replaces it.")
+    await user.should_see("A rule for “COOP” already exists (Groceries). Saving replaces it.")
     assert button(user, "Replace Rule").enabled
     put(user, newest(user, ui.input, "Text contains"), "Coop Pronto")
     await user.should_not_see("Saving replaces it.")
@@ -190,8 +185,8 @@ async def test_only_expenditure_and_income_with_a_category_make_a_rule(user: Use
 # ------------------------------------------------------------------ the rule sheet's checks
 async def test_the_rule_sheet_checks_its_fields(user: User, ctx, setup) -> None:
     await user.open("/rules")
-    await user.should_see("Categorization Rules")
-    click(user, min((b for b in user.find(kind=ui.button).elements if b.text == "Add Rule…"), key=lambda b: b.id))
+    await user.should_see("A rule gives new and imported transactions their category by payee or bank text.")
+    click(user, button(user, "New Rule"))  # the empty state's
     await user.should_see("New Rule")
     save = button(user, "Save Rule")
     assert not save.enabled
@@ -225,18 +220,22 @@ async def test_the_rules_page_lists_edits_and_deletes(user: User, ctx, setup, th
     migros, sbb, _ = three_rules
     await user.open("/rules")
     await user.should_see("Contains “Migros”")
-    await user.should_see("01.1 Groceries · Bank (CHF)")
+    await user.should_see("Groceries · Bank (CHF)")  # the name, the code on hover
     await user.should_see("Contains “Lohn”")
-    await user.should_see("3 rules")
+    await user.should_not_see("3 rules")  # no count: the list says it
+    groups = [lb.text for lb in user.find(kind=ui.label).elements if "group-header" in lb.classes]
+    assert sorted(groups) == ["Expenditure", "Income"]
+    [new] = [b for b in user.find(kind=ui.button).elements if b.text == "New Rule"]
+    assert new.props.get("flat") and not new.props.get("unelevated")  # the sidebar's New Transaction is the filled one
     active = {link.props["href"] for link in user.find(kind=ui.link).elements if "active" in link.classes}
-    assert active == {"/settings", "/payees"}  # Settings in the sidebar, its Payees tab
+    assert active == {"/transactions", "/rules"}  # Transactions in the sidebar, its Rules tab (decision 49)
 
     edit = min((b for b in user.find(kind=ui.button).elements if b.props.get("icon") == "o_edit"), key=lambda b: b.id)
     click(user, edit)
     await user.should_see("Edit Rule")
     assert newest(user, ui.input, "Text contains").value == "Migros"
     put(user, newest(user, ui.input, "Text contains"), "SBB")  # the other rule's text
-    await user.should_see("A rule for “SBB” already exists (07.3 Public transport). Saving replaces it.")
+    await user.should_see("A rule for “SBB” already exists (Public transport). Saving replaces it.")
     put(user, newest(user, ui.input, "Text contains"), "Migros Bank")
     click(user, button(user, "Save Rule"))
     assert notified(user, "Saved the rule for “Migros Bank”")
@@ -261,13 +260,23 @@ async def test_saving_a_rule_deleted_meanwhile_is_refused(user: User, ctx, setup
     assert notified(user, "Rule not found")
 
 
-async def test_the_rules_page_adds_per_type_and_says_when_empty(user: User, ctx, setup) -> None:
+async def test_the_rules_page_says_when_empty_once(user: User, ctx, setup) -> None:
     await user.open("/rules")
-    await user.should_see("No rules yet.")
-    add_income = max((b for b in user.find(kind=ui.button).elements if b.text == "Add Rule…"), key=lambda b: b.id)
-    click(user, add_income)
-    await user.should_see("New Rule")
-    assert newest(user, ui.toggle).value == TX_INCOME
+    await user.should_see("No rules yet.")  # one empty state, not one per type, and no "0 rules"
+    await user.should_not_see("0 rules")
+    assert [b.text for b in user.find(kind=ui.button).elements if "Rule" in (b.text or "")] == ["New Rule"]
+    click(user, button(user, "New Rule"))
+    await user.should_see("Save Rule")
+    assert newest(user, ui.toggle).value == TX_EXPENDITURE  # the sheet chooses the type
+    put(user, newest(user, ui.toggle), TX_INCOME)
+    put(user, newest(user, ui.input, "Text contains"), "Lohn")
+    put(user, newest(user, ui.select, "Income category"), setup["salary"].id)
+    click(user, button(user, "Save Rule"))
+    await user.should_see("Contains “Lohn”")
+    await user.should_not_see("Expenditure")  # a type without rules has no group
+    await user.should_see("New and imported transactions get the category of the rule whose text they contain.")
+    [dot] = [i for i in user.find(kind=ui.icon).elements if "info-dot" in i.classes]
+    assert "the longest text wins" in dot.props["aria-label"]  # the rest behind ⓘ
 
 
 async def test_a_rule_whose_category_is_gone_says_so(user: User, ctx, setup) -> None:
@@ -276,77 +285,40 @@ async def test_a_rule_whose_category_is_gone_says_so(user: User, ctx, setup) -> 
     await user.should_see("Category no longer exists · Account no longer exists")
 
 
-async def test_payees_lead_to_the_rules(user: User, ctx, setup) -> None:
+def section_tabs(user: User) -> list[ui.link]:
+    """The tabs under the title, in their order."""
+    links = [link for link in user.find(kind=ui.link).elements if "section-tab" in link.classes]
+    return sorted(links, key=lambda link: link.id)
+
+
+async def test_payees_and_rules_are_tabs_of_transactions(user: User, ctx, setup) -> None:
     await user.open("/payees")
-    click(user, button(user, "Rules…"))
-    await user.should_see("Categorization Rules")
-    await user.should_see("A rule suggests its category for new and imported transactions")
+    tabs = [link.props["href"] for link in section_tabs(user)]
+    assert tabs == ["/transactions", "/to-sort", "/recurring", "/bills", "/payees", "/rules"]
+    await user.open("/settings")
+    tabs = [link.props["href"] for link in section_tabs(user)]
+    assert tabs == ["/settings", "/categories", "/tags"]
+    await user.open("/rules")
+    await user.should_see("No rules yet.")
 
 
 # ------------------------------------------------------------------ the import preview
-async def test_the_import_preview_marks_suggestions_until_they_are_changed(user: User, ctx, setup) -> None:
+async def test_the_import_sorts_by_rules_and_history_and_lists_the_guesses(user: User, ctx, setup) -> None:
     rules_svc.save(ctx, RuleInput(match="migros", category="01.1"))
     tx_svc.save(ctx, spend(setup, "Brezelkönig", "11.1"))
     await user.open("/import")
     await upload(user, "ubs.csv", UBS)
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
     await settle()
-    assert [(r["payee"], r["category"], r["suggested"], r["reason"]) for r in rows(user)] == [
-        ("Migros", "01.1 Groceries", True, "Rule: contains “migros”"),
-        ("Brezelkönig", "11.1 Eating out", True, "Used 1 time for this payee"),
-        # a search word of the category in the payee (#20's keyword match, with the everyday names' words)
-        ("Papeterie Zumstein", get_coicop().label("09.7.4"), True, "Payee contains “Papeterie”"),
-    ]
-    [grid] = user.find(kind=ui.aggrid).elements
-    category = next(c for c in grid.options["columnDefs"] if c["field"] == "category")
-    assert category["cellClassRules"] == {"suggested": "data.suggested"}  # in italics
-    assert "3 categories are suggestions (in italics): check them before importing." in summary(user)
-    clear = button(user, "Clear Suggestions")
-    assert clear.visible
-
-    # chosen by hand: no longer a suggestion
-    await select(user, "1")
-    put(user, field(user, ui.select, "Category"), "11.1.1")
-    click(user, button(user, "Apply"))
-    await settle()
-    assert [(r["suggested"], r["reason"]) for r in rows(user)][:2] == [(True, "Rule: contains “migros”"), (False, "")]
-    assert "2 categories are suggestions (in italics): check them before importing." in summary(user)
-
-    # a new payee brings its own suggestion; the one chosen by hand stays
-    edit_cell(user, 2, "payee", "Migros")
-    edit_cell(user, 1, "payee", "Migros")
-    assert [(r["category"], r["suggested"]) for r in rows(user)] == [
-        ("01.1 Groceries", True),
-        ("11.1.1 Restaurants and cafés", False),
-        ("01.1 Groceries", True),
-    ]
-    edit_cell(user, 2, "payee", "Somebody Else")
-    assert rows(user)[2]["category"] == "" and not rows(user)[2]["suggested"]
-
-    click(user, clear)
-    assert [(r["category"], r["suggested"]) for r in rows(user)] == [
-        ("", False),
-        ("11.1.1 Restaurants and cafés", False),
-        ("", False),
-    ]
-    assert not clear.visible
-    assert "suggestion" not in summary(user)
-
-
-async def test_importing_keeps_the_suggested_categories(user: User, ctx, setup) -> None:
-    rules_svc.save(ctx, RuleInput(match="migros", category="01.1"))
-    tx_svc.save(ctx, spend(setup, "Brezelkönig", "11.1"))
-    tx_svc.save(ctx, spend(setup, "Papeterie Zumstein", "09.7"))
-    await user.open("/import")
-    await upload(user, "ubs.csv", UBS)
-    put(user, field(user, ui.select, "Account"), setup["chf"].id)
-    await settle()
-    assert import_button(user).enabled
+    assert import_button(user).text == "Import 3 Transactions"
     click(user, import_button(user))
-    assert notified(user, "Imported 3 transactions")
+    await user.should_see("3 transactions imported. Undo the whole import from History at any time.")
+    # a search word of the category in the payee (#20's keyword match) is only a guess: listed, folded
+    await user.should_see("1 sorted only by a word in the name")
+    await user.should_see("2 sorted the way you sorted before")
     imported = sorted((tx for tx in ctx.store.transactions.all() if tx.import_ref), key=lambda tx: tx.date)
-    assert [tx.category for tx in imported] == ["01.1", "11.1", "09.7"]
-    assert len(ctx.store.rules.all()) == 1
+    assert [tx.category for tx in imported] == ["01.1", "11.1", "09.7.4"]
+    assert len(ctx.store.rules.all()) == 1  # importing a suggestion creates no rule
 
 
 async def test_a_camt_statement_gets_the_same_suggestions(user: User, ctx, setup) -> None:
@@ -358,7 +330,7 @@ async def test_a_camt_statement_gets_the_same_suggestions(user: User, ctx, setup
     await settle()
     put(user, field(user, ui.select, "Account"), setup["chf"].id)
     await settle()
-    assert [(r["category"], r["reason"]) for r in rows(user)][:2] == [
-        ("01.1 Groceries", "Rule: contains “migros”"),
-        ("Income · Salary", "Rule: contains “lohn”"),
-    ]
+    click(user, import_button(user))
+    await user.should_see("6 transactions imported", retries=30)
+    by_date = sorted(ctx.store.transactions.all(), key=lambda tx: (tx.date, tx.amount))
+    assert [tx.category for tx in by_date if tx.import_ref][:2] == ["01.1", setup["salary"].id]

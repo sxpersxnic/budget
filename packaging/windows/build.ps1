@@ -28,7 +28,14 @@ $env:ISCC = $iscc
 
 uv sync --locked --group build --group dev
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-uv run pytest -q
+# The tests get a fresh temp folder: Python 3.13 makes pytest's %TEMP%\pytest-of-<user> owner-only, so one left
+# by an elevated shell (an admin terminal, an SSH session) refuses a normal one with "Access is denied".
+$basetemp = Join-Path $env:TEMP "budget-build-tests-$PID"
+try {
+    uv run pytest -q --basetemp $basetemp
+} finally {
+    Remove-Item -Recurse -Force $basetemp -ErrorAction SilentlyContinue
+}
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 uv run --group build python packaging/build.py
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

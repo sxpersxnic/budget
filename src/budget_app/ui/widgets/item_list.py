@@ -67,11 +67,8 @@ class ItemList:
         self._amount, self._currency, self._use_total = amount, currency, use_total
         self._ctx, self._category, self._splittable = ctx, category, splittable
         self._rows: list[_Row] = []
+        # no heading: "Add Item" says what the section is (polish before 1.0)
         with ui.column().classes("w-full gap-1"):
-            with ui.row().classes("w-full items-center gap-2"):
-                ui.label(t("Items")).classes("text-[13px] font-semibold text-2")
-                ui.space()
-                self._summary = ui.label().classes("caption")
             self._head = ui.element("div").classes("item-row head")
             with self._head:
                 ui.label(t("Item"))
@@ -86,6 +83,7 @@ class ItemList:
                 add_btn = ui.button(t("Add Item"), icon="add", on_click=lambda: self.add())  # noqa: PLW0108 - the event must not become the name
                 add_btn.props("flat dense no-caps").classes("link-btn")
                 ui.space()
+                self._summary = ui.label().classes("caption")
                 self._use_btn = (
                     ui.button(t("Use Total as Amount"), on_click=self._apply_total)
                     .props("flat dense no-caps")

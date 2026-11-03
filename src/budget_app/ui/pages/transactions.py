@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date
 
 from nicegui import ui
 
 from budget_app.domain import months
 from budget_app.domain import tags as tag_codec
-from budget_app.domain.coicop import ADV, get_coicop
+from budget_app.domain.coicop import ADV, TO_SORT_NAME, get_coicop
 from budget_app.domain.models import (
     REVALUATION_KINDS,
     TX_EXCHANGE,
@@ -28,6 +29,7 @@ from budget_app.services import items as items_svc
 from budget_app.services import payees as payee_svc
 from budget_app.services import recurring as rec_svc
 from budget_app.services import rules as rules_svc
+from budget_app.services import sorting as sorting_svc
 from budget_app.services import tags as tag_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services.context import Context, ValidationError
@@ -36,7 +38,18 @@ from budget_app.ui.layout import date_input, error, frame, on_data_changed, pars
 from budget_app.ui.pages.add_budget import recurrence_label
 from budget_app.ui.pages.recurring import open_recurring_sheet
 from budget_app.ui.widgets.bulk_edit import open_bulk_edit_sheet
-from budget_app.ui.widgets.grid import confirm, date_col, export_items, make_grid, money_col, more_menu, num_col
+from budget_app.ui.widgets.empty import empty_state
+from budget_app.ui.widgets.grid import (
+    NUMBER,
+    confirm,
+    date_col,
+    date_fmt,
+    export_items,
+    make_grid,
+    money_col,
+    more_menu,
+    num_col,
+)
 from budget_app.ui.widgets.receipt import open_receipt_sheet
 from budget_app.ui.widgets.rule_sheet import always_like_this
 from budget_app.ui.widgets.selects import expenditure_category_select, set_options
@@ -45,13 +58,46 @@ from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 # the number of attachments beside a paper clip (a count from the server, so plain HTML is safe)
 CLIP = "p => p.value ? `<span class='clip-cell'><i class='material-icons'>attach_file</i>${p.value}</span>` : ''"
+PHONE = "_phone"  # the column a phone shows instead of all the others (no data of its own: "_" stays internal)
+PHONE_QUERY = "(max-width: 640px)"  # the phone layout of the page (theme.py)
+
+
+def _phone_renderer() -> str:
+    """A phone's row in two lines: the payee (the category when there is none) and the amount, the date below.
+    Built as elements, so a payee's text is never read as HTML."""
+    return (
+        "p => { const d = p.data, el = document.createElement('div'), top = document.createElement('div');"
+        " const add = (box, cls, text) => { const s = box.appendChild(document.createElement('span'));"
+        " s.className = cls; s.textContent = text; };"
+        " el.className = 'tx-phone'; top.className = 'tx-phone-top'; el.appendChild(top);"
+        " add(top, 'tx-phone-name', d.payee || d.category);"
+        f" add(top, 'tx-phone-amount' + (d._type === 'income' ? ' amt-in' : ''),"
+        f" (d._type === 'income' ? '+' : '') + d.amount.{NUMBER} + ' ' + d.currency);"
+        f" add(el, 'tx-phone-date', ({date_fmt()})({{value: d.date}}));"
+        " return el; }"
+    )
+
+
+def _phone_layout(wide: list[str]) -> str:
+    """Below the phone width the grid shows the one two-line column, without headers or checkboxes (a tap opens
+    the transaction), above it the columns in `wide`. Run when the grid is made and when its size changes."""
+    return (
+        f"p => {{ const phone = window.matchMedia('{PHONE_QUERY}').matches;"
+        f" if (p.api.getColumn('{PHONE}').isVisible() === phone) return;"
+        f" p.api.setColumnsVisible(['{PHONE}'], phone); p.api.setColumnsVisible({json.dumps(wide)}, !phone);"
+        " p.api.setGridOption('headerHeight', phone ? 0 : 38);"
+        " p.api.setGridOption('rowSelection', {mode: 'multiRow', headerCheckbox: !phone, checkboxes: !phone,"
+        " selectAll: 'filtered'}); p.api.resetRowHeights(); }"
+    )
 
 
 def _columns() -> list[dict]:
     return [
         date_col("date", t("Date"), sort="desc", width=120),
         {"field": "payee", "headerName": t("Payee"), "width": 180},
-        {"field": "category", "headerName": t("Category"), "width": 250, "tooltipField": "_category_tip"},
+        {"field": "category", "headerName": t("Category"), "width": 320, "tooltipField": "_category_tip"},
+        # names, not codes, on screen; an export keeps the COICOP code beside the name, to sort and group by
+        {"field": "code", "headerName": t("Code"), "hide": True},
         {"field": "tags", "headerName": t("Tags"), "width": 170, ":cellRenderer": CHIPS_RENDERER},  # F10
         money_col("amount", t("Amount"), width=150),
         {"field": "items", "headerName": t("Items"), "width": 90, "type": "rightAligned", "cellClass": "muted"},
@@ -72,6 +118,16 @@ def _columns() -> list[dict]:
         {"field": "recurring", "headerName": t("Repeats"), "width": 140, "cellClass": "muted"},
         date_col("fx_date", t("Rate Date"), width=120, cellClass="muted"),
     ]
+
+
+def grid_columns(items: bool, attachments: bool) -> list[dict]:
+    """The grid's columns: the phone's first (hidden on a wider screen), then the list's; Items and Attachments
+    only when a transaction has them, so no column stays empty in every row (polish before 1.0)."""
+    used = {"items": items, "attachments": attachments}
+    columns = [c | {"hide": True} if not used.get(c["field"], True) else c for c in _columns()]
+    phone = {"field": PHONE, "headerName": "", "flex": 1, "hide": True, "sortable": False}
+    phone[":cellRenderer"] = _phone_renderer()
+    return [phone, *columns]
 
 
 def split_columns(ctx: Context, tx: Transaction, lines: dict[str, list]) -> tuple[list[str], list[str]]:
@@ -114,7 +170,7 @@ def _row(
     elif tx.type == TX_EXPENDITURE:
         category, tip = coicop.label(tx.category), coicop.tooltip(tx.category)
     elif tx.type == TX_INCOME:
-        category = t(ADV_REPAY_NAME) if tx.is_advance else income_cats.get(tx.category, "")
+        category = t(ADV_REPAY_NAME) if tx.is_advance else income_cats.get(tx.category) or coicop.label(tx.category)
     elif tx.type == TX_REVALUATION:
         category = t(REVALUATION_KINDS.get(tx.category, tx.category))
     else:  # a transfer or an exchange: where the money went
@@ -139,6 +195,7 @@ def _row(
         "currency": tx.currency,
         "amount_chf": round(tx.amount_chf, 2),
         "category": category,
+        "code": ", ".join(split_codes or [tx.category]) if tx.type == TX_EXPENDITURE else "",
         "_category_tip": tip,
         "payee": tx.payee,
         "from": accs.get(tx.from_account, ""),
@@ -182,7 +239,10 @@ def month_dates(month: str) -> tuple[str, str]:
 
 
 def in_category(ctx: Context, tx: Transaction, code: str, lines: dict[str, list]) -> bool:
-    """Whether an expenditure counts in `code` or a category below it, by its own category or a split line's."""
+    """Whether an expenditure counts in `code` or a category below it, by its own category or a split line's;
+    `sorting.FILTER`: whether the transaction (spending or income) waits under To sort."""
+    if code == sorting_svc.FILTER:
+        return sorting_svc.is_unsorted(tx)
     if tx.type != TX_EXPENDITURE:
         return False
     coicop = get_coicop()
@@ -191,9 +251,10 @@ def in_category(ctx: Context, tx: Transaction, code: str, lines: dict[str, list]
     )
 
 
-def page(tag: str = "", month: str = "", category: str = "") -> None:
+def page(tag: str = "", month: str = "", category: str = "", payee: str = "") -> None:
     """Query parameters start the list filtered: `tag` (from the Tags page), `month` (YYYY-MM) and `category` (an
-    expenditure category, its subcategories included; both from the Overview's *Notable this month*, F18)."""
+    expenditure category, its subcategories included; both from the Overview's *Notable this month*, F18), or
+    `category=to-sort` with a `payee` (To sort's *Ask Me per Purchase*)."""
     with frame(t("Transactions"), "/transactions") as (ctx, actions):
         with actions:
             text = (
@@ -221,10 +282,15 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
                 clearable=True,
             )
             acc.props("dense outlined").classes("w-56")
-            payee = ui.select(
-                [p.name for p in payee_svc.all_payees(ctx)], label=t("Payee"), with_input=True, clearable=True
+            names = [p.name for p in payee_svc.all_payees(ctx)]
+            payee_filter = ui.select(
+                names + ([payee] if payee and payee not in names else []),
+                label=t("Payee"),
+                value=payee or None,
+                with_input=True,
+                clearable=True,
             )
-            payee.props("dense outlined").classes("w-56")
+            payee_filter.props("dense outlined").classes("w-56")
             typ = (
                 ui.select({k: t(v) for k, v in TX_TYPES.items()}, label=t("Type"), clearable=True)
                 .props("dense outlined")
@@ -233,8 +299,12 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
             tag_filter = TagSelect(ctx, [tag] if tag else [], label=t("Tags"), allow_new=False)  # any of them
             tag_filter.classes("w-64")
             known = category if category and get_coicop().get(category) and category != ADV else None
-            cat_filter = expenditure_category_select(known, ctx=ctx).classes(remove="w-full", add="w-64")
-        filters.set_visibility(bool(tag_filter.value or first_day or cat_filter.value))
+            if category == sorting_svc.FILTER:
+                known = category
+            cat_filter = expenditure_category_select(
+                known, ctx=ctx, extra={sorting_svc.FILTER: t(TO_SORT_NAME)}
+            ).classes(remove="w-full", add="w-64")
+        filters.set_visibility(bool(tag_filter.value or first_day or cat_filter.value or payee_filter.value))
         filter_btn.on_click(lambda: filters.set_visibility(not filters.visible))
         with ui.element("div").classes("selection-bar") as bar:
             selected_label = ui.label().classes("font-medium")
@@ -259,13 +329,21 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
                 "text-negative"
             )
         bar.set_visibility(False)
-        grid = make_grid(_columns())
+        with ui.element("div").classes("group") as empty:
+            empty_state(
+                t("No transactions yet."),
+                t("Add one with New Transaction, or import a bank statement."),
+                t("Import…"),
+                lambda: ui.navigate.to("/import"),
+            )
+        with ui.column().classes("w-full gap-0") as listing:
+            count = ui.label().classes("group-header")  # the number of rows, once, above them (polish before 1.0)
+            grid = make_grid(grid_columns(items=True, attachments=True))
         grid.options["tooltipShowDelay"] = 400  # the official COICOP name of a category (`_category_tip`)
-        count = ui.label().classes("caption px-1")
         shown: list[dict] = []  # the rows the filters let through, for the export
 
         def apply_filters() -> None:
-            set_options(payee, [p.name for p in payee_svc.all_payees(ctx)])  # with payees added since
+            set_options(payee_filter, [p.name for p in payee_svc.all_payees(ctx)])  # with payees added since
             tag_filter.refresh_tags(ctx)  # and tags
             wanted = set(tag_filter.value or [])
             tags = tag_svc.by_id(ctx)
@@ -288,7 +366,7 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
                     continue
                 if typ.value and tx.type != typ.value:
                     continue
-                if payee.value and tx.payee != payee.value:
+                if payee_filter.value and tx.payee != payee_filter.value:
                     continue
                 split = split_columns(ctx, tx, lines)
                 if wanted and wanted.isdisjoint([*tag_codec.split(tx.tags), *split[1]]):
@@ -306,9 +384,17 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
                 rows.append(r)
             rows.sort(key=lambda r: r["date"], reverse=True)  # the grid's default order
             shown[:] = rows
+            columns = grid_columns(items=bool(item_counts), attachments=bool(attached[0]))
+            grid.options["columnDefs"] = columns
+            wide = [c["field"] for c in columns[1:] if not c.get("hide")]
+            grid.options[":onGridReady"] = grid.options[":onGridSizeChanged"] = _phone_layout(wide)
+            grid.options[":getRowHeight"] = f"p => p.api.getColumn('{PHONE}')?.isVisible() ? 60 : undefined"
             grid.options["rowData"] = rows
             grid.update()
             total = len(ctx.store.transactions.all())
+            empty.set_visibility(not total)
+            for el in (listing, text, filter_btn):
+                el.set_visibility(bool(total))
             count.set_text(
                 tn("{shown} of {n} transaction", "{shown} of {n} transactions", total, shown=len(rows))
                 if len(rows) != total
@@ -316,7 +402,7 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
             )
             bar.set_visibility(False)
 
-        for el in (d_from, d_to, a_min, a_max, acc, payee, typ, tag_filter, cat_filter, text):
+        for el in (d_from, d_to, a_min, a_max, acc, payee_filter, typ, tag_filter, cat_filter, text):
             el.on_value_change(apply_filters)
         apply_filters()
         on_data_changed(apply_filters)
@@ -394,3 +480,9 @@ def page(tag: str = "", month: str = "", category: str = "") -> None:
 
         grid.on("selectionChanged", selection_changed)
         grid.on("rowDoubleClicked", lambda e: open_editor(e.args["data"]["id"]), ["data"])
+        # a phone's row has no checkbox: a tap opens the transaction
+        grid.on(
+            "cellClicked",
+            lambda e: open_editor(e.args["data"]["id"]) if e.args.get("colId") == PHONE else None,
+            ["data", "colId"],
+        )

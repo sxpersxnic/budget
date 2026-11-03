@@ -71,8 +71,10 @@ async def test_the_empty_page_teaches_and_subscriptions_leads_here(user: User, c
     with user:
         assert user.client.page.path == "/recurring"
     await user.should_see("Found in Your Transactions")
-    await user.should_see("shows here once it was charged 3 times (2 times for half-yearly and yearly ones)")
-    await user.should_see("Rent, premiums, a salary: add what repeats with New Recurring Transaction")
+    await user.should_see("No regular payments found yet.")
+    [dot] = [i for i in user.find(kind=ui.icon).elements if "info-dot" in i.classes]  # the how, behind ⓘ
+    assert "shows here once it was charged 3 times (2 times for half-yearly and yearly ones)" in dot.props["aria-label"]
+    await user.should_see("No recurring transactions yet.")
     shown = " ".join(labels(user))
     assert "Ignored" not in shown and "Due" not in labels(user)  # nothing can be due without a series
     assert "spending about" not in shown
@@ -84,8 +86,10 @@ async def test_detected_subscriptions_with_their_captions(user: User, ctx, setup
     await user.should_see("Found in Your Transactions")
     shown = labels(user)
     assert shown.index("ZVV") < shown.index("Swisscom")  # the dearer year first
-    assert "2 subscriptions · about 1'618.80 CHF a year" in shown
-    assert "1'020.00 CHF a year" in shown and "598.80 CHF a year" in shown
+    assert "2 regular payments · about 1'619 CHF a year" in shown  # not only subscriptions: rent, insurance too
+    yearly = [h.content for h in user.find(kind=ui.html).elements if "row-amount" in h.classes]
+    assert sorted(yearly) == sorted(['1&#x27;020.00<span class="cur">CHF</span>', '598.80<span class="cur">CHF</span>'])
+    assert shown.count("a year") == 2  # under each yearly amount
     [sub] = [s for s in sub_svc.detect(ctx, "CHF") if s.name == "Swisscom"]
     assert page.caption(sub) in shown
     assert page.caption(sub) == f"49.90 CHF · Every month · next around {i18n.date_label(day(0, 10))}"  # two facts
@@ -98,7 +102,9 @@ async def test_make_recurring_opens_the_prefilled_sheet_and_the_row_leaves(user:
     charges(ctx, setup)
     await user.open("/recurring")
     await user.should_see("Swisscom")
-    swisscom = buttons(user, "Make Recurring…")[1]  # the second row
+    swisscom = icon_buttons(user, "o_event_repeat")[1]  # the second row
+    assert swisscom.props["aria-label"] == "Make Recurring…"
+    assert "row-actions" in swisscom.parent_slot.parent.classes  # shown on hover, with Ignore
     click(user, swisscom)
     await user.should_see("New Recurring Transaction")
     [start] = in_dialog(user, ui.input, "First Date")
@@ -113,9 +119,9 @@ async def test_make_recurring_opens_the_prefilled_sheet_and_the_row_leaves(user:
     assert series.payee == "Swisscom" and series.next_due == day(0, 10)
     assert notified(user, "Recurring transaction added")
     shown = labels(user)
-    assert "1 subscription · about 1'020.00 CHF a year" in shown
+    assert "1 regular payment · about 1'020 CHF a year" in shown
     assert f"Swisscom · {get_coicop().label('08.3')}" in shown  # now under Your Series
-    assert "spending about 598.80 CHF a year" in shown
+    assert "spending about 599 CHF a year" in shown
 
 
 async def test_ignore_and_watch_again(user: User, ctx, setup) -> None:
@@ -127,14 +133,14 @@ async def test_ignore_and_watch_again(user: User, ctx, setup) -> None:
     click(user, ignore)
     await settle()
     assert notified(user, "Ignored ZVV")
-    await user.should_see("Ignored · 1 subscription")
-    assert "1 subscription · about 598.80 CHF a year" in labels(user)
+    await user.should_see("Ignored · 1 regular payment")
+    assert "1 regular payment · about 599 CHF a year" in labels(user)
     assert [i.name for i in sub_svc.ignored(ctx)] == ["ZVV"]
     click(user, buttons(user, "Watch Again")[0])
     await settle()
     assert notified(user, "Watching ZVV again")
     assert sub_svc.ignored(ctx) == []
-    assert "2 subscriptions · about 1'618.80 CHF a year" in labels(user)
+    assert "2 regular payments · about 1'619 CHF a year" in labels(user)
 
 
 async def test_a_stale_watch_again_is_reported(user: User, ctx, setup) -> None:
@@ -155,7 +161,7 @@ async def test_a_charge_deleted_meanwhile_is_reported(user: User, ctx, setup) ->
     await user.should_see("ZVV")
     last = max((tx for tx in ctx.store.transactions.all() if tx.payee == "ZVV"), key=lambda tx: tx.date)
     ctx.store.transactions.delete([last.id])
-    click(user, buttons(user, "Make Recurring…")[0])
+    click(user, icon_buttons(user, "o_event_repeat")[0])
     await user.should_see("Transaction not found")
 
 
@@ -175,5 +181,5 @@ async def test_the_running_series_and_their_yearly_cost(user: User, ctx, setup) 
     await user.open("/recurring")
     await user.should_see("Your Series")
     shown = labels(user)
-    assert "spending about 24'000.00 CHF a year" in shown  # 22'800 + 1'200
+    assert "spending about 24'000 CHF a year" in shown  # 22'800 + 1'200
     assert any(text.startswith("300.00 CHF · Every quarter") for text in shown)

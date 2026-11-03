@@ -128,7 +128,7 @@ def test_rules_are_listed_by_type_and_text_and_labelled(ctx, setup):
     rules_svc.save(ctx, RuleInput(match="SBB", category="07.3"))
     rules_svc.save(ctx, RuleInput(match="Coop", category="01.1"))
     assert [r.match for r in rules_svc.all_rules(ctx)] == ["Coop", "SBB", "Lohn"]
-    assert rules_svc.category_label(ctx, TX_EXPENDITURE, "01.1") == "01.1 Groceries"
+    assert rules_svc.category_label(ctx, TX_EXPENDITURE, "01.1") == "Groceries"
     assert rules_svc.category_label(ctx, TX_INCOME, setup["salary"].id) == "Salary"
     assert rules_svc.category_label(ctx, TX_INCOME, "gone") == ""
 
@@ -266,7 +266,7 @@ def test_a_first_import_suggests_shops_and_brands(ctx, setup):
     ]
 
 
-def test_the_import_suggests_rules_and_history_and_can_clear_them(ctx, setup):
+def test_the_import_suggests_rules_and_history(ctx, setup):
     rules_svc.save(ctx, RuleInput(match="migros", category="01.1", account=setup["eur"].id))
     rules_svc.save(ctx, RuleInput(match="lohn", type=TX_INCOME, category=setup["salary"].id))
     tx_svc.save(ctx, spend(setup, "Brezelkönig", "11.1"))
@@ -290,11 +290,6 @@ def test_the_import_suggests_rules_and_history_and_can_clear_them(ctx, setup):
         (setup["salary"].id, setup["chf"].id),
     ]
     assert len(ctx.store.rules.all()) == 2  # confirming a suggestion creates no rule
-
-    again = importer.analyse(ctx, importer.parse_rows(parsed, importer.guess_profile(parsed)), setup["chf"].id)
-    assert importer.clear_suggestions(again) == 3
-    assert [(r.category, r.suggested, r.reason) for r in again] == [("", False, "")] * 3
-    assert importer.clear_suggestions(again) == 0
 
 
 def test_a_category_given_by_the_file_is_not_a_suggestion(ctx, setup):

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import date
 
-from nicegui import ui
+from nicegui import run, ui
 
 from budget_app import i18n
 from budget_app.i18n import t
@@ -144,7 +144,7 @@ AG_GRID_LOCALE["it"] = {
 
 
 # ISO values keep sorting and filtering exact; the formatters only change what is shown.
-def _date_fmt() -> str:
+def date_fmt() -> str:
     return (
         f"p => p.value ? new Date(p.value + 'T00:00').toLocaleDateString('{i18n.browser_locale()}', "
         "{day: 'numeric', month: 'short', year: 'numeric'}) : ''"
@@ -176,7 +176,7 @@ def money_col(field: str, header: str, **extra) -> dict:
 
 
 def date_col(field: str, header: str, **extra) -> dict:
-    col = {"field": field, "headerName": header, ":valueFormatter": _date_fmt()}
+    col = {"field": field, "headerName": header, ":valueFormatter": date_fmt()}
     col.update(extra)
     return col
 
@@ -198,7 +198,8 @@ def make_grid(columns: list[dict], height: str = "calc(100vh - 230px)") -> ui.ag
             ":getRowId": "p => p.data.id",
             "pagination": True,
             "paginationPageSize": 100,
-            "paginationPageSizeSelector": [50, 100, 500, 1000],
+            # the page says how many rows there are, once, and a hundred to a page is enough (polish before 1.0)
+            "paginationPageSizeSelector": False,
             "overlayNoRowsTemplate": '<span style="color: var(--label-2)">'
             + html.escape(t("Nothing matches these filters."))
             + "</span>",
@@ -236,7 +237,7 @@ def export_items(name: str, title: str, columns: Callable[[], list[dict]], rows:
     async def export(kind: str) -> None:
         try:
             df = export_svc.view_frame(columns(), rows(), currency_header=t("Currency"))
-            data = export_svc.frame_csv(df) if kind == "csv" else export_svc.frame_xlsx(df, title)
+            data = export_svc.frame_csv(df) if kind == "csv" else await run.io_bound(export_svc.frame_xlsx, df, title)
         except Exception as exc:
             error(t("Export failed: {error}", error=exc))
             return

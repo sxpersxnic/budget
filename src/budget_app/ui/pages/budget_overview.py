@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import html
 
-from nicegui import ui
+from nicegui import run, ui
 
 from budget_app.domain import months
 from budget_app.domain import trends as trend_rules
@@ -45,61 +45,15 @@ from budget_app.ui.layout import (
     sheet_buttons,
     undoable,
 )
+from budget_app.ui.pages.accounts import account_entry_dialog
 from budget_app.ui.pages.add_budget import FOREVER, recurrence_options, until_options
-from budget_app.ui.widgets.selects import account_options, currency_select
+from budget_app.ui.widgets.selects import currency_select
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 EPS = 0.005
 
 
 # ------------------------------------------------------------------ dialogs
-def account_entry_dialog(ctx: Context, on_saved, month: str | None = None, account_id: str | None = None) -> None:
-    """Add or edit the recorded balance of an account at the end of a month."""
-    first, _ = data_month_range(ctx, back=60)
-    with sheet(t("Record Balance"), width="26rem") as dlg:
-        ui.label(t("What did the account hold at the end of the month?")).classes("footnote -mt-2")
-        month_sel = (
-            ui.select(
-                month_options(first, months.current_month()), value=month or months.previous_month(), label=t("Month")
-            )
-            .props("dense outlined options-dense")
-            .classes("w-full")
-        )
-        acc_sel = ui.select(
-            account_options(ctx, converted=True, loans=False), value=account_id, label=t("Account"), with_input=True
-        )
-        acc_sel.props("dense outlined").classes("w-full")
-        amount = (
-            ui.number(t("Balance"), format="%.2f").props("outlined inputmode=decimal").classes("hero-amount w-full")
-        )
-        hint = ui.label().classes("caption px-1 -mt-2")
-
-        def load() -> None:
-            acc = ctx.store.accounts.get(acc_sel.value) if acc_sel.value else None
-            amount.props(f"suffix={acc.currency}" if acc else "suffix=")
-            entry = wealth_svc.entry_for(ctx, acc_sel.value, month_sel.value) if acc and month_sel.value else None
-            amount.value = entry.amount if entry else None
-            hint.set_text(t("Already recorded. Saving replaces it.") if entry else "")
-            check()
-
-        def check() -> None:
-            save_btn.set_enabled(bool(month_sel.value and acc_sel.value and amount.value is not None))
-
-        def save() -> None:
-            try:
-                wealth_svc.upsert_entry(ctx, acc_sel.value, month_sel.value, amount.value)
-            except Exception as exc:
-                error(str(exc))
-                return
-            dlg.close()
-            undoable(t("Balance recorded"))
-            on_saved()
-
-        save_btn = sheet_buttons(dlg, t("Save"), save)
-        month_sel.on_value_change(load)
-        acc_sel.on_value_change(load)
-        amount.on_value_change(check)
-        load()
 
 
 def budget_edit_dialog(ctx: Context, month: str, type_: str, category: str, label: str, on_saved) -> None:
@@ -315,7 +269,8 @@ def page(month: str = "", category: str = "") -> None:
             name = f"statement_{state['month']}_{state['currency']}.{kind}"
             try:
                 rep = reports.month_report(ctx, state["month"], state["currency"])
-                data = export_svc.statement_xlsx(rep) if kind == "xlsx" else export_svc.statement_pdf(rep)
+                build = export_svc.statement_xlsx if kind == "xlsx" else export_svc.statement_pdf
+                data = await run.io_bound(build, rep)  # off the event loop: the page stays responsive
             except Exception as exc:
                 error(t("Export failed: {error}", error=exc))
                 return
@@ -335,10 +290,7 @@ def page(month: str = "", category: str = "") -> None:
             ):
                 ui.menu_item(t("Export as Excel…"), on_click=lambda: export("xlsx"))
                 ui.menu_item(t("Export as PDF…"), on_click=lambda: export("pdf"))
-            # secondary: the page is for reading the month; recording a balance is an occasional chore
-            ui.button(
-                t("Record Balance"), icon="add", on_click=lambda: account_entry_dialog(ctx, content.refresh)
-            ).props("flat no-caps").classes("text-primary")
+            # balances are recorded on Wealth (polish before 1.0); the month's own Record links stay where it needs one
 
         @ui.refreshable
         def content() -> None:
@@ -384,7 +336,8 @@ def page(month: str = "", category: str = "") -> None:
                     )
                 net = rep.total_income.actual - rep.total_expenditure.actual
                 net_budget = rep.total_income.budget - rep.total_expenditure.budget
-                metric(t("Net Income"), net, cur, t("Budgeted {amount}", amount=fmt(net_budget)))
+                budgeted = (fmt_signed(net_budget) or fmt(0)) + f" {cur}"  # signed, as the net income above it
+                metric(t("Net Income"), net, cur, t("Budgeted {amount}", amount=budgeted))
 
             if rep.complete:
                 reconciliation_card(rep)
@@ -417,6 +370,7 @@ def page(month: str = "", category: str = "") -> None:
                     ui.label(t("Appears once balances are recorded for this and the previous month.")).classes(
                         "caption"
                     )
+                    ui.link(t("Balances on Wealth"), "/accounts").classes("link-btn no-underline text-[13px]")
                     return
                 recorded = rep.total_income.actual - rep.total_expenditure.actual
                 with ui.element("div").classes("metrics pt-2").style("--n: 4"):
@@ -519,9 +473,9 @@ def page(month: str = "", category: str = "") -> None:
                     with ui.element("div").classes("ledger-row head"):
                         ui.label(t("Category"))
                         ui.element("div").classes("c-bar")
-                        ui.label(t("Actual")).classes("r")
+                        ui.label(t("Actual")).classes("r c-act")
                         if cmp is None:
-                            ui.label(t("Budget")).classes("r")
+                            ui.label(t("Budget")).classes("r c-bud")
                             ui.label(t("Difference")).classes("r c-diff")
                         else:
                             ui.label(months.label(cmp.month)).classes("r c-ref")
@@ -532,7 +486,7 @@ def page(month: str = "", category: str = "") -> None:
                     with ui.row().classes("w-full items-center pt-2"):
                         ui.space()
                         ui.switch(
-                            t("Show all subcategories"),
+                            t("Show All Categories"),
                             value=state["show_empty"],
                             on_change=lambda e: (state.update(show_empty=e.value), content.refresh()),
                         ).props("dense").classes("text-[13px] text-2")
@@ -544,11 +498,14 @@ def page(month: str = "", category: str = "") -> None:
             depth: int = 0,
             children=None,
             cmp: trends_svc.Comparison | None = None,
-        ) -> None:
+        ) -> bool:
+            """The row, unless it has nothing to show; False then."""
             expanded = line.key in state["expanded"]
             is_exp = type_ == BUDGET_EXPENDITURE
             change = cmp.change(line, income=not is_exp) if cmp is not None else None
             empty = _is_zero(line.actual) and (change.empty if change is not None else _is_zero(line.budget))
+            if empty and depth == 0 and not state["show_empty"] and line.key != state["target"]:
+                return False  # nothing budgeted, nothing spent: shown with Show All Categories (polish before 1.0)
             editable = not rep.complete and line.editable and line.key != "TOTAL" and cmp is None
             marked = " target" if line.key == state["target"] else ""
             with ui.element("div").classes("ledger-row" + (" dim" if empty else "") + marked) as row:
@@ -562,9 +519,8 @@ def page(month: str = "", category: str = "") -> None:
                         ui.icon("chevron_right", size="18px").classes("chev" + (" open" if expanded else ""))
                     else:
                         ui.element("span").style("width: 18px; flex: none")
-                    code, name = _split_code(line)
-                    code_html = f'<span class="code">{html.escape(code)}</span>' if code else ""
-                    lbl = ui.html(code_html + html.escape(name), tag="span").classes("name")
+                    lbl = ui.html(html.escape(line.label), tag="span").classes("name")
+                    lbl._props["data-code"] = line.key  # names, not codes: the code is the tooltip's
                     # on hover the full name (long names are truncated) and the official COICOP name
                     lbl._props["title"] = "\n".join(filter(None, (line.label, get_coicop().tooltip(line.key))))
                 if change is not None:  # F18: the compared month instead of the budget
@@ -574,11 +530,12 @@ def page(month: str = "", category: str = "") -> None:
                     _change_cell(change, is_exp, rep.currency)
                 else:
                     _meter(line.actual, line.budget)
-                    _amount(line.actual)
-                    _amount(line.budget)
+                    _amount(line.actual, " c-act")
+                    _amount(line.budget, " c-bud")
                     diff = None if empty else line.diff
                     over = diff is not None and (diff > EPS if is_exp else diff < -EPS)
-                    ui.label(fmt_signed(diff)).classes("r c-diff " + ("text-neg" if over else "text-2"))
+                    text = "" if diff is None else fmt_signed(diff) or fmt(0)  # on budget: 0.00, not a blank on phones
+                    ui.label(text).classes("r c-diff " + ("text-neg" if over else "text-2"))
                 if editable:
                     named(
                         ui.button(
@@ -600,17 +557,21 @@ def page(month: str = "", category: str = "") -> None:
                     content.refresh()
 
                 label_cell.classes(add="cursor-pointer").on("click", toggle)
+            return True
 
         def expenditure_rows(rep: reports.MonthReport, cmp: trends_svc.Comparison | None = None) -> None:
-            def walk(line: reports.Line, depth: int) -> None:
+            def walk(line: reports.Line, depth: int) -> bool:
                 children = rep.children(line.key, include_empty=state["show_empty"]) if line.key != ADV else []
-                line_row(rep, line, BUDGET_EXPENDITURE, depth, children, cmp)
+                if not line_row(rep, line, BUDGET_EXPENDITURE, depth, children, cmp):
+                    return False
                 if line.key in state["expanded"]:
                     for child in children:
                         walk(child, depth + 1)
+                return True
 
-            for code in rep.top_expenditure:
-                walk(rep.expenditure_tree[code], 0)
+            shown = [walk(rep.expenditure_tree[code], 0) for code in rep.top_expenditure]
+            if not any(shown):
+                ui.label(t("No expenditure this month.")).classes("caption px-1 py-2")
 
         def income_rows(rep: reports.MonthReport, cmp: trends_svc.Comparison | None = None) -> None:
             if not rep.income_lines:
@@ -753,11 +714,3 @@ def _summary(total: reports.Line, is_exp: bool, currency: str) -> str:
     if left < -EPS:
         return t("{amount} still expected of {budget}", amount=fmt(-left), budget=fmt(total.budget, currency))
     return t("On budget, {budget}", budget=fmt(total.budget, currency))
-
-
-def _split_code(line: reports.Line) -> tuple[str, str]:
-    """'01.1 Food' -> ('01.1', 'Food'); labels without a leading code are returned whole."""
-    prefix = f"{line.key} "
-    if line.label.startswith(prefix):
-        return line.key, line.label[len(prefix) :]
-    return "", line.label

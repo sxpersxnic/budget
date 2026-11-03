@@ -86,7 +86,9 @@ def test_fetch_reads_the_tag(github):
         (200, json.dumps({"tag_name": 42}).encode()),
         (200, json.dumps(["v0.2.0"]).encode()),
         (200, b"\xff\xfe"),
-        (200, b'{"tag_name": "v0.2.0", "body": "' + b"x" * (updates.MAX_BYTES + 10) + b'"}'),
+        pytest.param(  # a short id: pytest names a test by its parameters
+            200, b'{"tag_name": "v0.2.0", "body": "' + b"x" * (updates.MAX_BYTES + 10) + b'"}', id="200-too-long"
+        ),
     ],
 )
 def test_fetch_refuses_unexpected_answers(github, status, body):

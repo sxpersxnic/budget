@@ -30,6 +30,7 @@ from budget_app.services import profiles as profiles_svc
 from budget_app.services import recurring as recurring_svc
 from budget_app.services import reminders as reminders_svc
 from budget_app.services import security, sync
+from budget_app.services import sorting as sorting_svc
 from budget_app.services import transactions as tx_svc
 from budget_app.services import undo as undo_svc
 from budget_app.services import updates as updates_svc
@@ -54,16 +55,20 @@ SETTINGS = ("/settings", N_("Settings"), "o_settings")
 SECTIONS = {
     "/transactions": [
         ("/transactions", N_("Transactions")),
+        ("/to-sort", N_("To Sort")),
         ("/recurring", N_("Recurring")),
         ("/bills", N_("Bills")),
+        # who you pay and what Budget files automatically, beside the transactions they act on (not in Settings)
+        ("/payees", N_("Payees")),
+        ("/rules", N_("Rules")),
     ],
     "/budget-entries": [
-        ("/budget-entries", N_("Budget Plan")),
+        ("/budget-entries", N_("Plan")),
         ("/goals", N_("Goals")),
         ("/scenarios", N_("Scenarios")),
     ],
     "/accounts": [
-        ("/accounts", N_("Accounts")),
+        ("/accounts", N_("Wealth")),
         ("/investments", N_("Investments")),
         ("/loans", N_("Loans")),
         ("/shared", N_("Shared Expenses")),
@@ -75,17 +80,16 @@ SECTIONS = {
     "/settings": [
         ("/settings", N_("General")),
         ("/categories", N_("Categories")),
-        ("/payees", N_("Payees")),
         ("/tags", N_("Tags")),
     ],
 }
-# Pages that are no tab highlight the tab they belong to.
+# Pages that are no tab (forms, the history): their place is marked in the sidebar, and a link above the title leads
+# back to the tab (polish before 1.0: a form showed its place's tabs with a tab marked open that it isn't).
 TAB_PARENT = {
     "/add-transaction": "/transactions",
     "/import": "/transactions",
     "/add-budget": "/budget-entries",
     "/history": "/settings",
-    "/rules": "/payees",
 }
 # Every route that is not a place highlights its place in the sidebar.
 NAV_PARENT = {tab: place for place, tabs in SECTIONS.items() for tab, _ in tabs if tab != place}
@@ -102,6 +106,7 @@ SHORTCUTS = [
     ("Esc", N_("Close the open sheet")),
     ("?", N_("Keyboard Shortcuts")),
 ]
+SHOW_ACTIVE_TAB = "document.querySelector('.section-tab.active')?.scrollIntoView({inline: 'nearest', block: 'nearest'})"
 SEARCH_FOCUS = "document.querySelector('.search input')?.focus()"  # every page's search field has the class
 # the sheet keeps its Ctrl/⌘ Enter, so a sheet opened from a form doesn't also save the form
 SAVE_KEYS = (
@@ -117,7 +122,9 @@ _sheets: weakref.WeakKeyDictionary[Client, weakref.WeakSet[ui.dialog]] = weakref
 _due_badges: weakref.WeakKeyDictionary[Client, dict[str, ui.badge]] = weakref.WeakKeyDictionary()
 BADGES = {
     "/": N_("Things to do"),  # in the sidebar: exactly the rows of the Overview's Due list (reminders.count)
-    "/recurring": N_("Due recurring transactions"),  # the others on their tabs
+    "/transactions": N_("Payees to sort"),  # in the sidebar too: imported transactions without a category
+    "/to-sort": N_("Payees to sort"),  # the others on their tabs
+    "/recurring": N_("Due recurring transactions"),
     "/bills": N_("Bills due within a week or overdue"),
     "/loans": N_("Due loan payments"),
 }
@@ -223,6 +230,8 @@ def refresh_due_badge() -> None:
     badges = _due_badges.get(ui.context.client, {})
     counts = {
         "/": reminders_svc.count,
+        "/transactions": lambda ctx, _today: sorting_svc.count(ctx),
+        "/to-sort": lambda ctx, _today: sorting_svc.count(ctx),
         "/recurring": recurring_svc.due_count,
         "/bills": bills_svc.due_count,
         "/loans": loan_svc.due_count,
@@ -261,16 +270,23 @@ def _mark(link: ui.link, active: bool) -> None:
         link.classes(remove="active").props(remove="aria-current")
 
 
+def _place_label(place: str) -> str:
+    return t(next(label for target, label, _ in [*NAV, SETTINGS] if target == place))
+
+
 def _section_tabs(place: str, path: str) -> None:
     """The pages of a place as tabs under the title; the open one is marked."""
-    current = TAB_PARENT.get(path, path)
+    current = path
     with ui.element("nav").classes("section-tabs") as nav:
-        nav.props["aria-label"] = t(next(label for target, label, _ in [*NAV, SETTINGS] if target == place))
+        nav.props["aria-label"] = _place_label(place)
         for target, label in SECTIONS[place]:
             with ui.link(target=target).classes("section-tab") as link:
                 ui.label(t(label))
-                _badge(target)
+                if target != place:  # a place's own count is the sidebar's (Transactions: payees to sort)
+                    _badge(target)
             _mark(link, target == current)
+    # on a phone the tabs scroll sideways: the open one comes into view, not off the right edge
+    ui.run_javascript(SHOW_ACTIVE_TAB)
 
 
 def _new_transaction() -> None:
@@ -530,16 +546,23 @@ def frame(title: str, path: str, subtitle: str | None = None, narrow: bool = Fal
     ):
         shell_.skip.props["href"] = f"#{main.html_id}"
         shell_.skip.update()
-        with ui.row().classes("w-full items-end gap-3 flex-wrap"):
-            with ui.column().classes("gap-0"):
-                ui.label(title).classes("large-title max-lg:hidden")
-                if subtitle:
-                    ui.label(subtitle).classes("title-sub")
-            ui.space()
-            actions = ui.row().classes("items-center gap-2 flex-wrap")
         place = NAV_PARENT.get(path, path)
-        if place in SECTIONS:
-            _section_tabs(place, path)
+        # the title, its actions and the tabs: the same height and width on every page of a place, so switching tabs
+        # moves nothing (polish before 1.0)
+        with ui.column().classes("page-head"):
+            if path in TAB_PARENT:  # a form: the way back instead of the place's tabs
+                with ui.link(target=TAB_PARENT[path]).classes("back-link"):
+                    ui.icon("chevron_left")
+                    ui.label(_place_label(place))
+            with ui.row().classes("page-title-row"):
+                with ui.column().classes("gap-0 min-w-0"):
+                    ui.label(title).classes("large-title max-lg:hidden")
+                    if subtitle:
+                        ui.label(subtitle).classes("title-sub")
+                ui.space()
+                actions = ui.row().classes("items-center gap-2 flex-wrap")
+            if place in SECTIONS and path not in TAB_PARENT:
+                _section_tabs(place, path)
         yield ctx, actions
 
 
@@ -587,6 +610,37 @@ def sheet_buttons(dlg: ui.dialog, label: str, on_click, enabled: bool = True) ->
 def segmented(options: dict, value, on_change=None, full: bool = False) -> ui.toggle:
     toggle = ui.toggle(options, value=value, on_change=on_change).props("no-caps unelevated spread=false")
     return toggle.classes("segmented" + (" full" if full else ""))
+
+
+def row_value(value: float | None, currency: str = "", sub: str = "", tone: str = "") -> ui.element:
+    """The amount of a list row, right-aligned at the row's end so the rows compare at a glance (a balance, what a
+    payee cost, what a person owes); `sub` is a short line below it. Say a date or a currency the rows share once
+    above the list, not on every row. `tone` "positive" or "negative" colours the number."""
+    with ui.element("div").classes("row-value") as box:
+        ui.html(money_html(value, currency)).classes("row-amount" + (f" {tone}" if tone else ""))
+        if sub:
+            ui.label(sub).classes("caption")
+    return box
+
+
+def info(text: str) -> ui.icon:
+    """An ⓘ beside a label that holds the explanation as its tooltip: one plain line on the page where it helps, the
+    rest here (polish before 1.0). Reachable by keyboard; screen readers read the text."""
+    icon = ui.icon("o_info", size="16px").classes("info-dot").props("tabindex=0 role=img")
+    icon.props["aria-label"] = text  # a prop, not a props string: no quoting, nothing escaped for the reader
+    with icon:
+        ui.tooltip(text).classes("info-tip")
+    return icon
+
+
+@contextmanager
+def more_menu(label: str | None = None, classes: str = ""):
+    """A "···" button with a menu: what a page or row offers besides its one main button (polish before 1.0).
+    Yields the menu; add `ui.menu_item`s inside."""
+    button = ui.button(icon="more_horiz").props("flat round dense").classes("text-primary " + classes)
+    named(button, label or t("More"))
+    with button, ui.menu().props("auto-close") as menu:
+        yield menu
 
 
 def metric(label: str, value: float | None, currency: str, sub: str = "", hero: bool = False) -> None:
@@ -667,11 +721,14 @@ MEDIA_TYPES = {
 }
 
 
-async def save_file(data: bytes, filename: str) -> None:
+async def save_file(data: bytes | None, filename: str) -> None:
     """Hand a file to the user: the system save dialog in the app window, a download in the browser.
 
-    The app window (pywebview) drops browser downloads, so there the file is written from Python.
+    The app window (pywebview) drops browser downloads, so there the file is written from Python. No data (a file
+    built with `run.io_bound` while the app shuts down) saves nothing.
     """
+    if data is None:
+        return
     window = app.native.main_window
     if window is None:
         ui.download.content(data, filename, MEDIA_TYPES.get(Path(filename).suffix, ""))

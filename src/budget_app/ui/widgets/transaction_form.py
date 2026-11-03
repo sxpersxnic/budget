@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import date
+from typing import Any
 
 from nicegui import ui
 from nicegui.events import KeyEventArguments
@@ -74,6 +75,29 @@ from budget_app.ui.widgets.tags import tag_select
 
 log = logging.getLogger(__name__)
 AUTO_ADVANCE = "__auto__"
+COMMON_TYPES = (TX_EXPENDITURE, TX_INCOME, TX_TRANSFER)  # in the switch; the rarer ones under More
+SHORT_TYPES = {TX_TRANSFER: N_("Transfer")}  # what the switch says, where the type's name is long
+
+
+class TypeSwitch(ui.toggle):
+    """Expenditure · Income · Transfer (polish before 1.0): fits a phone. A currency exchange or a revaluation,
+    picked from the More menu beside it, joins the switch while it is the chosen type."""
+
+    def __init__(self, value: str, on_change: Callable[..., object]) -> None:
+        super().__init__(self.choices(value), value=value, on_change=on_change)
+        self.props("no-caps unelevated spread=false").classes("segmented full")
+
+    @staticmethod
+    def choices(kind: str) -> dict[str, str]:
+        shown = [*COMMON_TYPES, *([kind] if kind in TX_TYPES and kind not in COMMON_TYPES else [])]
+        return {k: t(SHORT_TYPES.get(k, TX_TYPES[k])) for k in shown}
+
+    def _handle_value_change(self, value: Any) -> None:
+        if list(self.choices(value)) != self._values:  # before the model value is looked up among the options
+            self.options = self.choices(value)
+            self._update_values_and_labels()
+            self._update_options()
+        super()._handle_value_change(value)
 
 
 class TransactionForm:
@@ -122,10 +146,8 @@ class TransactionForm:
         with ui.column().classes("w-full gap-4"):
             # The type decides every other field, so it comes first.
             with ui.row().classes("w-full items-center gap-2 no-wrap"):
-                self.type = segmented({k: t(v) for k, v in TX_TYPES.items()}, init.type, on_change=ch, full=True)
-                self.type.classes("flex-1 min-w-0")
-                if not self.editing:
-                    self._templates_menu()
+                self.type = TypeSwitch(init.type, on_change=ch).classes("flex-1 min-w-0")
+                self._more_menu()
             with ui.column().classes("w-full gap-1") as self.amount_box:
                 with ui.row().classes("w-full gap-2 items-center no-wrap"):
                     self.amount = AmountInput(
@@ -136,8 +158,10 @@ class TransactionForm:
                         on_change=ch,
                         validation={t("Must be positive"): lambda v: v is None or v > 0},
                     )
-                    self.amount.props("outlined inputmode=decimal autofocus").classes("hero-amount flex-1 min-w-0")
-                    self.currency = currency_select(self.ctx, init.currency, on_change=ch)
+                    self.amount.props("outlined inputmode=decimal autofocus hide-bottom-space").classes(
+                        "hero-amount flex-1 min-w-0"
+                    )
+                    self.currency = currency_select(self.ctx, init.currency, on_change=ch).classes("hero-side")
                 self.base_hint = ui.label().classes("caption px-1")
             self.date = date_input(t("Date"), init.date.isoformat() if init.date else "", on_change=ch).classes(
                 "w-full"
@@ -217,7 +241,7 @@ class TransactionForm:
                     on_change=ch,
                     validation={t("Must be positive"): lambda v: v is None or v > 0},
                 )
-                self.to_amount.props("outlined inputmode=decimal").classes("w-full mt-2")
+                self.to_amount.props("outlined inputmode=decimal hide-bottom-space").classes("w-full mt-2")
                 self.exchange_hint = ui.label().classes("caption px-1 whitespace-pre-line")
 
             # --- revaluation (F43)
@@ -283,19 +307,20 @@ class TransactionForm:
             )
             for name, data in self._start_files:
                 self.attachments.add_pending(name, data)
-            with ui.row().classes("w-full items-center gap-2 no-wrap pt-1"):
+            # on a phone the buttons keep their words on one line; the reason Save waits wraps above them instead
+            with ui.row().classes("w-full items-center gap-2 pt-1"):
                 self.status = ui.label().classes("caption")
                 ui.space()
                 if self.editing and self.on_duplicate:
                     editing = self.editing
                     ui.button(t("Duplicate"), icon="o_content_copy", on_click=lambda: self.on_duplicate(editing)).props(
-                        "flat"
+                        "flat no-wrap"
                     ).classes("text-primary")
                 if self.on_cancel:
-                    ui.button(t("Cancel"), on_click=self.on_cancel).props("flat").classes("text-primary")
+                    ui.button(t("Cancel"), on_click=self.on_cancel).props("flat no-wrap").classes("text-primary")
                 save_label = t("Save Changes") if self.editing else t("Add Transaction")
                 self.save_btn = ui.button(t("Mark Paid") if self._bill_id else save_label, on_click=self._save).props(
-                    "unelevated"
+                    "unelevated no-wrap"
                 )
             ui.keyboard(on_key=self._shortcut, ignore=[])
 
@@ -327,16 +352,23 @@ class TransactionForm:
         if e.action.keydown and e.key.enter and (e.modifiers.meta or e.modifiers.ctrl) and self.save_btn.enabled:
             self._save()
 
-    def _templates_menu(self) -> None:
-        """Start from a saved template, or save the current fields as one (F06)."""
-        button = ui.button(icon="o_bookmarks").props("flat round dense").classes("text-primary")
-        with named(button, t("Templates")), ui.menu().props("auto-close") as menu:
+    def _more_menu(self) -> None:
+        """Beside the type switch: the rarer types, and for a new transaction the templates (F06): start from one,
+        or save the current fields as one."""
+        button = ui.button(icon="more_horiz").props("flat round dense").classes("text-primary")
+        with named(button, t("More")), ui.menu().props("auto-close") as menu:
             self._template_menu = menu
             self._fill_templates_menu()
 
     def _fill_templates_menu(self) -> None:
         self._template_menu.clear()
         with self._template_menu:
+            for kind in TX_TYPES:
+                if kind not in COMMON_TYPES:
+                    ui.menu_item(t(TX_TYPES[kind]), on_click=lambda kind=kind: self.type.set_value(kind))
+            if self.editing:
+                return
+            ui.separator()
             templates = templates_svc.all_templates(self.ctx)
             for tp in templates:
                 with (

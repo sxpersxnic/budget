@@ -14,7 +14,7 @@ from datetime import date
 
 from budget_app.config import BASE_CURRENCY
 from budget_app.domain import months, splits
-from budget_app.domain.coicop import ADV, TAX, get_coicop
+from budget_app.domain.coicop import ADV, TAX, TO_SORT, get_coicop
 from budget_app.domain.models import (
     BUDGET_EXPENDITURE,
     BUDGET_INCOME,
@@ -121,18 +121,18 @@ def budgeted(ctx: Context, month_set: set[str], type_: str, view_cur: str) -> di
 
 
 def rollup(direct: dict[str, float]) -> dict[str, float]:
-    """Sum every amount into its own code and all ancestor codes."""
+    """Sum every amount into its own code and all ancestor codes; one without ancestors (To sort) keeps its own."""
     coicop = get_coicop()
     out: dict[str, float] = defaultdict(float)
     for code, value in direct.items():
-        for anc in coicop.ancestors(code):
+        for anc in coicop.ancestors(code) or [code]:
             out[anc] += value
     return dict(out)
 
 
 def top_expenditure_codes() -> list[str]:
-    """The expenditure rows of the statement's top level: COICOP divisions, taxes, advances."""
-    return [*get_coicop().divisions, TAX, ADV]
+    """The expenditure rows of the statement's top level: COICOP divisions, taxes, advances, and what is to sort."""
+    return [*get_coicop().divisions, TAX, ADV, TO_SORT]
 
 
 def projected_net(ctx: Context, month: str, view_cur: str) -> float:

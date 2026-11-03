@@ -1,4 +1,4 @@
-"""*Propose from History…* on the Budget Plan page (F16): the sheet, its inputs, conflicts, flags and creating."""
+"""*Propose from History…* on the Plan page (F16): the sheet, its inputs, conflicts, flags and creating."""
 
 from datetime import date
 
@@ -141,7 +141,7 @@ async def test_proposes_from_the_last_six_months(user: User, ctx, setup) -> None
     assert f"Based on 6 complete months: {span}. Amounts in CHF; a month without spending counts as 0." in texts(dlg)
     assert list(row_elements(dlg)) == ["expenditure:01.1", "expenditure:07.3", f"income:{setup['salary'].id}"]
     box, amount, lines = row(dlg, "expenditure:01.1")
-    assert box.text.startswith("01.1 ") and box.value
+    assert box.text == "Groceries" and box.value
     assert amount.value == 310  # 1'860 / 6, to 10 CHF
     assert "300 · 330 · 0 · 900 · 0 · 330" in lines
     assert "–" in lines  # no budget yet
@@ -269,12 +269,13 @@ async def test_overlaps_and_recurring_series_are_flagged(user: User, ctx, setup)
     box, _, lines = row(dlg, "expenditure:01.1")
     assert not box.value
     assert any(
-        s.startswith("Overlaps the budget for 01.1.1 ") and s.endswith("(120.00 CHF); both would count.") for s in lines
+        s.startswith("Overlaps the budget for Bread and cereals ") and s.endswith("(120.00 CHF); both would count.")
+        for s in lines
     )
     box, _, lines = row(dlg, "expenditure:07.3")
     assert box.value
     assert any(
-        s.startswith("Booked by a recurring transaction: SBB · 07.3.2 ") and s.endswith(", 85.00 CHF (Every month)")
+        s.startswith("Booked by a recurring transaction: SBB · ") and s.endswith(", 85.00 CHF (Every month)")
         for s in lines
     )
 

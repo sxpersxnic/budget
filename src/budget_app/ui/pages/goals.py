@@ -10,12 +10,10 @@ from nicegui import ui
 
 from budget_app import i18n
 from budget_app.domain import goals as plan
-from budget_app.domain import months
 from budget_app.domain.models import GOAL_AMOUNT, GOAL_MONTHS, Goal
 from budget_app.i18n import t, tn
 from budget_app.services import accounts as acc_svc
 from budget_app.services import goals as goal_svc
-from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.services.goals import GoalInput, GoalStatus
 from budget_app.ui.layout import (
@@ -195,8 +193,8 @@ def open_goal_sheet(ctx: Context, on_saved: Callable[[], None], editing: Goal | 
 
 
 # ------------------------------------------------------------------ the Overview card
-def goals_card(ctx: Context, view_cur: str) -> None:
-    """The first three goals not archived, and with goals reserved in the projection what is free at the horizon.
+def goals_card(ctx: Context) -> None:
+    """The first three goals not archived: name, bar and how far (polish before 1.0: the rest is the Goals page's).
     Nothing without goals."""
     shown = goal_svc.top_open(ctx)
     if not shown:
@@ -208,25 +206,14 @@ def goals_card(ctx: Context, view_cur: str) -> None:
             ui.link(t("All Goals"), "/goals").classes("link-btn no-underline text-[13px]")
         with ui.element("div").classes("goal-grid"):
             for st in shown:
-                with ui.column().classes("gap-1 min-w-0"):
+                with ui.column().classes("gap-1.5 min-w-0"):
                     with ui.row().classes("w-full items-baseline gap-2 no-wrap"):
-                        ui.label(st.goal.name).classes("flex-1 min-w-0 truncate text-[14px] font-medium")
-                        ui.label(percent(st)).classes("goal-amount caption")
+                        ui.label(st.goal.name).classes("flex-1 min-w-0 truncate text-[14px]")
+                        # an open-ended goal has no share: what it holds instead
+                        ui.label(percent(st) or of_line(st)).classes(
+                            "goal-amount caption " + TONE.get(st.progress.status, "")
+                        )
                     meter(st)
-                    ui.label(of_line(st)).classes("goal-amount caption")
-                    ui.label(plan_line(st)).classes("caption " + TONE.get(st.progress.status, ""))
-        if goal_svc.reserving(ctx):
-            horizon = ctx.horizon()
-            reserved = goal_svc.reserve_at(ctx, horizon, view_cur)
-            free = wealth_svc.projected_wealth(ctx, horizon, view_cur) - reserved
-            ui.label(
-                t(
-                    "Projected for {month}: {free} free after {reserved} reserved for goals",
-                    month=months.label(horizon),
-                    free=fmt(free, view_cur),
-                    reserved=fmt(reserved, view_cur),
-                )
-            ).classes("caption")
 
 
 # ------------------------------------------------------------------ the page
@@ -242,15 +229,13 @@ def page() -> None:
             rows = goal_svc.statuses(ctx)
             new.set_visibility(bool(rows))  # while there are none, the empty state offers it
             with ui.column().classes("w-full gap-0"):
-                ui.label(tn("{n} goal", "{n} goals", len(rows))).classes("group-header")
+                if rows:  # no "0 goals" above the empty state
+                    ui.label(tn("{n} goal", "{n} goals", len(rows))).classes("group-header")
                 with ui.element("div").classes("group"):
                     if not rows:
                         empty_state(
                             t("No goals yet."),
-                            t(
-                                "Save towards a holiday, a car or an emergency fund. Link a goal to an account to "
-                                "follow its balance; with a target date you see what to put aside each month."
-                            ),
+                            t("Save towards a holiday, a car or an emergency fund."),
                             t("New Goal"),
                             lambda: open_goal_sheet(ctx, refresh),
                         )

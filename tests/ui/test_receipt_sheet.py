@@ -12,6 +12,7 @@ from notifications import notified
 from PIL import Image, ImageDraw
 
 from budget_app.domain.receipts import TextBox
+from budget_app.i18n import date_label
 from budget_app.services import attachments as att_svc
 from budget_app.services import items as items_svc
 from budget_app.services import ocr
@@ -89,7 +90,7 @@ async def test_a_receipt_fills_the_form_and_is_saved_with_the_transaction(user: 
     await user.should_see("It is read on your computer")
     await drop(user, "IMG_0042.png", photo())
     await user.should_see(
-        f"Read from the receipt: Coop Pronto Zürich HB · {TODAY:%-d %b %Y} · 6.45 CHF. Check it before you save."
+        f"Read from the receipt: Coop Pronto Zürich HB · {date_label(TODAY)} · 6.45 CHF. Check it before you save."
     )
     assert newest(user, ui.number, "Amount").value == 6.45
     assert newest(user, PayeeInput, "Payee").value == "Coop Pronto Zürich HB"
