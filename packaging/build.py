@@ -129,6 +129,34 @@ def strip_unused(app: Path) -> None:
                 print(f"  removed unused plotly/{name}")
 
 
+def strip_build_paths(app: Path) -> None:
+    """Remove the files that record where the build machine keeps its checkout.
+
+    The installer is public, so it must not carry the builder's home folder (/Users/<name>, C:\\Users\\<name>):
+    - `__pycache__` folders that came along with the NiceGUI folder copied by --add-data: each .pyc stores the
+      absolute path it was compiled from. The modules run from PyInstaller's archive, whose paths are relative.
+    - `direct_url.json` in the copied package metadata: for the editable install it holds the checkout's path.
+    """
+    for cache in [p for p in app.rglob("__pycache__") if p.is_dir()]:
+        shutil.rmtree(cache)
+    for record in app.rglob("*.dist-info/direct_url.json"):
+        record.unlink()
+    # a personal home folder (/Users/<name>, /home/<name>, C:\Users\<name>); not a service account's like /root
+    home = Path.home()
+    paths = {str(ROOT)} | ({str(home)} if home.parent.name.lower() in ("users", "home") else set())
+    needles = [p.lower().encode() for p in paths]
+
+    def mentions(f: Path) -> bool:
+        content = f.read_bytes().lower()
+        return any(n in content for n in needles)
+
+    leaks = [f for f in app.rglob("*") if f.is_file() and not f.is_symlink() and mentions(f)]
+    if leaks:
+        listed = "\n  ".join(str(f.relative_to(app)) for f in leaks[:20])
+        raise SystemExit(f"The build still mentions {' or '.join(sorted(paths))} in {len(leaks)} file(s):\n  {listed}")
+    print(f"  no file mentions {' or '.join(sorted(paths))}")
+
+
 def checksum(installer: Path) -> Path:
     """Write <installer>.sha256 beside the installer, in the format `shasum -c` / `sha256sum -c` read."""
     digest = hashlib.sha256(installer.read_bytes()).hexdigest()
@@ -244,6 +272,7 @@ def build_linux(app_dir: Path) -> Path:
 def main() -> None:
     app = pyinstaller()
     strip_unused(app)
+    strip_build_paths(app)
     if sys.platform == "darwin":
         out = build_macos(app)
     elif sys.platform == "win32":
