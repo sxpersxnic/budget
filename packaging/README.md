@@ -72,26 +72,16 @@ The three wrappers:
 `build.py` itself can also be run directly:
 `uv run --group build python packaging/build.py`.
 
-The version comes from `pyproject.toml` (`[project] version`). Raise it before building a new
-release; it is the only place it is set.
+The version comes from `pyproject.toml` (`[project] version`), the only place it is set; `uv.lock`
+follows it. `just pre-release` raises both for a new release.
 
 ## Releasing an update
 
-1. Raise `version` in `pyproject.toml`, for example `1.0.0` → `1.1.0`, run `uv sync`, and merge
-   the change into `main` through a pull request.
-2. Tag that commit with the same version and push the tag:
-   `git tag v0.2.0 && git push origin v0.2.0`. The tag must match `[project] version`; the
-   in-app update check (F33) reads the newest release's tag.
-3. Build on each platform from the tagged commit (`just build`, or the wrappers above). Each
-   build leaves the installer and its `.sha256` file in `dist/`.
-4. Create the release and attach the files, from the first machine:
-
-   ```bash
-   gh release create v0.2.0 dist/Budget-0.2.0-* --title "Budget 0.2.0" --generate-notes --verify-tag
-   ```
-
-   and from the others: `gh release upload v0.2.0 dist/Budget-0.2.0-*`. The installers are not
-   committed to the repository.
+[docs/RELEASE.md](../docs/RELEASE.md) has the release step by step. `just pre-release X.Y.Z`
+([`scripts/release.py`](../scripts/release.py)) raises `version` in `pyproject.toml` through a pull request, tags
+`main` as `vX.Y.Z` (the in-app update check, F33, reads the newest release's tag), runs `just build` and attaches
+the installer and its `.sha256` to a draft release. Run it once more on each system; then publish the draft.
+The installers are not committed to the repository.
 
 What makes the new installer an update rather than a second copy:
 

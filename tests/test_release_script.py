@@ -204,3 +204,36 @@ def test_a_dry_run_shows_the_plan_and_changes_nothing(tmp_path, capsys) -> None:
 def test_the_command_line_says_why_it_stopped(capsys) -> None:
     assert release.main(["1.1"]) == 1
     assert "not a version like 1.1.0" in capsys.readouterr().err
+
+
+def test_a_shown_command_can_be_typed_and_a_long_text_is_cut_short() -> None:
+    assert release.Shell.shown(("git", "commit", "-m", "Release 1.1.0")) == "git commit -m 'Release 1.1.0'"
+    shown = release.Shell.shown(("gh", "pr", "create", "--body", release.pr_body("1.1.0")))
+    assert shown.endswith("…'") and len(shown) < 100
+
+
+def test_another_machine_whose_main_moved_on_builds_the_tag_and_comes_back(tmp_path) -> None:
+    tagged = {
+        ("git", "ls-remote", "--tags", "origin", "refs/tags/v1.1.0"): f"{TAG_SHA}\trefs/tags/v1.1.0",
+        ("gh", "release", "view", "v1.1.0", "--json", "isDraft"): '{"isDraft": true}',
+    }  # HEAD is main's newer commit, not the tag's
+    sh, _ = repo(tmp_path, "1.1.0", over=tagged)
+    sh.ok.add(("gh", "release", "view", "v1.1.0"))
+    run(sh)
+    assert sh.changed[0] == ["git", "switch", "--detach", "v1.1.0"]
+    assert sh.changed[1] == ["just", "build"]
+    assert sh.changed[-1] == ["git", "switch", "main"]  # back on main afterwards
+
+
+def test_a_failed_build_on_the_tag_still_switches_back(tmp_path) -> None:
+    tagged = {
+        ("git", "ls-remote", "--tags", "origin", "refs/tags/v1.1.0"): f"{TAG_SHA}\trefs/tags/v1.1.0",
+        ("gh", "release", "view", "v1.1.0", "--json", "isDraft"): '{"isDraft": true}',
+    }
+    sh, _ = repo(tmp_path, "1.1.0", over=tagged)
+    sh.ok.add(("gh", "release", "view", "v1.1.0"))
+    sh.cwd = tmp_path / "elsewhere"  # the build leaves nothing in dist/: no installer to attach
+    sh.cwd.mkdir()
+    with pytest.raises(release.ReleaseError, match="no installer"):
+        release.Release("1.1.0", sh, yes=True, dist=tmp_path / "empty").run()
+    assert sh.changed[-1] == ["git", "switch", "main"]

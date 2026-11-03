@@ -1548,7 +1548,11 @@ Pages follow the system light/dark appearance (`ui.run(dark=None)`).
 ## 9. Installers
 
 Installed builds are made with PyInstaller (see [packaging/README.md](../packaging/README.md)), by hand on
-each system, and attached to the GitHub release of their version with a `.sha256` file each:
+each system, and attached to the GitHub release of their version with a `.sha256` file each. `just pre-release`
+(`scripts/release.py`, [docs/RELEASE.md](RELEASE.md)) runs a release in rounds, since `main` takes the version
+only through a squash-merged pull request: the version change as a pull request, then the tag on `main`, the
+build and a draft release, then each further system's build added to the draft. Publishing the draft is left to
+a person, because the update check (F33) offers a published release to every installation that asks:
 
 - **macOS:** `Budget.app` inside a drag-to-Applications `.dmg`.
 - **Windows:** an Inno Setup installer. It installs per user, needs no admin rights, and

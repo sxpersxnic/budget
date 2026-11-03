@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import shutil
 import subprocess  # nosec B404 - a release tool running fixed commands
 import sys
@@ -133,8 +134,13 @@ class Shell:
     def test(self, *cmd: str) -> bool:
         return subprocess.run(self._exe(cmd), check=False, cwd=self.cwd, capture_output=True).returncode == 0  # noqa: S603  # nosec B603
 
+    @staticmethod
+    def shown(cmd: tuple[str, ...]) -> str:
+        """The command as one could type it, a long argument (the pull request's text) cut short."""
+        return shlex.join(a if len(a) <= 60 else a[:57].split("\n")[0] + "…" for a in cmd)
+
     def change(self, *cmd: str) -> None:
-        print(("  would run: " if self.dry_run else "+ ") + " ".join(cmd), flush=True)
+        print(("  would run: " if self.dry_run else "+ ") + self.shown(cmd), flush=True)
         self.changed.append(list(cmd))
         if not self.dry_run:
             subprocess.run(self._exe(cmd), cwd=self.cwd, check=True)  # noqa: S603  # nosec B603
@@ -296,28 +302,40 @@ class Release:
         self.build_and_attach(state)
 
     def build_here(self) -> None:
-        """The tag exists (another machine made it): build its commit here and add the installer to the draft."""
+        """The tag exists (another machine made it): build its commit here and add the installer to the draft.
+
+        Away from the tagged commit (`main` moved on), it switches to the tag for the build and back afterwards,
+        also when the build fails."""
         self.require_clean()
-        if self.local_tag() != (tagged := self.rev(self.tag)):  # fetch --tags brought it; a local one differing
-            raise ReleaseError(f"The local tag {self.tag} differs from GitHub's. Remove it: git tag -d {self.tag}")
-        if self.rev("HEAD") != tagged:
-            on_main = self.sh.read("git", "rev-parse", "--abbrev-ref", "HEAD") == MAIN
-            if not (on_main and self.sh.test("git", "merge-base", "--is-ancestor", "HEAD", tagged)):
-                raise ReleaseError(f"Check out the tagged commit first: git switch --detach {self.tag}")
-            self.sh.change("git", "merge", "--ff-only", self.tag)
         state = self.draft_state()
         if state == "published":
             raise ReleaseError(
                 f"{self.tag} is published already. To add an installer anyway: "
                 f"gh release upload {self.tag} dist/Budget-{self.version}-*"
             )
+        away = self.rev("HEAD") != self.rev(self.tag)
+        back = self.sh.read("git", "rev-parse", "--abbrev-ref", "HEAD") if away else ""
+        back = "" if back == "HEAD" else back  # a detached checkout has no branch to return to
         self.confirm(
             [
+                *(
+                    [f"switch to the tag {self.tag} for the build{f', then back to {back}' if back else ''}"]
+                    if away
+                    else []
+                ),
                 f"build this machine's installer of {self.tag}: just build (it runs the tests first)",
                 f"{'create' if state == 'none' else 'add it to'} the draft release {self.tag}, with its .sha256",
             ]
         )
-        self.build_and_attach(state)
+        if not away:
+            self.build_and_attach(state)
+            return
+        self.sh.change("git", "switch", "--detach", self.tag)
+        try:
+            self.build_and_attach(state)
+        finally:
+            if back:
+                self.sh.change("git", "switch", back)
 
     def build_and_attach(self, state: str) -> None:
         self.sh.change("just", "build")
@@ -334,7 +352,7 @@ class Release:
         else:
             self.sh.change("gh", "release", "upload", self.tag, *files, "--clobber")
         print(
-            f"\nThe draft release {self.tag} has this machine's installer.\n"
+            f"\nThe draft release {self.tag} {'would have' if self.sh.dry_run else 'has'} this machine's installer.\n"
             f"Next: run `just pre-release {self.version}` on the other machines (macOS, Windows, Linux),\n"
             f"check the draft (gh release view {self.tag} --web), then publish it:\n"
             f"  gh release edit {self.tag} --draft=false --latest"

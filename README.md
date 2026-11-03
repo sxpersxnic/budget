@@ -481,10 +481,9 @@ comes back. Sample data only goes into an empty data folder.
 ## Building the installers
 
 The installers are built by hand, each on its own operating system, and attached to the GitHub
-release of their version; no workflow builds them. To publish a release, raise `version` in
-`pyproject.toml`, tag that commit with the same version (`git tag v0.2.0 && git push origin v0.2.0`),
-build on each system and attach the files: the steps are in
-[packaging/README.md](packaging/README.md#releasing-an-update).
+release of their version; no workflow builds them. `just pre-release 1.1.0` does most of a release:
+it raises the version through a pull request, tags `main`, builds this system's installer and attaches it
+to a draft release; run it once more on each system. The steps are in [docs/RELEASE.md](docs/RELEASE.md).
 
 Each installer is built on its own operating system. A Mac cannot build the Windows
 installer, and Windows cannot build the macOS one. Building needs
@@ -553,6 +552,7 @@ types, tests and coverage before each push.
   the app implements no cryptographic primitive of its own.
 - The specification is in [docs/Description_Budgeting_App.md](docs/Description_Budgeting_App.md).
 - The implementation (data model, formulas, decisions) is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- How to release a new version, step by step: [docs/RELEASE.md](docs/RELEASE.md).
 - Code layout: `src/budget_app/{domain,storage,services,ui}`.
 
 ## Sources
