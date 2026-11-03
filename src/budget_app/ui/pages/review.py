@@ -13,7 +13,7 @@ import base64
 import logging
 
 import plotly.graph_objects as go
-from nicegui import ui
+from nicegui import run, ui
 
 from budget_app import i18n
 from budget_app.domain import months, trends
@@ -192,8 +192,10 @@ def page() -> None:
         async def export(kind: str) -> None:
             review = current()
             try:
-                png = await chart_image() if kind == "pdf" else None
-                data = review_export.pdf(review, png) if kind == "pdf" else review_export.xlsx(review)
+                if kind == "pdf":
+                    data = await run.io_bound(review_export.pdf, review, await chart_image())
+                else:
+                    data = await run.io_bound(review_export.xlsx, review)
             except Exception as exc:  # reported to the user, like the statement export
                 error(t("Could not create the file: {error}", error=exc))
                 return

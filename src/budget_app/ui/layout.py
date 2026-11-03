@@ -721,11 +721,14 @@ MEDIA_TYPES = {
 }
 
 
-async def save_file(data: bytes, filename: str) -> None:
+async def save_file(data: bytes | None, filename: str) -> None:
     """Hand a file to the user: the system save dialog in the app window, a download in the browser.
 
-    The app window (pywebview) drops browser downloads, so there the file is written from Python.
+    The app window (pywebview) drops browser downloads, so there the file is written from Python. No data (a file
+    built with `run.io_bound` while the app shuts down) saves nothing.
     """
+    if data is None:
+        return
     window = app.native.main_window
     if window is None:
         ui.download.content(data, filename, MEDIA_TYPES.get(Path(filename).suffix, ""))

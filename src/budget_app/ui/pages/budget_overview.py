@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import html
 
-from nicegui import ui
+from nicegui import run, ui
 
 from budget_app.domain import months
 from budget_app.domain import trends as trend_rules
@@ -269,7 +269,8 @@ def page(month: str = "", category: str = "") -> None:
             name = f"statement_{state['month']}_{state['currency']}.{kind}"
             try:
                 rep = reports.month_report(ctx, state["month"], state["currency"])
-                data = export_svc.statement_xlsx(rep) if kind == "xlsx" else export_svc.statement_pdf(rep)
+                build = export_svc.statement_xlsx if kind == "xlsx" else export_svc.statement_pdf
+                data = await run.io_bound(build, rep)  # off the event loop: the page stays responsive
             except Exception as exc:
                 error(t("Export failed: {error}", error=exc))
                 return

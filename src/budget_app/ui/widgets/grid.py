@@ -7,7 +7,7 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import date
 
-from nicegui import ui
+from nicegui import run, ui
 
 from budget_app import i18n
 from budget_app.i18n import t
@@ -237,7 +237,7 @@ def export_items(name: str, title: str, columns: Callable[[], list[dict]], rows:
     async def export(kind: str) -> None:
         try:
             df = export_svc.view_frame(columns(), rows(), currency_header=t("Currency"))
-            data = export_svc.frame_csv(df) if kind == "csv" else export_svc.frame_xlsx(df, title)
+            data = export_svc.frame_csv(df) if kind == "csv" else await run.io_bound(export_svc.frame_xlsx, df, title)
         except Exception as exc:
             error(t("Export failed: {error}", error=exc))
             return
