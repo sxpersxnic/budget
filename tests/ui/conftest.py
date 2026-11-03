@@ -121,6 +121,19 @@ async def _open(self: User, path: str, *, clear_forward_history: bool = True) ->
 
 User.open = _open  # type: ignore[method-assign]
 
+# Answered in time, the sidebar's question can still time out: the CI runner, with a worker per core, has held a
+# page's event loop for over a second in its first moments (from #40 on, which changed how the test files are spread
+# over the workers), and the time-out fails the test through the error log check below. The answer is canned, the
+# tests don't depend on when it comes: up to 10 s for it.
+_run_javascript = Client.run_javascript
+
+
+def _patient_run_javascript(self: Client, code: str, *, timeout: float = 1.0):
+    return _run_javascript(self, code, timeout=10.0 if "__IS_DRAWER_OPEN__" in code else timeout)
+
+
+Client.run_javascript = _patient_run_javascript  # type: ignore[method-assign]
+
 # A page change that reloads the page (the lock, the welcome screen) takes longer on a busy machine than the 0.3 s
 # NiceGUI's `should_see` waits by default; up to 3 s here, which costs nothing when the text is already there.
 WAIT_RETRIES = 30

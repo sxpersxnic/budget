@@ -427,19 +427,33 @@ async def test_export_wealth_data_as_excel(user: User, demo) -> None:
 
 async def test_slow_export_keeps_the_page_responsive(user: User, demo, monkeypatch) -> None:
     """A file that takes long to build (the first Excel file loads openpyxl; on a slow disk that takes seconds) is
-    built off the event loop: the page's own requests to the browser still get their answer in time."""
+    built off the event loop: the page keeps answering while the file is being made."""
     from budget_app.services import export as export_svc  # noqa: PLC0415
 
     build = export_svc.frame_xlsx
 
     def slow(*args, **kwargs):
-        time.sleep(1.5)  # longer than NiceGUI waits for the browser (1 s)
+        time.sleep(2)
         return build(*args, **kwargs)
+
+    gaps = [0.0]
+
+    async def tick() -> None:  # the longest time the event loop was away
+        last = time.monotonic()
+        while True:
+            await asyncio.sleep(0.02)
+            gaps.append(time.monotonic() - last)
+            last = time.monotonic()
 
     monkeypatch.setattr(export_svc, "frame_xlsx", slow)
     await open_overview(user)
-    await menu_item(user, "Export Data as Excel…", within=card(user, "Wealth Over Time"))
-    assert (await downloaded(user)).content.startswith(b"PK")
+    ticker = asyncio.create_task(tick())
+    try:
+        await menu_item(user, "Export Data as Excel…", within=card(user, "Wealth Over Time"))
+        assert (await downloaded(user)).content.startswith(b"PK")
+    finally:
+        ticker.cancel()
+    assert max(gaps) < 1.5  # on the event loop, the export alone would hold it for 2 s
 
 
 @pytest.fixture
