@@ -19,10 +19,11 @@ def page() -> None:
         def body() -> None:
             waiting = sorting.count(ctx)
             if not waiting:
-                empty_state(
-                    t("Everything is sorted."),
-                    t("Imported transactions Budget can't place wait here, one question per payee."),
-                )
+                with ui.element("div").classes("group"):
+                    empty_state(
+                        t("Everything is sorted."),
+                        t("Imported transactions Budget can’t place wait here, one question per payee."),
+                    )
                 return
             with ui.element("div").classes("surface flex flex-col gap-5"):
                 ui.label(t("One answer sorts every transaction of a payee.")).classes("caption")

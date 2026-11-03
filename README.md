@@ -142,8 +142,8 @@ The app opens in its own window and keeps all data in your user folder:
 
 | System | Data folder |
 | --- | --- |
-| macOS | `~/Library/Application Support/Budget` (in the Finder: **Go → Go to Folder…**) |
-| Windows | `%APPDATA%\Budget` (type it into the Explorer address bar) |
+| macOS | `~/Library/Application Support/Budget` (**Settings → Data → Show in Finder**, or in the Finder: **Go → Go to Folder…**) |
+| Windows | `%APPDATA%\Budget` (**Settings → Data → Show in Explorer**, or type it into the Explorer address bar) |
 | Linux | `~/.local/share/budget` (or `$XDG_DATA_HOME/budget`) |
 
 - **Backup:** **Settings → Data → Back Up Now…** saves all your records, with the files attached
@@ -161,8 +161,8 @@ The app opens in its own window and keeps all data in your user folder:
   seconds. **Settings → Data → Change History** lists the last changes, each with **Undo**. An
   undo is refused when the records were changed again afterwards, so it never overwrites later
   work.
-- **Export:** the Transactions and Budget Plan lists export what they show (with their filters)
-  as CSV or Excel (**More** on Transactions, and on Budget Plan: the budgets or the months, whichever
+- **Export:** the Transactions and Plan lists export what they show (with their filters)
+  as CSV or Excel (**More** on Transactions, and on Plan: the budgets or the months, whichever
   view is open). **Settings → Data → Export as JSON…** writes every record into
   one JSON file for other programs; it can't be restored.
 - **Older versions:** opening your data with an older version is safe too; it keeps fields it
@@ -214,7 +214,7 @@ The app opens in its own window and keeps all data in your user folder:
 ## First steps
 
 On the first start the app shows a **welcome screen**: choose the language and the display currency,
-see where your data is kept, and either open Settings for your own data or **Load Sample Data**, a
+see where your data is kept, and either **Add Accounts** for your own data or **Load Sample Data**, a
 year of example records (accounts, a holiday, a renovation, investments, budgets, goals) to explore
 every page with. While the sample data is loaded the sidebar says so; **Settings → Data → Remove
 Sample Data…** empties the folder again (your language and currency stay) and the welcome screen
@@ -223,26 +223,28 @@ comes back. Sample data only goes into an empty data folder.
 1. **Settings:**
    - Choose the language (English, Deutsch, Français or Italiano; by default it follows your
      system).
-   - Add your accounts, each with its currency.
-   - Add your income categories.
+   - Add your income categories (**Categories**).
    - Choose how far ahead to plan (*Plan Until*) and the display currency.
-   - Choose how the **projected wealth** treats a month without balances (*Projected Wealth*): the budgets
-     alone, or what you've recorded where it is more than the budget (the default).
-2. **Budget → Record Balance:** enter each account's balance at the end of last month.
+   - Choose how the **projected wealth** treats a month without balances (*Projected Wealth*): *Budget only*,
+     or *Actual spending when higher* (the default: spending already above a budget counts, and so does extra
+     income). The ⓘ beside it explains both.
+2. **Wealth:** add your accounts with **Add Account…**, each with its currency, then **Record Balance…**:
+   enter each account's balance at the end of last month. Later, click an account's balance to record
+   the next one. The page leads with your net worth.
 3. **New Transaction** (top of the sidebar, available on every page): record expenditures
    (with a COICOP category or taxes), income, transfers, currency exchanges and
    revaluations (a change in an account's value, such as a gain on an investment). Turn on
    *Partly paid for others* when part of a payment was for someone else. Record their
    repayment later as income with *Repays an advance payment*, or on the **Shared Expenses**
-   page. Under **Items** you can list what you bought (for example a grocery receipt) with
+   page. With **Add Item** you can list what you bought (for example a grocery receipt) with
    quantity and price; the Transactions search then also finds a purchase by item name. To **split** an expenditure across categories
    (food, detergent and a present on one receipt), click the split button beside a line and give it
    its own category, and tags if you like; the line below the list shows what stays in the
-   transaction's category ("Rest in 01.1 Groceries: 23.40"). Reports, budgets, charts and tag totals then
+   transaction's category ("Rest in Groceries: 23.40"). Reports, budgets, charts and tag totals then
    count each line in its own category; a share paid for others is taken proportionally from every
    part. Lines with their own category can't add up to more than the amount; a negative line (a
    discount) lowers its category. Only expenditure is split. The Transactions list shows a split
-   as "01.1 Groceries + 2 more", and its search finds the lines' categories. Under **Attachments** you can keep the receipt,
+   as "Groceries + 2 more", and its search finds the lines' categories. Below the note you can keep the receipt,
    invoice or contract with the transaction: drop files onto the box or click it to choose them
    (PDF, photos including iPhone HEIC, Word, Excel, OpenDocument, text or CSV, up to 20 MB each).
    Click a photo's or PDF's name to preview it; **Open** shows it in your usual viewer, **Save a
@@ -250,16 +252,17 @@ comes back. Sample data only goes into an empty data folder.
    Transactions list shows a paper clip with the number of files, and its search also finds file
    names. Shortcuts: type a sum such as `12.50+8.30`
    into an amount, press **N** for a new transaction and **⌘↩** (Ctrl+Enter) to save, save the
-   usual ones as **templates** (bookmark button), or **Duplicate** an existing transaction.
+   usual ones as **templates** (the **···** beside the type, which also has currency exchanges and
+   revaluations), or **Duplicate** an existing transaction.
    Outside a field, **/** jumps to the page's search, **←** **→** change the month, **1**–**9** open the places
    in the sidebar and **,** opens Settings; press **?** (or **Keyboard Shortcuts** at the foot of the sidebar)
    to see them all. In any sheet, **⌘↩** (Ctrl+Enter) saves and **Esc** closes it. Every button has a name for
    screen readers, and text keeps a contrast of at least 4.5:1 in light and dark mode.
    The category field shows everyday names with their COICOP code ("01.1 Groceries", the official
    name below it) and your recently used categories first, and its search also knows shops and
-   brands: type "Migros", "SBB" or "Netflix". Every list, report and chart shows the same name;
-   hover over a category in the Budget page or the Transactions list to see its official COICOP
-   name. Transfers and exchanges show their accounts there ("Bank → Savings").
+   brands: type "Migros", "SBB" or "Netflix". Lists, reports and charts show the name alone
+   ("Groceries"); hover over it to see its COICOP code and official name. Transfers and exchanges
+   show their accounts there ("Bank → Savings").
    It also finds a category by what it includes ("quinoa" finds 01.1.1.1 Cereals); hover over a
    category, or tap its ⓘ on a touch screen, to see what it includes and excludes.
    Expenditures and income have a **Payee** (who you paid, or who paid you): pick one of the
@@ -299,7 +302,7 @@ comes back. Sample data only goes into an empty data folder.
    the category and account and click **Add Transaction**; the receipt is kept as an attachment. If
    reading isn't available on your computer (Intel Macs), the sheet says so and you type the amount,
    date and payee from the picture beside the form.
-5. **Plan → Budget Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
+5. **Plan → New Budget Entry:** plan recurring income and expenditure. Use "Forever"
    for open-ended budgets. The page lists one row per budget ("Rent · every month · from Oct 2025,
    forever"), income first; click one to change it from a month on (amount, currency, until, repeat),
    while the months before keep their values, or to delete it. **Months** shows the same plan month
@@ -333,7 +336,8 @@ comes back. Sample data only goes into an empty data folder.
    chart draws it as a dashed line beside the plan, so you can compare several futures. When you
    decide, **Adopt into Plan…** writes the changes into your budget (replacing the plan's budget for
    those categories and months) and removes the scenario; one Undo takes it back.
-   **Due** (on the Overview, below your wealth): one list of what wants doing while the app is open:
+   **Due** (on the Overview, below your wealth, only while something is due): one list of what wants doing
+   while the app is open:
    balances to record for last month, recurring transactions, QR bills and loan payments that are
    due, and goals behind their plan or past their date. Each row has its action: *Record…* the
    balance, *Book* the transaction or the payment as planned, *Pay…* the bill, or *Open* the goal;
@@ -358,26 +362,31 @@ comes back. Sample data only goes into an empty data folder.
    paid by eBill); paid and dismissed bills are kept under **Paid and Dismissed**. The same bill
    dropped twice is refused; deleting its payment puts a bill back on the open list.
 7. **Categories** (sidebar): look up a COICOP category by code, official or everyday name, or what it
-   includes (each row shows both names: "01.1 Food · Groceries"); the ⓘ
+   includes (each row shows the code and everyday name, "01.1 Groceries", and the official name beside
+   it, smaller); the ⓘ
    beside a name shows what the category includes, also includes and excludes. The ones you used
    show what you spent in them this year.
-   **Payees** (sidebar) lists everyone you paid or who paid you, with the number of transactions and
-   the amounts. Rename a payee, merge several into one (tick them, then **Merge…**) or delete one you
+   **Payees** (a tab of Transactions) lists everyone you paid or who paid you, with what you spent there and the
+   number of transactions; well-known brands show their logo. Rename a payee, merge several into one
+   (**Select**, tick them, then **Merge…**) or delete one you
    no longer use; each can be undone. Imports keep using the name you chose. On **Transactions**,
-   search for a payee or choose one under **Filters**. **Payees → Rules…** (or **Settings → Rules…**)
-   lists your categorization rules, to add, change or delete them. When several rules match, the one
+   search for a payee or choose one under **Filters**. The **Rules** tab, next to **Payees** under
+   Transactions, lists your categorization rules, to add, change or delete them. When several rules match, the one
    with the longest text wins.
-   **Tags** (sidebar) lists your tags with their number of transactions and what was spent and
-   received. Click a tag to see its transactions. Give a tag a **budget** (piggy bank button: an
+   **Tags** (sidebar) lists your tags with their number of transactions and what was spent with
+   each. Click a tag to see its transactions. Give a tag a **budget** (piggy bank button: an
    amount, optionally a period such as the dates of a holiday) and a bar shows the tagged spending
    against it; the part paid for others and income don't count. Rename or recolour a tag, merge
-   several, or delete one (it is taken off its transactions; **Undo** brings it back). On
+   several (**Select**, then **Merge…**), or delete one (it is taken off its transactions; **Undo** brings it back). On
    **Transactions**, filter by tag under **Filters** or search for a tag name, and *Add Chart →
    Spending by Tag* on the Overview compares the tags over a period.
 8. **Overview / Budget:** compare actual against budget, check the projected wealth, build
    charts, and export statements as Excel or PDF (share button on the Budget page).
    Once an account has an asset class other than cash, the Overview shows your wealth **by asset
-   class**, and *Add Chart → Wealth by Asset Class* shows it month by month.
+   class**, and *Add Chart → Wealth by Asset Class* shows it month by month. A chart's settings (months,
+   categories, currencies) are behind its tune button. The Budget page hides categories with neither a
+   budget nor spending; **Show All Categories** brings them back. On a phone it shows each category's
+   difference to its budget.
    **Compare with** above the Budget page's tables switches their third column from the budget to the
    month before or the same month last year: that month's amount per category and the change as
    ▲/▼ and a percentage (hover it for the amount; narrow windows show the change instead of the
@@ -398,13 +407,14 @@ comes back. Sample data only goes into an empty data folder.
      month (the median of the last six complete months) and at least 100 CHF above it, unless its
      budget covers the amount or one large payment explains it.
 9. **Investments** (sidebar, optional): give an account the asset class *Securities* or *Crypto*
-   in **Settings** (edit the account), then add its holdings (name, optional ISIN or symbol) on the
+   on the **Wealth** page (edit the account), then add its holdings (name, optional ISIN or symbol) on the
    Investments page. An account that already has transactions or balances is **converted**: choose
    the conversion month and the holdings it starts with (quantity and price on the first day of that
    month); its balances before that month stay as they were, and the difference to the last one is
-   booked as *Capital gains on investment*, so the month still reconciles. Record
-   **Buy**, **Sell** and **Dividend** with the cash account the money comes from or goes to (in the
-   holding's currency), and enter prices with **Update Price** or **Paste Prices…** (one line per
+   booked as *Capital gains on investment*, so the month still reconciles. Record a
+   **Buy** (top of the page), or **Sell…** and **Dividend…** (the **···** of a holding), with the cash account the
+   money comes from or goes to (in the holding's currency), and enter prices with **Update Price…** (the same
+   **···**) or **Paste Prices…** (the **···** at the top; one line per
    price: date, holding name/ISIN/symbol and price, as copied from your bank's or broker's price
    list; nothing is fetched online). A dividend is entered gross with its withholding tax (35 %
    prefilled in CHF accounts, editable); the cash account receives the net. The app books the
@@ -429,8 +439,8 @@ comes back. Sample data only goes into an empty data folder.
    accounts, enter 0 as the debt at the start and record the payout as a transfer from the loan account.
    Budget the interest like any other cost; the repayment doesn't change your wealth.
    **Shared Expenses** (sidebar): who owes you what. Everyone you named as debtor of a payment *partly paid
-   for others* gets a row with what is still open (per currency), how many payments, the oldest one and what
-   came back this year; unfold the row to see the payments and click one to open it. When someone pays you
+   for others* gets a row with what they still owe (per currency), how many payments and since when; unfold the
+   row to see the payments (click one to open it), what came back this year and **Summary…**. When someone pays you
    back, **Settle Up…**: enter the amount, the date and the account it went to. The amount settles their
    oldest payments first (the sheet shows which) and is recorded as repayments, undoable in one step.
    **Summary…** gives the open payments as text to copy, or as a text or PDF file to save, so you can send it
@@ -451,7 +461,8 @@ comes back. Sample data only goes into an empty data folder.
     compared with the same months of last year). You see what you saved and your savings rate, how
     your wealth moved since the end of the year before, income and expenditure month by month as a
     chart, spending by category and income by source with the change as ▲/▼ and a percentage, and the
-    five biggest payments (a button opens each). The figures are the monthly statements added up, so
+    five biggest payments (a button opens each). Without anything recorded the year before, the comparisons
+    are left out. The figures are the monthly statements added up, so
     they agree with the Budget page; wealth is your recorded month-end balances. The share button
     saves the review as **PDF** (with the chart) or **Excel**.
 12. **Tax Summary** (sidebar, once a year): the amounts for your tax declaration, last year by
@@ -556,6 +567,9 @@ types, tests and coverage before each push.
   the UN's; the German, French and Italian translations are the app's own and unofficial, as
   the app says beside them.
 - **QR bills:** read according to SIX, *Swiss Implementation Guidelines for the QR-bill*, version 2.3.
+- **Payee logos:** the marks of 35 well-known brands (Apple, IKEA, Netflix …) from
+  [Simple Icons](https://simpleicons.org) 16.30.0, CC0 1.0 (`resources/logos.json`). The logos are
+  trademarks of their owners and only name the payee; every other payee shows its initials.
 
 ### Libraries for QR bills and receipts
 

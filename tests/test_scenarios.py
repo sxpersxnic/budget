@@ -146,7 +146,7 @@ def test_changes_their_months_and_labels(ctx, setup):
     assert euro.amount_chf == pytest.approx(810)  # at the latest rate, like a budget entry
     assert [c.seq for c in scen_svc.changes(ctx, s.id)] == [1, 2, 3]
     assert scen_svc.category_label(ctx, cut) == "Salary"
-    assert scen_svc.category_label(ctx, quarterly).startswith("07.1.1")
+    assert scen_svc.category_label(ctx, quarterly) == "Car purchase"
     gone = ctx.store.scenario_changes.get(cut.id)
     gone.category = "gone"
     assert scen_svc.category_label(ctx, gone) == "gone"

@@ -19,6 +19,7 @@ from nicegui import ui
 
 from budget_app.domain import months
 from budget_app.domain.coicop import TAX, get_coicop
+from budget_app.domain.logos import logo_for
 from budget_app.domain.models import TX_EXPENDITURE
 from budget_app.domain.payees import key
 from budget_app.i18n import t, tn
@@ -39,10 +40,14 @@ def initials(name: str) -> str:
     return (words[0][0] + second).upper()
 
 
-def logo(name: str) -> ui.element:
-    """The payee's mark: its initials on a colour chosen by its name."""
+def logo(name: str, small: bool = False) -> ui.element:
+    """The payee's mark: a well-known brand's logo (domain/logos.py), else its initials on a colour chosen by its
+    name. `small` for a list row (the Payees page)."""
+    size = " small" if small else ""
+    if found := logo_for(name):
+        return ui.html(found.svg()).classes("sort-logo brand" + size)
     hue = HUES[sum(map(ord, key(name))) % len(HUES)]
-    return ui.label(initials(name)).classes("sort-logo").style(f"background: hsl({hue} 45% 46%)")
+    return ui.label(initials(name)).classes("sort-logo" + size).style(f"background: hsl({hue} 45% 46%)")
 
 
 def answer_label(ctx: Context, type_: str, code: str) -> str:

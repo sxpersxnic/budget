@@ -57,13 +57,14 @@ async def until(check, timeout: float = 5.0) -> None:
 async def test_off_by_default_and_the_privacy_note(user: User, ctx, fake_github) -> None:
     await user.open("/settings")
     await user.should_see("Check for Updates")
-    await user.should_see("Nothing is downloaded or installed")
-    await user.should_see("Off: the app never asks on its own. The releases page lists the installers.")
+    await user.should_see("Once a day. Sends nothing about you.")  # one line; the rest behind the ⓘ
+    note = next(e for e in user.find(kind=ui.icon).elements if "Nothing is downloaded" in e.props.get("aria-label", ""))
+    assert "the only connection the app makes" in note.props["aria-label"]
     assert switch(user).value is False
     assert fake_github == []
+    await user.should_not_see("Newest Release")  # nothing to report while it's off
     await user.should_not_see("Check Now")
-    assert any(lk.text == "Releases page" for lk in links(user))
-    assert not any("is available" in lk.text for lk in links(user))
+    assert not any(lk.text in ("Releases page", "Budget 0.2.0 is available") for lk in links(user))
 
 
 async def test_turning_it_on_checks_at_once_and_the_sidebar_links_the_release(
@@ -89,7 +90,7 @@ async def test_turning_it_on_checks_at_once_and_the_sidebar_links_the_release(
     # off again: the result is forgotten, and the sidebar is quiet
     with user:
         switch(user).value = False
-    await user.should_see("Off: the app never asks on its own. The releases page lists the installers.")
+    await user.should_not_see("Newest Release")
     assert (ctx.store.settings.update_check, ctx.store.settings.update_latest) == (False, "")
     await user.open("/")
     await user.should_not_see("is available")
@@ -103,6 +104,7 @@ async def test_a_current_app_shows_the_version_but_no_link(user: User, ctx, fake
     user.find("Check Now").click()
     await user.should_see("the newest release is 0.2.0")
     await user.should_not_see("is available")
+    assert any(lk.text == "Releases page" for lk in links(user))  # where the installers are
 
 
 async def test_a_failed_check_now_is_reported(user: User, ctx, fake_github, monkeypatch) -> None:

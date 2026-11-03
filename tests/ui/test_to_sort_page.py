@@ -40,6 +40,8 @@ async def test_one_answer_sorts_a_payee_and_the_count_follows(user: User, ctx, s
     UserInteraction(user, {answer_button(user, "Gifts and party supplies")}, None).click()
     await settle()
     await user.should_see("Everything is sorted.")
+    [title] = [lb for lb in user.find(kind=ui.label).elements if lb.text == "Everything is sorted."]
+    assert "group" in title.parent_slot.parent.parent_slot.parent.classes  # a card, like every empty state
     assert sorting.unsorted(ctx) == []
 
 
@@ -56,3 +58,16 @@ async def test_the_overview_shows_spending_to_sort(user: User, ctx, setup) -> No
     tx_svc.save(ctx, imported(setup, "Amazon", -20))
     await user.open("/")  # the notable spending used to fail on a transaction without a category
     await user.should_see("Overview")
+
+
+async def test_a_known_brand_shows_its_logo_and_a_person_their_initials(user: User, ctx, setup) -> None:
+    tx_svc.save(ctx, imported(setup, "IKEA", -80))
+    tx_svc.save(ctx, imported(setup, "Sandro M.", -30, text="TWINT *Sandro M."))
+    await user.open("/to-sort")
+    await user.should_see("Sandro M.")
+    marks = [e for e in user.find(kind=ui.html).elements if "sort-logo" in e.classes]
+    assert [m.content.split('aria-label="')[1].split('"')[0] for m in marks] == ["IKEA"]
+    assert "SM" in [lb.text for lb in user.find(kind=ui.label).elements if "sort-logo" in lb.classes]
+    await user.open("/payees")  # the same marks, small, beside the payees
+    await user.should_see("IKEA")
+    assert [e for e in user.find(kind=ui.html).elements if "sort-logo" in e.classes and "small" in e.classes]

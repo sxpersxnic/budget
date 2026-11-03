@@ -69,7 +69,7 @@ def test_move_copies_everything_but_the_running_apps_files(home, tmp_path, opene
     moved = profiles.move("default", str(target))
     assert moved.folder == target.resolve() and opened == [(target.resolve(), True)]
     assert profiles.active().path == str(target.resolve())
-    copied = sorted(str(p.relative_to(target)) for p in target.rglob("*") if p.is_file())
+    copied = sorted(p.relative_to(target).as_posix() for p in target.rglob("*") if p.is_file())
     assert "accounts.csv" in copied and "settings.json" in copied and "history.jsonl" in copied
     assert "attachments/t1/a1.pdf" in copied and "security.json" in copied
     assert "backups/2026-10-01_090000_before-restore/accounts.csv" in copied

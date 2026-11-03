@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from budget_app.domain import everyday
 from budget_app.domain.coicop import ADV, TAX, get_coicop
 from budget_app.domain.models import ACCOUNT_REGULAR, TX_EXPENDITURE, TX_INCOME, Rule, Transaction
 from budget_app.domain.payees import normalize
@@ -50,9 +49,10 @@ def valid_account(ctx: Context, account_id: str) -> bool:
 
 
 def category_label(ctx: Context, type_: str, category: str) -> str:
-    """The category's label ("01.1 Groceries") for expenditure, the category's name for income."""
+    """The category's name ("Groceries", names not codes outside a picker) for expenditure, the category's name for
+    income."""
     if type_ == TX_EXPENDITURE:
-        return everyday.label(category)
+        return get_coicop().label(category)
     cat = ctx.store.income_categories.get(category)
     return cat.name if cat else ""
 

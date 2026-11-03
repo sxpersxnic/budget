@@ -140,6 +140,25 @@ async def test_a_change_of_page_closes_the_phone_drawer(user: User, monkeypatch:
     assert layout.HIDE_MOBILE_DRAWER.format(id=drawer.id) in ran
 
 
+@pytest.mark.parametrize(
+    ("path", "back", "place"),
+    [
+        ("/add-transaction", "/transactions", "Transactions"),
+        ("/add-budget", "/budget-entries", "Plan"),
+        ("/import", "/transactions", "Transactions"),
+        ("/history", "/settings", "Settings"),
+    ],
+)
+async def test_a_form_leads_back_instead_of_showing_tabs(user: User, path: str, back: str, place: str) -> None:
+    await user.open(path)
+    links = user.find(kind=ui.link).elements
+    [link] = [e for e in links if "back-link" in e.classes]
+    assert link.props["href"] == back
+    assert place in [e.text for e in link.descendants() if isinstance(e, ui.label)]
+    assert not [e for e in links if "section-tab" in e.classes]  # no tab marked open that the form isn't
+    assert active(user) == [layout.NAV_PARENT[path]]
+
+
 # ------------------------------------------------------------------ query parameters
 async def test_query_parameters_reach_the_page(user: User, demo) -> None:
     await user.open("/")
@@ -164,14 +183,14 @@ async def test_back_forward_and_reload_open_the_page(user: User) -> None:
     assert active(user) == ["/budget"] and drawers(user) == [drawer]
     user.navigate.forward()
     await arrives(user, "/payees")
-    assert active(user) == ["/settings"]
+    assert active(user) == ["/transactions"]
     user.navigate.reload()  # a new document, on the page of the URL
     for _ in range(50):
         if user.client.id != drawer.client.id:
             break
         await asyncio.sleep(0.02)
-    await user.should_see("Rules…")
-    assert drawers(user) != [drawer] and active(user) == ["/settings"]
+    await user.should_see("No payees yet.")
+    assert drawers(user) != [drawer] and active(user) == ["/transactions"]
 
 
 @pytest.mark.parametrize("path", ["/goals", "/tax", f"/budget?month={PREV}"])

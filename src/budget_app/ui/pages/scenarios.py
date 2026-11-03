@@ -3,11 +3,13 @@ scenario and for a change; *Adopt into Plan*; each change one undoable step. The
 
 from __future__ import annotations
 
+import html
 from collections.abc import Callable
 
 from nicegui import ui
 
 from budget_app.domain import months
+from budget_app.domain.coicop import get_coicop
 from budget_app.domain.models import BUDGET_EXPENDITURE, BUDGET_INCOME, Scenario, ScenarioChange
 from budget_app.i18n import t, tn
 from budget_app.services import scenarios as scen_svc
@@ -19,6 +21,7 @@ from budget_app.ui.layout import (
     fmt,
     frame,
     month_options,
+    more_menu,
     named,
     on_data_changed,
     segmented,
@@ -55,21 +58,21 @@ def change_line(ctx: Context, change: ScenarioChange) -> str:
     return " · ".join([amount, span_text(ctx, change)])
 
 
-def outcome_line(ctx: Context, scenario: Scenario, view_cur: str) -> tuple[str, str]:
-    """ "Projected for Dec 2027: 48'200.00 CHF · −9'600.00 CHF against the plan", and its colour class."""
+def outcome_html(ctx: Context, scenario: Scenario, view_cur: str) -> str:
+    """ "Projected for Dec 2027: 48'200.00 CHF · −9'600.00 CHF against the plan", only the difference coloured
+    (polish before 1.0: a whole line in red read as an alarm)."""
     out = scen_svc.outcome(ctx, scenario.id, view_cur)
     delta = out.delta
     month, amount = months.label(out.month), fmt(out.scenario, view_cur)
     if abs(delta) < scen_svc.EPS:
-        return t("Projected for {month}: {amount} · as in the plan", month=month, amount=amount), ""
-    sign = "+" if delta > 0 else ""
-    text = t(
-        "Projected for {month}: {amount} · {delta} against the plan",
-        month=month,
-        amount=amount,
-        delta=f"{sign}{fmt(delta, view_cur)}",
+        return html.escape(t("Projected for {month}: {amount} · as in the plan", month=month, amount=amount))
+    mark = "\x00"  # where the coloured difference goes, so the sentence is escaped and translated as a whole
+    text = html.escape(
+        t("Projected for {month}: {amount} · {delta} against the plan", month=month, amount=amount, delta=mark)
     )
-    return text, "text-pos" if delta > 0 else "text-neg"
+    tone = "text-pos" if delta > 0 else "text-neg"
+    sign = "+" if delta > 0 else ""
+    return text.replace(mark, f'<span class="{tone}">{html.escape(sign + fmt(delta, view_cur))}</span>')
 
 
 # ------------------------------------------------------------------ sheets
@@ -233,10 +236,7 @@ def page() -> None:
                     with ui.element("div").classes("group"):
                         empty_state(
                             t("No scenarios yet."),
-                            t(
-                                "Try a future without touching the plan, such as less salary from January or a car "
-                                "in March. The Overview’s wealth chart shows it beside the plan."
-                            ),
+                            t("Try a future without touching the plan, such as less salary from January."),
                             t("New Scenario"),
                             lambda: open_scenario_sheet(ctx, refresh),
                         )
@@ -244,68 +244,67 @@ def page() -> None:
                     _scenario(scenario, view_cur)
 
         def _scenario(scenario: Scenario, view_cur: str) -> None:
+            """One card: the scenario's name, where it ends against the plan, and its changes."""
             rows = scen_svc.changes(ctx, scenario.id)
-            with ui.column().classes("w-full gap-1 scenario"):
-                with ui.row().classes("w-full items-center gap-2 no-wrap px-1"):
-                    with ui.column().classes("gap-0 flex-1 min-w-0"):
-                        ui.label(scenario.name).classes("section-title truncate")
+            with ui.element("div").classes("group w-full scenario"):
+                with ui.element("div").classes("group-row items-start py-3"):
+                    with ui.column().classes("gap-0.5 flex-1 min-w-0"):
+                        ui.label(scenario.name).classes("section-title truncate w-full")
                         if scenario.comment:
                             ui.label(scenario.comment).classes("caption")
-                    ui.switch(
-                        t("On the Overview"),
-                        value=scenario.shown,
-                        on_change=lambda e, s=scenario: show(s, bool(e.value)),
-                    ).props("dense left-label").classes("text-[13px]")
-                    named(
-                        ui.button(icon="o_edit", on_click=lambda s=scenario: open_scenario_sheet(ctx, refresh, s))
-                        .props(ROW_ACTION)
-                        .classes("text-primary"),
-                        t("Edit"),
-                    )
-                    named(
-                        ui.button(icon="o_delete", on_click=lambda s=scenario: delete(s))
-                        .props(ROW_ACTION)
-                        .classes("text-negative"),
-                        t("Delete"),
-                    )
-                text, tone = outcome_line(ctx, scenario, view_cur)
-                ui.label(text).classes("caption px-1 " + tone)
-                with ui.element("div").classes("group w-full"):
-                    if not rows:
-                        with ui.element("div").classes("group-row"):
-                            ui.label(t("No changes yet: the scenario is the plan.")).classes("text-2")
-                    for change in rows:
-                        with ui.element("div").classes("group-row"):
-                            with ui.column().classes("gap-0 flex-1 min-w-0"):
-                                ui.label(scen_svc.category_label(ctx, change)).classes("truncate")
-                                ui.label(change_line(ctx, change)).classes("caption")
-                                if change.comment:
-                                    ui.label(change.comment).classes("caption")
-                            with ui.row().classes("row-actions gap-0 no-wrap"):
-                                named(
-                                    ui.button(
-                                        icon="o_edit",
-                                        on_click=lambda c=change, s=scenario: open_change_sheet(ctx, s, refresh, c),
-                                    )
-                                    .props(ROW_ACTION)
-                                    .classes("text-primary"),
-                                    t("Edit"),
+                        ui.html(outcome_html(ctx, scenario, view_cur)).classes("text-[13px] text-2 pt-1")
+                    with ui.row().classes("items-center gap-1 no-wrap self-start"):
+                        with ui.element("div").classes("max-sm:hidden"):  # a phone has it in the "···"
+                            ui.switch(
+                                t("On the Overview"),
+                                value=scenario.shown,
+                                on_change=lambda e, s=scenario: show(s, bool(e.value)),
+                            ).props("dense left-label").classes("text-[13px] text-2")
+                        with more_menu():
+                            ui.menu_item(t("Edit…"), on_click=lambda s=scenario: open_scenario_sheet(ctx, refresh, s))
+                            ui.menu_item(
+                                t("Hide on the Overview") if scenario.shown else t("Show on the Overview"),
+                                on_click=lambda s=scenario: show(s, not s.shown),
+                            ).classes("sm:hidden")  # a phone has no room for the switch
+                            ui.separator()
+                            ui.menu_item(t("Delete…"), on_click=lambda s=scenario: delete(s)).classes("text-negative")
+                if not rows:
+                    with ui.element("div").classes("group-row"):
+                        ui.label(t("No changes yet: the scenario is the plan.")).classes("text-2")
+                for change in rows:
+                    with ui.element("div").classes("group-row"):
+                        with ui.column().classes("gap-0 flex-1 min-w-0"):
+                            name = ui.label(scen_svc.category_label(ctx, change)).classes("truncate")
+                            if change.type == BUDGET_EXPENDITURE and (code := get_coicop().tooltip(change.category)):
+                                name.props["title"] = code  # names, not codes: the code on hover
+                            ui.label(change_line(ctx, change)).classes("caption")
+                            if change.comment:
+                                ui.label(change.comment).classes("caption")
+                        with ui.row().classes("row-actions gap-0 no-wrap"):
+                            named(
+                                ui.button(
+                                    icon="o_edit",
+                                    on_click=lambda c=change, s=scenario: open_change_sheet(ctx, s, refresh, c),
                                 )
-                                named(
-                                    ui.button(icon="o_delete", on_click=lambda c=change: delete_change(c))
-                                    .props(ROW_ACTION)
-                                    .classes("text-negative"),
-                                    t("Delete"),
-                                )
-                    with ui.element("div").classes("group-row gap-3 flex-wrap"):
-                        ui.button(
-                            t("Add Change…"), on_click=lambda s=scenario: open_change_sheet(ctx, s, refresh)
-                        ).props("flat dense no-caps").classes("link-btn -ml-2")
-                        ui.space()
-                        if rows:
-                            ui.button(t("Adopt into Plan…"), on_click=lambda s=scenario: adopt(s)).props(
-                                "flat dense no-caps"
-                            ).classes("link-btn")
+                                .props(ROW_ACTION)
+                                .classes("text-primary"),
+                                t("Edit"),
+                            )
+                            named(
+                                ui.button(icon="o_delete", on_click=lambda c=change: delete_change(c))
+                                .props(ROW_ACTION)
+                                .classes("text-negative"),
+                                t("Delete"),
+                            )
+                with ui.element("div").classes("group-row gap-3 flex-wrap"):
+                    ui.button(t("Add Change…"), on_click=lambda s=scenario: open_change_sheet(ctx, s, refresh)).props(
+                        "flat dense no-caps"
+                    ).classes("link-btn -ml-2")
+                    ui.space()
+                    if rows:
+                        ui.button(t("Adopt into Plan…"), on_click=lambda s=scenario: adopt(s)).props(
+                            "flat dense no-caps"
+                        ).classes("link-btn")
 
         def refresh() -> None:
             scenario_list.refresh()

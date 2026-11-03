@@ -17,6 +17,7 @@ from nicegui.testing.user_interaction import UserInteraction
 from budget_app.services import archive
 from budget_app.services import export as export_svc
 from budget_app.storage import backup
+from budget_app.ui.pages import settings
 
 
 # ------------------------------------------------------------------ helpers
@@ -74,7 +75,7 @@ async def test_transactions_export_follows_the_filters(user: User, demo) -> None
     response = await downloaded(user)
     df = pd.read_csv(io.BytesIO(response.content))
     assert set(df["Type"]) == {"Income"} and len(df) == 6
-    assert list(df.columns[:6]) == ["Date", "Payee", "Category", "Tags", "Amount", "Currency"]
+    assert list(df.columns[:7]) == ["Date", "Payee", "Category", "Code", "Tags", "Amount", "Currency"]
     assert set(df["Currency"]) == {"CHF"}
     assert list(df["Date"]) == sorted(df["Date"], reverse=True)  # newest first, like the list
 
@@ -116,7 +117,7 @@ async def test_a_failed_list_export_is_reported(user: User, demo, monkeypatch) -
 async def test_back_up_now_hands_over_a_restorable_zip(user: User, ctx, demo) -> None:
     await user.open("/settings")
     await user.should_see("Data Folder")
-    await user.should_see(str(ctx.store.data_dir))
+    await user.should_see(settings.short_path(ctx.store.data_dir))
     await click(user, button(user, "Back Up Now…"))
     response = await downloaded(user)
     files = archive.read(response.content)

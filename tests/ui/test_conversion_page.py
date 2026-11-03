@@ -20,8 +20,8 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.investments import OpeningHolding
 from budget_app.services.transactions import TransactionInput
+from budget_app.ui.pages import accounts
 from budget_app.ui.pages import investments as page
-from budget_app.ui.pages import settings
 from budget_app.ui.widgets.transaction_form import open_transaction_sheet
 
 CONVERSION = months.previous_month()  # a complete month, so the Budget page reconciles it
@@ -92,7 +92,7 @@ def fund(ctx, setup):
 async def open_account_sheet(user: User, ctx, acc) -> None:
     await user.open("/settings")
     with user:
-        settings._account_sheet(ctx, ACCOUNT_REGULAR, lambda: None, ctx.store.accounts.get(acc.id))
+        accounts._account_sheet(ctx, ACCOUNT_REGULAR, lambda: None, ctx.store.accounts.get(acc.id))
     await settle()
 
 

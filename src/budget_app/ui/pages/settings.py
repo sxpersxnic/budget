@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from datetime import date
+from pathlib import Path
 
 from nicegui import events, run, ui
 
@@ -10,12 +13,6 @@ from budget_app import i18n
 from budget_app.config import BASE_CURRENCY, RELEASES_URL
 from budget_app.domain import months
 from budget_app.domain.models import (
-    ACCOUNT_ADVANCE,
-    ACCOUNT_REGULAR,
-    ASSET_CASH,
-    ASSET_CLASSES,
-    ASSET_LOAN,
-    HOLDING_CLASSES,
     PROJECTION_BUDGET,
     PROJECTION_HIGHER,
 )
@@ -25,19 +22,15 @@ from budget_app.services import archive, phone, security, sync
 from budget_app.services import budget as budget_svc
 from budget_app.services import demo as demo_svc
 from budget_app.services import export as export_svc
-from budget_app.services import investments as inv_svc
-from budget_app.services import loans as loan_svc
 from budget_app.services import profiles as profiles_svc
 from budget_app.services import reminders as rem_svc
-from budget_app.services import transactions as tx_svc
 from budget_app.services import updates as updates_svc
-from budget_app.services import wealth as wealth_svc
 from budget_app.services.context import Context, ValidationError
 from budget_app.ui.layout import (
     error,
-    fmt,
     frame,
     full_load,
+    info,
     lock_now,
     month_options,
     named,
@@ -51,7 +44,6 @@ from budget_app.ui.layout import (
     undoable,
 )
 from budget_app.ui.pages import welcome
-from budget_app.ui.pages.investments import open_conversion_sheet
 from budget_app.ui.widgets.grid import confirm
 from budget_app.ui.widgets.selects import currency_select
 
@@ -61,179 +53,6 @@ ROW_ACTION = "flat dense round size=sm"
 def _icon_button(icon: str, label: str, on_click, classes: str = "text-primary") -> ui.button:
     """A row's icon-only button; its tooltip is also its accessible name (F32)."""
     return named(ui.button(icon=icon, on_click=on_click).props(ROW_ACTION).classes(classes), label)
-
-
-def _account_sheet(ctx: Context, kind: str, refresh, acc=None) -> None:
-    """Add (acc=None) or edit an account."""
-    advance = kind == ACCOUNT_ADVANCE
-    if acc:
-        title = t("Edit Advance Payment Account") if advance else t("Edit Account")
-    else:
-        title = t("New Advance Payment Account") if advance else t("New Account")
-    in_use = acc is not None and acc_svc.account_in_use(ctx, acc.id)
-    with sheet(title, width="26rem") as dlg:
-        name = ui.input(t("Name"), value=acc.name if acc else "").props("dense outlined autofocus").classes("w-full")
-        cur = currency_select(ctx, acc.currency if acc else ctx.store.settings.display_currency)
-        if in_use:
-            cur.disable()
-            ui.label(t("The currency can’t change while transactions or recorded balances use this account.")).classes(
-                "caption -mt-2"
-            )
-        elif not acc:
-            ui.label(t("Every transaction on this account will be in this currency.")).classes("caption -mt-2")
-        asset_class = None
-        if not advance:  # F21: what the account holds; advance-payment accounts are cash
-            is_loan = acc is not None and acc.is_loan  # F22: a loan's account keeps its class; the loan owns it
-            classes = {k: t(v) for k, v in ASSET_CLASSES.items() if (k == ASSET_LOAN) == is_loan}
-            asset_class = (
-                ui.select(
-                    classes,
-                    value=acc.asset_class if acc and acc.asset_class in classes else ASSET_CASH,
-                    label=t("Asset class"),
-                )
-                .props("dense outlined options-dense")
-                .classes("w-full")
-            )
-            if is_loan:
-                asset_class.disable()
-            class_note = ui.label().classes("caption -mt-2")
-
-            def explain() -> None:
-                fresh = ctx.store.accounts.get(acc.id) if acc else None
-                if asset_class.value == ASSET_LOAN:
-                    text = t("The outstanding debt of its loan on the Loans page; no balances to record.")
-                elif fresh is not None and fresh.invest_from and asset_class.value in HOLDING_CLASSES:
-                    text = t(
-                        "Valued from its holdings from {month} on; the balances recorded before stay as its history.",
-                        month=months.label(fresh.invest_from),
-                    )
-                elif asset_class.value in HOLDING_CLASSES:
-                    text = t("Valued from its holdings on the Investments page; no balances to record.")
-                else:
-                    text = t("Valued from the balances you record at the end of each month.")
-                class_note.set_text(text)
-
-            def class_chosen() -> None:
-                chosen = asset_class.value
-                if acc is not None and inv_svc.needs_conversion(ctx, acc.id, chosen):
-                    # an account with history becomes a securities or crypto account through a conversion (decision 13)
-                    fresh = ctx.store.accounts.get(acc.id)
-                    asset_class.value = fresh.asset_class if fresh else ASSET_CASH  # until the conversion is saved
-
-                    def converted() -> None:  # the conversion saved the class: this sheet is done
-                        dlg.close()
-                        refresh()
-
-                    open_conversion_sheet(ctx, acc.id, chosen, converted)
-                explain()
-
-            asset_class.on_value_change(class_chosen)
-            explain()
-
-        def save():
-            chosen = asset_class.value if asset_class else ASSET_CASH
-            try:
-                if acc:
-                    acc_svc.edit_account(ctx, acc.id, name.value, cur.value, chosen)
-                else:
-                    acc_svc.add_account(ctx, name.value, cur.value, kind, chosen)
-            except ValidationError as exc:
-                error(str(exc))
-                return
-            dlg.close()
-            refresh()
-
-        sheet_buttons(dlg, t("Save") if acc else t("Add"), save)
-        name.on("keydown.enter", save)
-
-
-def accounts_group(ctx: Context, kind: str, title: str) -> None:
-    @ui.refreshable
-    def body():
-        rows = acc_svc.accounts(ctx, kind)
-        with ui.element("div").classes("group"):
-            for acc in rows:
-                with ui.element("div").classes("group-row"):
-                    with ui.column().classes("gap-0 flex-1 min-w-0"):
-                        ui.label(acc.name).classes("truncate")
-                        if kind == ACCOUNT_REGULAR and acc.holds_securities:
-                            ui.label(
-                                t(
-                                    "{asset_class} · {amount} in holdings",
-                                    asset_class=t(ASSET_CLASSES[acc.asset_class]),
-                                    amount=fmt(inv_svc.account_value(ctx, acc.id), acc.currency),
-                                )
-                            ).classes("caption")
-                        elif kind == ACCOUNT_REGULAR and acc.is_loan:  # F22
-                            loan = loan_svc.of_account(ctx, acc.id)
-                            owed = t(
-                                "{amount} outstanding",
-                                amount=fmt(loan_svc.debt(ctx, loan) if loan else 0, acc.currency),
-                            )
-                            ui.label(f"{t(ASSET_CLASSES[ASSET_LOAN])} · {owed}").classes("caption")
-                        elif kind == ACCOUNT_REGULAR:
-                            last = wealth_svc.balance_entry(ctx, acc.id, "9999-12")
-                            balance = (
-                                t(
-                                    "{amount} at the end of {month}",
-                                    amount=fmt(last.amount, acc.currency),
-                                    month=months.label(last.month),
-                                )
-                                if last
-                                else t("No balance recorded")
-                            )
-                            if acc.asset_class != ASSET_CASH:
-                                balance = (
-                                    f"{t(ASSET_CLASSES.get(acc.asset_class, ASSET_CLASSES[ASSET_CASH]))} · {balance}"
-                                )
-                            ui.label(balance).classes("caption")
-                        else:
-                            ui.label(
-                                t(
-                                    "{amount} outstanding",
-                                    amount=fmt(tx_svc.advance_account_balance(ctx, acc.id), acc.currency),
-                                )
-                            ).classes("caption")
-                    ui.label(acc.currency).classes("text-2 text-[13px]")
-                    with ui.row().classes("row-actions gap-0 no-wrap"):
-                        named(
-                            ui.button(icon="o_edit", on_click=lambda a=acc: _account_sheet(ctx, kind, body.refresh, a))
-                            .props(ROW_ACTION)
-                            .classes("text-primary"),
-                            t("Edit"),
-                        )
-
-                        def delete(a=acc):
-                            def do():
-                                try:
-                                    acc_svc.delete_account(ctx, a.id)
-                                    undoable(t("Deleted {name}", name=a.name))
-                                except ValidationError as exc:
-                                    error(str(exc))
-                                body.refresh()
-
-                            confirm(
-                                t("Delete “{name}”?", name=a.name),
-                                do,
-                                detail=t(
-                                    "Its recorded balances are removed too. "
-                                    "Accounts with transactions can’t be deleted."
-                                ),
-                            )
-
-                        named(
-                            ui.button(icon="o_delete", on_click=delete).props(ROW_ACTION).classes("text-negative"),
-                            t("Delete"),
-                        )
-            with ui.element("div").classes("group-row"):
-                ui.button(
-                    t("Add Advance Payment Account…") if kind == ACCOUNT_ADVANCE else t("Add Account…"),
-                    on_click=lambda: _account_sheet(ctx, kind, body.refresh),
-                ).props("flat dense no-caps").classes("link-btn -ml-2")
-
-    with ui.column().classes("w-full gap-0"):
-        ui.label(title).classes("group-header")
-        body()
 
 
 def _category_sheet(ctx: Context, refresh, cat=None) -> None:
@@ -820,7 +639,11 @@ def _data_group(ctx: Context) -> None:
             with ui.element("div").classes("group-row"):
                 with ui.column().classes("gap-0 flex-1 min-w-0"):
                     ui.label(t("Data Folder"))
-                    ui.label(str(ctx.store.data_dir)).classes("caption break-all select-all")
+                    folder = ui.label(short_path(ctx.store.data_dir)).classes("caption truncate max-w-full")
+                    folder.props["title"] = str(ctx.store.data_dir)  # the whole path on hover
+                ui.button(t(file_manager_label()), on_click=lambda: open_folder(ctx.store.data_dir)).props(
+                    "flat dense no-caps"
+                ).classes("text-primary")
                 ui.button(t("Move…"), on_click=_move_sheet).props("flat dense no-caps").classes("text-primary")
             _sample_row(ctx)
 
@@ -846,34 +669,34 @@ def _data_group(ctx: Context) -> None:
 
 
 def _updates_group(ctx: Context) -> None:
-    """F33: the update check, off by default; it says what it does and what it never does."""
+    """F33: the update check, off by default; one line says what it does, the ⓘ what it never does."""
     settings = ctx.store.settings
 
     @ui.refreshable
     def status() -> None:
-        with ui.column().classes("gap-0 flex-1 min-w-0"):
-            ui.label(t("Newest Release"))
-            release = updates_svc.available(ctx)
-            if not settings.update_check:
-                text = t("Off: the app never asks on its own. The releases page lists the installers.")
-            elif not settings.update_checked:
-                text = t("Not checked yet.")
-            else:
-                text = t(
-                    "Checked on {date}: the newest release is {version}.",
-                    date=i18n.date_label(date.fromisoformat(settings.update_checked)),
-                    version=updates_svc.latest_version(ctx),
-                )
-            ui.label(text).classes("caption")
-            if release:
-                ui.link(t("Budget {version} is available", version=release.version), release.url, new_tab=True).classes(
-                    "caption text-primary"
-                )
-            else:
-                ui.link(t("Releases page"), RELEASES_URL, new_tab=True).classes("caption text-primary")
-        check_btn = ui.button(t("Check Now")).props("flat dense no-caps").classes("text-primary")
-        check_btn.on_click(lambda: check_now(check_btn))
-        check_btn.set_visibility(settings.update_check)
+        if not settings.update_check:  # off: nothing to report
+            return
+        with ui.element("div").classes("group-row"):
+            with ui.column().classes("gap-0 flex-1 min-w-0"):
+                ui.label(t("Newest Release"))
+                release = updates_svc.available(ctx)
+                if not settings.update_checked:
+                    text = t("Not checked yet.")
+                else:
+                    text = t(
+                        "Checked on {date}: the newest release is {version}.",
+                        date=i18n.date_label(date.fromisoformat(settings.update_checked)),
+                        version=updates_svc.latest_version(ctx),
+                    )
+                ui.label(text).classes("caption")
+                if release:
+                    ui.link(
+                        t("Budget {version} is available", version=release.version), release.url, new_tab=True
+                    ).classes("caption text-primary no-underline")
+                else:
+                    ui.link(t("Releases page"), RELEASES_URL, new_tab=True).classes("caption text-primary no-underline")
+            check_btn = ui.button(t("Check Now")).props("flat dense no-caps").classes("text-primary")
+            check_btn.on_click(lambda: check_now(check_btn))
 
     async def check_now(button: ui.button) -> None:
         button.props(add="loading")
@@ -901,26 +724,64 @@ def _updates_group(ctx: Context) -> None:
         with ui.element("div").classes("group"):
             with ui.element("div").classes("group-row"):
                 with ui.column().classes("gap-0 flex-1 min-w-0"):
-                    ui.label(t("Check for Updates"))
-                    ui.label(
-                        t(
-                            "Once a day, Budget asks GitHub for the number of the newest release. Nothing is "
-                            "downloaded or installed, and the request carries nothing about you or your data. Off by "
-                            "default; besides the ECB rates it is the only connection the app makes."
+                    with ui.label(t("Check for Updates")):
+                        info(
+                            t(
+                                "Budget asks GitHub for the number of the newest release. Nothing is downloaded or "
+                                "installed, and the request carries nothing about you or your data. Off by default; "
+                                "besides the ECB rates it is the only connection the app makes."
+                            )
                         )
-                    ).classes("caption")
+                    ui.label(t("Once a day. Sends nothing about you.")).classes("caption")
                 ui.switch(value=settings.update_check, on_change=toggle).props("dense").mark("update-check")
-            with ui.element("div").classes("group-row"):
-                status()
+            status()
 
 
 def _backup_date(b: archive.SavedBackup) -> str:
     return f"{i18n.date_label(b.created.date())}, {b.created:%H:%M}"
 
 
+def short_path(path: Path | str, limit: int = 48) -> str:
+    """A folder as a caption shows it, on one line: the home folder as "~" and, when still long, the middle elided
+    ("~/Library/…/Finance/Budget"); the full path is its tooltip."""
+    folder, home = Path(path), Path.home()
+    if folder.is_relative_to(home):
+        folder = Path("~") / folder.relative_to(home)
+    text = str(folder)
+    if len(text) <= limit:
+        return text
+    parts = folder.parts
+    head, tail = Path(*parts[:2]), list(parts[-1:])  # "~/Library" or "/private", and the last folder
+    for part in reversed(parts[2:-1]):
+        if len(str(head.joinpath("…", part, *tail))) > limit:
+            break
+        tail.insert(0, part)
+    shortened = str(head.joinpath("…", *tail))
+    if len(shortened) > limit:  # one long folder name: elide inside it
+        keep = (limit - 1) // 2
+        return text[:keep] + "…" + text[-keep:]
+    return shortened
+
+
+FILE_MANAGERS = {"darwin": N_("Show in Finder"), "win32": N_("Show in Explorer")}
+
+
+def file_manager_label(platform: str | None = None) -> str:
+    """The text of the button that opens the data folder, after the system's file manager; translate it with t."""
+    return FILE_MANAGERS.get(platform or sys.platform, N_("Open Folder"))
+
+
+def open_folder(path: Path | str, platform: str | None = None) -> None:
+    """Open `path` in the system's file manager. The app's server runs on the user's own computer, so this opens a
+    window there."""
+    platform = platform or sys.platform
+    opener = "open" if platform == "darwin" else "explorer" if platform == "win32" else "xdg-open"
+    subprocess.Popen([opener, str(path)])  # noqa: S603 - the system's own opener and the app's data folder
+
+
 PROJECTION_LABELS = {  # the choice in Settings, in its order (decision 36)
     PROJECTION_BUDGET: N_("Budget only"),
-    PROJECTION_HIGHER: N_("Recorded where higher"),
+    PROJECTION_HIGHER: N_("Actual spending when higher"),
 }
 
 
@@ -978,13 +839,16 @@ def page() -> None:
                     sel.on_value_change(lambda e: apply_btn.set_visibility(e.value != ctx.horizon()))
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
-                        ui.label(t("Projected Wealth"))
-                        ui.label(
-                            t(
-                                "For months without recorded balances: the budgets alone, or per top-level "
-                                "category the recorded amount where it exceeds the budget."
+                        with ui.label(t("Projected Wealth")):
+                            info(
+                                t(
+                                    "Budget only: a month adds its budgeted income and subtracts its budgeted "
+                                    "spending. Actual spending when higher: per category, spending already recorded "
+                                    "above the budget counts, as does extra income; a budget not used yet still "
+                                    "counts."
+                                )
                             )
-                        ).classes("caption")
+                        ui.label(t("How months without recorded balances are estimated.")).classes("caption")
 
                     def set_projection(e):
                         ctx.store.settings.projection = e.value
@@ -995,7 +859,7 @@ def page() -> None:
                         {k: t(v) for k, v in PROJECTION_LABELS.items()},
                         value=ctx.store.settings.projection,
                         on_change=set_projection,
-                    ).props("dense outlined options-dense").classes("w-56").mark("projection-rule")
+                    ).props("dense outlined options-dense").classes("w-72 max-sm:w-44").mark("projection-rule")
                 with ui.element("div").classes("group-row"):
                     with ui.column().classes("gap-0 flex-1 min-w-0"):
                         ui.label(t("Display Currency"))

@@ -251,10 +251,10 @@ A page listing all COICOP categories as a tree with code and name, in the interf
 language, with a search box. Linked from the sidebar or Settings. With F40, each category
 also shows what it includes.
 
-**As built.** *Categories* in the sidebar (after Budget Plan, route `/categories`): all 602
-categories of the four levels as one tree, code and name in the interface language, divisions
-bold, the number of subcategories, and what was spent in each this calendar year in the display
-currency. The search matches code or name, ignoring case and accents (*getranke* finds
+**As built.** *Categories*, a tab of Settings (route `/categories`): all 602
+categories of the four levels as one tree, code and the everyday name in the interface language ("01.1
+Groceries"), divisions bold, the official name beside it, smaller (whole on hover), and what was spent in each
+this calendar year in the display currency. The search matches code or name, ignoring case and accents (*getranke* finds
 *Getränke*); the ancestors of each match stay visible and open, and clearing the search
 restores what was open before. *Taxes* and *Advance payments* are the app's own categories, not
 COICOP, so a note below the tree explains them instead of listing them. Since F40 an info
@@ -409,7 +409,8 @@ expenditure alike, to the projected wealth on the budget page and to the Overvie
   today) or the same rule.
 
 **Changed by the product owner (2026-10-29, decision 36):** the rule is a choice in **Settings → Projected
-Wealth**: *Budget only* sums the month's budgeted income and expenditure (option 1); *Recorded where higher* uses the
+Wealth**: *Budget only* sums the month's budgeted income and expenditure (option 1); *Actual spending when higher*
+(named *Recorded where higher* until the polish before 1.0, architecture decision 50; explained behind an ⓘ) uses the
 recorded amount where it exceeds the budget, per top-level COICOP category and income category (option 2, the rule
 above, and the default so existing projections don't change). Either applies to every projected month and to the
 what-if scenarios (F15). With the change, every transaction and account balance is valued again at its exchange rate
@@ -544,7 +545,7 @@ lines.
 
 **As built:** *Recurring* in the sidebar (after Transactions, route `/recurring`, with the number
 of due occurrences as a badge). A series is an expenditure, income or account transfer with amount,
-currency, category, accounts, first date, rhythm (the Budget Plan's: every month to every year),
+currency, category, accounts, first date, rhythm (the Plan's: every month to every year),
 an optional end date and a note; it is stored in `recurring.csv`. Occurrences fall on the first
 date's day (the 31st becomes the last day of shorter months). The page lists the **Due**
 occurrences (date ≤ today, one row per missed date) with the amount and date editable, *Book*,
@@ -573,7 +574,7 @@ Rent, insurance premiums and subscriptions repeat every month or year.
 **Status:** ☑ Done (2026-10-20)
 
 **As built:** sums in the amount fields (evaluated safely: numbers, + − × ÷ and brackets, Swiss
-apostrophes and decimal commas); named templates from a bookmark menu in the form; recently used
+apostrophes and decimal commas); named templates from the "···" beside the form's type (with the rarer types since decision 50); recently used
 accounts first in the account dropdowns (recent *categories* come with F08); ⌘↩ / Ctrl+Enter
 saves, N opens a new transaction; *Duplicate* from the edit sheet and the Transactions list,
 with the items.
@@ -604,11 +605,11 @@ this payee"; rows stored before payees (F09) fall back to the same bank text wit
 words in the payee suggests its category, "Payee contains “Migros”" (spending only; words listed under unrelated
 categories are left out), so a first import is mostly categorized. Where no account
 is fixed, an account is suggested too: the rule's, else the one the payee had most often. The **form** shows
-"Use 01.1 Groceries" with the reason under the category of a new expenditure or income once it has a payee; a
+"Use Groceries" with the reason under the category of a new expenditure or income once it has a payee; a
 click fills the category (and the account, if still empty). The **import** (CSV and camt) imports the suggestions;
 afterwards it lists, folded, what was sorted from rules and history and, with *Change…*, what was sorted only because of
-a word in the name; what it could not place waits under To sort (F48). Taking a suggestion never makes a rule. **Categorization Rules** (`/rules`, under
-Payees; *Rules…* on the Payees page and in Settings) lists the rules per type, with add, edit and delete; every
+a word in the name; what it could not place waits under To sort (F48). Taking a suggestion never makes a rule. **Rules** (`/rules`, a tab of
+Transactions beside Payees, decision 49) lists the rules per type, with one *New Rule*, edit and delete; every
 change is undoable. Not built: the AI level, conditions on amount or account, and applying a new rule to stored
 transactions (bulk edit, F13, does that).
 
@@ -638,10 +639,10 @@ that repeats its group takes the group's name, every other category keeps its tr
 picker shows "01.1 Groceries" with the official name as a second line and lists the last ten distinct expenditure categories first (marked with a
 history icon). The search matches everyday name, search words, official name and code, ignoring
 case and accents, in the browser; since F40 also what the COICOP notes say a category includes
-(listed after the matches by name), and hovering an option shows its notes. Transaction form, budget forms, the Budget Plan sheet and the
-import page use it; the stored value stays the COICOP code. Since the redesign before 1.0 every list,
-ledger, report, chart and export shows the same label ("01.1 Groceries"); the official name is on the
-Categories page and on hover in the Budget ledger and the Transactions grid. Not built: favourites.
+(listed after the matches by name), and hovering an option shows its notes. Transaction form, budget forms, the Plan page's sheet and the
+import page use it; the stored value stays the COICOP code. Since the polish before 1.0 (decision 50) lists,
+ledgers, reports, charts and exports show the name alone ("Groceries"), with the code and the official name on
+hover; the picker, selects and the Categories page keep the code. Not built: favourites.
 
 COICOP names are statistical ("Individual consumption expenditure of non-profit institutions
 serving households"). Keep COICOP as the storage format, but:
@@ -665,7 +666,8 @@ name, "MIGROS ZUERICH HB 1234" → "Migros"). The CSV import reads the payee fro
 *Merchant* …) or the description, camt from the counterparty's name, and remembers each bank text as an alias of
 its payee; a payee renamed or merged later holds for the next file. The form's payee field suggests known payees (recently used first) and takes a
 new name as typed. Transactions has a Payee column, search and filter. The **Payees** page lists every payee
-with its number of transactions and what was spent and received, and renames, merges (several → one name; their
+with its logo when it is a well-known brand (decision 50), what was spent as the row's value and its number of
+transactions, and renames, merges (after *Select*; several → one name; their
 transactions, templates, series and aliases move) and deletes unused payees, each as one undo step. Not built:
 a "top merchants" report, and payees on transfers (QR-bill creditors became payees with F03). Category suggestions per payee
 came with F07.
@@ -690,9 +692,10 @@ as a dashed chip and becomes a tag only when the transaction is saved, in the sa
 templates, *Duplicate*, *Make Recurring…* and booked occurrences carry the tags; bulk edit (F13) has **Add Tags**
 and **Remove Tags**. **Transactions** shows the tags as coloured chips (an AG Grid cell renderer; export and
 sorting use the names), filters by tag (any of the chosen) and finds tag names in the search. The **Tags** page
-(`/tags`, sidebar after Payees) lists each tag with its number of transactions, what was spent and received, and
+(`/tags`, a tab of Settings) lists each tag with its number of transactions, what was spent as the row's value, and
 with a budget a bar "540.00 of 2'500.00 CHF · 1'960.00 CHF left · 1 Jul 2026 – 31 Jul 2026" (red when over); a
-click on a tag opens Transactions filtered by it (`?tag=<id>`); it adds tags, edits name and colour, merges,
+click on a tag opens Transactions filtered by it (`?tag=<id>`); it adds tags, edits name and colour, merges (after
+*Select*),
 deletes and sets budgets, each one undoable step. The Overview has a **Spending by Tag** chart (one bar per tag in
 its colour, between two months; PNG, PDF, CSV and Excel like the other charts). **Decided while building:**
 spending counts the own share of tagged expenditure (the part paid for others is an advance that comes back), and
@@ -714,7 +717,7 @@ Labels across categories: "Holiday Italy 2026", "Renovation", "Business".
 
 **As built (decision 14):** a split is a category per item line. In the transaction form each item line of an
 expenditure has a split button that opens a row below it with the category picker (F08) and a tag field (F10) for
-that line; lines without a category keep the transaction's. Below the list, "Rest in 01.1 Groceries: 23.40 CHF" shows
+that line; lines without a category keep the transaction's. Below the list, "Rest in Groceries: 23.40 CHF" shows
 what stays in the transaction's category, live. `transaction_items.csv` got `category` and `tags` columns (older
 files load unchanged). **How the amount is counted** (`domain.splits`, the one place every consumer uses): each
 line with its own category (or tags) counts its total there, in CHF at the transaction's own rate rounded to the
@@ -727,7 +730,7 @@ discount on its category and raises the rest by as much. **Advances:** every par
 *Income and Expenditure* chart series and their exports, the projection's "higher of recorded and budget", the
 COICOP page's spending this year, and tag totals, budgets and the *Spending by Tag* chart (a line's tags count
 that line, on top of the transaction's). Net income, account balances and the reconciliation use the whole
-transaction and never change (tested). **Transactions** shows a split as "01.1 Groceries + 2 more"; the search finds
+transaction and never change (tested). **Transactions** shows a split as "Groceries + 2 more"; the search finds
 its lines' categories, and the tag column and filter include its lines' tags. Deleting or merging a tag rewrites
 the lines too. **Bulk edit** changes only the rest's category (the hint says how many rows are split). Income,
 transfers, exchanges and revaluations are not split: the form hides the split buttons for income and says that
@@ -814,11 +817,12 @@ accounts), converted at the latest rate. Progress in `domain/goals.py`: the perc
 target), the **monthly amount needed** (what is left over the whole months to the target date, one less when the
 date's day comes before today's, at least one; rounded up to the cent), *Reached*, *Overdue since …*, and **on
 track / behind** against the straight line from the start to the target on its date; without a date "… to go · no
-target date". The **Goals** page (`/goals`, sidebar after Budget Plan, icon `o_flag`) lists the goals by date with
+target date". The **Goals** page (`/goals`, a tab of Plan) lists the goals by date with
 a bar (green once reached), the plan line and the source; a sheet adds and edits (the months-of-spending target is
 worked out live), rows archive and delete, archived goals can be restored; each change is one undoable step. The
-**Overview** has a **Goals** card with the first three goals not archived (those still to reach first) and, when a
-goal reserves, "Projected for Dec 2027: … free after … reserved for goals"; the card is left out without goals.
+**Overview** has a **Goals** card with the first three goals not archived (those still to reach first): name, bar
+and share (since decision 50; the plan line and what is free after goals are the Goals page's and the chart's); the
+card is left out without goals.
 **Reserve:** the projection (F47) is unchanged; the *Wealth Over Time* chart adds a dashed *Free after goals* line
 (and a `free_after_goals` column in its export): projected wealth minus what each reserving goal is to hold at that
 month on its plan, today's amount plus the monthly amount needed per month and the full target from the month the
@@ -843,10 +847,10 @@ scenario the budget of that category **is** that amount in those months instead 
 **0 takes the budget out** of those months ("drop the gym from March"); everything else stays as in the plan. Where
 two changes of a scenario meet in a month and category, the later one counts. The scenario's projection is the plan's
 (F47) with those budgets laid over: recorded amounts still count where they are higher, so a scenario never undoes
-what has happened. The **Scenarios** page (`/scenarios`, sidebar after Goals, icon `o_alt_route`) lists each
-scenario with "Projected for Dec 2027: 48'200.00 CHF · −9'600.00 CHF against the plan", its changes ("Salary ·
-4'960.00 CHF every month · from Jan 2027 to the end of the plan"), *Add Change…*, a switch *On the Overview*, edit
-and delete; the change sheet (type, amount, currency, category, From, Until or Forever, Repeat, note) says how many
+what has happened. The **Scenarios** page (`/scenarios`, a tab of Plan) lists each scenario in one card with
+"Projected for Dec 2027: 48'200.00 CHF · −9'600.00 CHF against the plan" (the difference coloured), its changes
+("Salary · 4'960.00 CHF every month · from Jan 2027 to the end of the plan"), *Add Change…*, a switch *On the
+Overview*, and *Edit…* and *Delete…* in its "···"; the change sheet (type, amount, currency, category, From, Until or Forever, Repeat, note) says how many
 months it covers and what the plan has for that category in the first month. The **Overview** wealth chart draws
 every shown scenario as a dashed line of its own from the last recorded value, beside the plan and the goals' line,
 and the chart export gets a `scenario: <name>` column each. **Adopt into Plan…** (confirmed) writes the changes into
@@ -868,7 +872,7 @@ March".
 
 **Status:** ☑ Done (2026-10-22)
 
-**As built:** *Propose from History…* on Budget Plan (in its *More* menu, and in the empty plan's card) opens one sheet. **Inputs:** the
+**As built:** *Propose from History…* on Plan (in its *More* menu) opens one sheet. **Inputs:** the
 last 3, 6 or 12 complete months (default 6), *Average* or *Median*, the COICOP level of the expenditure rows
 (division, group (default) or class), the rounding (to the cent, 1, 5, 10 (default), 50 or 100 CHF), and From
 (this month to the plan's end) and Until (a month or *Forever*, as in the New Budget Entry form). **Rows:** every
@@ -914,8 +918,9 @@ rhythm) and every charge is within 20 % or 2.00 of the median; a skipped or late
 old price ends the run, so long imported histories still find today's subscription. The run needs at least three
 charges (two for half-yearly and yearly rhythms), and its last one must be no older than two rhythms. Each row says
 two facts, how much and how often with the expected next date ("49.90 CHF · Every month · next around 15 Nov
-2026"), and what it costs a year; how many charges since when and the last one are its tooltip. The header sums the
-detected subscriptions per year in the display currency. **Make Recurring…** opens F05's series sheet prefilled from the last charge (its payee, note, tags, the
+2026"), and what it costs a year as the row's value; how many charges since when and the last one are its tooltip.
+The header sums them per year in the display currency, "5 regular payments · about 29'756 CHF a year"; what is
+detected sits behind the ⓘ beside the title, and *Make Recurring…* and *Ignore* show on hover (decision 50). **Make Recurring…** opens F05's series sheet prefilled from the last charge (its payee, note, tags, the
 most frequent category and account, the detected rhythm, the last charge as the series' first booking, so the
 next occurrence is due a rhythm later); **Ignore** takes a group off the list for good (`subscription_ignores.csv`,
 one undo step), and the closed *Ignored* group offers **Watch Again**. Rows a series booked (F05) are never
@@ -980,7 +985,8 @@ below it. Then a bar chart of income and expenditure per month, *Spending by Cat
 top-level rows: divisions, Taxes, Advance payments, each with the year before, its share of the year's spending
 and the change as ▲/▼ and a percentage, red when spending rose, the amount in the tooltip; *new* and ▼ 100 %
 for what only one year had), *Income* per category (red when it fell), and the five *Biggest Expenses* (the own
-share of a payment, F11; a button opens the transaction). The figures are the monthly statements added up
+share of a payment, F11; a button opens the transaction). Without anything recorded in the year before, the
+comparisons are left out, and the chart starts at the first month with income or spending (decision 50). The figures are the monthly statements added up
 (`aggregates`, per part: a split line in its own category, the share paid for others under *Advance payments*
 and its repayments as income), so the year agrees with the Budget page month by month; wealth is the recorded
 month-end wealth, nothing is projected. **Save as PDF…** renders the review with the chart as the browser draws
@@ -1010,7 +1016,9 @@ tax withheld, ISIN in the payee, and income in a category named Dividends or Int
 lines (F11) count in their own category, the share paid for others doesn't count. **Sections…** links tags to
 sections (`tax_sections.csv`, a tag in one section at most, new names become tags, one undo step); a tagged
 expenditure part, income or transfer then counts there too, income in a spending section as a refund (negative).
-Sections can overlap only by a tag, and the page says so (and how many transactions do). Exports: **PDF** (a
+Sections can overlap only by a tag, and the page says so (and how many transactions do): since decision 50 in the ⓘ
+beside its one neutral line that cantonal rules differ, where an orange banner was; a section counts "2 payments ·
+1 receipt". Exports: **PDF** (a
 summary page with the note that cantonal rules differ, then a table per section with date, payee, category, amount
 and the attachment names as *Proof*), **CSV** (one row per section row, formula-safe) and **Proofs as ZIP…** (the
 PDF, the CSV and the attachment files in one folder per section, each read through F12's check; files that fail
@@ -1037,7 +1045,7 @@ Cantonal rules differ, so the app lists amounts and leaves the judgment to the u
 
 - **Asset classes:** every account has one (`accounts.csv` → `asset_class`): cash (the default,
   also for files written before and for advance-payment accounts), securities, pillar 2, pillar 3a,
-  real estate, crypto, other. It is set in the account sheet in Settings. Securities and crypto
+  real estate, crypto, other. It is set in the account sheet on the Wealth page. Securities and crypto
   accounts are valued from their holdings; an account without transactions or balances becomes one
   right away, and stays one while it has holdings. The Overview shows wealth at the end of last
   month by class (a split bar with amounts and shares) once any account is not cash, and the chart
@@ -1083,10 +1091,10 @@ Cantonal rules differ, so the app lists amounts and leaves the judgment to the u
   net dividends, fees, gain = value − money put in + net dividends − fees and its percentage of the
   money put in; the holding sheet shows the withholding tax apart and splits the gain into realized
   and unrealized (average cost).
-- **Investments page** (`/investments`, sidebar after Payees): holdings by account with quantity,
-  last price and date, value, gain and %, totals; *Buy*, *Sell*, *Dividend*, *Update Price* and
-  *Paste Prices…* (tab, semicolon or comma separated, header line skipped, Swiss and other number
-  formats) sheets; a holding sheet with its figures and history (edit and delete per trade or
+- **Investments page** (`/investments`, a tab of Wealth): holdings by account with quantity,
+  last price and date, value, gain and %, totals (the gain's formula behind an ⓘ); *Buy* in the header,
+  *Sell…*, *Dividend…* and *Update Price…* in each holding's "···", and *Paste Prices…* (tab, semicolon or
+  comma separated, header line skipped, Swiss and other number formats) in the header's "···" (decision 50); a holding sheet with its figures and history (edit and delete per trade or
   price, rename, delete with everything it booked). The booked rows appear in Transactions; opening
   one opens its trade or price, deleting or bulk-editing it there is refused. Every save is one
   undoable step.
@@ -1113,8 +1121,8 @@ F21 would create them from price changes.
 **As built** (architecture §4.7, §7 decision 34): a loan is a **liability account** of the new asset class
 *Loans and mortgages* with a repayment schedule (`loans.csv`: principal and start date, interest rate per year,
 payment rhythm, first payment, repayment per payment, paying account, interest category, lender, optional *fixed
-until*, note). The account is added with the loan on the **Loans** page (`/loans`, sidebar after Investments) and
-can't be given that class in Settings. Its balance is **minus the outstanding debt**, computed from the loan's
+until*, note). The account is added with the loan on the **Loans** page (`/loans`, a tab of Wealth) and
+can't be given that class in the account sheet. Its balance is **minus the outstanding debt**, computed from the loan's
 bookings (the principal, plus what left the account, minus what came in) like a securities account's value, never
 recorded; it counts against wealth, in *By Asset Class* (negative) and in the asset-class chart. A loan paid into
 one of your accounts starts with a principal of 0 and a transfer from the loan account. **Payments** are due every
@@ -1145,12 +1153,13 @@ a reminder (F31).
 **Status:** ☑ Done (2026-10-28)
 
 **As built** (architecture §3 *Advance payments*, §7 decision 35): the **Shared Expenses** page (`/shared`,
-sidebar after Loans) reads the existing advance payments per **person**, with no new data file and no new field:
+a tab of Wealth) reads the existing advance payments per **person**, with no new data file and no new field:
 a person is the *debtor* of an expenditure *partly paid for others*, names compared folded (case and accents
 ignored), shown as last written; a repayment counts for the person of the advance it settles. One row per person
-who owes something, oldest open item first: what is open per currency ("40.00 CHF + 45.00 EUR open"), the number
-of open items, the date of the oldest, and what came back this calendar year; the open items fold out below the
-row (date, payee or category with the note, "40.00 of 60.00 CHF open"; a click opens the transaction). People who
+who owes something, oldest open item first: what they owe per currency as the row's value, and below the name the
+number of open items and the date of the oldest ("2 items · since 12 Sep 2026"); the open items fold out below the
+row (date, payee or category with the note, "40.00 of 60.00 CHF open"; a click opens the transaction), with what
+came back this calendar year and *Summary…* (decision 50). People who
 owe nothing are listed folded under *Settled*. **Settle Up…** opens a sheet for one person: the currency (when they
 owe in more than one), the amount received (prefilled with all that is open in it), the date, the account it went
 to (regular accounts in that currency, preselected when there is one) and a note; the caption lists which items
@@ -1178,8 +1187,8 @@ Advance payments already record money paid for others. Build on that:
 
 **Status:** ☑ Done (2026-10-19)
 
-**As built:** *More* on Transactions and on Budget Plan exports the rows the list shows
-(on Budget Plan: one per budget in the Series view, one per month in the Months view),
+**As built:** *More* on Transactions and on Plan exports the rows the list shows
+(on Plan: one per budget in the Series view, one per month in the Months view),
 in the list's column order, as CSV or Excel. *Settings → Data → Export as JSON…* writes every
 record into one document (`format: budget-app/export`, `version: 1`). Decided: the JSON export is
 for other programs and is not imported back; full backups (F25) are the restore format.
@@ -1324,7 +1333,7 @@ records; the script is a thin wrapper that empties a folder and calls it (`just 
 (`/welcome`, no sidebar): the Overview opens it while the data folder holds no record and it was not passed before
 (`settings.onboarding_done`), so a folder with records never sees it. It has the language (applied at once), the
 display currency, the data folder (its path and how to change it: `--data-dir` or `BUDGET_DATA_DIR`) and two
-ways in: **Open Settings** (accounts and income categories; the Budget page then records the balances) or **Load
+ways in: **Add Accounts** (opens Wealth, where the balances are recorded too since decision 50) or **Load
 Sample Data**, which writes the set (a moment, in a worker thread) and opens the Budget page. The folder is marked
 (`settings.sample_data`): the sidebar footer says *Sample data*, and **Settings → Data → Sample Data** offers
 *Remove Sample Data…*, which deletes every record, attachment and the change history (language and currency stay)
@@ -1353,7 +1362,7 @@ the earliest at the series' amount), **bills due** (open QR bills overdue or due
 the payment sheet), **loan payments due** (F22, one row per loan; *Book* books the earliest with the schedule's
 interest and repayment) and **goals behind or overdue** (F14; "Behind: … short of the plan line", "Overdue since …
 · … to go"; *Open*). The title links to the page where the item can be changed first. More than six rows fold the
-rest behind *Show n more*; nothing due is one quiet line. The sidebar's one badge, beside Overview, counts the
+rest behind *Show n more*; with nothing due the card is left out (decision 50). The sidebar's one badge, beside Overview, counts the
 rows. Budgets exceeded or on pace to be are no reminder any more: they are *Notable this month* on the same page
 (F18). *Settings → Reminders* has one switch per kind (all on; `settings.json` → `reminders_off`); a kind turned off
 leaves the list and the badge, and with every kind off the card is gone. Everything is computed from the records
@@ -1398,10 +1407,10 @@ buttons use a darker blue and red (`--accent-strong`, `--negative-strong`) so th
 **Status:** ☑ Done (2026-10-28)
 
 **As built** (architecture §7, decision 28): **off by default**. **Settings → Updates → Check for Updates** is
-a switch whose caption says what it does and what it never does: once a day, when on, the app reads the newest
+a switch with one line, "Once a day. Sends nothing about you.", and the rest behind its ⓘ (decision 50): once a day, when on, the app reads the newest
 release's version number from GitHub's releases API for this repository (`services/updates.py`, the same kind of
 read-only request as the ECB rates, capped at 1 MB); nothing is downloaded or installed, and the request carries
-nothing about the user or the data. Turning it on checks at once; *Check Now* checks again; the row below says
+nothing about the user or the data. Turning it on checks at once; *Check Now* checks again; the row below, shown only while it is on, says
 *Not checked yet* or "Checked on 28 Oct 2026: the newest release is 0.2.0" and links to the releases page. When
 the release is newer than the running app, the sidebar footer of every page and the Settings row link **Budget
 0.2.0 is available** to that release's page (installers and update steps), opened in the browser. The check runs
@@ -1522,7 +1531,7 @@ replaces the specification's rule that manual entries use the latest rate.
 **B09 as built.** Budget entries are stored one row per month, linked by a series ID. The
 dialog shows the series' end month (or *Forever*), its rhythm and an editable note; changing
 the schedule replans the series from the edited month on, as a new series, and the earlier
-months end there. The Budget Plan page's month dialog has the same fields since B14, and its series sheet
+months end there. The Plan page's month dialog has the same fields since B14, and its series sheet
 (before 1.0) changes a whole budget from a chosen month on the same way (`budget.replan_series`).
 
 ### Follow-up fixes and milestone 2
@@ -1552,6 +1561,21 @@ months end there. The Budget Plan page's month dialog has the same fields since 
 | 14 | ☑ Done | **F36 · Closing balance from bank files.** | decision 6 (decided) | M |
 | 15 | ☑ Done | **F38 · Exchange-rate chart.** | – | S |
 | 16 | ☑ Done | **F37 · COICOP information page** with codes, names and search. | – | S |
+
+### Polish before 1.0
+
+**Status:** ☑ Done (2026-11-02, decision 50)
+
+Every page reads calmer. A category shows its name ("Groceries") in lists, the budget, reports and charts, with its
+code and official name on hover; the picker, selects and the Categories page keep the code. The tabs of a place share
+one header, the first tab is named like the place (**Plan**, **Wealth**), and a form leads back ("‹ Transactions")
+instead of showing tabs. Each list has one short empty state, an amount sits at its row's end, explanations wait
+behind ⓘ, and a screen has at most one filled button, the rest under "···". Payees and Tags show checkboxes only
+after **Select**. **Record Balance…** moved from Budget to Wealth (or click a balance there), which now leads with the
+net worth. Transactions has two-line rows on a phone and no empty columns; New Transaction offers Expenditure, Income
+and Transfer, the rest under "···"; Budget hides categories with nothing in them (**Show All Categories**); Settings
+calls the projection's choices *Budget only* and *Actual spending when higher*. 35 well-known payees show their logo
+(Simple Icons) on To Sort and Payees.
 
 ### Built features
 

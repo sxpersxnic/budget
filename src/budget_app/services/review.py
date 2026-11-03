@@ -116,6 +116,21 @@ class YearReview:
         return self.wealth_end - self.wealth_start
 
     @property
+    def compared(self) -> bool:
+        """Whether the year before has anything to compare with: without it, a comparison only says "nothing"."""
+        lines = (self.income, self.expenditure, *self.income_lines, *self.expenditure_lines)
+        return any(abs(line.previous) >= rules.EPS for line in lines) or self.previous_wealth_change is not None
+
+    @property
+    def active_months(self) -> list[MonthFlow]:
+        """The year's months from the first with income or spending on (a year that started late doesn't open with
+        empty months); none when nothing came in or went out."""
+        for n, m in enumerate(self.monthly):
+            if abs(m.income) >= rules.EPS or abs(m.expenditure) >= rules.EPS:
+                return self.monthly[n:]
+        return []
+
+    @property
     def has_data(self) -> bool:
         """Anything recorded in the year: a transaction or a balance."""
         return not (self.income.amount < rules.EPS and self.expenditure.amount < rules.EPS and self.wealth_end is None)

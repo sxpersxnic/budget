@@ -4,9 +4,11 @@
 2026"), the account it goes into, and plain checks, each with a way out: money in and out the right way round (an
 example of each; *That's Wrong* swaps them), what is already in Budget (skipped; *Show Them* lists each match beside
 the transaction it matches, with *Import anyway*), lines that can't be read, and the month-end balances (F36). One
-button imports everything new, with a category or without one (those wait under To sort). The column settings of a
-CSV file stay folded behind *The Columns Look Wrong…*: a bank seen before needs none, and a camt.053 / camt.054
-statement (XML, F02) needs none at all.
+button imports everything new, with a category or without one (those wait under To sort). A CSV file shows how it
+is read as soon as it is chosen: which column is the date, the description, the amount (or money out and money in)
+and the balance, each changeable there, and its first three rows as they come out; separator, header line, date and
+number format and the saved settings stay folded behind *More Settings…*. A camt.053 / camt.054 statement (XML,
+F02) says all of that itself and shows none of it.
 
 2 · A few questions: the account is up to date. The file's payees Budget could not place are asked about once each
 (ui/widgets/sort_cards.py, the cards of the To Sort tab), then the categories that were only a guess from a word in
@@ -84,67 +86,78 @@ def page() -> None:
                     .classes("w-64")
                 )
                 account_hint = ui.label().classes("caption")
+            # how a CSV file is read: which column is what, and the first rows as they come out (a statement says
+            # it itself, so it has none)
+            with ui.element("div").classes("import-mapping") as mapping:
+                ui.label(t("How the file is read")).classes("import-subhead")
+                with ui.row().classes("w-full gap-3 items-start flex-wrap"):
+                    date_sel = (
+                        ui.select({}, label=t("Date column")).props("dense outlined options-dense").classes("w-48")
+                    )
+                    text_sel = (
+                        ui.select({}, label=t("Description"), multiple=True)
+                        .props("dense outlined options-dense use-chips")
+                        .classes("flex-1 min-w-[14rem]")
+                    )
+                amount_mode = segmented({"single": t("One amount column"), "split": t("Debit and credit")}, "single")
+                amount_mode.classes("self-start")
+                with ui.row().classes("w-full gap-3 items-center flex-wrap"):
+                    amount_sel = ui.select({}, label=t("Amount")).props("dense outlined options-dense").classes("w-44")
+                    debit_sel = (
+                        ui.select({}, label=t("Debit (money out)"))
+                        .props("dense outlined options-dense")
+                        .classes("w-44")
+                    )
+                    credit_sel = (
+                        ui.select({}, label=t("Credit (money in)"))
+                        .props("dense outlined options-dense")
+                        .classes("w-44")
+                    )
+                    balance_sel = (
+                        ui.select({}, label=t("Balance column")).props("dense outlined options-dense").classes("w-44")
+                    )
+                preview = ui.element("div").classes("import-preview")
             problem = ui.label().classes("import-problem")
             checks = ui.element("div").classes("import-checks")
             with ui.row().classes("w-full items-center gap-2"):
                 import_btn = ui.button(t("Import"), on_click=lambda: do_import()).props("unelevated")  # noqa: PLW0108 - defined below
                 ui.space()
-                columns_link = ui.button(t("The Columns Look Wrong…"), on_click=lambda: toggle_columns()).props(  # noqa: PLW0108 - defined below
+                settings_link = ui.button(t("More Settings…"), on_click=lambda: toggle_settings()).props(  # noqa: PLW0108 - defined below
                     "flat no-caps"
                 )
-                columns_link.classes("text-primary")
+                settings_link.classes("text-primary")
                 picks_files(ui.button(t("Choose Another File…")).props("flat no-caps").classes("text-primary"), upload)
         file_card.set_visibility(False)
 
-        # ---------------------------------------------------------- the columns of a CSV file, folded
-        with ui.element("div").classes("surface flex flex-col gap-3") as columns_card:
+        # ---------------------------------------------------------- the rest of a CSV file's settings, folded
+        with ui.element("div").classes("surface flex flex-col gap-3") as settings_card:
             with ui.row().classes("w-full items-center gap-2"):
-                ui.label(t("Columns")).classes("section-title")
+                ui.label(t("More settings")).classes("section-title")
                 ui.space()
                 profile_sel = (
                     ui.select({p.name: p.name for p in profiles}, label=t("Saved settings"), clearable=True)
                     .props("dense outlined options-dense")
                     .classes("w-56")
                 )
-            with ui.row().classes("w-full gap-3 items-start flex-wrap"):
+            with ui.row().classes("w-full gap-3 items-center flex-wrap"):
                 delimiter = (
                     ui.select({k: t(v) for k, v in DELIMITER_NAMES.items()}, label=t("Separator"))
                     .props("dense outlined options-dense")
                     .classes("w-40")
                 )
                 header_line = ui.number(t("Header on line"), min=1, format="%d").props("dense outlined").classes("w-36")
-            with ui.row().classes("w-full gap-3 items-start flex-wrap"):
-                date_sel = ui.select({}, label=t("Date column")).props("dense outlined options-dense").classes("w-56")
                 date_fmt = (
                     ui.select(importer.DATE_FORMATS, label=t("Date format"))
                     .props("dense outlined options-dense")
                     .classes("w-40")
                 )
-            with ui.row().classes("w-full gap-3 items-center flex-wrap"):
-                amount_mode = segmented({"single": t("One amount column"), "split": t("Debit and credit")}, "single")
                 decimal = segmented({".": "1'234.50", ",": "1.234,50"}, ".")
-            with ui.row().classes("w-full gap-3 items-start flex-wrap"):
-                amount_sel = ui.select({}, label=t("Amount")).props("dense outlined options-dense").classes("w-56")
-                debit_sel = (
-                    ui.select({}, label=t("Debit (money out)")).props("dense outlined options-dense").classes("w-56")
-                )
-                credit_sel = (
-                    ui.select({}, label=t("Credit (money in)")).props("dense outlined options-dense").classes("w-56")
-                )
-                balance_sel = (
-                    ui.select({}, label=t("Balance column")).props("dense outlined options-dense").classes("w-56")
-                )
-            text_sel = (
-                ui.select({}, label=t("Description"), multiple=True)
-                .props("dense outlined options-dense use-chips")
-                .classes("w-full max-w-2xl")
-            )
             invert = ui.switch(t("Positive amounts are spending (typical for credit card statements)")).props("dense")
             with ui.row().classes("w-full items-center gap-2 pt-1"):
                 profile_name = ui.input(placeholder=t("Name, e.g. UBS Private")).props("dense outlined").classes("w-56")
                 ui.button(t("Save Settings"), on_click=lambda: save_settings()).props("flat").classes("text-primary")  # noqa: PLW0108 - defined below
                 ui.label(t("The next file with the same columns is recognised automatically.")).classes("caption")
-        columns_card.set_visibility(False)
+        settings_card.set_visibility(False)
 
         # ---------------------------------------------------------- 2 · a few questions
         done_area = ui.element("div").classes("flex flex-col gap-5 w-full")
@@ -231,8 +244,9 @@ def page() -> None:
             state["parsed"], state["statement"] = None, statement
             state["source"] = camt.format_iban(statement.iban) or statement.name
             kind.set_text("XML")
-            columns_card.set_visibility(False)
-            columns_link.set_visibility(False)
+            settings_card.set_visibility(False)
+            settings_link.set_visibility(False)
+            mapping.set_visibility(False)
             remembered = camt.remembered_account(ctx.store, statement.iban)
             known = bool(remembered and ctx.store.accounts.get(remembered))
             account_hint.set_text(
@@ -253,7 +267,8 @@ def page() -> None:
             profile = importer.guess_profile(parsed, profiles)
             state["source"] = profile.name or parsed.name
             kind.set_text("CSV")
-            columns_link.set_visibility(True)
+            settings_link.set_visibility(True)
+            mapping.set_visibility(True)
             if profile.name:
                 profile_sel.value = profile.name
             apply_profile(profile)
@@ -318,6 +333,7 @@ def page() -> None:
                 problem.set_text(t("Choose the account this file belongs to."))
             else:
                 problem.set_text(state["problem"])
+            render_preview()
             render_checks()
             chosen = sum(1 for r in rows if r.include)
             balances = [c for c in state["balances"] if c.include]
@@ -332,6 +348,24 @@ def page() -> None:
             else:
                 import_btn.set_text(tn("Import {n} Transaction", "Import {n} Transactions", chosen))
             import_btn.set_enabled(bool(account.value and (chosen or balances) and not state["problem"]))
+
+        def render_preview() -> None:
+            """The first rows as the columns read them: date, description, signed amount, or why a line can't be
+            read."""
+            preview.clear()
+            if state["statement"] is not None:
+                return
+            rows = state["rows"]
+            shown = [r for r in rows if r.status != importer.ERROR][:3] or rows[:3]
+            with preview:
+                for r in shown:
+                    ui.label(date_label(r.date) if r.date else "—").classes("num")
+                    ui.label(r.text or "—").classes("truncate")
+                    if r.error:
+                        ui.label(r.error).classes("caption text-right")
+                    else:
+                        sign = "+" if (r.amount or 0) > 0 else ""
+                        ui.label(f"{sign}{fmt(r.amount)}").classes("num text-right" + (" text-pos" if sign else ""))
 
         def toggle(name: str) -> None:
             state["open"] ^= {name}
@@ -499,8 +533,8 @@ def page() -> None:
             candidate.include = bool(value)
             render()
 
-        def toggle_columns() -> None:
-            columns_card.set_visibility(not columns_card.visible)
+        def toggle_settings() -> None:
+            settings_card.set_visibility(not settings_card.visible)
 
         def save_settings() -> None:
             if state["parsed"] is None:
@@ -552,7 +586,7 @@ def page() -> None:
             guesses: dict[str, str],
             sorted_before: Counter,
         ) -> None:
-            for card in (choose_card, file_card, columns_card):
+            for card in (choose_card, file_card, settings_card):
                 card.set_visibility(False)
             done_area.clear()
             done_area.set_visibility(True)

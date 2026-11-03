@@ -36,12 +36,15 @@ from budget_app.ui.layout import (
     fmt,
     fmt_signed,
     frame,
+    info,
     metric,
     month_options,
+    more_menu,
     named,
     on_data_changed,
     page_area,
     parse_date,
+    row_value,
     segmented,
     sheet,
     sheet_buttons,
@@ -546,6 +549,10 @@ def open_holding_sheet(ctx: Context, holding_id: str, on_change: Refresh = None)
             acc = ctx.store.accounts.get(h.account_id)
             cur = acc.currency if acc else ""
             perf = inv_svc.performance(ctx, h.id)
+            tips = {  # the two gains a reader may not know
+                t("Realized"): t("Sales against the average cost of what was sold."),
+                t("Unrealized"): t("Value against the average cost of what is held."),
+            }
             ui.label(" · ".join(p for p in (h.symbol, acc_svc.account_label(acc)) if p)).classes("caption -mt-2")
             with ui.element("div").classes("group shrink-0"):  # the sheet scrolls, its lists don't shrink
                 for label, value in (
@@ -561,17 +568,14 @@ def open_holding_sheet(ctx: Context, holding_id: str, on_change: Refresh = None)
                     (t("Unrealized"), fmt(perf.unrealized, cur)),
                 ):
                     with ui.element("div").classes("group-row"):
-                        ui.label(label).classes("flex-1 text-2")
+                        with ui.row().classes("flex-1 items-center gap-0 no-wrap min-w-0"):
+                            ui.label(label).classes("text-2")
+                            if tip := tips.get(label):
+                                info(tip)
                         ui.label(value).classes("num text-right")
                 with ui.element("div").classes("group-row"):
                     ui.label(t("Gain")).classes("flex-1 font-medium")
                     ui.label(_gain_text(perf, cur)).classes("num font-medium " + _gain_class(perf.gain))
-            ui.label(
-                t(
-                    "Realized: sales against the average cost of what was sold. "
-                    "Unrealized: value against the average cost of what is held."
-                )
-            ).classes("caption px-1")
             with ui.row().classes("w-full gap-1 flex-wrap"):
                 for kind in (TRADE_BUY, TRADE_SELL, TRADE_DIVIDEND):
                     ui.button(
@@ -857,7 +861,9 @@ def _summary(ctx: Context, view: str) -> None:
             t("Dividends {dividends} · fees {fees}", dividends=fmt(total.dividends), fees=fmt(total.fees)),
         )
         with ui.element("div").classes("metric"):
-            ui.label(t("Gain")).classes("metric-label")
+            with ui.row().classes("items-center gap-0 no-wrap"):
+                ui.label(t("Gain")).classes("metric-label")
+                info(t(GAIN_NOTE))
             ui.label((fmt_signed(total.gain) or fmt(0)) + f" {view}").classes("metric-value " + _gain_class(total.gain))
             ui.label(
                 t("{pct} % of the money put in", pct=fmt_signed(total.pct) or "0.00")
@@ -875,15 +881,18 @@ def _reclaimable(ctx: Context) -> None:
     years = {year: amount for year, amount in inv_svc.reclaimable_tax(ctx).items() if year >= first}
     if not years:
         return
-    with ui.column().classes("w-full gap-1"):
-        with ui.element("div").classes("group"):
-            for year, amount in years.items():
-                with ui.element("div").classes("group-row"):
-                    ui.label(t("Reclaimable withholding tax {year}", year=str(year))).classes("flex-1")
-                    ui.label(fmt(amount, "CHF")).classes("num font-medium")
-        ui.label(
-            t("Swiss withholding tax on dividends in CHF accounts. Claim it back with your tax return for that year.")
-        ).classes("caption px-1")
+    with ui.element("div").classes("group"):
+        for year, amount in years.items():
+            with ui.element("div").classes("group-row"):
+                with ui.row().classes("flex-1 items-center gap-0 no-wrap min-w-0"):
+                    ui.label(t("Reclaimable withholding tax {year}", year=str(year)))
+                    info(
+                        t(
+                            "Swiss withholding tax on dividends in CHF accounts. Claim it back with your tax return "
+                            "for that year."
+                        )
+                    )
+                row_value(amount, "CHF")
 
 
 def _holding_row(ctx: Context, h: Holding, cur: str, refresh: Callable[[], object]) -> Performance:
@@ -902,7 +911,17 @@ def _holding_row(ctx: Context, h: Holding, cur: str, refresh: Callable[[], objec
         with ui.column().classes("gap-0 items-end shrink-0"):
             ui.label(fmt(perf.value, cur)).classes("num font-medium")
             ui.label(_gain_text(perf, cur)).classes("caption num " + _gain_class(perf.gain))
-        ui.icon("chevron_right", size="18px").classes("text-3")
+        # the holding's own actions; a click on them doesn't open the holding
+        with (
+            ui.element("div")
+            .classes("row-actions")
+            .on("click.stop", js_handler="() => {}")
+            .on("keydown.enter.stop", js_handler="() => {}"),
+            more_menu(),
+        ):
+            ui.menu_item(t("Sell…"), on_click=lambda: open_trade_sheet(ctx, refresh, TRADE_SELL, h.id))
+            ui.menu_item(t("Dividend…"), on_click=lambda: open_trade_sheet(ctx, refresh, TRADE_DIVIDEND, h.id))
+            ui.menu_item(t("Update Price…"), on_click=lambda: open_price_sheet(ctx, refresh, holding_id=h.id))
     return perf
 
 
@@ -917,39 +936,24 @@ def page() -> None:
             ui.button(t("Buy"), icon="add", on_click=lambda: open_trade_sheet(ctx, refresh, TRADE_BUY)).props(
                 "unelevated"
             )
-            for label, open_sheet in (
-                (t("Sell"), lambda: open_trade_sheet(ctx, refresh, TRADE_SELL)),
-                (t("Dividend"), lambda: open_trade_sheet(ctx, refresh, TRADE_DIVIDEND)),
-                (t("Update Price"), lambda: open_price_sheet(ctx, refresh)),
-                (t("Paste Prices…"), lambda: open_paste_sheet(ctx, refresh)),
-            ):
-                ui.button(label, on_click=open_sheet).props("flat no-caps").classes("text-primary")
+            with more_menu():
+                ui.menu_item(t("Paste Prices…"), on_click=lambda: open_paste_sheet(ctx, refresh))
 
         @ui.refreshable
         def body() -> None:
             accounts = inv_svc.investment_accounts(ctx)
             if not accounts:
-                with (
-                    ui.element("div").classes("group"),
+                with ui.element("div").classes("group"):
                     empty_state(
                         t("No securities or crypto accounts yet."),
-                        t(
-                            "Give an account the asset class Securities or Crypto under Accounts, then add its "
-                            "holdings here. They are valued at quantity × the latest price, and buys, sales and "
-                            "dividends are booked as transactions."
-                        ),
-                    ),
-                ):
-                    ui.button(t("Accounts…"), on_click=lambda: ui.navigate.to("/accounts")).props(
-                        "flat dense no-caps"
-                    ).classes("link-btn -ml-2")
+                        t("Give an account the asset class Securities or Crypto on the Wealth page."),
+                    )
                 return
             if inv_svc.holdings(ctx):
                 try:
                     _summary(ctx, view)
                 except FxError as exc:
                     error(str(exc))
-                ui.label(t(GAIN_NOTE)).classes("caption -mt-2 px-1")
                 _reclaimable(ctx)
             for acc in accounts:
                 with ui.column().classes("w-full gap-0"):
@@ -969,7 +973,7 @@ def page() -> None:
                                     ui.label(_gain_text(total, acc.currency)).classes(
                                         "caption num " + _gain_class(total.gain)
                                     )
-                                ui.element("div").classes("w-[18px]")
+                                ui.element("div").classes("w-[34px] shrink-0")  # under the rows' "···"
                         with ui.element("div").classes("group-row"):
                             ui.button(
                                 t("Add Holding…"), on_click=lambda a=acc: open_holding_form(ctx, refresh, a.id)

@@ -1,7 +1,10 @@
 """Settings page: language, plan horizon, display currency, accounts and income categories."""
 
 import asyncio
+import html
+import re
 from datetime import date
+from pathlib import Path
 
 import pytest
 from nicegui import ui
@@ -17,6 +20,7 @@ from budget_app.services import transactions as tx_svc
 from budget_app.services import wealth as wealth_svc
 from budget_app.services.transactions import TransactionInput
 from budget_app.storage.store import Store
+from budget_app.ui.pages import settings
 
 
 # ------------------------------------------------------------------ helpers
@@ -73,6 +77,38 @@ async def no_label(user: User, text: str) -> None:
     raise AssertionError(f"still showing {text!r}")
 
 
+def read_amount(e: ui.html) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", " ", e.content)).replace("  ", " ").strip()
+
+
+def amounts(user: User) -> list[str]:
+    """The amounts on the page as read: '1'234.50 CHF'."""
+    with user:
+        found = [e for e in user.client.elements.values() if isinstance(e, ui.html)]
+    return [read_amount(e) for e in found]
+
+
+async def row_texts(user: User, name: str) -> list[str]:
+    """The texts, amounts and buttons of the list row that shows `name`, in order (once a refresh has shown it)."""
+    for _ in range(40):
+        with user:
+            labels = [e for e in user.client.elements.values() if isinstance(e, ui.label) and e.text == name]
+        if labels:
+            break
+        await asyncio.sleep(0.05)
+    assert labels, f"no row {name!r}"
+    row = labels[0]
+    while "group-row" not in row.classes:
+        row = row.parent_slot.parent
+    out = []
+    for e in row.descendants():
+        if isinstance(e, ui.html):
+            out.append(read_amount(e))
+        elif isinstance(e, ui.label | ui.button) and e.text:
+            out.append(e.text)
+    return out
+
+
 def set_value(user: User, element, value) -> None:
     with user:
         element.value = value
@@ -110,10 +146,9 @@ async def test_rows_show_balances_and_outstanding_advances(user: User, ctx, setu
     )
     await user.open("/accounts")  # Wealth's first page, out of Settings (UX review before 1.0)
     await user.should_see("Accounts")
-    await user.should_see("1'234.50 CHF at the end of Sep 2026")
-    await user.should_see("No balance recorded")  # the euro account has none
-    await user.should_see("Flatmates")
-    await user.should_see("40.00 CHF outstanding")
+    assert amounts(user).count("1'234.50 CHF") == 2  # the net worth and the bank's balance
+    assert await row_texts(user, "Euro account") == ["Euro account", "Record Balance…"]  # none recorded yet
+    assert await row_texts(user, "Flatmates") == ["Flatmates", "40.00 CHF", "Outstanding"]
     await user.open("/categories")  # income categories beside the COICOP ones
     await user.should_see("Salary")
     await user.open("/settings")  # preferences only
@@ -135,7 +170,7 @@ async def test_add_account(user: User, ctx) -> None:
     assert acc is not None
     assert (acc.currency, acc.kind) == ("USD", ACCOUNT_REGULAR)
     await user.should_see("Savings")
-    await user.should_see("No balance recorded")
+    assert await row_texts(user, "Savings") == ["Savings", "Record Balance…"]
     # the sheet closed after saving
     with user:
         assert not any(isinstance(e, ui.dialog) and e.value for e in user.client.elements.values())
@@ -174,7 +209,8 @@ async def test_add_advance_payment_account(user: User, ctx) -> None:
     dialog_button(user, "Add").click()
     acc = account_named(ctx, "Club")
     assert (acc.kind, acc.currency) == (ACCOUNT_ADVANCE, "EUR")
-    await user.should_see("0.00 EUR outstanding")
+    await user.should_see("Club")
+    assert await row_texts(user, "Club") == ["Club", "0.00 EUR", "Outstanding"]
 
 
 async def test_edit_account_name_and_currency(user: User, ctx, setup) -> None:
@@ -390,3 +426,52 @@ async def test_projection_rule_is_chosen_in_settings(user: User, ctx) -> None:
     assert ctx.store.settings.projection == PROJECTION_BUDGET
     assert Store(ctx.store.data_dir).settings.projection == PROJECTION_BUDGET  # saved with the settings
     assert notified(user, "Projected wealth: Budget only")
+    rule_options = {k: str(v) for k, v in rule.options.items()}
+    assert rule_options == {PROJECTION_BUDGET: "Budget only", PROJECTION_HIGHER: "Actual spending when higher"}
+
+
+async def test_the_projection_rule_says_what_it_does(user: User, ctx) -> None:
+    """One line under the setting; how each choice counts a month is behind the ⓘ (polish before 1.0)."""
+    await user.open("/settings")
+    await user.should_see("How months without recorded balances are estimated.")
+    note = next(e for e in user.find(kind=ui.icon).elements if "Budget only:" in e.props.get("aria-label", ""))
+    assert "Actual spending when higher: per category" in note.props["aria-label"]
+
+
+# ------------------------------------------------------------------ the data folder
+def test_a_long_folder_is_shortened_to_one_line(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(settings.Path, "home", lambda: tmp_path)
+    assert settings.short_path(tmp_path / "Budget") == str(Path("~/Budget"))  # the home folder as ~
+    deep = tmp_path / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "Finance" / "Budget" / "Household"
+    assert settings.short_path(deep) == str(Path("~/Library/…/Finance/Budget/Household"))
+    outside = Path("/srv/budget")
+    assert settings.short_path(outside) == str(outside)  # short enough as it is
+    one_long = Path("/data") / ("x" * 80)
+    shortened = settings.short_path(one_long)
+    assert len(shortened) <= 48 and "…" in shortened and shortened.startswith(str(Path("/data")))
+
+
+@pytest.mark.parametrize(
+    ("platform", "label", "opener"),
+    [
+        ("darwin", "Show in Finder", "open"),
+        ("win32", "Show in Explorer", "explorer"),
+        ("linux", "Open Folder", "xdg-open"),
+    ],
+)
+def test_the_folder_opens_in_the_systems_file_manager(monkeypatch, tmp_path, platform, label, opener) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(settings.subprocess, "Popen", calls.append)
+    assert settings.file_manager_label(platform) == label
+    settings.open_folder(tmp_path, platform)
+    assert calls == [[opener, str(tmp_path)]]
+
+
+async def test_the_data_folder_row_shows_the_folder(user: User, ctx, monkeypatch) -> None:
+    opened: list[Path] = []
+    monkeypatch.setattr(settings, "open_folder", opened.append)
+    await user.open("/settings")
+    folder = next(lb for lb in user.find(kind=ui.label).elements if lb.props.get("title") == str(ctx.store.data_dir))
+    assert folder.text == settings.short_path(ctx.store.data_dir) and "truncate" in folder.classes
+    user.find(kind=ui.button, content=settings.file_manager_label()).click()
+    assert opened == [ctx.store.data_dir]

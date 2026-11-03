@@ -12,7 +12,7 @@ from notifications import notified
 from test_bulk_edit_ui import select
 from test_faster_entry_ui import menu_items
 from test_overview_page import card, menu_item, open_overview, traces, values
-from test_payees_page import checkboxes, click, icon_buttons, newest, put
+from test_payees_page import click, icon_buttons, newest, put
 from test_transactions_page import rows as grid_rows
 from test_transactions_page import show_filters
 
@@ -25,6 +25,17 @@ from budget_app.services.transactions import TransactionInput
 from budget_app.ui import layout
 from budget_app.ui.widgets.bulk_edit import open_bulk_edit_sheet
 from budget_app.ui.widgets.tags import ColourPicker, TagSelect, tag_select
+
+
+def checkboxes(user: User) -> list[ui.checkbox]:
+    """The rows' checkboxes; none until Select."""
+    with user:
+        return sorted((e for e in user.client.elements.values() if isinstance(e, ui.checkbox)), key=lambda c: c.id)
+
+
+def by_class(user: User, cls: str) -> ui.element:
+    with user:
+        return next(e for e in user.client.elements.values() if cls in e.classes)
 
 
 def spend(setup, amount=20.0, tags=(), **kw) -> TransactionInput:
@@ -88,19 +99,38 @@ def tagged(ctx, setup):
 async def test_the_page_lists_tags_with_totals_and_budgets(user: User, ctx, setup) -> None:
     await user.open("/tags")
     await user.should_see("No tags yet.")
-    await user.should_see("Labels across categories")  # the page's explanation, while empty
-    new_tag = [b for b in user.find(kind=ui.button).elements if b.text == "New Tag"]
+    await user.should_see("Labels across categories, such as a holiday or a renovation.")  # one line, while empty
+    await user.should_not_see("0 tags")  # no count above an empty list
+    new_tag = [b for b in user.find(kind=ui.button).elements if b.text == "New Tag" and b.visible]
     assert len(new_tag) == 1  # the empty state's: the header's waits until there is a tag
-    tabs = [p for p, _ in layout.SECTIONS["/settings"]]  # a list, after Payees
-    assert tabs.index("/tags") == tabs.index("/payees") + 1
+    with user:
+        select = next(e for e in user.client.elements.values() if isinstance(e, ui.button) and e.text == "Select")
+    assert not select.visible  # nothing to merge
+    tabs = [p for p, _ in layout.SECTIONS["/settings"]]  # a list, after Categories
+    assert tabs.index("/tags") == tabs.index("/categories") + 1
+
+
+def row_values(user: User) -> list[tuple[str, str, str]]:
+    """Each row's value (layout.row_value): the amount, its line below and its tone, top to bottom."""
+    out = []
+    for box in sorted(user.find(kind=ui.element).elements, key=lambda e: e.id):
+        if "row-value" not in box.classes:
+            continue
+        amount = next(c for c in box.default_slot.children if "row-amount" in c.classes)
+        sub = next((c.text for c in box.default_slot.children if "caption" in c.classes), "")
+        tone = next((c for c in ("positive", "negative") if c in amount.classes), "")
+        out.append((amount.content.split("<")[0], sub, tone))
+    return out
 
 
 async def test_tags_with_their_numbers(user: User, ctx, tagged) -> None:
     await user.open("/tags")
     await user.should_see("3 tags")
-    await user.should_see("2 transactions · spent 125.00 CHF")
-    await user.should_see("2 transactions · spent 45.00 CHF · received 300.00 CHF")
+    await user.should_see("All time, CHF")  # the currency, once above the list
+    await user.should_see("2 transactions")
     await user.should_see("No transactions")
+    # what a tag cost, as the row's value; a tag also on income says what came in below it
+    assert row_values(user) == [("125.00", "", ""), ("45.00", "received 300.00", "")]
     await user.should_see("125.00 of 100.00 CHF · 25.00 CHF over budget · 1 Sep 2026 – 30 Sep 2026")
     over = next(lb for lb in user.find(kind=ui.label).elements if "over budget" in lb.text)
     assert "text-neg" in over.classes
@@ -112,6 +142,11 @@ async def test_tags_with_their_numbers(user: User, ctx, tagged) -> None:
     await user.should_not_see("Holiday")
     put(user, newest(user, ui.input), "nothing")
     await user.should_see("No tag matches.")
+    rise = tag_svc.add(ctx, "Pay rise")
+    income = dict(type="income", amount=50, category=tagged["salary"].id, to_account=tagged["chf"].id)
+    tx_svc.save(ctx, TransactionInput(date=date(2026, 9, 25), currency="CHF", tags=[rise.id], **income))
+    await user.open("/tags")
+    assert ("50.00", "", "positive") in row_values(user)  # only income: what was received, in green
 
 
 async def test_a_chip_opens_the_transactions_with_that_tag(user: User, ctx, tagged) -> None:
@@ -158,6 +193,12 @@ async def test_add_and_edit_a_tag(user: User, ctx, tagged) -> None:
 
 async def test_merge_selected_tags(user: User, ctx, tagged) -> None:
     await user.open("/tags")
+    assert checkboxes(user) == []  # the checkboxes only after Select
+    assert not by_class(user, "selection-bar").visible
+    click(user, newest(user, ui.button, text="Select"))
+    await user.should_see("0 selected")
+    assert by_class(user, "selection-bar").visible
+    assert icon_buttons(user, "o_edit") == []  # the rows' own actions wait meanwhile
     boxes = checkboxes(user)  # Holiday, Unused, Work
     click(user, boxes[0])
     assert not newest(user, ui.button, text="Merge…").enabled
@@ -172,18 +213,33 @@ async def test_merge_selected_tags(user: User, ctx, tagged) -> None:
     assert ctx.store.transactions.get(tagged["hotel"].id).tags == tagged["work"].id
     assert ctx.store.transactions.get(tagged["train"].id).tags == tagged["work"].id
     await user.should_see("2 tags")
+    await user.should_not_see("selected")
+    assert checkboxes(user) == [] and not by_class(user, "selection-bar").visible  # done after merging
+    assert newest(user, ui.button, text="Select").visible
 
+    click(user, newest(user, ui.button, text="Select"))
+    await user.should_see("0 selected")
+    click(user, checkboxes(user)[0])
+    await user.should_see("1 selected")
+    click(user, newest(user, ui.button, text="Clear Selection"))
+    await user.should_see("0 selected")
+    click(user, newest(user, ui.button, text="Done"))
+    await user.should_not_see("selected")
+    assert checkboxes(user) == [] and not by_class(user, "selection-bar").visible
+    assert icon_buttons(user, "o_edit")  # the rows' actions are back
+
+    click(user, newest(user, ui.button, text="Select"))
+    await user.should_see("0 selected")
     click(user, checkboxes(user)[0])
     click(user, checkboxes(user)[1])
     click(user, newest(user, ui.button, text="Merge…"))
     ctx.store.tags.delete([tagged["unused"].id])  # gone in the meantime
     click(user, newest(user, ui.button, text="Merge"))
     assert notified(user, "Select at least two tags to merge")
+    click(user, newest(user, ui.button, text="Cancel"))
     click(user, newest(user, ui.button, text="Clear Selection"))
-    await user.should_not_see("2 selected")
-    click(user, checkboxes(user)[0])
-    click(user, checkboxes(user)[0])
-    await user.should_not_see("1 selected")
+    await user.should_not_see("selected")  # one tag left: nothing to merge it with
+    assert checkboxes(user) == []
 
 
 async def test_delete_takes_the_tag_off_its_transactions(user: User, ctx, tagged) -> None:

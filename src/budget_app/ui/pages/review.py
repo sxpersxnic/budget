@@ -1,8 +1,9 @@
 """Year in Review (F19): a year's income, spending, savings and wealth against the year before, on screen and as PDF.
 
 A year picker (last year by default), the display currency, a metric strip with what was saved as the hero, the
-year's months as a chart, then spending by category, income and the biggest payments, each with its change
-against the year before (▲/▼ like the Budget page's comparison, F18). The share menu saves the review as PDF,
+year's months as a chart (from the first with income or spending), then spending by category, income and the biggest
+payments, each with its change against the year before (▲/▼ like the Budget page's comparison, F18) when that year
+has anything to compare with. The share menu saves the review as PDF,
 with the chart as the Overview's *Save as PDF* renders it, or as Excel.
 """
 
@@ -71,6 +72,8 @@ def wealth_label(review: YearReview) -> str:
     if review.wealth_end is None:
         return t("No balances recorded")
     if review.wealth_change is None:
+        if not review.compared:  # nothing to compare with: when, not what's missing
+            return t("End of {month}", month=months.label(review.wealth_month))
         return t("No balances at the end of {month}", month=months.label(review.period.before))
     text = t(
         "{change} since the end of {month}",
@@ -83,11 +86,13 @@ def wealth_label(review: YearReview) -> str:
 
 
 def flows_figure(review: YearReview) -> go.Figure:
-    """Income and expenditure per month of the year, as bars in the app's colours."""
+    """Income and expenditure per month of the year, from the first month with either, as bars in the app's
+    colours."""
     fig = go.Figure()
-    x = [m.month for m in review.monthly]
-    fig.add_bar(x=x, y=[round(m.income, 2) for m in review.monthly], name=t("Income"), marker_color=POSITIVE)
-    fig.add_bar(x=x, y=[round(m.expenditure, 2) for m in review.monthly], name=t("Expenditure"), marker_color=SERIES[0])
+    shown = review.active_months
+    x = [m.month for m in shown]
+    fig.add_bar(x=x, y=[round(m.income, 2) for m in shown], name=t("Income"), marker_color=POSITIVE)
+    fig.add_bar(x=x, y=[round(m.expenditure, 2) for m in shown], name=t("Expenditure"), marker_color=SERIES[0])
     fig.update_layout(barmode="group")
     fig.update_xaxes(type="category", tickvals=x, ticktext=[months.label(m) for m in x])
     return chart_layout(fig, review.currency)
@@ -97,25 +102,30 @@ def flows_figure(review: YearReview) -> go.Figure:
 def _figure_row(line: Figure, review: YearReview, total: float, is_expenditure: bool) -> None:
     with ui.element("div").classes("group-row py-2"):
         with ui.column().classes("gap-0.5 flex-1 min-w-0"):
-            ui.label(line.label).classes("w-full truncate")
-            parts = [previous_label(line, review)]
+            name = ui.label(line.label).classes("w-full truncate")
+            if is_expenditure and (code := get_coicop().tooltip(line.key)):
+                name.props(f'title="{code}"')  # the name alone; the official code on hover
+            parts = [previous_label(line, review)] if review.compared else []
             if is_expenditure and line.amount > rules.EPS:
                 parts.append(t("{pct} of spending", pct=trends.percent(rules.share(line.amount, total))))
-            ui.label(" · ".join(parts)).classes("caption w-full truncate")
+            if parts:
+                ui.label(" · ".join(parts)).classes("caption w-full truncate")
         with ui.column().classes("items-end gap-0 shrink-0"):
             ui.label(fmt(line.amount, review.currency)).classes("num font-medium whitespace-nowrap")
-            text, colour = change_label(line.change, is_expenditure)
-            lbl = ui.label(text).classes(f"caption whitespace-nowrap {colour}")
-            lbl._props["title"] = (fmt_signed(line.change.delta) or fmt(0)) + f" {review.currency}"
+            if review.compared:
+                text, colour = change_label(line.change, is_expenditure)
+                lbl = ui.label(text).classes(f"caption whitespace-nowrap {colour}")
+                lbl._props["title"] = (fmt_signed(line.change.delta) or fmt(0)) + f" {review.currency}"
 
 
-def _group(title: str, caption: str, lines: list[Figure], review: YearReview, is_expenditure: bool) -> None:
+def _group(title: str, lines: list[Figure], review: YearReview, is_expenditure: bool) -> None:
     total = review.expenditure.amount if is_expenditure else review.income.amount
     with ui.column().classes("w-full gap-0"):
         with ui.row().classes("w-full items-end gap-2"):
             ui.label(title).classes("group-header")
-            ui.space()
-            ui.label(caption).classes("caption pb-1.5 pr-1")
+            if review.compared:
+                ui.space()
+                ui.label(f"{review.year} · {review.year - 1}").classes("caption pb-1.5 pr-1")
         with ui.element("div").classes("group"):
             if not lines:
                 with ui.element("div").classes("group-row"):
@@ -140,18 +150,19 @@ def _biggest(ctx: Context, review: YearReview, refresh) -> None:
                 with ui.element("div").classes("group-row py-2"):
                     with ui.column().classes("gap-0.5 flex-1 min-w-0"):
                         ui.label(item.name or coicop.label(item.category)).classes("w-full truncate")
-                        ui.label(f"{i18n.date_label(item.date)} · {coicop.label(item.category)}").classes(
-                            "caption w-full truncate"
-                        )
-                    ui.label(fmt(item.amount, review.currency)).classes("num font-medium whitespace-nowrap")
+                        caption = ui.label(f"{i18n.date_label(item.date)} · {coicop.label(item.category)}")
+                        caption.classes("caption w-full truncate")
+                        if code := coicop.tooltip(item.category):
+                            caption.props(f'title="{code}"')
                     tx = ctx.store.transactions.get(item.transaction_id)
-                    if tx is not None:
+                    if tx is not None:  # before the amount, so the amounts line up with the lists above
                         named(
                             ui.button(icon="o_open_in_new", on_click=lambda tx=tx: show(tx))
                             .props(ROW_ACTION)
                             .classes("text-primary row-actions"),
                             t("Show the transaction"),
                         )
+                    ui.label(fmt(item.amount, review.currency)).classes("num font-medium whitespace-nowrap")
 
 
 # ------------------------------------------------------------------ the page
@@ -219,19 +230,17 @@ def page() -> None:
                 with ui.element("div").classes("group"):
                     empty_state(
                         t("Nothing recorded in {year}", year=str(review.year)),
-                        t(
-                            "Your income, spending, savings and wealth over a year, against the year before. The "
-                            "figures are the monthly statements added up; wealth is the recorded month-end balances."
-                        ),
+                        t("A year’s income, spending, savings and wealth, against the year before."),
                     )
                 return
             with ui.element("div").classes("surface flex flex-col gap-3"):
                 with ui.row().classes("w-full items-baseline gap-2"):
                     ui.label(period).classes("section-title")
-                    ui.label(review_export.comparison_label(review)).classes("caption")
+                    if review.compared:
+                        ui.label(review_export.comparison_label(review)).classes("caption")
                 with ui.element("div").classes("metrics").style("--n: 4"):
-                    metric(t("Income"), review.income.amount, cur, previous_label(review.income, review))
-                    metric(t("Expenditure"), review.expenditure.amount, cur, previous_label(review.expenditure, review))
+                    for label, figure in ((t("Income"), review.income), (t("Expenditure"), review.expenditure)):
+                        metric(label, figure.amount, cur, previous_label(figure, review) if review.compared else "")
                     with ui.element("div").classes("metric"):
                         ui.label(t("Saved")).classes("metric-label")
                         ui.html(money_html(review.saved.amount, cur)).classes(
@@ -244,14 +253,17 @@ def page() -> None:
                         cur,
                         wealth_label(review),
                     )
-            with ui.element("div").classes("surface flex flex-col gap-3"):
-                with ui.column().classes("gap-0 min-w-0"):
-                    ui.label(t("Income and Expenditure")).classes("section-title")
-                    ui.label(t("Month by month, in {currency}", currency=cur)).classes("caption")
-                state["plot"] = ui.plotly(figure_dict(flows_figure(review))).classes("w-full").style("height: 320px")
-            years = f"{review.year} · {review.year - 1}"
-            _group(t("Spending by Category"), years, review.expenditure_lines, review, True)
-            _group(t("Income"), years, review.income_lines, review, False)
+            state["plot"] = None
+            if review.active_months:  # a year of balances alone has no months to chart
+                with ui.element("div").classes("surface flex flex-col gap-3"):
+                    with ui.column().classes("gap-0 min-w-0"):
+                        ui.label(t("Income and Expenditure")).classes("section-title")
+                        ui.label(t("Month by month, in {currency}", currency=cur)).classes("caption")
+                    state["plot"] = (
+                        ui.plotly(figure_dict(flows_figure(review))).classes("w-full").style("height: 320px")
+                    )
+            _group(t("Spending by Category"), review.expenditure_lines, review, True)
+            _group(t("Income"), review.income_lines, review, False)
             _biggest(ctx, review, content.refresh)
 
         content()
