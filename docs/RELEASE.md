@@ -144,7 +144,7 @@ be redone.
   ```
 
   Merge the fix into `main` through a pull request, then run step 7 again: `main` still says 1.1.0, so the command
-  tags the new commit.
+  tags the new commit. On the other machines, the command replaces the old tag with GitHub's by itself.
 - **The upload fails** (network). Run the command again: it builds again and replaces the files it uploads
   (`--clobber`).
 - **"A local tag v1.1.0 points at another commit"**: a leftover tag from an attempt you removed. Delete it with
@@ -165,6 +165,8 @@ what to do.
   commits of its own, the command stops.
 - Round 1 stops if a branch `release/vX.Y.Z` exists already, locally or on GitHub.
 - Round 2 stops if a local tag `vX.Y.Z` points at another commit, or if a published release of that tag exists.
+- Where GitHub has the tag, the local tag is GitHub's: a local one that points elsewhere is from an attempt that
+  was removed, and the command replaces it (`git fetch --force`) and says so.
 - Round 3 builds the tagged commit. Elsewhere, it switches to the tag (`git switch --detach vX.Y.Z`) and back to
   your branch afterwards, also when the build fails. It stops if the release is published already.
 

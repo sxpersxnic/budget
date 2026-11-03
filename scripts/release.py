@@ -188,8 +188,25 @@ class Release:
             )
         self.sh.change("git", "merge", "--ff-only", f"{REMOTE}/{MAIN}")
 
-    def tag_on_remote(self) -> bool:
-        return bool(self.sh.read("git", "ls-remote", "--tags", REMOTE, f"refs/tags/{self.tag}"))
+    def remote_tag(self) -> str:
+        """The commit of the tag on GitHub, or "" without one."""
+        ref = f"refs/tags/{self.tag}"  # an annotated tag's commit is listed only when asked for by its ^{} name
+        lines = self.sh.read("git", "ls-remote", "--tags", REMOTE, ref, f"{ref}^{{}}").splitlines()
+        refs = {name: sha for sha, name in (line.split("\t", 1) for line in lines if "\t" in line)}
+        return refs.get(f"{ref}^{{}}", refs.get(ref, ""))
+
+    def follow_remote_tag(self, commit: str) -> None:
+        """The local tag is GitHub's. One that differs is left from an attempt that was removed (RELEASE.md)."""
+        local = self.local_tag()
+        if local == commit:
+            return
+        if not local:
+            self.sh.read("git", "fetch", REMOTE, "tag", self.tag)
+            return
+        print(
+            f"The local tag {self.tag} ({local[:7]}) is from an earlier attempt; GitHub's ({commit[:7]}) replaces it."
+        )
+        self.sh.change("git", "fetch", "--force", REMOTE, f"refs/tags/{self.tag}:refs/tags/{self.tag}")
 
     def local_tag(self) -> str:
         """The commit of the local tag, or "" without one."""
@@ -225,10 +242,12 @@ class Release:
     # ---------------------------------------------------------------- the rounds
     def run(self) -> str:
         self.check_tools()
-        self.sh.read("git", "fetch", "--tags", REMOTE)
-        remote_tag = self.tag_on_remote()
+        self.sh.read("git", "fetch", REMOTE)  # not --tags: it stops at a tag made again on GitHub (a restarted release)
+        remote_tag = self.remote_tag()
+        if remote_tag:
+            self.follow_remote_tag(remote_tag)
         main_version = project_version(self.sh.read("git", "show", f"{REMOTE}/{MAIN}:pyproject.toml"))
-        round_ = due(main_version, self.version, remote_tag)
+        round_ = due(main_version, self.version, bool(remote_tag))
         {BUMP: self.bump, TAG: self.tag_and_build, BUILD: self.build_here}[round_]()
         return round_
 
@@ -374,6 +393,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     except subprocess.CalledProcessError as exc:
         cmd = " ".join(str(c) for c in exc.cmd)
+        if exc.stderr:  # a command whose output was read: what it said is not on the screen yet
+            print("\n" + exc.stderr.strip(), file=sys.stderr)
         print(
             f"\nStopped: `{cmd}` failed (exit {exc.returncode}). Fix that and run the command again.", file=sys.stderr
         )
