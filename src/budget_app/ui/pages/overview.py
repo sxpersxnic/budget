@@ -9,7 +9,7 @@ from datetime import date
 
 import pandas as pd
 import plotly.graph_objects as go
-from nicegui import ui
+from nicegui import run, ui
 
 from budget_app.domain import months
 from budget_app.domain.models import ASSET_CLASSES
@@ -454,7 +454,10 @@ class ChartCard:
         return f"{self.kind}_chart_{self.currency['value']}.{ext}"
 
     async def download(self, kind: str) -> None:
-        data = export_svc.frame_csv(self.data) if kind == "csv" else export_svc.frame_xlsx(self.data, self.kind)
+        if kind == "csv":
+            data: bytes | None = export_svc.frame_csv(self.data)
+        else:  # off the event loop: Excel takes a moment, the first file longer (openpyxl loads then)
+            data = await run.io_bound(export_svc.frame_xlsx, self.data, self.kind)
         await save_file(data, self.file_name(kind))
 
     async def save_image(self, kind: str) -> None:
@@ -463,10 +466,12 @@ class ChartCard:
             url = await self.plot.run_plot_method(
                 "toImage", {"format": "png", "width": 1200, "height": 600, "scale": 2}, timeout=15
             )
-            data = base64.b64decode(str(url).split(",", 1)[1])
+            png = base64.b64decode(str(url).split(",", 1)[1])
+            data: bytes | None = png
             if kind == "pdf":
                 title = t(CHART_TYPES[self.kind])
-                data = export_svc.chart_pdf(data, title, t("Amounts in {currency}", currency=self.currency["value"]))
+                subtitle = t("Amounts in {currency}", currency=self.currency["value"])
+                data = await run.io_bound(export_svc.chart_pdf, png, title, subtitle)
         except Exception as exc:
             error(t("Could not create the image: {error}", error=exc))
             return

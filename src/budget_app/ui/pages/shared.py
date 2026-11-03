@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import date
 from functools import partial
 
-from nicegui import ui
+from nicegui import run, ui
 
 from budget_app import i18n
 from budget_app.domain.models import Transaction
@@ -163,7 +163,7 @@ def open_summary_sheet(ctx: Context, key: str) -> None:
             success(t("Copied"))
 
         async def save_pdf() -> None:
-            await save_file(shared_svc.summary_pdf(p), shared_svc.file_name(p, "pdf"))
+            await save_file(await run.io_bound(shared_svc.summary_pdf, p), shared_svc.file_name(p, "pdf"))
 
         async def save_text() -> None:
             await save_file(text.encode("utf-8"), shared_svc.file_name(p, "txt"))

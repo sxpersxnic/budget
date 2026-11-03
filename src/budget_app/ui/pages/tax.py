@@ -149,7 +149,7 @@ def page() -> None:
             summary = tax_svc.summary(ctx, year)
             try:
                 if kind == "pdf":
-                    data = tax_export.summary_pdf(summary)
+                    data = await run.io_bound(tax_export.summary_pdf, summary)
                 elif kind == "csv":
                     data = tax_export.summary_csv(summary)
                 else:

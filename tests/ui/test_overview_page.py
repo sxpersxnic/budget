@@ -6,6 +6,7 @@ import asyncio
 import base64
 import html
 import io
+import time
 
 import httpx
 import numpy as np
@@ -422,6 +423,23 @@ async def test_export_wealth_data_as_excel(user: User, demo) -> None:
     frame = pd.read_excel(io.BytesIO(data), sheet_name="wealth")
     assert list(frame.columns) == ["month", "wealth", "type"]
     assert set(frame["type"]) == {"actual", "projected"}
+
+
+async def test_slow_export_keeps_the_page_responsive(user: User, demo, monkeypatch) -> None:
+    """A file that takes long to build (the first Excel file loads openpyxl; on a slow disk that takes seconds) is
+    built off the event loop: the page's own requests to the browser still get their answer in time."""
+    from budget_app.services import export as export_svc  # noqa: PLC0415
+
+    build = export_svc.frame_xlsx
+
+    def slow(*args, **kwargs):
+        time.sleep(1.5)  # longer than NiceGUI waits for the browser (1 s)
+        return build(*args, **kwargs)
+
+    monkeypatch.setattr(export_svc, "frame_xlsx", slow)
+    await open_overview(user)
+    await menu_item(user, "Export Data as Excel…", within=card(user, "Wealth Over Time"))
+    assert (await downloaded(user)).content.startswith(b"PK")
 
 
 @pytest.fixture

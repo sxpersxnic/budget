@@ -41,6 +41,10 @@ Do this once on each machine that builds an installer: the Mac, the Windows PC a
 3. Clone the repository and install the git hooks: `just setup`.
 4. On Windows, build from a normal PowerShell window, not one run as administrator, and not over an elevated SSH
    session. A test folder made by an elevated shell is closed to a normal one.
+5. To build the Linux installer in WSL, clone the repository a second time inside WSL's own file system, for example
+   `~/budget`, and run `just setup` there. Don't build from the Windows checkout under `/mnt/c`: Windows and Linux
+   would share one `.venv` and replace each other's, and files under `/mnt/c` are slow enough for UI tests to time
+   out.
 
 ## Release step by step
 
@@ -128,7 +132,9 @@ be redone.
   `gh pr create --base main --head release/v1.1.0 --title "Release 1.1.0"`. The command refuses to start round 1
   again while the branch exists, and its message says how to remove it.
 - **A build fails because of the machine** (Inno Setup missing, a Linux library missing). Install what it names
-  and run `just pre-release 1.1.0` again. The tag exists, so it only builds and adds the installer.
+  and run `just pre-release 1.1.0` again. The tag exists, so it only builds and adds the installer. Tests that
+  fail with *JavaScript did not respond within 1.0 s* on one machine only point at a slow disk: in WSL, build from
+  a clone in WSL's own file system (step 5 of *Before the first release*).
 - **A build fails because of the code** (a test fails on one system). The tag points at a commit that can't be
   released. As long as the release is a draft, remove both and start over:
 
