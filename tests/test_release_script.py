@@ -1,6 +1,7 @@
 """The release command (scripts/release.py, `just pre-release`): which round is due, and what each round runs."""
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -14,6 +15,7 @@ sys.modules["release_script"] = release  # its dataclasses look their module up 
 _spec.loader.exec_module(release)
 
 MAIN_SHA, TAG_SHA, OLD_SHA = "a" * 40, "b" * 40, "c" * 40
+LS_TAG = ("git", "ls-remote", "--tags", "origin", "refs/tags/v1.1.0", "refs/tags/v1.1.0^{}")
 PYPROJECT = '[project]\nname = "budget-app"\nversion = "1.0.0"\n\n[tool.other]\nversion = "9.9.9"\n'
 
 
@@ -46,7 +48,7 @@ def repo(tmp_path: Path, main_version: str = "1.0.0", over: dict | None = None) 
     """A checkout on `main` at origin/main, clean, signed in to gh; `over` replaces answers."""
     (tmp_path / "pyproject.toml").write_text(PYPROJECT.replace("1.0.0", main_version, 1))
     answers = {
-        ("git", "ls-remote", "--tags", "origin", "refs/tags/v1.1.0"): "",
+        LS_TAG: "",
         ("git", "show", "origin/main:pyproject.toml"): PYPROJECT.replace("1.0.0", main_version, 1),
         ("git", "status", "--porcelain"): "",
         ("git", "rev-parse", "--abbrev-ref", "HEAD"): "main",
@@ -168,7 +170,7 @@ def test_round_two_tags_main_builds_and_starts_a_draft_release(tmp_path) -> None
 
 def test_another_machine_builds_the_tag_and_adds_its_installer_to_the_draft(tmp_path) -> None:
     tagged = {
-        ("git", "ls-remote", "--tags", "origin", "refs/tags/v1.1.0"): f"{TAG_SHA}\trefs/tags/v1.1.0",
+        LS_TAG: f"{TAG_SHA}\trefs/tags/v1.1.0",
         ("git", "rev-parse", "HEAD^{commit}"): TAG_SHA,
         ("gh", "release", "view", "v1.1.0", "--json", "isDraft"): '{"isDraft": true}',
     }
@@ -181,7 +183,7 @@ def test_another_machine_builds_the_tag_and_adds_its_installer_to_the_draft(tmp_
 
 def test_a_published_release_is_left_alone(tmp_path) -> None:
     tagged = {
-        ("git", "ls-remote", "--tags", "origin", "refs/tags/v1.1.0"): f"{TAG_SHA}\trefs/tags/v1.1.0",
+        LS_TAG: f"{TAG_SHA}\trefs/tags/v1.1.0",
         ("git", "rev-parse", "HEAD^{commit}"): TAG_SHA,
         ("gh", "release", "view", "v1.1.0", "--json", "isDraft"): '{"isDraft": false}',
     }
@@ -214,7 +216,7 @@ def test_a_shown_command_can_be_typed_and_a_long_text_is_cut_short() -> None:
 
 def test_another_machine_whose_main_moved_on_builds_the_tag_and_comes_back(tmp_path) -> None:
     tagged = {
-        ("git", "ls-remote", "--tags", "origin", "refs/tags/v1.1.0"): f"{TAG_SHA}\trefs/tags/v1.1.0",
+        LS_TAG: f"{TAG_SHA}\trefs/tags/v1.1.0",
         ("gh", "release", "view", "v1.1.0", "--json", "isDraft"): '{"isDraft": true}',
     }  # HEAD is main's newer commit, not the tag's
     sh, _ = repo(tmp_path, "1.1.0", over=tagged)
@@ -227,7 +229,7 @@ def test_another_machine_whose_main_moved_on_builds_the_tag_and_comes_back(tmp_p
 
 def test_a_failed_build_on_the_tag_still_switches_back(tmp_path) -> None:
     tagged = {
-        ("git", "ls-remote", "--tags", "origin", "refs/tags/v1.1.0"): f"{TAG_SHA}\trefs/tags/v1.1.0",
+        LS_TAG: f"{TAG_SHA}\trefs/tags/v1.1.0",
         ("gh", "release", "view", "v1.1.0", "--json", "isDraft"): '{"isDraft": true}',
     }
     sh, _ = repo(tmp_path, "1.1.0", over=tagged)
@@ -237,3 +239,28 @@ def test_a_failed_build_on_the_tag_still_switches_back(tmp_path) -> None:
     with pytest.raises(release.ReleaseError, match="no installer"):
         release.Release("1.1.0", sh, yes=True, dist=tmp_path / "empty").run()
     assert sh.changed[-1] == ["git", "switch", "main"]
+
+
+def test_a_local_tag_left_from_a_removed_attempt_gives_way_to_github_s(tmp_path, capsys) -> None:
+    annotated = f"{'d' * 40}\trefs/tags/v1.1.0\n{TAG_SHA}\trefs/tags/v1.1.0^{{}}"  # the tag, then its commit
+    tagged = {
+        LS_TAG: annotated,
+        ("git", "rev-parse", "v1.1.0^{commit}"): OLD_SHA,
+        ("gh", "release", "view", "v1.1.0", "--json", "isDraft"): '{"isDraft": true}',
+    }
+    sh, _ = repo(tmp_path, "1.1.0", over=tagged)
+    sh.ok |= {("git", "rev-parse", "-q", "--verify", "refs/tags/v1.1.0"), ("gh", "release", "view", "v1.1.0")}
+    assert run(sh) == release.BUILD
+    assert sh.changed[0] == ["git", "fetch", "--force", "origin", "refs/tags/v1.1.0:refs/tags/v1.1.0"]
+    assert ["just", "build"] in sh.changed
+    assert "from an earlier attempt" in capsys.readouterr().out
+
+
+def test_a_failed_command_s_own_message_is_shown(monkeypatch, capsys) -> None:
+    def fails(_self):
+        raise subprocess.CalledProcessError(1, ["git", "fetch", "origin"], stderr="fatal: Could not read from remote\n")
+
+    monkeypatch.setattr(release.Release, "run", fails)
+    assert release.main(["1.1.0"]) == 1
+    err = capsys.readouterr().err
+    assert "fatal: Could not read from remote" in err and "Stopped: `git fetch origin` failed" in err
