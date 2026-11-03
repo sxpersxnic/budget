@@ -144,7 +144,7 @@ async def test_exports(user: User, ctx, setup) -> None:
     df = pd.read_csv(io.BytesIO((await downloaded(user)).content))
     assert list(df["Payee"]) == ["Dr. Muster"] and list(df["Proof"]) == ["invoice.pdf"]
     await menu_item(user, "Export as PDF…")
-    assert (await downloaded(user)).content.startswith(b"%PDF")
+    assert (await downloaded(user, 2)).content.startswith(b"%PDF")
     await menu_item(user, "Proofs as ZIP…")
     await until(lambda: len(user.download.http_responses) == 3)
     names = zipfile.ZipFile(io.BytesIO(user.download.http_responses[-1].content)).namelist()

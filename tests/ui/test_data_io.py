@@ -50,10 +50,11 @@ def button(user: User, text: str) -> ui.button:
     return found[-1]  # the newest, e.g. in the sheet that just opened
 
 
-async def downloaded(user: User) -> httpx.Response:
+async def downloaded(user: User, count: int = 1) -> httpx.Response:
+    """The `count`-th file the page handed to the user; files are built off the event loop, so wait for it."""
     for _ in range(100):
-        if user.download.http_responses:
-            return user.download.http_responses[-1]
+        if len(user.download.http_responses) >= count:
+            return user.download.http_responses[count - 1]
         await asyncio.sleep(0.05)
     raise AssertionError("no download happened")
 
